@@ -1,0 +1,5 @@
+# internal / non-published
+_*
+*.mp4
+.DS_Store
+Thumbs.db

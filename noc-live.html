@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NOC live dashboard (startPolling) — xray-core gallery</title>
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script>
+<script src="data.js"></script>
+<style>
+  :root {
+    --rc-accent:#4dd0e1; --rc-btn:#00acc1; --rc-btn-hover:#00838f;
+    --rc-topo-bg:#1e2a38; --rc-topo-box-bg:#141b24; --rc-topo-box-border:#455a64;
+    --rc-topo-iface-bg:#0f1318; --rc-topo-iface-color:#b0bec5; --rc-topo-ip:#80deea;
+    --rc-topo-link-line:linear-gradient(90deg,#37474f,#607d8b,#37474f);
+  }
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:21px;margin:0 0 4px}h1 .x{color:var(--rc-accent)}h1 small{font-size:13px;color:#78909c;font-weight:400}
+  .sub{color:#90a4ae;font-size:14px;margin:0 0 16px;line-height:1.5}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}
+  button{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;background:var(--rc-btn)}
+  button:hover{background:var(--rc-btn-hover)}
+  button.stop{background:#5d4037}button.stop:hover{background:#4e342e}
+  .status{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}
+  .status .led{width:11px;height:11px;border-radius:50%;background:#39ff14;box-shadow:0 0 8px rgba(57,255,20,0.6)}
+  .status.warn .led{background:#ff8c00;box-shadow:0 0 8px rgba(255,140,0,0.6)}
+  .status.crit .led{background:#ef5350;box-shadow:0 0 8px rgba(239,83,80,0.6)}
+  .status .cond{color:#cfe8ee}.status .meta{color:#607d8b;margin-left:auto;font-family:monospace;font-size:12px}
+  .topology{position:relative;margin-top:6px;padding:18px;background:var(--rc-topo-bg);border-radius:10px}
+  .topo-diagram{display:flex;align-items:center;justify-content:center;gap:0;padding:24px 10px;overflow-x:auto}
+  .topo-node{display:flex;flex-direction:column;align-items:center;min-width:120px}
+  .topo-box{background:var(--rc-topo-box-bg);border:2px solid var(--rc-topo-box-border);border-radius:8px;padding:12px 16px;text-align:center;min-width:100px}
+  .topo-box.router{border-color:var(--rc-accent)}
+  .topo-box.router.target{border-color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,0.4)}
+  .topo-box h4{margin:0 0 5px 0;font-size:16px}
+  .topo-box.router h4{color:var(--rc-accent)}.topo-box.router.target h4{color:#ef5350}
+  .topo-box .role{font-size:11px;color:#90a4ae;margin-bottom:8px}
+  a.topo-box-link{text-decoration:none;color:inherit}
+  .topo-iface{font-family:monospace;font-size:11px;color:var(--rc-topo-iface-color);margin:3px 0;padding:3px 6px;background:var(--rc-topo-iface-bg);border-radius:3px}
+  .topo-iface .label{color:#78909c}.topo-iface .ip{color:var(--rc-topo-ip)}
+  .topo-link{display:flex;flex-direction:column;align-items:center;padding:0 5px}
+  .topo-link-line{width:60px;height:3px;background:var(--rc-topo-link-line)}
+  .topo-link-label{font-size:10px;color:#78909c}.topo-link-subnet{font-family:monospace;font-size:10px;color:#90a4ae}
+  .topo-target-label{color:#ef5350;font-size:11px;margin-top:8px;font-weight:bold}
+  .terminal-hint{display:none}
+  #demo-wrap .xray-holo-panel{top:12px!important;right:14px!important;left:auto!important}
+  /* OSS demo: ping/packet 演出は通信依存ゆえ非表示。経路矢印と状態は表示。 */
+  #demo-wrap .de-ping-orb,#demo-wrap .de-ping-req,#demo-wrap .de-ping-rep,
+  #demo-wrap .de-packet,#demo-wrap .xray-packet-orb{display:none!important}
+  .log{margin-top:14px;background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:10px 12px;
+    font-family:"Courier New",monospace;font-size:12px;color:#9fb4bd;height:120px;overflow-y:auto;line-height:1.6}
+  .log .t{color:#5f7d8c}.log .ok{color:#39ff14}.log .w{color:#ff8c00}.log .c{color:#ef5350}
+  pre{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:"Courier New",monospace;font-size:12.5px;line-height:1.6;color:#cfe8ee;margin-top:22px}
+  pre .c{color:#5f7d8c}pre .k{color:#80cbc4}
+  .foot{margin-top:18px;font-size:12px;color:#607d8b;line-height:1.6}
+  code{background:#141b24;padding:1px 5px;border-radius:3px;color:#80deea;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap" id="demo-wrap">
+  <p style="margin:0 0 10px"><a href="index.html" style="color:#80deea;text-decoration:none;font-size:13px">← Gallery</a></p>
+  <h1><span class="x">NOC</span> live dashboard <small>(xray-core gallery · startPolling)</small></h1>
+  <p class="sub">
+    Wire <code>xrayCore.startPolling()</code> to your live telemetry (SNMP/gNMI/API) and the topology
+    updates itself. Here a simulated feed flaps the r1–r3 path; the view follows in real time —
+    no page reload, no manual clicks.
+  </p>
+
+  <div class="controls">
+    <button id="toggle" onclick="toggleMon()">⏸ Stop monitoring</button>
+    <span class="sub" style="margin:0">poll interval: 2.5s</span>
+  </div>
+
+  <div class="status" id="status">
+    <span class="led"></span><span class="cond" id="cond">—</span>
+    <span class="meta" id="meta"></span>
+  </div>
+
+  <div class="topology is-xray-mode">
+    <div class="topo-diagram" id="topo"></div>
+    <div class="xray-deep-engine"></div>
+  </div>
+
+  <div class="log" id="log"></div>
+
+<pre><span class="c">// real usage: poll your own state endpoint, the view auto-updates</span>
+<span class="k">var</span> view = xrayCore.renderTopology(<span style="color:#a5d6a7">'#topo'</span>, CONFIG, { topology, trace });
+view.startPolling(() =&gt; fetch(<span style="color:#a5d6a7">'/api/state'</span>).then(r =&gt; r.json()), 3000);
+
+<span class="c">// the fetcher may return a bare state, or a full snapshot:</span>
+<span class="c">//   { state, topology, trace }  ← overview links/arrows update too</span></pre>
+
+  <div class="foot">
+    Field shapes: see <code>DATA-CONTRACT.md</code>. Descriptive only — it reflects the state your feed
+    reports, it is not a simulator. The live ping/packet animation is hidden here (traffic-specific).
+  </div>
+</div>
+
+<script>
+(function () {
+  var view = null, timer_on = true;
+
+  // --- simulated telemetry feed: drift between the scenes (normal/detour/dead) ---
+  var COND = {
+    normal: { cls: '',     text: '● Healthy — r1→r3 direct, ping OK' },
+    detour: { cls: 'warn', text: '⚠ r1–r3 link down — rerouting via r2' },
+    dead:   { cls: 'crit', text: '✖ r2–r3 also down — r3 isolated, ping FAILS' }
+  };
+  var cur = 'normal';
+  function drift() {
+    var r = Math.random();
+    if (cur === 'normal') { if (r < 0.30) cur = 'detour'; }
+    else if (cur === 'detour') { if (r < 0.45) cur = 'normal'; else if (r < 0.60) cur = 'dead'; }
+    else if (cur === 'dead') { if (r < 0.55) cur = 'detour'; }
+    return cur;
+  }
+  function logLine(sc) {
+    var log = document.getElementById('log'); if (!log) return;
+    var t = new Date().toLocaleTimeString();
+    var cls = sc === 'normal' ? 'ok' : (sc === 'detour' ? 'w' : 'c');
+    var msg = sc === 'normal' ? 'recovered — direct path restored'
+            : sc === 'detour' ? 'r1–r3 down → detour via r2'
+            : 'r2–r3 down → r3 isolated (ping fail)';
+    var div = document.createElement('div');
+    div.innerHTML = '<span class="t">' + t + '</span>  <span class="' + cls + '">' + msg + '</span>';
+    log.insertBefore(div, log.firstChild);
+    while (log.children.length > 40) log.removeChild(log.lastChild);
+  }
+  var prev = null;
+  function fetcher() {
+    var sc = drift();
+    if (sc !== prev) {
+      prev = sc;
+      var st = document.getElementById('status'); if (st) st.className = 'status ' + COND[sc].cls;
+      var cond = document.getElementById('cond'); if (cond) cond.textContent = COND[sc].text;
+      logLine(sc);
+    }
+    var meta = document.getElementById('meta');
+    if (meta) meta.textContent = 'last poll ' + new Date().toLocaleTimeString();
+    var d = window.DEMO[sc];
+    return { state: d.state, topology: d.topo, trace: d.trace };  // full live snapshot
+  }
+
+  window.toggleMon = function () {
+    var b = document.getElementById('toggle');
+    if (timer_on) { view.stopPolling(); timer_on = false; if (b) b.innerHTML = '▶ Start monitoring'; if (b) b.className = ''; }
+    else { view.startPolling(fetcher, 2500); timer_on = true; if (b) b.innerHTML = '⏸ Stop monitoring'; if (b) b.className = 'stop'; }
+  };
+
+  function boot() {
+    view = xrayCore.renderTopology('#topo', window.DEMO_CONFIG, {
+      topology: window.DEMO.normal.topo, trace: window.DEMO.normal.trace
+    });
+    view.applyState(window.DEMO.normal.state);
+    document.getElementById('toggle').className = 'stop';
+    view.startPolling(fetcher, 2500);   // ← live feed
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

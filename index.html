@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>xray-core — gallery</title>
+<style>
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:880px;margin:0 auto;padding:36px 20px 64px}
+  h1{font-size:27px;margin:0 0 4px}h1 .x{color:#4dd0e1}
+  .tag{color:#80deea;font-size:13px;margin:0 0 22px}
+  .intro{background:#1c2736;border-left:3px solid #4dd0e1;padding:16px 20px;margin:18px 0 26px;
+    font-size:13.5px;line-height:1.75;border-radius:0 6px 6px 0}
+  .intro b{color:#4dd0e1}
+  code{background:#141b24;padding:1px 6px;border-radius:3px;color:#80deea;font-size:12.5px}
+  h2{font-size:14px;color:#80deea;margin:28px 0 10px;font-weight:600}
+  .cards{display:flex;flex-direction:column;gap:12px}
+  a.card{display:block;background:#141b24;border:1px solid #263238;border-radius:9px;
+    padding:16px 20px;text-decoration:none;color:inherit;transition:all .15s}
+  a.card:hover{border-color:#4dd0e1;background:#1c2736;transform:translateX(4px)}
+  .card .ttl{color:#4dd0e1;font-size:16px;font-weight:700}
+  .card .badge{font-size:10.5px;color:#0f1318;background:#4dd0e1;border-radius:10px;padding:1px 8px;
+    margin-left:8px;vertical-align:middle;font-weight:700}
+  .card .desc{color:#b0bec5;font-size:13px;margin-top:6px;line-height:1.6}
+  .card .feat{color:#607d8b;font-size:11px;margin-top:7px;font-family:"Courier New",monospace}
+  .api{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;margin-top:10px;
+    font-family:"Courier New",monospace;font-size:12.5px;line-height:1.7;color:#cfe8ee;overflow-x:auto}
+  .api .c{color:#5f7d8c}.api .k{color:#80cbc4}
+  footer{margin-top:34px;padding-top:18px;border-top:1px solid #263238;color:#607d8b;font-size:12px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1><span class="x">xray-core</span> gallery</h1>
+  <div class="tag">An OSS render engine for live router &amp; network state — driven by the tidy <code>xrayCore</code> API.</div>
+
+  <div class="intro">
+    <b>xray-core</b> turns a router's <b>state</b> (OSPF/BGP adjacency, routes, interfaces) into a live
+    visualization — an overview topology and an <b>"inside the router" DeepDive cylinder</b>. It is
+    <b>vendor-neutral</b> (feed it FRR, Cisco IOS, anything — via a small adapter) and <b>descriptive</b>
+    (it draws the state you report; it is not a simulator). You drive it with a few calls:
+    <code>renderTopology</code> · <code>applyState</code> · <code>startPolling</code> · <code>openDeepDive</code>.
+  </div>
+
+  <h2>Examples</h2>
+  <div class="cards">
+
+    <a class="card" href="frr-paste.html">
+      <span class="ttl">Paste your router output → render</span><span class="badge">bring your own data</span>
+      <div class="desc">Paste a router's <code>show ip route</code> + <code>show ip ospf neighbor</code> and press
+        Render. The local topology is reconstructed (incl. peer–peer links from equal-cost routes) and drawn.</div>
+      <div class="feat">FRR show text · topology inference · DeepDive</div>
+    </a>
+
+    <a class="card" href="ccna-ospf.html">
+      <span class="ttl">OSPF adjacency formation</span><span class="badge">CCNA instructor</span>
+      <div class="desc">Step the 7 OSPF neighbor states (Down → Full) without booting a router. Open the
+        cylinder to watch hello, LSDB sync (Exchange/Loading), and the route appear at Full. RFC 2328 §10.1 accurate.</div>
+      <div class="feat">state stepping · FSM indicator · DeepDive · LSDB</div>
+    </a>
+
+    <a class="card" href="bgp-session.html">
+      <span class="ttl">eBGP session establishment</span><span class="badge">CCNP / BGP</span>
+      <div class="desc">Step the BGP FSM (Idle → Connect → OpenSent → OpenConfirm → Established) between two
+        ASes. Open the cylinder to see the BGP processor and the session tunnel; at Established it learns
+        <code>203.0.113.0/24</code>. RFC 4271 §8.</div>
+      <div class="feat">state stepping · FSM indicator · DeepDive · session tunnel</div>
+    </a>
+
+    <a class="card" href="noc-live.html">
+      <span class="ttl">Live dashboard (startPolling)</span><span class="badge">NOC / SRE</span>
+      <div class="desc">Wire <code>startPolling()</code> to your telemetry and the topology updates itself. A
+        simulated feed flaps the path; the view + event log follow in real time, no reload.</div>
+      <div class="feat">startPolling · real-time · live snapshot feed</div>
+    </a>
+
+    <a class="card" href="failover.html">
+      <span class="ttl">OSPF failover (failure visualization)</span><span class="badge">SRE postmortem</span>
+      <div class="desc">A redundant triangle. Cut the shortest path → OSPF detours; cut the backup too → r3
+        isolated. Each scene is one snapshot; open the router to see the forwarding decision.</div>
+      <div class="feat">interactive scenes · reroute · DeepDive</div>
+    </a>
+
+  </div>
+
+  <h2>Bring your own data</h2>
+  <div class="intro" style="margin-top:10px">
+    Every field xray-core reads is a standard protocol concept, so any router OS works through a small
+    adapter that maps its <code>show</code> output into the documented shapes. See
+    <a href="DATA-CONTRACT.md" style="color:#80deea"><code>DATA-CONTRACT.md</code></a>
+    (config / state fields, FRR ↔ Cisco IOS mapping, the two optional seams).
+  </div>
+  <div class="api"><span class="c">// load: xray-core.js (engine) + xray-api.js (facade), then:</span>
+<span class="k">var</span> view = xrayCore.renderTopology(<span style="color:#a5d6a7">'#topo'</span>, config, { topology, trace });
+view.applyState(state);                                  <span class="c">// one snapshot</span>
+view.startPolling(() =&gt; fetch(<span style="color:#a5d6a7">'/api/state'</span>).then(r =&gt; r.json()), 3000);  <span class="c">// or live</span>
+view.openDeepDive();                                     <span class="c">// inside the router</span></div>
+
+  <footer>
+    Descriptive renderer, not a simulator — it draws the state your feed reports. The live ping/packet
+    animation is hidden in these demos (it is traffic-specific); the engine fully supports it (see
+    DATA-CONTRACT §Seam B). xray-core is the same engine RouteCrushLab runs in production (shared core,
+    no fork).
+  </footer>
+
+</div>
+</body>
+</html>

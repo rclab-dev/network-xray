@@ -1,0 +1,226 @@
+# xray-core
+
+**See how a router actually forwards — a render engine for live router & network state.**
+
+*English | [日本語](#日本語)*
+
+`xray-core` turns a router's **state** (OSPF/BGP adjacency, routes, interfaces) into a live
+picture: an **overview topology** and an **"inside the router" DeepDive cylinder** (forwarding
+plane, OSPF/BGP processor, hello & LSDB sync, the route it installs). You drive it with a few
+calls through the tidy `xrayCore` facade.
+
+> This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com)**,
+> not a fork — extracted as a shared module so there is no drift.
+
+It is **descriptive**, not a simulator: it draws the state your feed reports. And it is
+**vendor-neutral** — every field it reads is a standard `show`-command concept, so FRRouting,
+Cisco IOS, Arista, … all map onto it via a small adapter.
+
+## See it
+
+**Inside the router — the DeepDive cylinder** (an OSPF adjacency at Full: hello, synced LSDB, the route it installs):
+
+![Inside the router — the DeepDive cylinder](docs/deepdive.png)
+
+**▶ Try it live — no install:** paste a router's `show` output → it draws the topology, then click a
+router to look inside. **<https://rclab-dev.github.io/xray-core/>** (or jump straight to
+[paste-your-output](https://rclab-dev.github.io/xray-core/frr-paste.html)).
+
+## Run it
+
+Open **`index.html`** in a browser — no build, no server, no install. (Or
+`python -m http.server` then `http://localhost:8000/`.)
+
+## Quickstart
+
+```html
+<script src="xray-core.js"></script>   <!-- the engine (self-injects its CSS) -->
+<script src="xray-api.js"></script>    <!-- the xrayCore facade -->
+```
+
+```js
+var view = xrayCore.renderTopology('#topo', config, { topology, trace });
+view.applyState(state);                                   // one snapshot
+view.startPolling(() => fetch('/api/state').then(r => r.json()), 3000);  // …or live
+view.openDeepDive();                                      // inside the router
+```
+
+`config` / `state` shapes are in **[DATA-CONTRACT.md](./DATA-CONTRACT.md)**.
+
+## Examples (the gallery)
+
+Open `index.html` for the landing, or each directly:
+
+| Example | What it shows |
+|---|---|
+| **`frr-paste.html`** | Paste your own `show ip route` + `show ip ospf neighbor` → it reconstructs the topology and draws it. *Bring your own data, zero setup.* |
+| **`ccna-ospf.html`** | Step the 7 OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (RFC 2328 §10.1 accurate.) |
+| **`bgp-session.html`** | Step the eBGP FSM (Idle→Established) between two ASes. DeepDive shows the BGP processor and the session tunnel; at Established it learns `203.0.113.0/24`. (RFC 4271 §8.) |
+| **`noc-live.html`** | Wire `startPolling()` to telemetry; the view updates itself in real time. |
+| **`failover.html`** | A redundant OSPF triangle: cut the shortest path → detour, cut the backup → isolation. |
+
+## What people build with it
+
+- **Interactive teaching modules** — embed an OSPF/BGP walkthrough in a blog post or course.
+- **Live NOC / lab dashboards** — point `startPolling()` at your telemetry (Containerlab, FRR, EVE-NG).
+- **Paste-to-visualize** — drop CLI output in the browser to reconstruct a topology, no setup.
+- **Postmortem & MOP figures** — render before/after state to show what rerouted, for a writeup.
+
+(You bring the data; the engine draws it.)
+
+## Bring your own network
+
+Two ways to feed it:
+
+1. **Paste (fastest)** — open `frr-paste.html` and paste a router's `show ip route` +
+   `show ip ospf neighbor`. **It runs entirely in your browser — your config is never uploaded.**
+   Scope today: **FRR, OSPF, small topologies**. BGP, large meshes, and other vendors aren't
+   auto-parsed yet.
+2. **Feed `state` directly (any vendor)** — build the documented `config`/`state` objects and call
+   `view.applyState(state)`. This is how you support **Cisco IOS / Arista / Juniper**: write a small
+   adapter from your OS's `show` output to the shapes in
+   **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** (which includes a FRR ↔ Cisco IOS `show`-command
+   mapping table and the two optional seams). **`frr-parse.js` is the worked adapter template** —
+   copy it and swap the regexes for your vendor.
+
+To embed in your own page, copy this folder and replace `data.js` (the worked reference example).
+The live ping/packet animation is hidden in these demos (it is traffic-specific, driven by the
+optional trace seam); the engine fully supports it — see DATA-CONTRACT §Seam B.
+
+## Theming
+
+`xrayCore.applyTheme('troubleshoot' | 'capture' | 'destroy')` switches the three built-in palettes.
+The engine ships its own CSS (self-injected) — it is not a fully CSS-variable-themeable widget yet;
+treat the three themes as the supported looks.
+
+## Install / integrate
+
+Today this is **drop-in for the browser**: include the two `<script>` tags (above) and use the
+`window.xrayCore` global. There is **no npm package, ES module, or TypeScript types yet** — it is
+embedding-first (blog posts, dashboards, internal tools), not a bundler dependency. If you need
+ESM/types, fork and wrap it.
+
+## Scope & maintenance
+
+- **Descriptive renderer, not a network simulator** — it draws the state you feed it; it does
+  not compute routes or run protocols.
+- **Vendor-neutral via adapter** — map your router OS's `show` output to the documented shapes
+  (`frr-parse.js` is the template; DATA-CONTRACT has the mapping).
+- **Browser-only / private** — the paste demo sends nothing to a server.
+- **Maintained minimally / single maintainer.** Issues are read but carry no SLA, and
+  **pull requests are not accepted** (a single copyright holder is kept so the project can be
+  relicensed later). **Forking is welcome** under the license below.
+
+## License
+
+[MIT](./LICENSE) — Copyright (c) 2026 RouteCrushLab (@routecrushlab).
+
+---
+
+# 日本語
+
+*[English](#xray-core) | 日本語*
+
+**ルータが実際にどう転送しているかを見る — ルータ／ネットワークの状態を描く render エンジン。**
+
+`xray-core` は、ルータの**状態**(OSPF/BGP の隣接・経路・インターフェース)を生きた絵にします:
+**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、OSPF/BGP プロセッサ、
+hello と LSDB 同期、実際にインストールされる経路)。操作は `xrayCore` ファサード越しの数行だけ。
+
+> これは **[RouteCrushLab](https://routecrushlab.com) を動かしているのと同じ描画コア**で、
+> フォークではありません — 共有モジュールとして切り出し、本体とドリフトしない構成です。
+
+**シミュレータではなく記述的(descriptive)**:与えた状態を描くだけで、経路計算もプロトコル実行も
+しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
+FRRouting・Cisco IOS・Arista … いずれも小さなアダプタで対応できます。
+
+## 見る
+
+上の静止画は **DeepDive 円柱**(OSPF 隣接が Full:hello・LSDB 同期・学習した経路)。
+**▶ ライブで試す(インストール不要)**:ルータの `show` 出力を貼る → トポロジが描かれ、ルータをクリックすると
+中が見える — **<https://rclab-dev.github.io/xray-core/>**(貼って試すなら
+[frr-paste.html](https://rclab-dev.github.io/xray-core/frr-paste.html))。
+
+## 動かす
+
+ブラウザで **`index.html`** を開くだけ — ビルド・サーバ・インストール不要
+(または `python -m http.server` → `http://localhost:8000/`)。
+
+## クイックスタート
+
+```html
+<script src="xray-core.js"></script>   <!-- エンジン本体(CSS を自己注入) -->
+<script src="xray-api.js"></script>    <!-- xrayCore ファサード -->
+```
+
+```js
+var view = xrayCore.renderTopology('#topo', config, { topology, trace });
+view.applyState(state);                                   // スナップショット1枚
+view.startPolling(() => fetch('/api/state').then(r => r.json()), 3000);  // …またはライブ
+view.openDeepDive();                                      // ルータの中へ
+```
+
+`config` / `state` の形は **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** にあります。
+
+## 例(ギャラリー)
+
+`index.html` でランディング、または各ファイルを直接開く:
+
+| 例 | 何を見せるか |
+|---|---|
+| **`frr-paste.html`** | 自分の `show ip route` + `show ip ospf neighbor` を貼る → トポロジを再構築して描画。*データ持ち込み・セットアップ不要。* |
+| **`ccna-ospf.html`** | OSPF の7状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 準拠)。 |
+| **`bgp-session.html`** | eBGP の FSM(Idle→Established)を2つの AS 間で1歩ずつ。DeepDive で BGP プロセッサとセッショントンネルを表示し、Established で `203.0.113.0/24` を学習(RFC 4271 §8)。 |
+| **`noc-live.html`** | `startPolling()` をテレメトリに繋ぐと、ビューが自分でリアルタイム更新。 |
+| **`failover.html`** | 冗長 OSPF 三角形:最短路を切る→迂回、バックアップも切る→孤立。 |
+
+## 何に使えるか
+
+- **インタラクティブ教材** — OSPF/BGP の解説をブログ記事や講座に埋め込む。
+- **ライブ NOC / ラボ ダッシュボード** — `startPolling()` を自分のテレメトリ(Containerlab・FRR・EVE-NG)へ。
+- **貼って可視化** — CLI 出力をブラウザに貼るだけでトポロジを再構築、セットアップ不要。
+- **ポストモーテム・MOP 図** — 障害前後の状態を描いて「何が迂回したか」を報告書に。
+
+(データはあなたが用意、描くのはエンジン。)
+
+## 自分のネットワークを入れる
+
+2つの方法:
+
+1. **貼る(最速)** — `frr-paste.html` を開いて `show ip route` + `show ip ospf neighbor` を貼る。
+   **すべてブラウザ内で動き、config はアップロードされません。** 現在の対応範囲:
+   **FRR・OSPF・小規模トポロジ**。BGP・大規模メッシュ・他ベンダーはまだ自動解析しません。
+2. **`state` を直接渡す(任意ベンダー)** — ドキュメント化された `config`/`state` を作って
+   `view.applyState(state)` を呼ぶ。**Cisco IOS / Arista / Juniper** はこの方法:自分の OS の
+   `show` 出力を **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** の形(FRR ↔ Cisco IOS の `show`
+   コマンド対応表と、2つの任意シーム付き)に変換する小さなアダプタを書く。
+   **`frr-parse.js` がそのアダプタの雛形**なので、コピーして正規表現を自分のベンダー用に差し替える。
+
+自分のページに埋め込むには、このフォルダをコピーして `data.js`(動く参照例)を差し替える。
+ping/パケットのアニメはこれらのデモでは非表示(通信内容依存・任意の trace シーム駆動)ですが、
+エンジン自体は対応しています — DATA-CONTRACT §Seam B を参照。
+
+## テーマ
+
+`xrayCore.applyTheme('troubleshoot' | 'capture' | 'destroy')` で3つの組み込みパレットを切替。
+エンジンは自前の CSS を持つ(自己注入)ため、任意の CSS 変数で自由にテーマ化できるウィジェットでは
+まだありません。**この3テーマが対応する見た目**と捉えてください。
+
+## 導入 / 組み込み
+
+現状は**ブラウザにそのまま入れる**形:上の `<script>` を2つ読み込み `window.xrayCore` を使う。
+**npm パッケージ・ES Module・TypeScript 型はまだありません** — バンドラ依存ではなく埋め込み第一
+(ブログ記事・ダッシュボード・社内ツール)。ESM/型が必要ならフォークして包んでください。
+
+## スコープと保守
+
+- **記述レンダラであってシミュレータではない** — 与えた状態を描くだけ。経路計算もプロトコル実行もしない。
+- **アダプタでベンダー中立** — 自分のルータ OS の `show` 出力をドキュメントの形に対応付ける
+  (`frr-parse.js` が雛形、DATA-CONTRACT に対応表)。
+- **ブラウザ完結・プライベート** — 貼るデモはサーバへ何も送らない。
+- **最小限の保守・単独メンテナ。** Issue は読みますが SLA はなく、**Pull Request は受け付けません**
+  (将来の再ライセンスのため著作権者を単一に保つ方針)。**フォークは歓迎**します(下記ライセンス)。
+
+## ライセンス
+
+[MIT](./LICENSE) — Copyright (c) 2026 RouteCrushLab (@routecrushlab)。
