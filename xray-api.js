@@ -114,12 +114,55 @@
     var btns = document.querySelectorAll('.xray-focus-close');
     for (var i = 0; i < btns.length; i++) btns[i].innerHTML = '&#10005; Close';
   }
+
+  // --- i18n: translate the engine's remaining built-in Japanese UI to English at runtime.
+  // The engine (xray-core.js) is shared with a Japanese product (RouteCrushLab); this facade
+  // replaces Japanese DOM text/title strings via the window.xrayI18n dictionary (load xray-i18n.js).
+  // No-op if absent. RCL does not use this facade.
+  var _i18nKeys = null, _i18nObserver = null;
+  var _i18nRe = /[①-⓿★☆✕　-ヿ㐀-鿿＀-￯]/;
+  function _i18nReplace(s) {
+    var d = window.xrayI18n, i, k;
+    for (i = 0; i < _i18nKeys.length; i++) { k = _i18nKeys[i]; if (s.indexOf(k) >= 0) s = s.split(k).join(d[k]); }
+    return s;
+  }
+  function _localize(root) {
+    var d = window.xrayI18n;
+    if (!d) return;
+    if (!_i18nKeys) _i18nKeys = Object.keys(d).sort(function (a, b) { return b.length - a.length; });
+    root = root || document.body;
+    if (!root || !root.querySelectorAll) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), nodes = [], n;
+    while ((n = w.nextNode())) nodes.push(n);
+    for (var i = 0; i < nodes.length; i++) {
+      var t = nodes[i].nodeValue;
+      if (t && _i18nRe.test(t)) { var nt = _i18nReplace(t); if (nt !== t) nodes[i].nodeValue = nt; }
+    }
+    var els = root.querySelectorAll('[title]');
+    for (var j = 0; j < els.length; j++) {
+      var ti = els[j].getAttribute('title');
+      if (ti && _i18nRe.test(ti)) { var x = _i18nReplace(ti); if (x !== ti) els[j].setAttribute('title', x); }
+    }
+  }
+  function _localizeLive() {
+    if (!window.xrayI18n) return;
+    _localize(document.body);
+    if (_i18nObserver || typeof MutationObserver !== 'function') return;
+    _i18nObserver = new MutationObserver(function () {
+      _i18nObserver.disconnect();
+      _localize(document.body);
+      _i18nObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+    _i18nObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+  }
+
   function openDeepDive() {
     document.body.classList.add('is-xray-mode');
     if (typeof window.xrayDeepDiveZoomIn === 'function') window.xrayDeepDiveZoomIn();
     else document.body.classList.add('is-xray-deep');
     _relabelClose();    // English close label
     _paintBgpTable();   // Seam C: (re)inject the BGP table now the cylinder is open
+    _localize(document.body);
     _emitDeep(true);
   }
   // Zoom back out to the overview.
@@ -139,6 +182,7 @@
     window.applyXrayState(state);
     _lastState = state;
     _paintBgpTable();   // Seam C: keep the BGP table in sync with the snapshot
+    _localize(document.body);
   }
 
   // Poll a fetcher for fresh data and apply it on an interval. Returns a stop() fn.
@@ -209,6 +253,7 @@
     // Add an empty <div class="xray-deep-engine"></div> next to your topo host to enable it.
     _renderDeepEngine(config, target.id);
     _relabelClose();   // English close label on the pre-rendered cylinder
+    _localizeLive();
 
     // RCL UX: click the target router box in the overview to zoom into its DeepDive
     // (in addition to any explicit button). Only when a cylinder host is present.
