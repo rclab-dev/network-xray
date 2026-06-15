@@ -107,10 +107,18 @@
     try { document.dispatchEvent(new CustomEvent('xraycore:deepdive', { detail: { open: open } })); }
     catch (e) {}
   }
+  // The engine's built-in cylinder close button ships a Japanese label ("✕ 閉じる").
+  // For a language-neutral standalone library, relabel it to English. (RCL is unaffected —
+  // it doesn't use this facade.) Idempotent; safe to call whenever the cylinder (re)renders.
+  function _relabelClose() {
+    var btns = document.querySelectorAll('.xray-focus-close');
+    for (var i = 0; i < btns.length; i++) btns[i].innerHTML = '&#10005; Close';
+  }
   function openDeepDive() {
     document.body.classList.add('is-xray-mode');
     if (typeof window.xrayDeepDiveZoomIn === 'function') window.xrayDeepDiveZoomIn();
     else document.body.classList.add('is-xray-deep');
+    _relabelClose();    // English close label
     _paintBgpTable();   // Seam C: (re)inject the BGP table now the cylinder is open
     _emitDeep(true);
   }
@@ -200,6 +208,7 @@
     // Pre-render the DeepDive cylinder for the target router (hidden until openDeepDive()).
     // Add an empty <div class="xray-deep-engine"></div> next to your topo host to enable it.
     _renderDeepEngine(config, target.id);
+    _relabelClose();   // English close label on the pre-rendered cylinder
 
     // RCL UX: click the target router box in the overview to zoom into its DeepDive
     // (in addition to any explicit button). Only when a cylinder host is present.
