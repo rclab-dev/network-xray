@@ -16,6 +16,17 @@ It is **descriptive**, not a simulator: it draws the state your feed reports. An
 **vendor-neutral** — every field it reads is a standard `show`-command concept, so FRRouting,
 Cisco IOS, Arista, … all map onto it via a small adapter.
 
+## Why
+
+I learned networking by drawing diagrams — taking what someone described over the phone and
+turning it into a picture I could reason about and ask others about. One lesson stuck: a picture
+in your own head is worthless if the person you're talking to can't see the same one. The people
+who lasted at that work weren't the ones who knew the most protocols; they were the ones who could
+draw the diagram and ask honestly. And the hardest part was always the section you *couldn't*
+observe — you had to infer it, and then you wished you could just see inside the box. X-Ray is that
+instinct turned into a tool: it takes a router's live state and makes it a shared picture — the
+topology at a glance, and the forwarding decision *inside* the router when you look closer.
+
 ## See it
 
 **Inside the router — the DeepDive cylinder** (an OSPF adjacency at Full: hello, synced LSDB, the route it installs):
@@ -133,6 +144,16 @@ hello と LSDB 同期、実際にインストールされる経路)。操作は 
 **シミュレータではなく記述的(descriptive)**:与えた状態を描くだけで、経路計算もプロトコル実行も
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
 FRRouting・Cisco IOS・Arista … いずれも小さなアダプタで対応できます。
+
+## なぜ
+
+私はネットワークを「絵を描く」ことで覚えました。誰かが電話越しに話す構成を、自分が考えて人に
+相談できる一枚の絵に起こす。そこで気づいたのは、**自分の頭の中に絵があっても、話す相手に同じ絵が
+浮かばなければ意味がない**ということでした。その仕事で長く残ったのは、プロトコルに一番詳しい人では
+なく、**絵がしっかり描けて、分からないことを素直に聞ける人**でした。そして一番難しいのはいつも
+「観測できない区間」で、そこを推論しては、いっそ箱の中を覗ければと思っていました。X-Ray はその
+直感を道具にしたものです:ルータの生きた状態を、共有できる一枚の絵にします — 全体を一目で、
+そしてよく見ればルータの**「中」の転送判断**まで。
 
 ## 見る
 
