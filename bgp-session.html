@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -26,7 +26,7 @@
   button.deep{background:#37474f}button.deep:hover{background:#455a64}
   .caption{margin:8px 0 4px;padding:10px 14px;background:#10202c;border-left:3px solid var(--rc-accent);
     border-radius:0 6px 6px 0;font-size:13px;color:#cfe8ee;line-height:1.5;min-height:1.5em}
-  /* FSM 進行インジケータ: engine は Established/否 の二値しか描かないため、FSM 途中段階をここで示す (RFC 4271 §8) */
+  /* FSM progress indicator: the engine only renders the Established/not binary, so intermediate FSM stages are shown here (RFC 4271 §8) */
   .fsm{display:flex;gap:16px;flex-wrap:wrap;margin:6px 2px 10px;font-size:12px}
   .fsm-step{display:flex;align-items:center;gap:6px;color:#5f7d8c;transition:color .2s}
   .fsm-step .dot{width:9px;height:9px;border-radius:50%;background:#37474f;transition:all .2s}
@@ -50,7 +50,7 @@
   .topo-target-label{color:#ef5350;font-size:11px;margin-top:8px;font-weight:bold}
   .terminal-hint{display:none}
   #demo-wrap .xray-holo-panel{top:12px!important;right:14px!important;left:auto!important}
-  /* OSS demo: ping/packet 演出は通信依存ゆえ非表示 (機能はエンジンに残存=DATA-CONTRACT)。状態/トンネルは表示。 */
+  /* OSS demo: ping/packet animation depends on live traffic, so it is hidden (the capability remains in the engine = DATA-CONTRACT). State/tunnel are shown. */
   #demo-wrap .de-ping-orb,#demo-wrap .de-ping-req,#demo-wrap .de-ping-rep,
   #demo-wrap .de-packet,#demo-wrap .xray-packet-orb{display:none!important}
   pre{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:"Courier New",monospace;font-size:12.5px;line-height:1.6;color:#cfe8ee;margin-top:22px}
@@ -64,10 +64,10 @@
   <p style="margin:0 0 10px"><a href="index.html" style="color:#80deea;text-decoration:none;font-size:13px">← Gallery</a></p>
   <h1><span class="x">BGP</span>: eBGP session establishment <small>(xray-core gallery)</small></h1>
   <p class="sub">
-    ルータを起動せずに <b>eBGP セッションが Idle → Established に至る FSM</b>を見せる
-    (R1 <code>AS 65001</code> — R2 <code>AS 65002</code>)。各ボタンで状態を切替。<b>「Open the router」</b>
-    で円柱を開くと、BGP プロセッサとセッション(トンネル)が中で見える。Established で
-    r1 が広告する <code>203.0.113.0/24</code> を学習。
+    Shows the <b>FSM as an eBGP session goes Idle → Established</b> without booting any router
+    (R1 <code>AS 65001</code> — R2 <code>AS 65002</code>). Each button switches the state. Click <b>"Open the router"</b>
+    to open the cylinder and see the BGP processor and the session (tunnel) inside. At Established,
+    r2 learns the <code>203.0.113.0/24</code> advertised by r1.
   </p>
 
   <div class="controls">
@@ -81,9 +81,9 @@
   </div>
   <div class="caption" id="caption"></div>
   <div class="fsm" id="fsm">
-    <div class="fsm-step" data-i="1"><span class="dot"></span>① TCP :179 接続</div>
-    <div class="fsm-step" data-i="2"><span class="dot"></span>② OPEN / capabilities 交換</div>
-    <div class="fsm-step" data-i="3"><span class="dot"></span>③ Established(KEEPALIVE / UPDATE)</div>
+    <div class="fsm-step" data-i="1"><span class="dot"></span>① TCP :179 connect</div>
+    <div class="fsm-step" data-i="2"><span class="dot"></span>② OPEN / capabilities exchange</div>
+    <div class="fsm-step" data-i="3"><span class="dot"></span>③ Established (KEEPALIVE / UPDATE)</div>
   </div>
 
   <div class="topology is-xray-mode">
@@ -95,8 +95,8 @@
 <span class="k">var</span> view = xrayCore.renderTopology(<span style="color:#a5d6a7">'#topo'</span>, BGP_CONFIG, { topology: TOPO });
 
 <span class="c">// each state button = one snapshot</span>
-view.applyState(BGP_STATES.opensent);      <span class="c">// → OPEN 交換中 (まだ未確立)</span>
-view.applyState(BGP_STATES.established);    <span class="c">// → トンネル紫 + 203.0.113.0/24 を学習</span>
+view.applyState(BGP_STATES.opensent);      <span class="c">// → exchanging OPEN (not yet established)</span>
+view.applyState(BGP_STATES.established);    <span class="c">// → tunnel purple + learns 203.0.113.0/24</span>
 
 <span class="c">// "inside the router" cylinder:</span>
 view.openDeepDive();</pre>
@@ -116,11 +116,11 @@ view.openDeepDive();</pre>
   var view = null;
   var TOPO_UP = { success: true, subnets: { 'net-r1r2': '10.0.12.0/24' }, nodes: {
     r1: [{ name: 'eth0', ip: '10.0.12.1', prefix: 24, state: 'UP' },
-         { name: 'eth1', ip: '203.0.113.1', prefix: 24, state: 'UP' }],   // r1 が広告する網
+         { name: 'eth1', ip: '203.0.113.1', prefix: 24, state: 'UP' }],   // network advertised by r1
     r2: [{ name: 'eth0', ip: '10.0.12.2', prefix: 24, state: 'UP' }]
   } };
   var TOPO_DOWN = JSON.parse(JSON.stringify(TOPO_UP));
-  TOPO_DOWN.nodes.r1[0].state = 'DOWN'; TOPO_DOWN.nodes.r2[0].state = 'DOWN';  // r1-r2 リンク断
+  TOPO_DOWN.nodes.r1[0].state = 'DOWN'; TOPO_DOWN.nodes.r2[0].state = 'DOWN';  // r1-r2 link down
   window.TOPO = TOPO_UP;
 
   function setDeepLabel(open) {
@@ -140,8 +140,8 @@ view.openDeepDive();</pre>
     view.setTopology(name === 'linkdown' ? TOPO_DOWN : TOPO_UP);
     view.applyState(s);
     var cap = document.getElementById('caption'); if (cap) cap.textContent = (window.BGP_DESC || {})[name] || '';
-    // FSM 進行インジケータ: 状態フィールドから導出 (RFC 4271 §8)。
-    // ① TCP :179 = Connect 以降 (リンク up)、② OPEN 交換 = OpenSent 以降、③ Established = is_established。
+    // FSM progress indicator: derived from the state fields (RFC 4271 §8).
+    // ① TCP :179 = Connect onward (link up), ② OPEN exchange = OpenSent onward, ③ Established = is_established.
     var bs = s.bgp_state, up = !!(s.interfaces && s.interfaces.eth0 && s.interfaces.eth0.up);
     var on = [
       up && ['Connect', 'OpenSent', 'OpenConfirm', 'Established'].indexOf(bs) >= 0,
@@ -162,9 +162,9 @@ view.openDeepDive();</pre>
     });
     view = xrayCore.renderTopology('#topo', window.BGP_CONFIG, {
       topology: TOPO_UP,
-      trace: { success: true, reached: false, hops: [] }   // セッションデモ=ping 経路なし (Seam B fetch 抑制)
+      trace: { success: true, reached: false, hops: [] }   // session demo = no ping path (suppresses Seam B fetch)
     });
-    // Seam C: 円柱内の BGP Table。Established のときだけ r1 から学習した 203.0.113.0/24 を表示。
+    // Seam C: BGP Table inside the cylinder. Shows the 203.0.113.0/24 learned from r1 only when Established.
     view.setBgpTable(function (s) {
       return (s && s.is_established)
         ? [{ prefix: '203.0.113.0/24', nexthop: '10.0.12.1', status: '*>' }]

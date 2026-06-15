@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -26,7 +26,7 @@
   button.deep{background:#37474f}button.deep:hover{background:#455a64}
   .caption{margin:8px 0 4px;padding:10px 14px;background:#10202c;border-left:3px solid var(--rc-accent);
     border-radius:0 6px 6px 0;font-size:13px;color:#cfe8ee;line-height:1.5;min-height:1.5em}
-  /* FSM 進行インジケータ: hello フローは双方向のまま、認識の段階だけを示す (RFC 2328 §10.1) */
+  /* FSM progress indicator: the hello flow stays bidirectional; this only shows the recognition stage (RFC 2328 §10.1) */
   .fsm{display:flex;gap:16px;flex-wrap:wrap;margin:6px 2px 10px;font-size:12px}
   .fsm-step{display:flex;align-items:center;gap:6px;color:#5f7d8c;transition:color .2s}
   .fsm-step .dot{width:9px;height:9px;border-radius:50%;background:#37474f;transition:all .2s}
@@ -50,7 +50,7 @@
   .topo-target-label{color:#ef5350;font-size:11px;margin-top:8px;font-weight:bold}
   .terminal-hint{display:none}
   #demo-wrap .xray-holo-panel{top:12px!important;right:14px!important;left:auto!important}
-  /* OSS demo: ping/packet 演出は通信依存ゆえ非表示 (機能はエンジンに残存=DATA-CONTRACT)。状態/hello は表示。 */
+  /* OSS demo: ping/packet animation is hidden because it depends on live traffic (the feature remains in the engine = DATA-CONTRACT). State/hello are still shown. */
   #demo-wrap .de-ping-orb,#demo-wrap .de-ping-req,#demo-wrap .de-ping-rep,
   #demo-wrap .de-packet,#demo-wrap .xray-packet-orb{display:none!important}
   pre{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:"Courier New",monospace;font-size:12.5px;line-height:1.6;color:#cfe8ee;margin-top:22px}
@@ -64,9 +64,9 @@
   <p style="margin:0 0 10px"><a href="index.html" style="color:#80deea;text-decoration:none;font-size:13px">← Gallery</a></p>
   <h1><span class="x">CCNA</span>: OSPF adjacency formation <small>(xray-core gallery)</small></h1>
   <p class="sub">
-    Cisco / FRR を起動せずに <b>OSPF 隣接が Down → Full に至る 7 ステート</b>を講義で見せる。
-    各ボタンで状態を切替。<b>「Open the router」</b>で円柱を開くと、隣接形成が中で見える
-    (hello・LSDB 集約・トンネル)。
+    Show the <b>7 states an OSPF adjacency goes through from Down to Full</b> in a lecture, without booting Cisco / FRR.
+    Switch states with the buttons. Click <b>"Open the router"</b> to open the cylinder and watch the adjacency form inside
+    (hello, LSDB gather, tunnel).
   </p>
 
   <div class="controls">
@@ -82,9 +82,9 @@
   </div>
   <div class="caption" id="caption"></div>
   <div class="fsm" id="fsm">
-    <div class="fsm-step" data-i="1"><span class="dot"></span>① 自分 → 相手 Hello 送信</div>
-    <div class="fsm-step" data-i="2"><span class="dot"></span>② 相手 → 自分 Hello 受信</div>
-    <div class="fsm-step" data-i="3"><span class="dot"></span>③ 双方向(相手が自分を RID 掲載)</div>
+    <div class="fsm-step" data-i="1"><span class="dot"></span>1. Self &rarr; peer: Hello sent</div>
+    <div class="fsm-step" data-i="2"><span class="dot"></span>2. Peer &rarr; self: Hello received</div>
+    <div class="fsm-step" data-i="3"><span class="dot"></span>3. Bidirectional (peer lists our RID)</div>
   </div>
 
   <div class="topology is-xray-mode">
@@ -96,8 +96,8 @@
 <span class="k">var</span> view = xrayCore.renderTopology(<span style="color:#a5d6a7">'#topo'</span>, CCNA_CONFIG, { topology: TOPO });
 
 <span class="c">// each state button = one snapshot</span>
-view.applyState(CCNA_STATES.exchange);   <span class="c">// → LSA 集約アニメが流れる</span>
-view.applyState(CCNA_STATES.full);       <span class="c">// → トンネル + LSDB 緑、集約停止</span>
+view.applyState(CCNA_STATES.exchange);   <span class="c">// → LSA gather animation plays</span>
+view.applyState(CCNA_STATES.full);       <span class="c">// → tunnel + LSDB green, gather stops</span>
 
 <span class="c">// "inside the router" cylinder:</span>
 view.openDeepDive();</pre>
@@ -139,9 +139,9 @@ view.openDeepDive();</pre>
     view.setTopology(name === 'linkdown' ? TOPO_DOWN : TOPO_UP);
     view.applyState(s);
     var cap = document.getElementById('caption'); if (cap) cap.textContent = (window.CCNA_DESC || {})[name] || '';
-    // FSM 進行インジケータ: 状態フィールドから導出 (RFC 2328 §10.1)。
-    // ① 自分の Hello 送信 = ospf_active_on_interface, ② 相手の Hello 受信 = peer_sending_hello,
-    // ③ 双方向(相手の neighbor リストに自分掲載)= neighbor_state が 2-Way 以降。
+    // FSM progress indicator: derived from state fields (RFC 2328 §10.1).
+    // 1. Our Hello sent = ospf_active_on_interface, 2. Peer Hello received = peer_sending_hello,
+    // 3. Bidirectional (we appear in the peer's neighbor list) = neighbor_state at 2-Way or later.
     var biDir = ['2-Way', 'ExStart', 'Exchange', 'Loading', 'Full'].indexOf(s.neighbor_state) >= 0;
     var on = [!!s.ospf_active_on_interface, !!s.peer_sending_hello, biDir];
     Array.prototype.forEach.call(document.querySelectorAll('#fsm .fsm-step'), function (el) {
@@ -158,7 +158,7 @@ view.openDeepDive();</pre>
     });
     view = xrayCore.renderTopology('#topo', window.CCNA_CONFIG, {
       topology: TOPO_UP,
-      trace: { success: true, reached: false, hops: [] }   // 隣接デモ=ping 経路なし (Seam B fetch 抑制)
+      trace: { success: true, reached: false, hops: [] }   // adjacency demo = no ping path (suppress Seam B fetch)
     });
     window.setState('down');
   }

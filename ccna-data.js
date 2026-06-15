@@ -1,6 +1,6 @@
-// CCNA 講師例のデータ — 2ルータ (R1—R2) の OSPF 隣接形成を 7 ステートで見せる。
-// 実エンジン (xray-core.js) + xrayCore (xray-api.js) で描画。各状態は applyState で切替。
-// 注: これは「隣接形成」の教材なので ping/traffic は使わない (ping オーブはデモCSSで非表示)。
+// Data for the CCNA lecture example — shows OSPF adjacency formation between 2 routers (R1—R2) in 7 states.
+// Rendered with the real engine (xray-core.js) + xrayCore (xray-api.js). Each state is switched via applyState.
+// Note: this is teaching material about "adjacency formation", so ping/traffic is not used (the ping orb is hidden by the demo CSS).
 
 window.CCNA_CONFIG = {
   success: true, id: 'ccna', topology_type: 'linear', layout: '',
@@ -20,13 +20,13 @@ window.CCNA_CONFIG = {
   }
 };
 
-// 1 状態を生成。nbr=OSPF FSM 状態名、opts.peerHello=相手が Hello 送信中か、
-// opts.ifUp=IF が up か。target=r1, peer=r2, 単一 IF eth0 (R1—R2 リンク)。
+// Build one state. nbr = OSPF FSM state name, opts.peerHello = whether the peer is sending Hello,
+// opts.ifUp = whether the IF is up. target=r1, peer=r2, single IF eth0 (R1—R2 link).
 function _ccna(nbr, opts) {
   opts = opts || {};
   var ifUp = opts.ifUp !== false;
-  var ospfOn = ifUp;                       // r1 は OSPF 有効 (IF up の間 Hello 送信)
-  var peerHello = !!opts.peerHello && ifUp; // r2 が Hello 送信中か
+  var ospfOn = ifUp;                       // r1 has OSPF enabled (sends Hello while the IF is up)
+  var peerHello = !!opts.peerHello && ifUp; // whether r2 is sending Hello
   var full = (nbr === 'Full') && ifUp;
   var state = ifUp ? nbr : 'Down';
   return {
@@ -34,20 +34,20 @@ function _ccna(nbr, opts) {
     interfaces: { eth0: { up: ifUp, ip: '10.0.12.1/24' } },
     wan_iface: 'eth0', lan_iface: 'eth0',
     ospf_configured: true,
-    ospf_active_on_interface: ospfOn,       // helloOut (r1 が Hello 送信)
-    peer_sending_hello: peerHello,          // helloIn (r2 の Hello 受信)
+    ospf_active_on_interface: ospfOn,       // helloOut (r1 sends Hello)
+    peer_sending_hello: peerHello,          // helloIn (r2's Hello received)
     neighbor_state: state,
     has_full: full, full_count: full ? 1 : 0,
     has_ospf_route: full, ping_ok: false, cleared: false,
-    iface_hellos: ospfOn ? { eth0: 10 } : {},  // 自IF Hello (送信オーブ)
-    peer_hellos: { r2: 10 },                    // peer Hello (受信オーブ)
+    iface_hellos: ospfOn ? { eth0: 10 } : {},  // own-IF Hello (outbound orb)
+    peer_hellos: { r2: 10 },                    // peer Hello (inbound orb)
     r1_hello: 10, r2_hello: 10, target_hello: 10, peer_hello: 10,
     r1_dead: 40, r2_dead: 40, target_dead: 40, peer_dead: 40,
     target_area: '0.0.0.0', peer_area: '0.0.0.0', r1_area: '0.0.0.0', r2_area: '0.0.0.0',
     timer_match: true, area_match: true,
-    // Full で初めて r2 の loopback 2.2.2.2/32 を OSPF 学習 →
-    // Routing Engine パネル「Route: OSPF 2.2.2.2/32 / FORWARD」+ LSDB 行 + 円柱 FORWARD 矢印に出る。
-    // Full 未満は target=2.2.2.2 を引くが resolved:false → パネル「Route to 2.2.2.2: NONE」。
+    // Only at Full is r2's loopback 2.2.2.2/32 learned via OSPF →
+    // appears in the Routing Engine panel ("Route: OSPF 2.2.2.2/32 / FORWARD") + LSDB row + cylinder FORWARD arrow.
+    // Below Full, target=2.2.2.2 is looked up but resolved:false → panel shows "Route to 2.2.2.2: NONE".
     route_resolution: full
       ? { target: '2.2.2.2', resolved: true, protocol: 'ospf', out_iface: 'eth0', next_hop: '10.0.12.2', matched_prefix: '2.2.2.2/32' }
       : { target: '2.2.2.2', resolved: false, protocol: '', out_iface: '', next_hop: '', matched_prefix: '' },
@@ -56,23 +56,23 @@ function _ccna(nbr, opts) {
 }
 
 window.CCNA_STATES = {
-  down:     _ccna('Down',     { peerHello: false }), // Hello 送信のみ、相手未応答
-  init:     _ccna('Init',     { peerHello: true  }), // 相手 Hello 受信 (片方向)
-  twoway:   _ccna('2-Way',    { peerHello: true  }), // 双方向 Hello 確立 (DR/BDR 選出)
-  exstart:  _ccna('ExStart',  { peerHello: true  }), // Master/Slave 決定、DBD 交換開始
-  exchange: _ccna('Exchange', { peerHello: true  }), // DBD 交換中 → LSDB 集約アニメ
-  loading:  _ccna('Loading',  { peerHello: true  }), // 不足 LSA を要求・取得 → LSDB 集約
-  full:     _ccna('Full',     { peerHello: true  }), // 完全同期 → トンネル + LSDB 緑
-  linkdown: _ccna('Down',     { ifUp: false, peerHello: false }) // リンク断 → ✖・Hello 途絶
+  down:     _ccna('Down',     { peerHello: false }), // sending Hello only, peer not yet responding
+  init:     _ccna('Init',     { peerHello: true  }), // peer Hello received (one-way)
+  twoway:   _ccna('2-Way',    { peerHello: true  }), // bidirectional Hello established (DR/BDR election)
+  exstart:  _ccna('ExStart',  { peerHello: true  }), // Master/Slave decided, DBD exchange begins
+  exchange: _ccna('Exchange', { peerHello: true  }), // DBD exchange in progress → LSDB gather animation
+  loading:  _ccna('Loading',  { peerHello: true  }), // request/retrieve missing LSAs → LSDB gather
+  full:     _ccna('Full',     { peerHello: true  }), // fully synced → tunnel + LSDB green
+  linkdown: _ccna('Down',     { ifUp: false, peerHello: false }) // link down → ✖, Hello stops
 };
 
 window.CCNA_DESC = {
-  down:     'Down — Hello を送信しているが、相手からの Hello はまだ受信していない。',
-  init:     'Init — 相手の Hello を受信(片方向)。まだ自分が相手の neighbor リストに載っていない。',
-  twoway:   '2-Way — 双方向の Hello が成立。ここで DR/BDR が選出される。',
-  exstart:  'ExStart — Master/Slave を決め、DBD(DB Description)交換を開始。',
-  exchange: 'Exchange — DBD で LSDB の要約を交換中。→ 円柱内に LSA 集約アニメが流れる。',
-  loading:  'Loading — 不足している LSA を LSR/LSU で要求・取得中。→ LSA 集約継続。',
-  full:     'Full — LSDB 完全同期・隣接確立。r2 の loopback 2.2.2.2/32 を OSPF 学習 → Routing Engine パネル・LSDB・円柱の FORWARD 矢印に出る。トンネル表示・ゲージ緑・集約停止。',
-  linkdown: 'Link Down — リンク断。Hello が途絶し隣接がダウン(✖)。'
+  down:     'Down — sending Hello, but no Hello has been received from the peer yet.',
+  init:     'Init — peer Hello received (one-way). We do not yet appear in the peer\'s neighbor list.',
+  twoway:   '2-Way — bidirectional Hello established. DR/BDR are elected here.',
+  exstart:  'ExStart — Master/Slave is decided and DBD (DB Description) exchange begins.',
+  exchange: 'Exchange — exchanging LSDB summaries via DBD. → the LSA gather animation plays inside the cylinder.',
+  loading:  'Loading — requesting/retrieving missing LSAs via LSR/LSU. → LSA gather continues.',
+  full:     'Full — LSDB fully synced, adjacency established. r2\'s loopback 2.2.2.2/32 is learned via OSPF → shown in the Routing Engine panel, LSDB, and the cylinder FORWARD arrow. Tunnel shown, gauge green, gather stops.',
+  linkdown: 'Link Down — link down. Hello stops and the adjacency goes down (✖).'
 };
