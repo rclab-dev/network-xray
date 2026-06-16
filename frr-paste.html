@@ -155,7 +155,10 @@ view.openDeepDive();</pre>
   window.__render = function () {
     try {
       var r = window.FRR.build(document.getElementById('route').value, document.getElementById('nei').value, 'r1');
-      if (!r.config.nodes.length) throw new Error('no nodes parsed — check the pasted output');
+      // self node (r1) is always present, so a bare nodes.length check never fails. Require at least
+      // one parsed neighbor — otherwise it's empty / a different vendor / a non-FRR format, and we
+      // show the graceful "couldn't parse" hint instead of drawing a lone, unexplained r1.
+      if (r.config.nodes.length < 2) throw new Error('no OSPF neighbors parsed — is this FRR `show ip route` + `show ip ospf neighbor`?');
       document.getElementById('err').style.display = 'none';
       document.body.classList.remove('is-xray-deep');   // every render returns to the overview
       view = xrayCore.renderTopology('#topo', r.config, { topology: r.topo, trace: r.trace });
