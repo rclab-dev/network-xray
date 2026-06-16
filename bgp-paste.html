@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BGP paste &rarr; render — xray-core gallery</title>
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script><script src="xray-i18n.js"></script>
+<script src="bgp-parse.js"></script>
+<style>
+  :root {
+    --rc-accent:#4dd0e1; --rc-border:#26c6da; --rc-bg:#0f1318;
+    --rc-header-bg:#1c2736; --rc-btn:#00acc1; --rc-btn-hover:#00838f;
+    --rc-target:#e74c3c; --rc-topo-bg:#1e2a38; --rc-topo-box-bg:#141b24;
+    --rc-topo-box-border:#455a64; --rc-topo-iface-bg:#0f1318;
+    --rc-topo-iface-color:#b0bec5; --rc-topo-ip:#80deea;
+    --rc-topo-link-line:linear-gradient(90deg,#37474f,#607d8b,#37474f);
+  }
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:21px;margin:0 0 4px}h1 .x{color:var(--rc-accent)}h1 small{font-size:13px;color:#78909c;font-weight:400}
+  .sub{color:#90a4ae;font-size:14px;margin:0 0 16px;line-height:1.5}
+  .panes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+  .pane label{display:block;font-size:12px;color:#80cbc4;margin:0 0 4px}
+  textarea{width:100%;box-sizing:border-box;height:150px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;
+    border-radius:6px;padding:8px 10px;font-family:"Courier New",monospace;font-size:11.5px;line-height:1.4;resize:vertical}
+  .controls{display:flex;gap:10px;align-items:center;margin:6px 0 14px}
+  button{padding:9px 20px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;background:var(--rc-btn)}
+  button:hover{background:var(--rc-btn-hover)}
+  button.deep{background:#37474f}button.deep:hover{background:#455a64}
+  .hint{font-size:12px;color:#78909c}
+  .topology{position:relative;margin-top:6px;padding:18px;background:var(--rc-topo-bg);border-radius:10px}
+  .topo-diagram{display:flex;align-items:center;justify-content:center;gap:0;padding:24px 10px;overflow-x:auto}
+  .topo-node{display:flex;flex-direction:column;align-items:center;min-width:120px}
+  .topo-box{background:var(--rc-topo-box-bg);border:2px solid var(--rc-topo-box-border);border-radius:8px;padding:12px 16px;text-align:center;min-width:100px}
+  .topo-box.router{border-color:var(--rc-accent)}
+  .topo-box.router.target{border-color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,0.4)}
+  .topo-box h4{margin:0 0 5px 0;font-size:16px}
+  .topo-box.router h4{color:var(--rc-accent)}.topo-box.router.target h4{color:#ef5350}
+  .topo-box .role{font-size:11px;color:#90a4ae;margin-bottom:8px}
+  a.topo-box-link{text-decoration:none;color:inherit}
+  .topo-iface{font-family:monospace;font-size:11px;color:var(--rc-topo-iface-color);margin:3px 0;padding:3px 6px;background:var(--rc-topo-iface-bg);border-radius:3px}
+  .topo-iface .label{color:#78909c}.topo-iface .ip{color:var(--rc-topo-ip)}
+  .topo-link{display:flex;flex-direction:column;align-items:center;padding:0 5px}
+  .topo-link-line{width:60px;height:3px;background:var(--rc-topo-link-line)}
+  .topo-link-label{font-size:10px;color:#78909c}.topo-link-subnet{font-family:monospace;font-size:10px;color:#90a4ae}
+  .topo-target-label{color:#ef5350;font-size:11px;margin-top:8px;font-weight:bold}
+  .terminal-hint{display:none}
+  #demo-wrap .xray-holo-panel{top:12px!important;right:14px!important;left:auto!important}
+  /* OSS demo: ping/packet animation is traffic-specific, so it is hidden (the engine still supports it).
+     BGP session state (tunnel/processor), the learned route, and the BGP table are shown. */
+  #demo-wrap .de-ping-orb,#demo-wrap .de-ping-req,#demo-wrap .de-ping-rep,
+  #demo-wrap .de-packet,#demo-wrap .xray-packet-orb{display:none!important}
+  .err{display:none;margin-top:14px;padding:12px 14px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px;white-space:pre-wrap}
+  pre{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:"Courier New",monospace;font-size:12.5px;line-height:1.6;color:#cfe8ee;margin-top:22px}
+  pre .c{color:#5f7d8c}pre .k{color:#80cbc4}
+  .foot{margin-top:18px;font-size:12px;color:#607d8b;line-height:1.6}
+  code{background:#141b24;padding:1px 5px;border-radius:3px;color:#80deea;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap" id="demo-wrap">
+  <p style="margin:0 0 10px"><a href="index.html" style="color:#80deea;text-decoration:none;font-size:13px">← Gallery</a></p>
+  <h1><span class="x">BGP</span> paste &rarr; render <small>(xray-core gallery)</small></h1>
+  <p class="sub">
+    Paste a router's <code>show bgp summary</code> and <code>show ip bgp</code> output and press
+    <b>Render</b>. This router and its BGP neighbors are drawn, and the engine shows the session
+    (tunnel when Established) and the prefixes it has learned. Click <b>"Open the router"</b> to look
+    inside (BGP processor + the routes in the table).
+    <br><b>🔒 Runs entirely in your browser</b> — your config never leaves the page (no upload, no server).
+    <br><span style="color:#78909c">Supported here: <b>FRR</b> <code>show bgp summary</code> + <code>show ip bgp</code>,
+    small eBGP from one router's view. iBGP / route-reflectors / large tables / multipath aren't fully
+    reconstructed — feed the engine <code>state</code> directly (see
+    <a href="DATA-CONTRACT.md" style="color:#80deea">DATA-CONTRACT.md</a>) or fork <code>bgp-parse.js</code>.</span>
+  </p>
+
+  <div class="panes">
+    <div class="pane">
+      <label>show bgp summary</label>
+      <textarea id="summary">IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.12.2, local AS number 65002 vrf-id 0
+BGP table version 1
+RIB entries 1, using 184 bytes of memory
+Peers 1, using 20 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+10.0.12.1       4      65001        10        12        1    0    0 00:03:42            1        0 N/A
+
+Total number of neighbors 1</textarea>
+    </div>
+    <div class="pane">
+      <label>show ip bgp</label>
+      <textarea id="table">BGP table version is 1, local router ID is 10.0.12.2, vrf id 0
+Default local pref 100, local AS 65002
+Status codes:  s suppressed, d damped, h history, * valid, &gt; best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+
+   Network          Next Hop            Metric LocPrf Weight Path
+*&gt; 203.0.113.0/24   10.0.12.1                0             0 65001 i
+
+Displayed  1 routes and 1 total paths</textarea>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button onclick="window.__render()">Render</button>
+    <button class="deep" id="deepBtn" onclick="toggleDeep()" style="display:none">Open the router (r1) &#9656;</button>
+    <span class="hint">self node = <code>r1</code>; neighbors become <code>r2</code>, <code>r3</code>, &hellip;</span>
+  </div>
+
+  <div class="topology is-xray-mode">
+    <div class="topo-diagram" id="topo"></div>
+    <div class="xray-deep-engine"></div>
+  </div>
+  <div class="err" id="err"></div>
+
+<pre><span class="c">// bgp-parse.js turns the pasted text into the engine's config/state…</span>
+<span class="k">var</span> r = BGPFRR.build(summaryText, bgpTableText, <span style="color:#a5d6a7">'r1'</span>);
+
+<span class="c">// …and xrayCore draws it — the topology, the session, and the BGP table:</span>
+<span class="k">var</span> view = xrayCore.renderTopology(<span style="color:#a5d6a7">'#topo'</span>, r.config, { topology: r.topo, trace: r.trace });
+view.setBgpTable(r.bgpRows);   <span class="c">// Seam C: the learned routes, inside the cylinder</span>
+view.applyState(r.state);
+
+<span class="c">// zoom into this router's internals (the cylinder):</span>
+view.openDeepDive();</pre>
+
+  <div class="foot">
+    Field shapes: see <code>DATA-CONTRACT.md</code>. The engine renders BGP as a binary
+    (<code>is_established</code> → purple session tunnel) and installs the learned prefix from
+    <code>route_resolution</code>; it is descriptive, not a simulator. Topology is inferred from one
+    router's view (self + its eBGP neighbors); next-hops are matched to neighbors to place the links.
+    <br>The live ping/packet animation is hidden in this demo (traffic-specific); the engine supports it
+    via Seam B — see <code>DATA-CONTRACT.md</code>.
+  </div>
+</div>
+
+<script>
+(function () {
+  var view = null;
+  function showErr(e) {
+    var el = document.getElementById('err');
+    el.style.display = 'block';
+    el.innerHTML = '<b>Could not build a topology from this paste.</b><br>' +
+      'This demo parses <b>FRR</b> <code>show bgp summary</code> + <code>show ip bgp</code> ' +
+      '(small eBGP). A different vendor / output format, or no BGP neighbors, may not parse.<br>' +
+      '→ Check that <code>show bgp summary</code> lists at least one neighbor, or feed the engine ' +
+      '<code>state</code> directly — see DATA-CONTRACT.md. Your data stayed in the browser.' +
+      '<br><span style="opacity:.6;font-size:11px">(' + (e && e.message ? e.message : e) + ')</span>';
+    if (window.console) console.error(e);
+  }
+  function setDeepLabel(open) {
+    var b = document.getElementById('deepBtn');
+    if (!b) return;
+    b.style.display = view ? '' : 'none';
+    b.innerHTML = open ? '◂ Back to overview' : 'Open the router (r1) ▸';
+  }
+  window.toggleDeep = function () {
+    if (!view) return;
+    if (document.body.classList.contains('is-xray-deep')) { view.closeDeepDive(); setDeepLabel(false); }
+    else { view.openDeepDive(); setDeepLabel(true); }
+  };
+  document.addEventListener('xraycore:deepdive', function (e) { setDeepLabel(!!(e.detail && e.detail.open)); });
+  window.__render = function () {
+    try {
+      var r = window.BGPFRR.build(document.getElementById('summary').value, document.getElementById('table').value, 'r1');
+      // self node (r1) is always present; require at least one parsed BGP neighbor, otherwise show the hint.
+      if (r.config.nodes.length < 2) throw new Error('no BGP neighbors parsed — is this FRR `show bgp summary` + `show ip bgp`?');
+      document.getElementById('err').style.display = 'none';
+      document.body.classList.remove('is-xray-deep');
+      view = xrayCore.renderTopology('#topo', r.config, { topology: r.topo, trace: r.trace });
+      view.setBgpTable(r.bgpRows);
+      view.applyState(r.state);
+      setDeepLabel(false);
+    } catch (e) { showErr(e); }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.__render);
+  else window.__render();
+})();
+</script>
+</body>
+</html>
