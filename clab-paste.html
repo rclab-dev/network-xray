@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>containerlab paste &rarr; render — xray-core gallery</title>
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script><script src="xray-i18n.js"></script>
+<script src="clab-to-xray.js"></script>
+<script src="clab-xray-bridge.js"></script>
+<style>
+  :root{--rc-accent:#4dd0e1;--rc-btn:#00acc1;--rc-btn-hover:#00838f;--rc-topo-bg:#1e2a38;--rc-topo-box-bg:#141b24;
+    --rc-topo-box-border:#455a64;--rc-topo-iface-bg:#0f1318;--rc-topo-iface-color:#b0bec5;--rc-topo-ip:#80deea;
+    --rc-topo-link-line:linear-gradient(90deg,#37474f,#607d8b,#37474f);}
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:24px 18px 60px}
+  h1{font-size:21px;margin:0 0 4px}h1 .x{color:var(--rc-accent)}h1 small{font-size:13px;color:#78909c;font-weight:400}
+  .sub{color:#90a4ae;font-size:14px;margin:0 0 14px;line-height:1.55}
+  label.fld{display:block;font-size:12px;color:#80cbc4;margin:0 0 4px}
+  textarea{width:100%;box-sizing:border-box;height:200px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;
+    border-radius:6px;padding:8px 10px;font-family:"Courier New",monospace;font-size:12px;line-height:1.45;resize:vertical}
+  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 6px}
+  button{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;background:var(--rc-btn)}
+  button:hover{background:var(--rc-btn-hover)}button.cur{background:#26c6da;box-shadow:0 0 0 2px rgba(38,198,218,.4)}
+  button.fault{background:#5d4037}button.fault:hover{background:#4e342e}button.deep{background:#37474f}button.deep:hover{background:#455a64}
+  .opt{font-size:12px;color:#90a4ae;display:inline-flex;align-items:center;gap:4px}
+  .opt input[type=text]{width:70px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;border-radius:4px;padding:3px 6px;font-family:monospace}
+  .info{font-size:12.5px;color:#80cbc4;margin:6px 0;min-height:1.3em}.info b{color:#4dd0e1}
+  .caption{margin:6px 0;padding:9px 13px;background:#10202c;border-left:3px solid var(--rc-accent);border-radius:0 6px 6px 0;font-size:13px;color:#cfe8ee;min-height:1.3em}
+  .topology{position:relative;margin-top:6px;padding:18px;background:var(--rc-topo-bg);border-radius:10px}
+  .topo-diagram{display:flex;align-items:center;justify-content:center;padding:24px 10px;overflow-x:auto}
+  .topo-node{display:flex;flex-direction:column;align-items:center;min-width:120px}
+  .topo-box{background:var(--rc-topo-box-bg);border:2px solid var(--rc-topo-box-border);border-radius:8px;padding:12px 16px;text-align:center;min-width:100px}
+  .topo-box.router{border-color:var(--rc-accent)}.topo-box.server{border-color:#7e57c2}.topo-box.isp{border-color:#66bb6a}
+  .topo-box.target{border-color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.4)}
+  .topo-box h4{margin:0 0 5px;font-size:16px}.topo-box.router h4{color:var(--rc-accent)}.topo-box.target h4{color:#ef5350}
+  .topo-box .role{font-size:11px;color:#90a4ae;margin-bottom:8px}a.topo-box-link{text-decoration:none;color:inherit}
+  .topo-iface{font-family:monospace;font-size:11px;color:var(--rc-topo-iface-color);margin:3px 0;padding:3px 6px;background:var(--rc-topo-iface-bg);border-radius:3px}
+  .topo-iface .label{color:#78909c}.topo-iface .ip{color:var(--rc-topo-ip)}
+  .topo-link{display:flex;flex-direction:column;align-items:center;padding:0 5px}
+  .topo-link-line{width:60px;height:3px;background:var(--rc-topo-link-line)}
+  .topo-link-label{font-size:10px;color:#78909c}.topo-link-subnet{font-family:monospace;font-size:10px;color:#90a4ae}
+  .topo-target-label{color:#ef5350;font-size:11px;margin-top:8px;font-weight:bold}.terminal-hint{display:none}
+  #demo-wrap .xray-holo-panel{top:12px!important;right:14px!important;left:auto!important}
+  #demo-wrap .de-ping-orb,#demo-wrap .de-ping-req,#demo-wrap .de-ping-rep,#demo-wrap .de-packet,#demo-wrap .xray-packet-orb{display:none!important}
+  .err{display:none;margin-top:12px;padding:12px 14px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px;white-space:pre-wrap}
+  pre{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:"Courier New",monospace;font-size:12px;line-height:1.6;color:#cfe8ee;margin-top:20px}
+  pre .c{color:#5f7d8c}.foot{margin-top:16px;font-size:12px;color:#607d8b;line-height:1.6}code{background:#141b24;padding:1px 5px;border-radius:3px;color:#80deea;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap" id="demo-wrap">
+  <p style="margin:0 0 10px"><a href="index.html" style="color:#80deea;text-decoration:none;font-size:13px">← Gallery</a></p>
+  <h1><span class="x">containerlab</span> paste &rarr; render <small>(xray-core gallery)</small></h1>
+  <p class="sub">
+    Paste a <b>containerlab</b> topology (<code>.clab.yml</code>) and press <b>Render</b>. Your lab's nodes &amp; links are
+    mapped to an X-Ray diagram — then watch the OSPF state, cut a link, and <b>open a router</b> to see inside.
+    <br><b>🔒 Runs entirely in your browser</b> — your topology never leaves the page.
+    <br><span style="color:#78909c">Scope: small FRR labs — <b>2&ndash;3 nodes</b> (2-node link, 3-node path, or 3-node triangle).
+    Bigger graphs aren't mapped yet (X-Ray draws those three shapes). Default protocol = OSPF
+    (<code>?</code> override via the bridge).</span>
+  </p>
+
+  <label class="fld">containerlab topology (clab.yml)</label>
+  <textarea id="src">name: frr-triangle
+topology:
+  nodes:
+    r1:
+      kind: linux
+      image: frrouting/frr:latest
+    r2:
+      kind: linux
+      image: frrouting/frr:latest
+    r3:
+      kind: linux
+      image: frrouting/frr:latest
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]
+    - endpoints: ["r2:eth2", "r3:eth1"]
+    - endpoints: ["r3:eth2", "r1:eth2"]</textarea>
+
+  <div class="controls">
+    <button onclick="window.__render()">Render</button>
+    <span class="opt"><input type="checkbox" id="iv"> inverted-V (3-node path)</span>
+    <span class="opt"><input type="checkbox" id="js"> input is JSON</span>
+    <span class="opt">target <input type="text" id="tg" placeholder="auto"></span>
+  </div>
+  <div class="info" id="info"></div>
+
+  <div class="controls" id="scene" style="display:none">
+    <button id="bn" onclick="window.__scene('normal')">Normal</button>
+    <button id="bf" class="fault" onclick="window.__scene('fault')">Link Down</button>
+    <button class="deep" id="bd" onclick="window.__deep()">Open the router &#9656;</button>
+  </div>
+  <div class="caption" id="cap"></div>
+
+  <div class="topology is-xray-mode"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
+  <div class="err" id="err"></div>
+
+<pre><span class="c">// clab-to-xray.js parses your topology → X-Ray config; clab-xray-bridge.js adds OSPF live state:</span>
+var r     = clabToXray.convert(clabYamlText);           <span class="c">// { ok, config } (or { ok:false, reason })</span>
+var scene = clabXray.toScene(r.config);                 <span class="c">// real protocol + normal/fault state</span>
+var view  = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topos.normal });
+view.applyState(scene.states.normal);
+view.openDeepDive();                                    <span class="c">// inside the router</span></pre>
+
+  <div class="foot">
+    Mapping: 2 nodes/1 link → linear · 3 nodes/2 links → path (<code>inverted-V</code> optional) · 3 nodes/3 links → triangle.
+    IP/subnets are synthesized (<code>10.x.0.0/24</code>); real clab IPs would come from <code>containerlab inspect</code> enrichment.
+    Descriptive renderer, not a simulator.
+  </div>
+</div>
+
+<script>
+(function () {
+  var view = null, scene = null, cur = 'normal';
+  function showErr(msg) {
+    var el = document.getElementById('err'); el.style.display = 'block'; el.innerHTML = msg;
+    document.getElementById('scene').style.display = 'none';
+  }
+  function setDeep(open) { var b = document.getElementById('bd'); if (b) b.innerHTML = open ? '◂ Back to overview' : 'Open the router ▸'; }
+  window.__deep = function () {
+    if (!view) return;
+    if (document.body.classList.contains('is-xray-deep')) { view.closeDeepDive(); setDeep(false); }
+    else { view.openDeepDive(); setDeep(true); }
+  };
+  document.addEventListener('xraycore:deepdive', function (e) { setDeep(!!(e.detail && e.detail.open)); });
+  window.__scene = function (which) {
+    if (!scene) return; cur = which;
+    document.body.classList.remove('is-xray-deep');
+    view = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topos[which], trace: { success: true, reached: which === 'normal', hops: [] } });
+    view.applyState(scene.states[which]);
+    document.getElementById('cap').textContent = which === 'normal'
+      ? 'Normal — all links up, OSPF adjacencies Full, route resolved, ping OK.'
+      : 'Link Down — the inspected router\'s first link is cut: adjacency lost on that link.';
+    document.getElementById('bn').classList.toggle('cur', which === 'normal');
+    document.getElementById('bf').classList.toggle('cur', which === 'fault');
+    setDeep(false);
+  };
+  window.__render = function () {
+    try {
+      document.getElementById('err').style.display = 'none';
+      var opts = { invertedV: document.getElementById('iv').checked, json: document.getElementById('js').checked,
+        target: (document.getElementById('tg').value || '').trim() || null };
+      var r = window.clabToXray.convert(document.getElementById('src').value, opts);
+      if (!r.ok) {
+        showErr('<b>This topology isn\'t mapped (yet).</b><br>' +
+          'X-Ray draws three shapes: 2-node link, 3-node path, 3-node triangle. ' +
+          'Your lab has <b>' + r.nodes.length + ' nodes</b> / <b>' + r.links.length + ' links</b> ' +
+          '(' + r.nodes.join(', ') + ').<br>General graphs need a different renderer (see the repo roadmap). ' +
+          'Your topology stayed in the browser.');
+        document.getElementById('info').textContent = '';
+        return;
+      }
+      var cfg = r.config;
+      scene = window.clabXray.toScene(cfg);
+      var shape = cfg.topology_type + (cfg.layout ? ' (' + cfg.layout + ')' : '');
+      document.getElementById('info').innerHTML = 'Detected: <b>' + cfg._clab_source.node_count + ' nodes</b> / <b>' +
+        cfg._clab_source.link_count + ' links</b> → <b>' + shape + '</b> · target = <b>' + (scene._meta.target) + '</b> · protocol = <b>OSPF</b>';
+      document.getElementById('scene').style.display = '';
+      window.__scene('normal');
+    } catch (e) {
+      showErr('<b>Could not parse this topology.</b><br>The YAML parser handles the common clab subset; ' +
+        'for complex YAML, export JSON (<code>--json</code>) and tick "input is JSON".' +
+        '<br><span style="opacity:.6;font-size:11px">(' + (e && e.message ? e.message : e) + ')</span>');
+      if (window.console) console.error(e);
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.__render); else window.__render();
+})();
+</script>
+</body>
+</html>
