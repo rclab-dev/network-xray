@@ -33,7 +33,11 @@
     var st = document.createElement('style');
     st.id = 'xraycore-interactive';
     var sel = 'body' + new Array(13).join('.is-xray-mode');
-    st.textContent = sel + ' button:not(.topo-box-link),' + sel + ' a:not(.topo-box-link)' +
+    // The engine's disable rule (.is-xray-mode button:not(...):not(#font-size-btn)) carries ID-level
+    // specificity. Two !important rules are decided by specificity, so to win we must match its ID
+    // tier: append two bogus :not(#id) (never match → selection unchanged) for ID specificity 2 > 1.
+    var idBump = ':not(#_xcA):not(#_xcB)';
+    st.textContent = sel + ' button:not(.topo-box-link)' + idBump + ',' + sel + ' a:not(.topo-box-link)' + idBump +
       '{pointer-events:auto!important;cursor:pointer!important}';
     (document.head || document.documentElement).appendChild(st);
   }
