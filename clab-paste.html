@@ -126,16 +126,17 @@ view.openDeepDive();                                    <span class="c">// insid
   };
   document.addEventListener('xraycore:deepdive', function (e) { setDeep(!!(e.detail && e.detail.open)); });
   window.__scene = function (which) {
-    if (!scene) return; cur = which;
-    document.body.classList.remove('is-xray-deep');
-    view = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topos[which], trace: { success: true, reached: which === 'normal', hops: [] } });
+    // renderTopology は __render で一度だけ。シーン切替は setTopology+applyState で更新する
+    // (失敗デモパターン=毎回 renderTopology で再描画すると順序依存で blank 化した)。
+    if (!view || !scene) return; cur = which;
+    view.setTopology(scene.topos[which]);
+    view.setTrace({ success: true, reached: which === 'normal', hops: [] });
     view.applyState(scene.states[which]);
     document.getElementById('cap').textContent = which === 'normal'
       ? 'Normal — all links up, OSPF adjacencies Full, route resolved, ping OK.'
       : 'Link Down — the inspected router\'s first link is cut: adjacency lost on that link.';
     document.getElementById('bn').classList.toggle('cur', which === 'normal');
     document.getElementById('bf').classList.toggle('cur', which === 'fault');
-    setDeep(false);
   };
   window.__render = function () {
     try {
@@ -158,6 +159,10 @@ view.openDeepDive();                                    <span class="c">// insid
       document.getElementById('info').innerHTML = 'Detected: <b>' + cfg._clab_source.node_count + ' nodes</b> / <b>' +
         cfg._clab_source.link_count + ' links</b> → <b>' + shape + '</b> · target = <b>' + (scene._meta.target) + '</b> · protocol = <b>OSPF</b>';
       document.getElementById('scene').style.display = '';
+      // renderTopology はここで一度だけ (新しい貼り付けごと)。以後の Normal/Link Down は __scene が更新。
+      document.body.classList.remove('is-xray-deep');
+      view = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topos.normal, trace: { success: true, reached: true, hops: [] } });
+      cur = null; setDeep(false);
       window.__scene('normal');
     } catch (e) {
       showErr('<b>Could not parse this topology.</b><br>The YAML parser handles the common clab subset; ' +
