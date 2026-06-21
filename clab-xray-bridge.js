@@ -114,10 +114,6 @@
         neighbor_state: fullCount > 0 ? 'Full' : 'None',
         has_full: fullCount > 0, full_count: fullCount,
         ospf_configured: true, ospf_active_on_interface: fullCount > 0,
-        // すべて area 0 の素直なラボ前提 → area 一致。engine deep の Area 診断行を
-        // 「Area: 0 / MATCH」(緑) にする (値が無いと r1=? MISMATCH の誤表示になる)。
-        area_match: true, r1_area: '0', r2_area: '0',
-        r1_hello: 10, r2_hello: 10,   // Hello タイマー一致 (MISMATCH 誤表示防止)
         peer_sending_hello: fullCount > 0,
         iface_hellos: ifaceHellos, peer_hellos: peerHellos,
         has_ospf_route: routeOk && fullCount > 0,
@@ -148,7 +144,60 @@
     };
   }
 
-  var api = { toScene: toScene };
+  // §12-5 (b) 多ピアセレクタ: 任意トポロジの node について、DeepDive で見られる「ビュー」を列挙する。
+  // X-Ray シリンダーは2側 (in/out peer) ゆえ、隣接が 3+ の node は「どの2ピア対を見るか」で複数ビューになる。
+  // 各ビューは node+選択2ピア = 3ノードの sub-config (X-Ray の3形制限内) なので full N-node を渡さず描ける。
+  // ホスト (例: clab graph 外殻) はこの配列をボタン化 → 選択ビューを renderTopology + openDeepDiveFor で描く。
+  //   var views = clabXray.deepViews(fullConfig, 'r1');
+  //   // views[i] = { label, peers:[a,b], scene:{config,topo,states} }
+  //   var v = views[0]; var view = xrayCore.renderTopology('#topo', v.scene.config, {topology:v.scene.topo});
+  //   view.openDeepDiveFor('r1', v.scene.states.normal);
+  function deepViews(cfg, nodeId) {
+    var nets = cfg.networks || [];
+    // node の隣接 (peer, net) を収集
+    var adj = [];
+    nets.forEach(function (nw) {
+      var ms = nw.members || [];
+      if (ms.length !== 2) return;
+      var a = ms[0].node, b = ms[1].node;
+      if (a === nodeId) adj.push({ peer: b, net: nw });
+      else if (b === nodeId) adj.push({ peer: a, net: nw });
+    });
+    var nodeById = {}; (cfg.nodes || []).forEach(function (n) { nodeById[n.id] = n; });
+    function subScene(peerList) {
+      // node を中心に peerList (1-2個) を並べた sub-config を作る → toScene で per-node state 化
+      var ids = [nodeId].concat(peerList);
+      var subNodes = ids.map(function (id) {
+        var src = nodeById[id] || { id: id, type: 'router', role: 'Router' };
+        return Object.assign({}, src, { target: (id === nodeId) });
+      });
+      // 中心を真ん中に並べる (linear/inverted-v 表示用): peer1, node, peer2
+      var ordered = peerList.length === 2 ? [peerList[0], nodeId, peerList[1]] : ids;
+      subNodes.sort(function (x, y) { return ordered.indexOf(x.id) - ordered.indexOf(y.id); });
+      var subNets = adj.filter(function (e) { return peerList.indexOf(e.peer) >= 0; }).map(function (e) { return e.net; });
+      var subCfg = {
+        success: true, id: cfg.id + '-' + nodeId, topology_type: peerList.length === 2 ? 'linear_3node' : 'linear_2node',
+        layout: peerList.length === 2 ? 'inverted_v' : '', nodes: subNodes, networks: subNets,
+        modes: cfg.modes || ['troubleshoot']
+      };
+      return toScene(subCfg);
+    }
+    if (adj.length <= 2) {
+      return [{ label: adj.map(function (e) { return e.peer; }).join(' / ') || nodeId,
+        peers: adj.map(function (e) { return e.peer; }), scene: subScene(adj.map(function (e) { return e.peer; })) }];
+    }
+    // 隣接 3+ : ユニークなピア対を列挙
+    var views = [];
+    for (var i = 0; i < adj.length; i++) {
+      for (var j = i + 1; j < adj.length; j++) {
+        var pr = [adj[i].peer, adj[j].peer];
+        views.push({ label: pr[0] + ' ↔ ' + nodeId + ' ↔ ' + pr[1], peers: pr, scene: subScene(pr) });
+      }
+    }
+    return views;
+  }
+
+  var api = { toScene: toScene, deepViews: deepViews };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.clabXray = api;
 })(typeof window !== 'undefined' ? window : globalThis);

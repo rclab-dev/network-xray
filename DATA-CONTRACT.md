@@ -116,6 +116,23 @@ var view = xrayCore.renderTopology('#topo', config, { topology });
 view.openDeepDiveFor('r2', r2Snapshot);   // re-points the cylinder to r2 and zooms in
 ```
 
+**Multi-peer nodes (degree > 2) / 多ピアノード — `clabXray.deepViews(config, nodeId)`** (clab bridge helper):
+the cylinder is two-sided, so a node with 3+ neighbors has several inspectable views (one per peer
+pair). `deepViews` enumerates them — each entry is a 3-node sub-scene (`nodeId` + the two peers) that
+stays within X-Ray's shapes, so you never feed a full N-node graph to the engine. A host overview can
+turn the list into a peer-pair selector.
+
+シリンダーは2側ゆえ、隣接 3+ のノードは見られるビューが複数(ピア対ごと)。`deepViews` がそれを列挙
+(各ビュー = `nodeId` + 2ピアの3ノード sub-scene = X-Ray の3形内)。full N-node を engine に渡さない。
+
+```js
+clabXray.deepViews(fullConfig, 'spine1').forEach(function (v) {
+  // v = { label, peers:[a,b], scene:{ config, topo, states } }  → make a button per v
+  // on click: var view = xrayCore.renderTopology('#topo', v.scene.config, { topology: v.scene.topo });
+  //           view.openDeepDiveFor('spine1', v.scene.states.normal);
+});
+```
+
 ---
 
 ## 3. `config` — topology & scenario / トポロジ・シナリオ定義
