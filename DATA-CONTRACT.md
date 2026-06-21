@@ -98,6 +98,24 @@ Render path is chosen by `config.topology_type` / `config.xray.pattern`
 
 `window._xrayTargetNode` は調査対象ノードの DOM id(= `'topo-node-' + <target:true のノードの id>`)。
 
+### Per-node DeepDive / 任意ノードの DeepDive — `view.openDeepDiveFor(nodeId, state)`
+
+Re-target the DeepDive cylinder to **any** node and open it. Use when the overview lives in another
+graph tool (e.g. a containerlab graph) and you want node-click → "look inside that node", without
+re-rendering an X-Ray overview. `state` is that node's snapshot (you supply it — a per-node collector
+or your adapter); it is pure (no server fetch). Pairs with `xrayCore.renderTopology(...)` having been
+called once first (the shared topology config is remembered).
+
+任意ノードへ DeepDive を貼り替えて開く。全体図を別 graph ツール(例: containerlab graph)に任せ、
+node クリック→「そのノードの中を見る」をしたいときに使う。`state` は呼び出し側が供給(per-node
+collector / アダプタ)。先に `renderTopology()` を1回呼んでおくこと(共有 config を記憶している)。
+
+```js
+var view = xrayCore.renderTopology('#topo', config, { topology });
+// later, on a node click in your overview:
+view.openDeepDiveFor('r2', r2Snapshot);   // re-points the cylinder to r2 and zooms in
+```
+
 ---
 
 ## 3. `config` — topology & scenario / トポロジ・シナリオ定義

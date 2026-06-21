@@ -17,6 +17,7 @@
   var _pollTimer = null;
   var _bgpSrc = null;     // Seam C source (rows array or function(state) -> rows)
   var _lastState = null;  // last applied snapshot (so the BGP table can reflect it)
+  var _lastConfig = null; // last rendered config (so openDeepDiveFor can re-target the cylinder)
 
   function _need(name) {
     if (typeof window[name] !== 'function') {
@@ -178,6 +179,28 @@
   // The cylinder carries a built-in "✕ 閉じる" button that calls closeXrayDeep().
   window.closeXrayDeep = closeDeepDive;
 
+  // Re-target the DeepDive cylinder to ANY node and open it (§12-5: overview lives in another
+  // graph tool, X-Ray provides per-node DeepDive). Lets a host page do node-click → look inside
+  // that node, without re-rendering the overview. `state` is that node's snapshot (the caller
+  // supplies it — e.g. a per-node collector or the clab bridge); pure, no server fetch.
+  // The engine's deep renderer already takes a target id (xrayRenderDeepEngine(config, nodeId))
+  // and reads window._xrayTargetNode, so this is a thin re-point + applyState + open.
+  function openDeepDiveFor(nodeId, state) {
+    if (!nodeId) return;
+    if (!_lastConfig) throw new Error('xrayCore: call renderTopology() before openDeepDiveFor()');
+    // The engine's deep renderer + zoom are target-centric: the cylinder must be built from a
+    // config whose target IS this node (forceTarget), else the zoom can't bind and stays closed.
+    var cfg = _lastConfig;
+    if (!(cfg.nodes || []).some(function (n) { return n.id === nodeId && n.target; })) {
+      cfg = JSON.parse(JSON.stringify(_lastConfig));
+      (cfg.nodes || []).forEach(function (n) { n.target = (n.id === nodeId); });
+    }
+    window._xrayTargetNode = 'topo-node-' + nodeId;
+    _renderDeepEngine(cfg, nodeId);           // (re)build the cylinder for this node
+    if (state) applyState(state);             // drive its internals (also repaints BGP table + i18n)
+    openDeepDive();
+  }
+
   // Apply one state snapshot to the rendered view (see DATA-CONTRACT.md §4).
   function applyState(state) {
     if (typeof window.applyXrayState !== 'function') {
@@ -234,6 +257,7 @@
 
     var nodes = config.nodes || [];
     var target = nodes.filter(function (n) { return n.target; })[0] || nodes[0] || {};
+    _lastConfig = config;   // remembered so openDeepDiveFor() can re-target the cylinder later
     window._scenarioConfig = config;
     window._xrayTargetNode = 'topo-node-' + (target.id || 'r1');
     window._xrayLiveIfaceStates = window._xrayLiveIfaceStates || {};
@@ -280,6 +304,7 @@
       setTrace: setTrace,
       setBgpTable: setBgpTable,
       openDeepDive: openDeepDive,
+      openDeepDiveFor: openDeepDiveFor,
       closeDeepDive: closeDeepDive,
       startPolling: startPolling,
       stopPolling: stopPolling
@@ -294,6 +319,7 @@
     setTrace: setTrace,
     setBgpTable: setBgpTable,
     openDeepDive: openDeepDive,
+    openDeepDiveFor: openDeepDiveFor,
     closeDeepDive: closeDeepDive,
     startPolling: startPolling,
     stopPolling: stopPolling
