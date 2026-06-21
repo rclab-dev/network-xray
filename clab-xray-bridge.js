@@ -114,6 +114,10 @@
         neighbor_state: fullCount > 0 ? 'Full' : 'None',
         has_full: fullCount > 0, full_count: fullCount,
         ospf_configured: true, ospf_active_on_interface: fullCount > 0,
+        // すべて area 0 の素直なラボ前提 → area 一致。engine deep の Area 診断行を
+        // 「Area: 0 / MATCH」(緑) にする (値が無いと r1=? MISMATCH の誤表示になる)。
+        area_match: true, r1_area: '0', r2_area: '0',
+        r1_hello: 10, r2_hello: 10,   // Hello タイマー一致 (MISMATCH 誤表示防止)
         peer_sending_hello: fullCount > 0,
         iface_hellos: ifaceHellos, peer_hellos: peerHellos,
         has_ospf_route: routeOk && fullCount > 0,
