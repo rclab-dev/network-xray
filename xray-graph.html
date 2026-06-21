@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  xray-graph.html — a drop-in containerlab graph template (worker7 + worker1, §12-5).
+  Usage:  containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
+  static-dir (this gallery root) must contain: xray-core.js, xray-api.js, clab-xray-bridge.js
+
+  Clean 3-layer split (2026-06-21 dedupe):
+    outer shell (this file) = clab graph overview + node/peer selection UX
+    bridge  clabXray.deepViews(fullConfig, nodeId) = enumerate the DeepDive views (per peer-pair)
+    facade  xrayCore.openDeepDiveFor(nodeId, state) = render one view (OSS xray-core 80e3f88+)
+
+  containerlab renders this with Go html/template and passes:
+    {{ .Name }} — lab name (string)
+    {{ .Data }} — JSON string of { nodes:[{name,kind,...}], links:[{source,source_endpoint,target,target_endpoint}] }
+-->
+<title>X-Ray graph — {{ .Name }}</title>
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script>
+<script src="clab-xray-bridge.js"></script>
+<style>
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  h1{font-size:19px;margin:0 0 2px}h1 .x{color:#4dd0e1}h1 small{color:#78909c;font-weight:400;font-size:13px}
+  .sub{color:#90a4ae;font-size:13px;margin:0 0 10px;line-height:1.5}
+  .ov{position:relative;width:560px;height:360px;margin:6px auto;background:#16202b;border-radius:10px;border:1px solid #24323e}
+  .ov svg{position:absolute;inset:0;pointer-events:none}
+  .ov-node{position:absolute;transform:translate(-50%,-50%);background:#141b24;border:2px solid #4dd0e1;border-radius:8px;
+    padding:7px 12px;cursor:pointer;font-weight:700;color:#4dd0e1;font-size:13px;white-space:nowrap;text-align:center}
+  .ov-node .k{display:block;font-size:9px;color:#78909c;font-weight:400}
+  .ov-node:hover{box-shadow:0 0 12px rgba(77,208,225,.6)}
+  .ov-node.sel{border-color:#ef5350;color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.5)}
+  #peers{text-align:center;margin:8px 0;min-height:28px}
+  #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
+  #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
+  #peers button.cur{background:#26c6da;color:#06222a;border-color:#26c6da;font-weight:700}
+  .topology{position:relative;margin:8px 0;min-height:420px;background:#1e2a38;border-radius:10px}
+  #topo{display:none}.xray-deep-engine{min-height:420px}
+  .err{display:none;margin:10px 0;padding:10px 12px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px}
+</style>
+</head>
+<body class="is-xray-mode">
+<div class="wrap">
+  <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small>(containerlab × X-Ray DeepDive)</small></h1>
+  <p class="sub">Overview = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
+    OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.</p>
+  <div class="ov" id="ov"></div>
+  <div id="peers"></div>
+  <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
+  <div class="err" id="err"></div>
+</div>
+
+<!-- containerlab injects the topology JSON here (Go html/template). -->
+<script id="clab-data" type="application/json">{{ .Data }}</script>
+
+<script>
+(function () {
+  function showErr(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;}
+  if (typeof window.clabXray === 'undefined' || typeof window.clabXray.deepViews !== 'function')
+    return showErr('clabXray.deepViews missing — static-dir needs clab-xray-bridge.js (b8b3afb+).');
+  if (typeof window.xrayCore === 'undefined' || typeof window.xrayCore.openDeepDiveFor !== 'function')
+    return showErr('xrayCore.openDeepDiveFor missing — static-dir needs xray-api.js (80e3f88+).');
+
+  // ---- parse containerlab's injected data ----
+  var DATA;
+  try { DATA = JSON.parse(document.getElementById('clab-data').textContent || '{}'); }
+  catch (e) { return showErr('Could not parse containerlab topology data: ' + e.message); }
+  var rawNodes = DATA.nodes || [], rawLinks = DATA.links || [];
+
+  var NAMES = rawNodes.map(function (n) { return n.name; }).filter(Boolean);
+  var KIND = {}; rawNodes.forEach(function (n) { KIND[n.name] = n.kind || ''; });
+  function roleOf(n){ var k=(KIND[n]||'').toLowerCase();
+    return (k==='host'||k==='linux-host'||/^(sv|server|host|client|pc|h\d+)$/i.test(n)) ? 'server' : 'router'; }
+
+  // adjacency from links (Link.source / Link.target are node short-names)
+  var ADJ = {}; NAMES.forEach(function (n) { ADJ[n] = []; });
+  var EDGES = [];
+  rawLinks.forEach(function (l) {
+    var a = l.source, b = l.target; if (!a || !b || a === b) return;
+    if (!ADJ[a]) ADJ[a] = []; if (!ADJ[b]) ADJ[b] = [];
+    if (ADJ[a].indexOf(b) < 0) { ADJ[a].push(b); }
+    if (ADJ[b].indexOf(a) < 0) { ADJ[b].push(a); }
+    var k=[a,b].sort().join('|'); if (EDGES.indexOf(k)<0) EDGES.push(k);
+  });
+  Object.keys(ADJ).forEach(function (n) { if (NAMES.indexOf(n) < 0) NAMES.push(n); });
+
+  // ---- build the FULL X-Ray config (all nodes + all networks) that deepViews consumes ----
+  var fullCfg = {
+    id: (document.getElementById('labname').textContent || 'clab'),
+    topology_type: 'multi', layout: '',
+    nodes: NAMES.map(function (n) { var r=roleOf(n); return { id:n, type:r, role: r==='server'?'Server':'Router' }; }),
+    networks: EDGES.map(function (k) { var p=k.split('|');
+      return { name: 'net-'+p[0]+p[1], members:[{node:p[0],host_id:10},{node:p[1],host_id:20}] }; }),
+    modes: ['troubleshoot']
+  };
+
+  // ---- commodity circular auto-layout (any N nodes) ----
+  var W=560,H=360,cx=W/2,cy=H/2,R=Math.min(W,H)/2-60, POS={};
+  NAMES.forEach(function (n,i){ var a=(i/Math.max(1,NAMES.length))*Math.PI*2-Math.PI/2;
+    POS[n]= NAMES.length===1 ? [cx,cy] : [cx+R*Math.cos(a), cy+R*Math.sin(a)]; });
+
+  // ================= render one deepView =================
+  // 3-layer: bridge deepViews → facade openDeepDiveFor. (自前 subYaml/pairsOf は撤去)
+  function renderView(v, nodeId){
+    document.body.classList.remove('is-xray-deep');
+    window.xrayCore.renderTopology('#topo', v.scene.config, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
+    window.xrayCore.openDeepDiveFor(nodeId, v.scene.states.normal);   // facade (a)
+    var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
+    return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
+  }
+
+  // ================= node click → deepViews + (b) peer-pair selector =================
+  function showNode(nodeId){
+    document.querySelectorAll('.ov-node').forEach(function(e){e.classList.toggle('sel', e.getAttribute('data-n')===nodeId);});
+    var box=document.getElementById('peers'); box.innerHTML='';
+    var views = window.clabXray.deepViews(fullCfg, nodeId);   // ← bridge (b)
+    if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
+    if (views.length > 1) {
+      box.innerHTML='<span class="lbl">'+nodeId+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      views.forEach(function(v,idx){
+        var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
+        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
+        if(idx===0) b.classList.add('cur'); box.appendChild(b);
+      });
+    }
+    renderView(views[0], nodeId);
+  }
+  window.__xrayShowNode = showNode;   // exposed for tests / external triggers
+
+  // ---- draw overview ----
+  var ov=document.getElementById('ov'); var svg='<svg viewBox="0 0 '+W+' '+H+'">'; var drawn={};
+  NAMES.forEach(function(n){ (ADJ[n]||[]).forEach(function(m){
+    var k=[n,m].sort().join('|'); if(drawn[k]||!POS[m])return; drawn[k]=1;
+    svg+='<line x1="'+POS[n][0]+'" y1="'+POS[n][1]+'" x2="'+POS[m][0]+'" y2="'+POS[m][1]+'" stroke="#455a64" stroke-width="2"/>';
+  });}); svg+='</svg>'; ov.innerHTML=svg;
+  NAMES.forEach(function(n){
+    var b=document.createElement('div'); b.className='ov-node'; b.setAttribute('data-n',n);
+    b.innerHTML=n+(KIND[n]?'<span class="k">'+KIND[n]+'</span>':'');
+    b.style.left=POS[n][0]+'px'; b.style.top=POS[n][1]+'px';
+    b.onclick=function(){ showNode(n); };
+    ov.appendChild(b);
+  });
+
+  if(!NAMES.length){ return showErr('No nodes found in topology data.'); }
+  var start = NAMES.slice().sort(function(a,b){ return (ADJ[b]||[]).length-(ADJ[a]||[]).length; })[0];
+  showNode(start);
+})();
+</script>
+</body>
+</html>

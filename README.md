@@ -66,10 +66,31 @@ Open `index.html` for the landing, or each directly:
 | **`frr-paste.html`** | Paste your own `show ip route` + `show ip ospf neighbor` → it reconstructs the topology and draws it. *Bring your own data, zero setup.* |
 | **`bgp-paste.html`** | Paste your own `show bgp summary` + `show ip bgp` → it draws your eBGP neighbors, the session state, and the prefixes you learned; the cylinder shows the BGP processor + table. *Small eBGP, bring your own data.* |
 | **`clab-paste.html`** | Paste a **containerlab** `.clab.yml` → it maps your lab's nodes & links to an X-Ray diagram (OSPF state, fault, DeepDive). *Small FRR labs: 2–3 nodes (link / path / triangle).* |
+| **`xray-graph.html`** | A **containerlab `graph --template`** drop-in: render your *live* lab as an overview of **any size**, then click any node for its X-Ray DeepDive. *See [containerlab graph template](#containerlab-graph-template) below.* |
 | **`ccna-ospf.html`** | Step the 7 OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (RFC 2328 §10.1 accurate.) |
 | **`bgp-session.html`** | Step the eBGP FSM (Idle→Established) between two ASes. DeepDive shows the BGP processor and the session tunnel; at Established it learns `203.0.113.0/24`. (RFC 4271 §8.) |
 | **`noc-live.html`** | Wire `startPolling()` to telemetry; the view updates itself in real time. |
 | **`failover.html`** | A redundant OSPF triangle: cut the shortest path → detour, cut the backup → isolation. |
+
+## containerlab graph template
+
+Already running a **[containerlab](https://containerlab.dev)** lab? `xray-graph.html` is a drop-in for
+`containerlab graph --template`. It renders your live topology as an overview of **any size** (the
+overview layout is commodity — it doesn't try to out-draw NeXt UI), and then **clicking any node opens
+that node's X-Ray DeepDive**: OSPF/BGP adjacencies, LSDB, the route it installs. Nodes with 3+ neighbors
+get a peer-pair selector (the cylinder shows one adjacency pair at a time).
+
+```
+containerlab graph \
+  --topo lab.clab.yml \
+  --template xray-graph.html \
+  --static-dir <this gallery dir>   # serves xray-core.js, xray-api.js, clab-xray-bridge.js
+```
+
+Clone this repo and point `--static-dir` at it. The overview comes from clab's own
+`{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so node/link count is unbounded — X-Ray adds
+the per-node DeepDive on top. *(State is synthesized today; a per-node `vtysh … json` collector for
+live state is on the roadmap.)*
 
 ## What people build with it
 
@@ -192,10 +213,31 @@ view.openDeepDive();                                      // ルータの中へ
 | **`frr-paste.html`** | 自分の `show ip route` + `show ip ospf neighbor` を貼る → トポロジを再構築して描画。*データ持ち込み・セットアップ不要。* |
 | **`bgp-paste.html`** | 自分の `show bgp summary` + `show ip bgp` を貼る → eBGP 隣接・セッション状態・学習プレフィックスを描画。円柱で BGP プロセッサ + テーブルを表示。*小規模 eBGP・データ持ち込み。* |
 | **`clab-paste.html`** | **containerlab** の `.clab.yml` を貼る → ラボのノード/リンクを X-Ray 図にマップ(OSPF 状態・障害・DeepDive)。*小規模 FRR ラボ: 2〜3 ノード(link / path / triangle)。* |
+| **`xray-graph.html`** | **containerlab `graph --template`** の drop-in:稼働中ラボを**任意サイズ**の overview で描き、ノードをクリックでそのノードの X-Ray DeepDive。*下記 [containerlab graph テンプレート](#containerlab-graph-テンプレート) 参照。* |
 | **`ccna-ospf.html`** | OSPF の7状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 準拠)。 |
 | **`bgp-session.html`** | eBGP の FSM(Idle→Established)を2つの AS 間で1歩ずつ。DeepDive で BGP プロセッサとセッショントンネルを表示し、Established で `203.0.113.0/24` を学習(RFC 4271 §8)。 |
 | **`noc-live.html`** | `startPolling()` をテレメトリに繋ぐと、ビューが自分でリアルタイム更新。 |
 | **`failover.html`** | 冗長 OSPF 三角形:最短路を切る→迂回、バックアップも切る→孤立。 |
+
+## containerlab graph テンプレート
+
+すでに **[containerlab](https://containerlab.dev)** でラボを動かしているなら、`xray-graph.html` が
+`containerlab graph --template` の drop-in です。稼働中トポロジを**任意サイズ**の overview で描き
+(overview レイアウトは commodity — NeXt UI と描画品質を競わない)、**ノードをクリックするとその
+ノードの X-Ray DeepDive** が開きます:OSPF/BGP 隣接・LSDB・インストールされる経路。隣接3+のノードは
+peer-pair セレクタが出ます(円柱は隣接1対ずつ表示)。
+
+```
+containerlab graph \
+  --topo lab.clab.yml \
+  --template xray-graph.html \
+  --static-dir <この gallery ディレクトリ>   # xray-core.js / xray-api.js / clab-xray-bridge.js を serve
+```
+
+このリポジトリを clone して `--static-dir` をそこへ向けるだけ。overview は clab 自身の
+`{{ .Name }}` / `{{ .Data }}`(nodes + links)注入から作るのでノード/リンク数は無制限 — X-Ray は
+その上に per-node DeepDive を足します。*(state は現状は合成。live state 用の per-node `vtysh … json`
+collector はロードマップ。)*
 
 ## 何に使えるか
 
