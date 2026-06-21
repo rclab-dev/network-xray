@@ -89,8 +89,23 @@ containerlab graph \
 
 Clone this repo and point `--static-dir` at it. The overview comes from clab's own
 `{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so node/link count is unbounded — X-Ray adds
-the per-node DeepDive on top. *(State is synthesized today; a per-node `vtysh … json` collector for
-live state is on the roadmap.)*
+the per-node DeepDive on top.
+
+**Live state (optional):** `clab-collect.js` is a small Node tool that reads ONE node's real FRR
+state from a running lab (`docker exec clab-<lab>-<node> vtysh -c "show … json"`) and emits a `state`
+object you feed straight to the DeepDive — so the cylinder shows the *actual* OSPF/BGP adjacency,
+LSDB and installed route, not a synthesized one:
+
+```
+node clab-collect.js --lab <lab> --node <node> --adj eth0:peerA,eth1:peerB > state.json
+# then in the browser:  view.openDeepDiveFor('<node>', state)   // state loaded from state.json
+```
+
+It maps each neighbor to its clab peer by interface (so it works on any IP plan), and supports
+OSPF and BGP. Parsers are verified offline against FRR 8.x; if your FRR version's `… json` keys
+differ, collect the json yourself and pass `--fixtures <dir>`, and please open an issue with the
+raw output. *(Without the collector, the template renders a synthesized state — correct topology,
+assumed-healthy adjacencies.)*
 
 ## What people build with it
 
@@ -236,8 +251,21 @@ containerlab graph \
 
 このリポジトリを clone して `--static-dir` をそこへ向けるだけ。overview は clab 自身の
 `{{ .Name }}` / `{{ .Data }}`(nodes + links)注入から作るのでノード/リンク数は無制限 — X-Ray は
-その上に per-node DeepDive を足します。*(state は現状は合成。live state 用の per-node `vtysh … json`
-collector はロードマップ。)*
+その上に per-node DeepDive を足します。
+
+**live state(任意):** `clab-collect.js` は、稼働中ラボの1ノードの実 FRR 状態を読み
+(`docker exec clab-<lab>-<node> vtysh -c "show … json"`)、DeepDive にそのまま渡せる `state` を出す
+小さな Node ツールです。円柱に「実際の」OSPF/BGP 隣接・LSDB・インストール経路が出ます(合成でなく):
+
+```
+node clab-collect.js --lab <lab> --node <node> --adj eth0:peerA,eth1:peerB > state.json
+# ブラウザ側:  view.openDeepDiveFor('<node>', state)   // state.json を読み込んで渡す
+```
+
+neighbor を interface で clab ピアにマップする(任意 IP プランで動く)・OSPF/BGP 対応。パーサは
+FRR 8.x に対し offline 検証済。FRR バージョンで `… json` のキーが違う場合は自分で json を集め
+`--fixtures <dir>` で渡し、raw 出力を issue で報告ください。*(collector 無しでもテンプレは合成 state で
+描画します — トポロジは正しく、隣接は健全と仮定。)*
 
 ## 何に使えるか
 
