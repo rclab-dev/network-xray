@@ -291,6 +291,16 @@ function xrayApplyHierarchy(state) {
     : "Input: " + state.lanIf;
   var outLabel = document.querySelector(".de-label.out");
   if (outLabel) outLabel.textContent = "Output: " + state.wanIf;
+  // Single-face left: the kept tunnel is .de-tunnel.left-side, which CSS only reveals via
+  // tunnel-active (the right tunnel shows on xray-state-full alone). Toggle it by adjacency state
+  // so the left leaf shows the same up/down tunnel as a right one would.
+  if (window._xraySingleFace && window._xraySingleSide === "left") {
+    var _sfLt = document.querySelector(".de-tunnel.left-side");
+    if (_sfLt) {
+      if (state.ospfFull || state.bgpEstablished) _sfLt.classList.add("tunnel-active");
+      else _sfLt.classList.remove("tunnel-active");
+    }
+  }
   var fwd = document.getElementById("de-cyl-fwd-arrow");
   if (fwd) {
     var rr = window._lastXrayState && window._lastXrayState.route_resolution || {};
