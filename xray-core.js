@@ -294,7 +294,8 @@ function xrayApplyHierarchy(state) {
     if (fwdText && rr.matched_prefix) {
       fwdText.textContent = rr.matched_prefix;
     }
-    var dir = window._xrayFwdDirection;
+    // Single-face: always forward right, overriding any stale global direction from a prior node.
+    var dir = window._xraySingleFace ? "right" : window._xrayFwdDirection;
     var dirKnown = true;
     if (!dir) {
       if (xrayCurrentPingMode() === "cylinder-to-left") {
@@ -2929,7 +2930,9 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += '<ellipse cx="100" cy="340" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.25"/>';
   html += '<ellipse cx="100" cy="400" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.3"/>';
   html += '<ellipse cx="100" cy="460" rx="80" ry="22" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.02)" opacity="0.9"/>';
-  var _fwdDir0 = window._xrayFwdDirection;
+  // Single-face nodes always forward to their single (right) link; force it so a stale
+  // window._xrayFwdDirection carried over from a prior 2-face node can't mirror the arrow left.
+  var _fwdDir0 = singleFace ? "right" : window._xrayFwdDirection;
   if (!_fwdDir0) {
     var _rr0 = window._lastXrayState && window._lastXrayState.route_resolution || {};
     if (window._xrayPingMode === "cylinder-to-left") {
