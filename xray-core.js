@@ -3822,7 +3822,12 @@ function xrayBuildApplyState(config) {
     if (_triNodes) {
       var _lId = _triNodes.left, _rId = _triNodes.right;
       var _leftLink, _rightLink;
-      if (pattern === "ospf_triangle") {
+      // An apex/dual-link node that isn't BGP gets the OSPF dual-link panel. Previously only
+      // "ospf_triangle" did, so an OSPF "ospf_linear" apex (e.g. a clab transit node with 2 OSPF
+      // peers, inverted_v) fell through to the BGP builder and showed a bogus "BGP: Idle". The
+      // bottom tri-link SVG stays gated on "ospf_triangle" only, so no false peer-to-peer link is
+      // drawn for a linear chain. (BGP/bgp_multi still use the BGP builder.)
+      if (pattern === "ospf_triangle" || pattern === "ospf_linear") {
         var _lFull = s[_lId + "_has_full"] !== undefined ? !!s[_lId + "_has_full"] : !!s.has_full;
         var _rFull = s[_rId + "_has_full"] !== undefined ? !!s[_rId + "_has_full"] : false;
         var _lNbr = s[_lId + "_neighbor_state"] || "None";
