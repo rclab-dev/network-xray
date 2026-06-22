@@ -102,9 +102,10 @@ node clab-collect.js --lab <lab> --node <node> --adj eth0:peerA,eth1:peerB > sta
 ```
 
 It maps each neighbor to its clab peer by interface (so it works on any IP plan), and supports
-OSPF and BGP. Parsers are verified offline against FRR 8.x; if your FRR version's `… json` keys
-differ, collect the json yourself and pass `--fixtures <dir>`, and please open an issue with the
-raw output. *(Without the collector, the template renders a synthesized state — correct topology,
+OSPF and BGP. The collector is live-verified end-to-end against a real containerlab FRR 8.4 lab
+(0 field mismatches, live state drives the DeepDive); only FRR 8.4 is live-verified so far, so if
+your FRR version's `… json` keys differ, collect the json yourself and pass `--fixtures <dir>`,
+and please open an issue with the raw output. *(Without the collector, the template renders a synthesized state — correct topology,
 assumed-healthy adjacencies.)*
 
 ## What people build with it
@@ -262,9 +263,10 @@ node clab-collect.js --lab <lab> --node <node> --adj eth0:peerA,eth1:peerB > sta
 # ブラウザ側:  view.openDeepDiveFor('<node>', state)   // state.json を読み込んで渡す
 ```
 
-neighbor を interface で clab ピアにマップする(任意 IP プランで動く)・OSPF/BGP 対応。パーサは
-FRR 8.x に対し offline 検証済。FRR バージョンで `… json` のキーが違う場合は自分で json を集め
-`--fixtures <dir>` で渡し、raw 出力を issue で報告ください。*(collector 無しでもテンプレは合成 state で
+neighbor を interface で clab ピアにマップする(任意 IP プランで動く)・OSPF/BGP 対応。collector は
+実 containerlab FRR 8.4 ラボに対し live で end-to-end 検証済(field mismatch 0・live state が
+DeepDive を駆動)。live 検証済は今のところ FRR 8.4 のみ。FRR バージョンで `… json` のキーが違う
+場合は自分で json を集め `--fixtures <dir>` で渡し、raw 出力を issue で報告ください。*(collector 無しでもテンプレは合成 state で
 描画します — トポロジは正しく、隣接は健全と仮定。)*
 
 ## 何に使えるか

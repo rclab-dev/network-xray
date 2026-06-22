@@ -21,13 +21,14 @@
  *
  * Node-only (it shells out to docker); not a browser module.
  *
- * VERIFICATION / CAVEAT: the JSON parsers + the produced state are verified offline (self-test
- * + a headless DeepDive render) against FRR 8.x `... json` output, and the state is confirmed to
- * drive the X-Ray DeepDive correctly. The LIVE `--lab/--node` docker-exec path itself has only
- * been exercised against those fixtures, not yet against an arbitrary running lab — FRR's json key
- * names drift a little across 7.x/8.x/9.x, so parsing is defensive. If a key differs on your FRR
- * version, run `vtysh -c "show ... json"` yourself and feed it via `--fixtures`, and please open an
- * issue with the raw json so the parser can be widened.
+ * VERIFICATION: the JSON parsers + the produced state are live-verified against real FRR 8.4.
+ * Beyond the offline checks (self-test + a headless DeepDive render against FRR `... json` output),
+ * the LIVE `--lab/--node` docker-exec path was run end-to-end against a real 3-node containerlab
+ * FRR OSPF lab (FRR 8.4): collector exit 0, 0 field mismatches, and the live state drove the
+ * X-Ray DeepDive correctly. CAVEAT: only FRR 8.4 is live-verified so far — FRR's json key names
+ * drift a little across 7.x/9.x, so parsing is defensive. If a key differs on your FRR version,
+ * run `vtysh -c "show ... json"` yourself and feed it via `--fixtures`, and please open an issue
+ * with the raw json so the parser can be widened.
  */
 'use strict';
 
