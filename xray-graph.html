@@ -97,10 +97,19 @@
     modes: ['troubleshoot']
   };
 
-  // ---- commodity circular auto-layout (any N nodes) ----
+  // ---- hub-and-spoke / circular auto-layout (any N nodes) ----
   var W=560,H=360,cx=W/2,cy=H/2,R=Math.min(W,H)/2-60, POS={};
-  NAMES.forEach(function (n,i){ var a=(i/Math.max(1,NAMES.length))*Math.PI*2-Math.PI/2;
-    POS[n]= NAMES.length===1 ? [cx,cy] : [cx+R*Math.cos(a), cy+R*Math.sin(a)]; });
+  // Put the highest-degree node (hub) at top-center with its leaves on the bottom row (NAMES
+  // order, L->R) so the overview's left/right match the hub's DeepDive left/right. Only for >=3
+  // nodes where the hub connects to every leaf; otherwise fall back to the circle (non-breaking).
+  (function(){ var deg=function(n){return (ADJ[n]||[]).length;};
+    if(NAMES.length===1){POS[NAMES[0]]=[cx,cy];return;}
+    var hub=NAMES.slice().sort(function(a,b){return deg(b)-deg(a);})[0];
+    var leaves=NAMES.filter(function(n){return n!==hub;});
+    if(NAMES.length>=3 && deg(hub)>=leaves.length){ POS[hub]=[cx,70];
+      leaves.forEach(function(n,i){ var x=leaves.length===1?cx:(W*0.18+(W*0.64)*(i/(leaves.length-1))); POS[n]=[x,H-70]; }); }
+    else { var order=[hub].concat(leaves); order.forEach(function(n,i){ var a=(i/order.length)*Math.PI*2-Math.PI/2; POS[n]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]; }); }
+  })();
 
   // ================= render one deepView =================
   // 3-layer: bridge deepViews → facade openDeepDiveFor. (自前 subYaml/pairsOf は撤去)
