@@ -299,7 +299,7 @@ function xrayApplyHierarchy(state) {
     if (!dir) {
       if (xrayCurrentPingMode() === "cylinder-to-left") {
         dir = "left";
-      } else if (state.singleIf) {
+      } else if (state.singleIf || window._xraySingleFace) {
         dir = "right";
       } else if (rr.out_iface) {
         dir = rr.out_iface === state.lanIf ? "left" : "right";
@@ -338,7 +338,7 @@ function xrayApplyHierarchy(state) {
   var pingMode = xrayCurrentPingMode();
   _xrayApplyPingModeClasses(b, pingMode);
   var _rr = window._lastXrayState && window._lastXrayState.route_resolution || {};
-  if (!window._xrayIsTransit && _rr.out_iface && _rr.out_iface === state.lanIf && !state.singleIf) {
+  if (!window._xrayIsTransit && _rr.out_iface && _rr.out_iface === state.lanIf && !state.singleIf && !window._xraySingleFace) {
     b.add("ping-left");
   }
   _xrayApplyHelloTiming(state);
@@ -2850,6 +2850,12 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   var isTriangle = (config.topology_type === "triangle" || _xrayIsDualLinkApexLayout(config)) && otherNodes.length >= 2;
   var leftNode = isTriangle ? otherNodes[0] : null;
   var rightNode = isTriangle ? otherNodes[1] : null;
+  // Single-face (stub/endpoint) mode: opt-in flag from the data layer only.
+  // A leaf node has just one real adjacency, so its DeepDive has no input (left) face.
+  // RCL scenarios never set this (their DeepDive target is always a transit/GW with a
+  // real LAN-side input IF) -> RCL render is byte-identical. Triangle is inherently 2-face.
+  var singleFace = !isTriangle && !!((targetNode && targetNode.single_link) || (xray && xray.single_face));
+  window._xraySingleFace = singleFace;
   var html = '<button class="xray-focus-close" onclick="closeXrayDeep()">&#10005; 閉じる</button>';
   html += '<svg class="de-box-svg" viewBox="0 0 1200 700" preserveAspectRatio="none">';
   html += '<rect x="200" y="140" width="800" height="420" stroke="rgba(57,255,20,0.2)" stroke-width="1.5" fill="none"/>';
@@ -2865,7 +2871,7 @@ function xrayRenderDeepEngine(config, activeTargetId) {
     html += '<div class="de-beam in"></div>';
     html += '<div class="de-beam out"></div>';
   } else {
-    html += '<div class="de-beam in"></div>';
+    if (!singleFace) html += '<div class="de-beam in"></div>';
     html += '<div class="de-beam out"></div>';
   }
   if (isOspf || isBgp) {
@@ -2877,8 +2883,10 @@ function xrayRenderDeepEngine(config, activeTargetId) {
       html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _protoLabel + " &#8212; " + rightNode.id + "</div></div>";
     } else {
       var _linearLabel = isBgp ? "BGP SESSION" : "OSPF ADJACENCY";
-      html += '<div class="de-tunnel left-side"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
-      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
+      if (!singleFace) {
+        html += '<div class="de-tunnel left-side"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
+        html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
+      }
       html += '<div class="de-tunnel"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
       html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
     }
@@ -2889,17 +2897,17 @@ function xrayRenderDeepEngine(config, activeTargetId) {
     html += '<div class="de-label in">' + leftNode.id + ": ...</div>";
     html += '<div class="de-label out">' + rightNode.id + ": ...</div>";
   } else {
-    html += '<div class="de-energy el"></div>';
+    if (!singleFace) html += '<div class="de-energy el"></div>';
     html += '<div class="de-energy er"></div>';
-    html += '<div class="de-label in">Input: ...</div>';
+    if (!singleFace) html += '<div class="de-label in">Input: ...</div>';
     html += '<div class="de-label out">Output: ...</div>';
   }
   html += '<div class="de-packet"></div><div class="de-packet p2"></div>';
   html += '<div class="de-ping-orb" id="de-ping-req"></div><div class="de-ping-orb reply" id="de-ping-rep"></div>';
-  html += '<div class="de-ping-orb left-req"></div><div class="de-ping-orb left-rep"></div>';
+  if (!singleFace) html += '<div class="de-ping-orb left-req"></div><div class="de-ping-orb left-rep"></div>';
   if (isOspf) {
     html += '<div class="de-hello-orb out"></div><div class="de-hello-orb in"></div>';
-    html += '<div class="de-hello-orb left-out"></div><div class="de-hello-orb left-in"></div>';
+    if (!singleFace) html += '<div class="de-hello-orb left-out"></div><div class="de-hello-orb left-in"></div>';
   }
   html += '<svg class="de-cyl-svg" viewBox="0 0 200 500" fill="none">';
   html += '<line x1="20" y1="40" x2="20" y2="460" stroke="#00e5ff" stroke-width="1.5" opacity="0.8"/>';
@@ -3735,6 +3743,11 @@ function xrayBuildApplyState(config) {
       document.body.classList.add("xray-target-bypassed");
     } else {
       document.body.classList.remove("xray-target-bypassed");
+    }
+    if (window._xraySingleFace) {
+      document.body.classList.add("xray-single-face");
+    } else {
+      document.body.classList.remove("xray-single-face");
     }
     if (s.input_bgp_established) {
       document.body.classList.add("xray-input-session-up");

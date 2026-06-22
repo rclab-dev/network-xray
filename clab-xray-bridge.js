@@ -167,9 +167,12 @@
     function subScene(peerList) {
       // node を中心に peerList (1-2個) を並べた sub-config を作る → toScene で per-node state 化
       var ids = [nodeId].concat(peerList);
+      // 隣接が 1 つだけ = 端点(スタブ)ノード → DeepDive は入力(左)面を持たない単一面。
+      // engine は targetNode.single_link で単一面モードに入る (toScene が node プロパティを保持)。
+      var isStub = peerList.length === 1;
       var subNodes = ids.map(function (id) {
         var src = nodeById[id] || { id: id, type: 'router', role: 'Router' };
-        return Object.assign({}, src, { target: (id === nodeId) });
+        return Object.assign({}, src, { target: (id === nodeId), single_link: (id === nodeId && isStub) });
       });
       // 中心を真ん中に並べる (linear/inverted-v 表示用): peer1, node, peer2
       var ordered = peerList.length === 2 ? [peerList[0], nodeId, peerList[1]] : ids;
