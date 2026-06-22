@@ -46,10 +46,14 @@ function parseOspfNeighbors(j) {
     var arr = j.neighbors[rid]; if (!Array.isArray(arr)) arr = [arr];
     arr.forEach(function (n) {
       var state = n.state || n.nbrState || n.converged || '';   // "Full/DR", "Init/-", "2-Way/DROther"
+      // FRR 8.x `show ip ospf neighbor json` reports ifaceName as "eth1:10.1.12.2" (iface:local-ip);
+      // strip the :ip so it matches the bare clab link iface (eth1) used for peer mapping & labels.
+      // (route nexthop interfaceName and ospf-interface keys are already bare.)
+      var rawIf = n.ifaceName || n.interfaceName || n.iface || '';
       var rec = {
         rid: rid,
         address: n.address || n.ifaceAddress || n.neighborIp || '',
-        iface: n.ifaceName || n.interfaceName || n.iface || '',
+        iface: String(rawIf).split(':')[0],
         state: state,
         full: /^full/i.test(state)
       };
@@ -396,6 +400,15 @@ function selfTest() {
   _assert(/\/32$/.test(st.route_resolution.matched_prefix), 'target prefers a remote loopback /32');
   _assert(st.area_match === true && st.r1_area === '0' && st.r2_area === '0', 'area_match true + r1/r2 area = 0 (Full implies match; clears Area MISMATCH)');
   _assert(st.timer_match === true && st.r1_hello === 10 && st.r2_hello === 10, 'timer_match true + hellos mirrored from real iface');
+
+  console.log('self-test: OSPF ifaceName "eth0:10.1.0.10" (real FRR 8.4 form) -> iface stripped to bare, peer still maps');
+  var fixIp = JSON.parse(JSON.stringify(FIX));
+  fixIp.ospfNeighbor.neighbors['2.2.2.2'][0].ifaceName = 'eth0:10.1.0.10';
+  var sip = collectFromJson({ node: 'r1', proto: 'ospf', adjacency: [{ iface: 'eth0', peer: 'r2' }],
+    ospfNeighbor: fixIp.ospfNeighbor, ospfInterface: FIX.ospfInterface, route: FIX.route });
+  _assert(sip.r2_iface === 'eth0', 'ifaceName ":ip" stripped to bare eth0');
+  _assert(sip.r2_has_full === true, 'peer still maps to r2 via bare iface (not mislabeled to seq name)');
+  _assert(sip.lan_iface === 'eth0', 'lan_iface bare (no :ip leak)');
 
   console.log('self-test: OSPF DOWN (neighbor Init -> not Full)');
   var down = JSON.parse(JSON.stringify(FIX));
