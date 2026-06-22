@@ -114,6 +114,11 @@
   // ================= render one deepView =================
   // 3-layer: bridge deepViews → facade openDeepDiveFor. (自前 subYaml/pairsOf は撤去)
   function renderView(v, nodeId){
+    // Single-face side hint: if this node has one link, draw it on the side the peer sits in the
+    // overview (peer left of node => left face), so the DeepDive matches the overview geometry.
+    try{ var _tn=(v.scene.config.nodes||[]).filter(function(n){return n.id===nodeId;})[0];
+      if(_tn && _tn.single_link){ var _pe=(ADJ[nodeId]||[])[0];
+        if(_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; } }catch(e){}
     document.body.classList.remove('is-xray-deep');
     window.xrayCore.renderTopology('#topo', v.scene.config, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
     window.xrayCore.openDeepDiveFor(nodeId, v.scene.states.normal);   // facade (a)
