@@ -212,6 +212,15 @@ function buildState(opts) {
     });
   }
 
+  // A peer declared in --adj but absent from the live neighbor/bgp list is a DOWN link (e.g. the
+  // interface was shut). Emit it explicitly as down so the DeepDive per-peer row shows Down instead
+  // of falling back to the engine's default Full.
+  adj.forEach(function (a) {
+    if (a.peer && !peers.some(function (p) { return p.name === a.peer; })) {
+      peers.push({ name: a.peer, iface: a.iface || '', full: false, state: 'Down', ip: '' });
+    }
+  });
+
   var fullCount = peers.filter(function (p) { return p.full; }).length;
 
   // hellos (ospf) per real interface
@@ -418,6 +427,14 @@ function selfTest() {
   _assert(sd.full_count === 0 && sd.has_full === false, 'full_count 0 when Init');
   _assert(sd.r2_has_full === false && sd.r2_neighbor_state === 'Init/-', 'per-peer reflects Init/-');
   _assert(sd.has_ospf_route === false && sd.cleared === false, 'no route / not cleared when down');
+
+  console.log('self-test: OSPF peer in --adj but absent from neighbors (shut link) -> emitted Down');
+  // adj has two peers (eth0:r1, eth1:r3) but the fixture neighbor list only has the eth0 one (-> r1
+  // Full). eth1's peer r3 is absent (link down) and must be emitted as Down, not default Full.
+  var sgone = collectFromJson({ node: 'r2', proto: 'ospf', adjacency: [{ iface: 'eth0', peer: 'r1' }, { iface: 'eth1', peer: 'r3' }],
+    ospfNeighbor: FIX.ospfNeighbor, ospfInterface: FIX.ospfInterface, route: FIX.route });
+  _assert(sgone.r1_has_full === true && sgone.r1_neighbor_state === 'Full', 'live neighbor on eth0 -> r1 Full');
+  _assert(sgone.r3_has_full === false && sgone.r3_neighbor_state === 'Down', 'absent --adj peer r3 emitted Down (not default Full)');
 
   console.log('self-test: BGP (Established, 203.0.113.0/24 best)');
   var sb = collectFromJson({ node: 'r1', proto: 'bgp', adjacency: [{ iface: 'eth0', peer: 'r2' }],
