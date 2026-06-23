@@ -134,7 +134,10 @@ window.__xrayGraphBoot = function () {
         if(_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; } }catch(e){}
     document.body.classList.remove('is-xray-deep');
     window.xrayCore.renderTopology('#topo', v.scene.config, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
-    window.xrayCore.openDeepDiveFor(nodeId, v.scene.states.normal);   // facade (a)
+    // Prefer the REAL collected state for this node (xray-states.js) when present; otherwise use the
+    // topology-derived synthetic scaffold from the bridge.
+    var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    window.xrayCore.openDeepDiveFor(nodeId, _st);   // facade (a)
     var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }
@@ -198,9 +201,22 @@ window.__xrayGraphBoot = function () {
     return window.clabXray && typeof window.clabXray.deepViews === 'function'
         && window.xrayCore && typeof window.xrayCore.openDeepDiveFor === 'function';
   }
+  // Optional real per-node state: clab-xray-collect.js writes xray-states.js
+  // (window.LIVE_STATES) next to the assets. Load it from the working base, ignore if absent
+  // (the graph then uses the topology-derived synthetic scaffold).
+  function withStates(base, done){
+    var s = document.createElement('script');
+    s.src = base + 'xray-states.js';
+    s.onload = done; s.onerror = done;   // optional; 404/HTML is fine
+    document.head.appendChild(s);
+  }
   function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
-  // try the clab-graph base (/static/) first, then fall back to the page-relative base (Pages).
-  loadSeq('static/', function(){ if (ready()) boot(); else loadSeq('', boot); });
+  // try the clab-graph base (/static/) first, then fall back to the page-relative base (Pages);
+  // once the deps resolve on a base, load the optional live states from that same base, then boot.
+  loadSeq('static/', function(){
+    if (ready()) withStates('static/', boot);
+    else loadSeq('', function(){ withStates('', boot); });
+  });
 })();
 </script>
 </body>

@@ -108,6 +108,17 @@ your FRR version's `… json` keys differ, collect the json yourself and pass `-
 and please open an issue with the raw output. *(Without the collector, the template renders a synthesized state — correct topology,
 assumed-healthy adjacencies.)*
 
+**Auto-wire the whole graph (optional):** `clab-xray-collect.js` does the above for *every* node in
+one step — it derives each node's adjacency from the topology links, runs `clab-collect.js` per node,
+and writes `xray-states.js` (`window.LIVE_STATES`) next to the assets. `xray-graph.html` loads it
+automatically when present, so every node's DeepDive shows its **real** state; if it's absent the graph
+falls back to the synthetic scaffold (so this step is purely additive):
+
+```
+node clab-xray-collect.js lab.clab.yml <this gallery dir>     # writes <dir>/xray-states.js
+containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
+```
+
 ## What people build with it
 
 - **Interactive teaching modules** — embed an OSPF/BGP walkthrough in a blog post or course.
