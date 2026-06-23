@@ -127,16 +127,34 @@ window.__xrayGraphBoot = function () {
   // ================= render one deepView =================
   // 3-layer: bridge deepViews → facade openDeepDiveFor. (自前 subYaml/pairsOf は撤去)
   function renderView(v, nodeId){
-    // Single-face side hint: if this node has one link, draw it on the side the peer sits in the
-    // overview (peer left of node => left face), so the DeepDive matches the overview geometry.
-    try{ var _tn=(v.scene.config.nodes||[]).filter(function(n){return n.id===nodeId;})[0];
-      if(_tn && _tn.single_link){ var _pe=(ADJ[nodeId]||[])[0];
-        if(_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; } }catch(e){}
-    document.body.classList.remove('is-xray-deep');
-    window.xrayCore.renderTopology('#topo', v.scene.config, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
     // Prefer the REAL collected state for this node (xray-states.js) when present; otherwise use the
     // topology-derived synthetic scaffold from the bridge.
     var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
+    // Protocol: the collector marks BGP states (s.protocol==='bgp'). Switch the scene to BGP so the
+    // panel, tunnels and direction render as BGP instead of the bridge's OSPF default.
+    if (_st && _st.protocol === 'bgp') {
+      _cfg.xray.protocol = 'bgp';
+      var _others0 = (_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      _cfg.xray.pattern = _others0.length >= 2 ? 'bgp_multi' : 'bgp';
+    }
+    // Overview-geometry alignment: order the node's peers so left-in-overview = left face. For a
+    // single link this sets single_link 'left'/'right'; for a transit (two peers) it reorders the
+    // two peer nodes by their overview x, so leftNode/rightNode (and the forward direction derived
+    // from route_resolution.out_iface) are deterministic and match the overview, instead of the
+    // bridge's adjacency-order which can swap run-to-run.
+    try{
+      var _tn=(_cfg.nodes||[]).filter(function(n){return n.id===nodeId;})[0];
+      if(_tn && _tn.single_link){ var _pe=(ADJ[nodeId]||[])[0];
+        if(_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; }
+      var _peers=(_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      if(_peers.length===2 && _tn && POS[_peers[0].id] && POS[_peers[1].id]
+         && POS[_peers[0].id][0] > POS[_peers[1].id][0]){
+        _cfg.nodes = [_peers[1], _tn, _peers[0]];   // index0 = geometrically-left peer
+      }
+    }catch(e){}
+    document.body.classList.remove('is-xray-deep');
+    window.xrayCore.renderTopology('#topo', _cfg, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
     window.xrayCore.openDeepDiveFor(nodeId, _st);   // facade (a)
     var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
