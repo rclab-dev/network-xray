@@ -64,8 +64,20 @@ window.__xrayGraphBoot = function () {
     return showErr('xrayCore.openDeepDiveFor missing — static-dir needs xray-api.js (80e3f88+).');
 
   // ---- parse containerlab's injected data ----
+  // This file is a containerlab `graph --template`: clab replaces {{ .Data }} with the topology
+  // JSON. Opened directly (e.g. on GitHub Pages) the placeholder is unsubstituted — show a friendly
+  // pointer to the browser demo instead of a JSON parse error.
+  var _raw = (document.getElementById('clab-data').textContent || '').trim();
+  if (!_raw || _raw.indexOf('{{') >= 0) {
+    var _e = document.getElementById('err'); _e.style.display = 'block';
+    _e.innerHTML = 'This page is a <b>containerlab graph template</b> — render it with '
+      + '<code>containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir &lt;this dir&gt;</code>.'
+      + '<br>To try X-Ray in the browser (no containerlab needed), open '
+      + '<a href="clab-paste.html" style="color:#80cbc4">clab-paste.html</a> and paste a <code>.clab.yml</code>.';
+    return;
+  }
   var DATA;
-  try { DATA = JSON.parse(document.getElementById('clab-data').textContent || '{}'); }
+  try { DATA = JSON.parse(_raw); }
   catch (e) { return showErr('Could not parse containerlab topology data: ' + e.message); }
   var rawNodes = DATA.nodes || [], rawLinks = DATA.links || [];
 
