@@ -3891,13 +3891,22 @@ function xrayBuildApplyState(config) {
           target: (s.route_resolution || {}).target || "3.3.3.3"
         });
       } else {
+        // Per-peer BGP up state: the collector emits <peer>_has_full (= established) for both
+        // protocols and does not set <peer>_established, so fall back to it (then to the node-wide
+        // is_established). Without this a graph BGP transit had up=false on both links and its
+        // tunnels stayed collapsed (the BGP-transit form of the left-tunnel fix).
+        var _peerEst = function (id) {
+          return s[id + "_established"] !== undefined ? !!s[id + "_established"]
+               : s[id + "_has_full"] !== undefined ? !!s[id + "_has_full"]
+               : !!s.is_established;
+        };
         _leftLink = {
-          up: !!s[_lId + "_established"],
+          up: _peerEst(_lId),
           fallback: false,
           ifName: s[_lId + "_iface"]
         };
         _rightLink = {
-          up: !!s[_rId + "_established"],
+          up: _peerEst(_rId),
           fallback: false,
           ifName: s[_rId + "_iface"]
         };
