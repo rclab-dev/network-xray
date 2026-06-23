@@ -64,11 +64,13 @@ window.__xrayGraphBoot = function () {
     return showErr('xrayCore.openDeepDiveFor missing — static-dir needs xray-api.js (80e3f88+).');
 
   // ---- parse containerlab's injected data ----
-  // This file is a containerlab `graph --template`: clab replaces {{ .Data }} with the topology
-  // JSON. Opened directly (e.g. on GitHub Pages) the placeholder is unsubstituted — show a friendly
-  // pointer to the browser demo instead of a JSON parse error.
+  // This file is a containerlab `graph --template`: clab substitutes the topology JSON into the
+  // clab-data script. Opened directly (e.g. on GitHub Pages) that placeholder is left as the raw
+  // Go-template action — show a friendly pointer to the browser demo instead of a parse error.
+  // NB: write the "{"+"{" probe split so containerlab's Go text/template (which renders this whole
+  // file) doesn't read it as an action and panic with "unterminated character constant".
   var _raw = (document.getElementById('clab-data').textContent || '').trim();
-  if (!_raw || _raw.indexOf('{{') >= 0) {
+  if (!_raw || _raw.indexOf('{' + '{') >= 0) {
     var _e = document.getElementById('err'); _e.style.display = 'block';
     _e.innerHTML = 'This page is a <b>containerlab graph template</b> — render it with '
       + '<code>containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir &lt;this dir&gt;</code>.'
