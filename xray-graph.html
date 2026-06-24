@@ -162,6 +162,7 @@ window.__xrayGraphBoot = function () {
 
   // ================= node click → deepViews + (b) peer-pair selector =================
   function showNode(nodeId){
+    window.__xrayCurNode = nodeId;   // remember the open node so the live poll can refresh it in place
     document.querySelectorAll('.ov-node').forEach(function(e){e.classList.toggle('sel', e.getAttribute('data-n')===nodeId);});
     var box=document.getElementById('peers'); box.innerHTML='';
     var views = window.clabXray.deepViews(fullCfg, nodeId);   // ← bridge (b)
@@ -229,11 +230,39 @@ window.__xrayGraphBoot = function () {
     document.head.appendChild(s);
   }
   function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
+  // Live mode (opt-in): only when the collector ran with --watch (it sets window.LIVE_WATCH) do we
+  // poll xray-states.js from the resolved base. Change-detection skips a redraw when nothing moved
+  // (no idle flicker); when it changes we applyState() the open node in place (smooth) and only fall
+  // back to a full showNode() if applyState isn't available. A one-shot / static graph never polls.
+  function startLivePoll(base){
+    if (!window.LIVE_WATCH) return;
+    var POLL_MS = 3000;
+    window.__xrayLastStates = JSON.stringify(window.LIVE_STATES || {});
+    setInterval(function(){
+      var s = document.createElement('script');
+      s.src = base + 'xray-states.js?t=' + (+new Date());
+      s.onload = function(){
+        try {
+          var cur = JSON.stringify(window.LIVE_STATES || {});
+          if (cur !== window.__xrayLastStates) {
+            window.__xrayLastStates = cur;
+            var n = window.__xrayCurNode, st = n && window.LIVE_STATES && window.LIVE_STATES[n];
+            if (st && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
+              try { window.xrayCore.applyState(st); } catch (e) { if (window.__xrayShowNode) window.__xrayShowNode(n); }
+            } else if (n && window.__xrayShowNode) { window.__xrayShowNode(n); }
+          }
+        } catch (e) {}
+        s.remove();
+      };
+      s.onerror = function(){ s.remove(); };
+      document.head.appendChild(s);
+    }, POLL_MS);
+  }
   // try the clab-graph base (/static/) first, then fall back to the page-relative base (Pages);
-  // once the deps resolve on a base, load the optional live states from that same base, then boot.
+  // once the deps resolve on a base, load the optional live states from that same base, boot, poll.
   loadSeq('static/', function(){
-    if (ready()) withStates('static/', boot);
-    else loadSeq('', function(){ withStates('', boot); });
+    if (ready()) withStates('static/', function(){ boot(); startLivePoll('static/'); });
+    else loadSeq('', function(){ withStates('', function(){ boot(); startLivePoll(''); }); });
   });
 })();
 </script>

@@ -119,6 +119,18 @@ node clab-xray-collect.js lab.clab.yml <this gallery dir>     # writes <dir>/xra
 containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
 ```
 
+**Live mode (optional):** add `--watch` and the collector keeps re-collecting on an interval, only
+rewriting `xray-states.js` when something actually changed. It also sets `window.LIVE_WATCH`, which
+tells the graph to poll for updates and refresh the **open node in place** (`applyState`, no flicker —
+it redraws only when the state moves). Without `--watch` the snapshot is static and the graph never
+polls, so this is purely opt-in:
+
+```
+node clab-xray-collect.js lab.clab.yml <this gallery dir> --watch --interval 3 &
+containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
+# shut a link in the lab → the open node's DeepDive updates within a few seconds.
+```
+
 ## What people build with it
 
 - **Interactive teaching modules** — embed an OSPF/BGP walkthrough in a blog post or course.
