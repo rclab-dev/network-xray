@@ -281,6 +281,14 @@ function buildState(opts) {
     s.protocol = 'bgp';
     s.ping_ok = routeOk && fullCount > 0;
     s.has_ospf_route = false;
+    // We ran --proto bgp against this node, so BGP IS configured here. Surface that + a session
+    // state so a down/isolated node reads "BGP: Active" (configured, not up) instead of the engine's
+    // "NOT CONFIGURED" default (which is for RCL scenarios with no bgp data at all).
+    s.bgp_configured = true;
+    if (!s.is_established) {
+      var _dp = peers.filter(function (p) { return !p.full; })[0];
+      s.bgp_state = (_dp && _dp.state && _dp.state !== 'Down') ? _dp.state : 'Active';
+    }
     // surface learned bgp prefixes for the BGP table seam (best paths)
     s.bgp_routes = bgpRt.filter(function (r) { return r.best; }).map(function (r) {
       return { prefix: r.prefix, next_hop: r.nextHop };

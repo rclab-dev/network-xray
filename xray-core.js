@@ -1561,10 +1561,17 @@ function xrayUpdateDeepDiveIO(s) {
   }
 }
 
+// Lookup target for the Routing Engine card. RCL scenarios always pass opts.target, so they are
+// unaffected; only a data-driven node with no route and no opts (a down/isolated clab node) yields
+// "" — render that as "no destination" rather than leaking the RCL 8.8.8.8/2.2.2.2 placeholder.
+function _xrayTargetOr(rr, opts) { return (rr && rr.target) || (opts && opts.target) || ""; }
+function _xrayLookupText(t) { return "> Lookup: " + (t || "(no destination)"); }
+function _xrayRouteNoneText(t) { return "> " + (t ? "Route to " + t : "Route") + ': <span style="color:#ff4444">NONE</span>'; }
+
 function xrayStaticLogicLines(s, opts) {
   var rr = s.route_resolution || {};
   var ifaces = s.interfaces || {};
-  var target = rr.target || opts && opts.target || "8.8.8.8";
+  var target = _xrayTargetOr(rr, opts);
   var lines = [];
   Object.keys(ifaces).forEach(function(name) {
     var info = ifaces[name];
@@ -1622,14 +1629,14 @@ function xrayBgpLogicLines(s) {
 function xrayStaticDeepLines(s, opts) {
   var rr = s.route_resolution || {};
   var ifaces = s.interfaces || {};
-  var target = rr.target || opts && opts.target || "8.8.8.8";
+  var target = _xrayTargetOr(rr, opts);
   var lines = [];
   lines.push({
     text: "[Routing Engine]",
     cls: "de-title"
   });
   lines.push({
-    text: "> Lookup: " + target
+    text: _xrayLookupText(target)
   });
   Object.keys(ifaces).forEach(function(name) {
     var info = ifaces[name];
@@ -1669,7 +1676,7 @@ function xrayStaticDeepLines(s, opts) {
       });
     } else {
       lines.push({
-        text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+        text: _xrayRouteNoneText(target),
         style: "color:#ff6b35"
       });
     }
@@ -1685,7 +1692,7 @@ function xrayStaticDeepLines(s, opts) {
 function xrayOspfDeepLines(s, opts) {
   var rr = s.route_resolution || {};
   var ifaces = s.interfaces || {};
-  var target = rr.target || opts && opts.target || "2.2.2.2";
+  var target = _xrayTargetOr(rr, opts);
   var lines = [];
   var h = xrayEvaluateState(s);
   lines.push({
@@ -1822,7 +1829,7 @@ function xrayOspfDeepLines(s, opts) {
     });
   } else {
     lines.push({
-      text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+      text: _xrayRouteNoneText(target),
       style: "color:#ff6b35"
     });
   }
@@ -2009,7 +2016,7 @@ function xrayTriDeepLines(s, opts) {
     });
   } else {
     lines.push({
-      text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+      text: _xrayRouteNoneText(target),
       style: "color:#ff6b35"
     });
   }
@@ -2024,7 +2031,7 @@ function xrayTriDeepLines(s, opts) {
 function xrayBgpDeepLines(s, opts) {
   var rr = s.route_resolution || {};
   var ifaces = s.interfaces || {};
-  var target = rr.target || opts && opts.target || "8.8.8.8";
+  var target = _xrayTargetOr(rr, opts);
   var lines = [];
   var h = window._lastXrayHierarchy || xrayEvaluateState(s);
   lines.push({
@@ -2137,7 +2144,7 @@ function xrayBgpDeepLines(s, opts) {
     });
   } else {
     lines.push({
-      text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+      text: _xrayRouteNoneText(target),
       style: "color:#ff6b35"
     });
   }
