@@ -156,6 +156,20 @@ window.__xrayGraphBoot = function () {
     document.body.classList.remove('is-xray-deep');
     window.xrayCore.renderTopology('#topo', _cfg, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
     window.xrayCore.openDeepDiveFor(nodeId, _st);   // facade (a)
+    // BGP: show learned routes in the dedicated right-side BGP table panel (de-bgp-panel) via the
+    // facade, not as Routing-Engine lines. A function source repaints per applyState frame; OSPF
+    // nodes clear it. Maps the collector's bgp_routes (next_hop) to the facade row shape (nexthop).
+    if (window.xrayCore && typeof window.xrayCore.setBgpTable === 'function') {
+      if (_st && _st.protocol === 'bgp') {
+        window.xrayCore.setBgpTable(function(st){
+          return (((st && st.bgp_routes) || [])).map(function(r){
+            return { prefix: r.prefix, nexthop: r.next_hop, as_path: r.as_path,
+                     local_pref: r.local_pref, weight: r.weight, best: r.best,
+                     status: r.best ? '*>' : '* ' };
+          });
+        });
+      } else { window.xrayCore.setBgpTable(null); }
+    }
     var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }

@@ -72,7 +72,12 @@
     return (typeof _bgpSrc === 'function' ? _bgpSrc(_lastState) : _bgpSrc) || [];
   }
   function _paintBgpTable() {
-    if (!_bgpSrc) return;
+    if (!_bgpSrc) {
+      // cleared (e.g. switched to an OSPF node) — remove any leftover panel so it doesn't linger
+      var _old = document.getElementById('de-bgp-panel');
+      if (_old && _old.parentElement) _old.parentElement.removeChild(_old);
+      return;
+    }
     var re = document.getElementById('de-re-panel');
     if (!re || !re.parentElement) return;   // cylinder not rendered yet
     var tgt = (window._xrayTargetNode || 'topo-node-r1').replace('topo-node-', '');
@@ -87,10 +92,19 @@
     if (!rows || !rows.length) {
       body = '<div class="de-dim">no routes<br>(BGP session not established)</div>';
     } else {
-      body = '<table class="de-bgp-table"><thead><tr><th>Network</th><th>Next-Hop</th><th>Status</th></tr></thead><tbody>';
+      // RCL-style columns: St / Network / Next-Hop / LocPrf / Weight / Path. Best path row is
+      // highlighted (tr.bgp-best) and an unset LocPref shows the implicit default (100) dimmed —
+      // all via the engine's built-in de-bgp-table CSS.
+      body = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>LocPrf</th><th>Weight</th><th>Path</th></tr></thead><tbody>';
       rows.forEach(function (rt) {
-        body += '<tr><td>' + (rt.prefix || '') + '</td><td>' + (rt.nexthop || '') + '</td>' +
-          '<td><span class="bgp-st">' + (rt.status || '') + '</span></td></tr>';
+        var best = rt.best || (rt.status && rt.status.indexOf('>') >= 0);
+        body += '<tr class="' + (best ? 'bgp-best' : '') + '">' +
+          '<td><span class="bgp-st">' + (rt.status || (best ? '*>' : '* ')) + '</span></td>' +
+          '<td>' + (rt.prefix || '') + '</td>' +
+          '<td>' + (rt.nexthop || '') + '</td>' +
+          '<td>' + (rt.local_pref != null ? rt.local_pref : '<span class="bgp-default">100</span>') + '</td>' +
+          '<td>' + (rt.weight != null ? rt.weight : '') + '</td>' +
+          '<td>' + (rt.as_path || '') + '</td></tr>';
       });
       body += '</tbody></table>';
     }
