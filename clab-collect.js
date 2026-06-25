@@ -153,7 +153,11 @@ function parseBgpRoutes(j) {
     arr.forEach(function (r) {
       if (!r || typeof r !== 'object') return;
       var nh = (r.nexthops && r.nexthops[0] && r.nexthops[0].ip) || (r.peerId) || '';
-      out.push({ prefix: r.prefix || prefix, nextHop: nh, best: !!(r.bestpath || r.bestPath || r.valid) });
+      out.push({ prefix: r.prefix || prefix, nextHop: nh, best: !!(r.bestpath || r.bestPath),
+        as_path: (r.path != null ? String(r.path).trim() : ''),
+        local_pref: (r.locPrf != null ? r.locPrf : (r.localPref != null ? r.localPref : null)),
+        weight: r.weight, metric: r.metric, origin: r.origin,
+        reason: r.selectionReason || '' });
     });
   });
   return out;
@@ -289,10 +293,19 @@ function buildState(opts) {
       var _dp = peers.filter(function (p) { return !p.full; })[0];
       s.bgp_state = (_dp && _dp.state && _dp.state !== 'Down') ? _dp.state : 'Active';
     }
-    // surface learned bgp prefixes for the BGP table seam (best paths)
+    // surface learned bgp prefixes for the BGP table (best paths) with the columns the DeepDive shows
+    // (next-hop / AS-path / LocPref / weight / origin / best) so the panel is a real table, not 1 line.
     s.bgp_routes = bgpRt.filter(function (r) { return r.best; }).map(function (r) {
-      return { prefix: r.prefix, next_hop: r.nextHop };
+      var o = { prefix: r.prefix, next_hop: r.nextHop, as_path: r.as_path || '', best: true };
+      if (r.local_pref != null) o.local_pref = r.local_pref;
+      if (r.weight != null) o.weight = r.weight;
+      if (r.metric != null) o.metric = r.metric;
+      if (r.origin) o.origin = r.origin;
+      if (r.reason) o.reason = r.reason;
+      return o;
     });
+    // prefixes received = number of prefixes in this node's BGP RIB (best per prefix)
+    s.pfx_rcvd = s.bgp_routes.length;
   } else {
     s.has_ospf_route = routeOk && fullCount > 0;
     s.ping_ok = routeOk && fullCount > 0;
@@ -301,11 +314,14 @@ function buildState(opts) {
     : { target: route_resolution.target, resolved: false, protocol: '', out_iface: '', next_hop: '', matched_prefix: '' };
   // All prefixes this node learned via the protocol (own = locally originated, no next-hop ip),
   // so the DeepDive LSDB can show the whole picture (link networks + remote loopbacks) instead of
-  // just the one decision target. Symmetric with s.bgp_routes; the engine renders these when present.
-  s.lsdb_prefixes = routes.filter(function (r) { return r.protocol === proto; }).map(function (r) {
-    var via = (r.nexthops && r.nexthops[0]) || {};
-    return { text: r.prefix, own: !via.ip, via: via.ip || via.iface || '' };
-  });
+  // just the one decision target. OSPF only: LSDB is an OSPF concept; BGP learned routes go through
+  // s.bgp_routes (the BGP table), not here.
+  if (proto !== 'bgp') {
+    s.lsdb_prefixes = routes.filter(function (r) { return r.protocol === proto; }).map(function (r) {
+      var via = (r.nexthops && r.nexthops[0]) || {};
+      return { text: r.prefix, own: !via.ip, via: via.ip || via.iface || '' };
+    });
+  }
 
   Object.keys(_area).forEach(function (k) { s[k] = _area[k]; });
   Object.keys(_hello).forEach(function (k) { s[k] = _hello[k]; });

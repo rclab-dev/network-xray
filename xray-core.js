@@ -2083,6 +2083,21 @@ function xrayBgpDeepLines(s, opts) {
       text: "> " + name + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>"
     });
   });
+  // BGP table: the collector supplies learned best paths with columns (next-hop / AS-path / LocPref /
+  // weight). Render them so the BGP DeepDive shows the actual RIB, not just session state. Non-breaking:
+  // RCL scenarios omit s.bgp_routes (they use the xrayRenderBgpTableReplay panel instead).
+  if (s.bgp_routes && s.bgp_routes.length) {
+    lines.push({ text: "[BGP table]", cls: "de-title" });
+    s.bgp_routes.forEach(function(r) {
+      var cols = r.next_hop ? "via " + r.next_hop : "";
+      if (r.as_path) cols += " AS " + r.as_path;
+      if (r.local_pref != null) cols += " LP" + r.local_pref;
+      if (r.weight != null) cols += " w" + r.weight;
+      lines.push({
+        text: "> " + r.prefix + ' <span class="de-dim">' + cols + "</span>" + (r.best ? ' <span class="de-hl">[best]</span>' : "")
+      });
+    });
+  }
   var init = window._xrayInitialState || s;
   if (s.neighbor_ip !== undefined) {
     var initNbOk = !!init.neighbor_correct;
