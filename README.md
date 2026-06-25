@@ -36,9 +36,10 @@ router at the forwarding decision (the deepdive).
 router to look inside. **<https://rclab-dev.github.io/xray-core/>** (or jump straight to
 [paste-your-output](https://rclab-dev.github.io/xray-core/frr-paste.html)).
 
-**▶ Or watch a real lab converge & recover** — four frames captured from a running FRR/containerlab
-lab, replayed in the browser with no backend (steady → link down / router isolated → OSPF re-forms →
-converged): **[recorded replay demo](https://rclab-dev.github.io/xray-core/demo/)**.
+**▶ Or watch a real lab converge & recover** — frames captured from a running FRR/containerlab lab,
+replayed in the browser with no backend (steady → link down / router isolated → re-forms → converged):
+**[OSPF replay](https://rclab-dev.github.io/xray-core/demo/)** ·
+**[BGP replay](https://rclab-dev.github.io/xray-core/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table).
 
 ## Run it
 
