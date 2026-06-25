@@ -36,6 +36,10 @@ router at the forwarding decision (the deepdive).
 router to look inside. **<https://rclab-dev.github.io/xray-core/>** (or jump straight to
 [paste-your-output](https://rclab-dev.github.io/xray-core/frr-paste.html)).
 
+**▶ Or watch a real lab converge & recover** — four frames captured from a running FRR/containerlab
+lab, replayed in the browser with no backend (steady → link down / router isolated → OSPF re-forms →
+converged): **[recorded replay demo](https://rclab-dev.github.io/xray-core/demo/)**.
+
 ## Run it
 
 Open **`index.html`** in a browser — no build, no server, no install. (Or
@@ -77,7 +81,8 @@ Open `index.html` for the landing, or each directly:
 Already running a **[containerlab](https://containerlab.dev)** lab? `xray-graph.html` is a drop-in for
 `containerlab graph --template`. It renders your live topology as an overview of **any size** (the
 overview layout is commodity — it doesn't try to out-draw NeXt UI), and then **clicking any node opens
-that node's X-Ray DeepDive**: OSPF/BGP adjacencies, LSDB, the route it installs. Nodes with 3+ neighbors
+that node's X-Ray DeepDive**: OSPF/BGP adjacencies, the LSDB (every prefix the node learned — its own
+networks and the remote loopbacks, own vs learned), and the route it installs. Nodes with 3+ neighbors
 get a peer-pair selector (the cylinder shows one adjacency pair at a time).
 
 ```
