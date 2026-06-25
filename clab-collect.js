@@ -299,6 +299,13 @@ function buildState(opts) {
   }
   s.route_resolution = (routeOk && fullCount > 0) ? route_resolution
     : { target: route_resolution.target, resolved: false, protocol: '', out_iface: '', next_hop: '', matched_prefix: '' };
+  // All prefixes this node learned via the protocol (own = locally originated, no next-hop ip),
+  // so the DeepDive LSDB can show the whole picture (link networks + remote loopbacks) instead of
+  // just the one decision target. Symmetric with s.bgp_routes; the engine renders these when present.
+  s.lsdb_prefixes = routes.filter(function (r) { return r.protocol === proto; }).map(function (r) {
+    var via = (r.nexthops && r.nexthops[0]) || {};
+    return { text: r.prefix, own: !via.ip, via: via.ip || via.iface || '' };
+  });
 
   Object.keys(_area).forEach(function (k) { s[k] = _area[k]; });
   Object.keys(_hello).forEach(function (k) { s[k] = _hello[k]; });

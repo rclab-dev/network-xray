@@ -1494,6 +1494,16 @@ function xrayUpdateLsdb(s, opts) {
       });
     });
   }
+  // Data-driven LSDB: when the collector supplied every learned prefix, show the whole table
+  // (link nets + remote loopbacks), not just the one decision target. Absent (RCL scenarios) =>
+  // the existing own-subnet + matched_prefix rows above are kept unchanged.
+  if (s.lsdb_prefixes && s.lsdb_prefixes.length) {
+    var _seen = {};
+    rows = s.lsdb_prefixes.map(function(p) { _seen[p.text] = 1; return { text: p.text, own: !!p.own }; });
+    if (synced && rr.resolved && rr.matched_prefix && !_seen[rr.matched_prefix]) {
+      rows.push({ text: rr.matched_prefix, own: false });
+    }
+  }
   rows.forEach(function(row) {
     var div = document.createElement("div");
     var visible = row.own || synced;
