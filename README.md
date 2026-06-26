@@ -94,6 +94,8 @@ that node's X-Ray DeepDive**: OSPF/BGP adjacencies, the LSDB (every prefix the n
 networks and the remote loopbacks, own vs learned), and the route it installs. Nodes with 3+ neighbors
 get a peer-pair selector (the cylinder shows one adjacency pair at a time).
 
+![containerlab deploy, then `graph --template xray-graph.html` — click any node to look inside the router (OSPF/BGP, LSDB, installed route), live. Recorded from a real containerlab/FRR lab.](docs/clab-workflow.gif)
+
 ```
 containerlab graph \
   --topo lab.clab.yml \
