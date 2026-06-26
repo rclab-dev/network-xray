@@ -158,13 +158,9 @@ window.__xrayGraphBoot = function () {
     window.xrayCore.openDeepDiveFor(nodeId, _st);   // facade (a)
     if (window.xrayCore && typeof window.xrayCore.setBgpTable === 'function') {
       if (_st && _st.protocol === 'bgp') {
-        window.xrayCore.setBgpTable(function(st){
-          return (((st && st.bgp_routes) || [])).map(function(r){
-            return { prefix: r.prefix, nexthop: r.next_hop, as_path: r.as_path,
-                     local_pref: r.local_pref, weight: r.weight, best: r.best,
-                     status: r.best ? '*>' : '* ' };
-          });
-        });
+        // pass the collector's bgp_routes as-is (all candidate paths, with status/metric/origin/
+        // local_pref/weight/as_path) so the facade can build the BGP Table + Best-Path Decision.
+        window.xrayCore.setBgpTable(function(st){ return (st && st.bgp_routes) || []; });
       } else { window.xrayCore.setBgpTable(null); }
     }
     var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';

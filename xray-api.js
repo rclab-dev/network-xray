@@ -71,44 +71,148 @@
     if (!_bgpSrc) return null;
     return (typeof _bgpSrc === 'function' ? _bgpSrc(_lastState) : _bgpSrc) || [];
   }
-  function _paintBgpTable() {
-    if (!_bgpSrc) {
-      // cleared (e.g. switched to an OSPF node) — remove any leftover panel so it doesn't linger
-      var _old = document.getElementById('de-bgp-panel');
-      if (_old && _old.parentElement) _old.parentElement.removeChild(_old);
-      return;
+  // --- Best-Path Decision (ported from RCL xray_core xrayBuildBgpView — worker4 全基準化 2026-06-25) ---
+  // Generic, hardcode-free: group candidate paths per prefix and explain WHY the best won (Weight →
+  // LocPrf → AS-Path → Origin → MED tie-break). Reads the clab collector's bgp_routes shape.
+  var _BGP_CRIT = [
+    { key: 'weight', col: 'weight', label: 'Weight',  dir: 1,  val: function (r) { return _bnum(r.weight, 0); } },
+    { key: 'locprf', col: 'locprf', label: 'LocPrf',  dir: 1,  val: function (r) { return _bnum(r.local_pref, 100); } },
+    { key: 'aspath', col: 'path',   label: 'AS-Path', dir: -1, val: function (r) { return r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0; } },
+    { key: 'origin', col: 'path',   label: 'Origin',  dir: -1, val: function (r) { var m = { i: 0, e: 1, '?': 2 }; return (r.origin in m) ? m[r.origin] : 3; } },
+    { key: 'metric', col: 'metric', label: 'MED',     dir: -1, val: function (r) { return _bnum(r.metric, 0); } }
+  ];
+  function _bnum(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : n; }
+  function _bNbrAS(r) { var t = (r.as_path || '').split(/\s+/).filter(Boolean); return t.length ? t[0] : ''; }
+  function _bIsBest(r) { return (r.status || '').indexOf('>') !== -1; }
+  function _bgpDecision(group) {
+    if (!group || !group.length) return null;
+    var best = null; for (var i = 0; i < group.length; i++) { if (_bIsBest(group[i])) { best = group[i]; break; } }
+    if (!best) return { kind: 'nobest' };
+    var localOrigin = _bnum(best.weight, 0) === 32768;
+    if (group.length < 2) return { kind: localOrigin ? 'local' : 'single', best: best, col: null };
+    var chain = [], medSkipped = false;
+    for (var c = 0; c < _BGP_CRIT.length; c++) {
+      var crit = _BGP_CRIT[c], bv = crit.val(best), cohort = group;
+      if (crit.key === 'metric') {
+        var bAS = _bNbrAS(best); cohort = group.filter(function (r) { return _bNbrAS(r) === bAS; });
+        if (cohort.length < 2) { var anyDiff = group.some(function (r) { return r !== best && crit.val(r) !== bv; });
+          chain.push({ crit: crit, bestVal: bv, cmpVal: null, status: anyDiff ? 'skip' : 'tie' }); if (anyDiff) medSkipped = true; continue; }
+      }
+      var cmp = null; cohort.forEach(function (r) { if (r === best) return; var v = crit.val(r); cmp = (cmp === null) ? v : (crit.dir > 0 ? Math.max(cmp, v) : Math.min(cmp, v)); });
+      if (cohort.every(function (r) { return crit.val(r) === bv; })) { chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'tie' }); continue; }
+      if (!cohort.every(function (r) { return r === best || (crit.dir > 0 ? bv > crit.val(r) : bv < crit.val(r)); })) {
+        chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'amb' }); return { kind: 'ambiguous', best: best, chain: chain, col: null };
+      }
+      chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'win' });
+      return { kind: 'decided', best: best, chain: chain, criterion: crit, bestVal: bv, cmpVal: cmp, col: crit.col };
     }
+    return { kind: medSkipped ? 'medskip' : 'tie', best: best, chain: chain, col: null };
+  }
+  function _bgpChain(chain) {
+    if (!chain || !chain.length) return '';
+    var parts = chain.map(function (st) {
+      var op = st.crit.dir > 0 ? '>' : '<';
+      if (st.status === 'skip') return '<span class="bgp-step-tie">' + st.crit.label + ' (skipped: diff AS)</span>';
+      if (st.status === 'tie') { var t = (st.crit.key === 'origin') ? (st.crit.label + ' (tie)') : (st.crit.label + ' ' + st.bestVal + '=' + st.cmpVal); return '<span class="bgp-step-tie">' + t + '</span>'; }
+      var txt = (st.crit.key === 'origin') ? st.crit.label : (st.crit.label + ' ' + st.bestVal + op + st.cmpVal);
+      return '<span class="bgp-step-' + (st.status === 'win' ? 'win' : 'amb') + '">' + txt + (st.status === 'win' ? ' ✅' : ' ?') + '</span>';
+    });
+    return '<div class="bgp-chain">' + parts.join(' → ') + '</div>';
+  }
+  function _bgpReason(p, dec) {
+    if (!dec) return '';
+    if (dec.kind === 'nobest') return '<div class="bgp-reason bgp-reason-note">◦ ' + p + ' → no valid path</div>';
+    if (dec.kind === 'single') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>only path</b> (no alternatives)</div>';
+    if (dec.kind === 'local') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>locally originated</b> (always preferred)</div>';
+    var ch = _bgpChain(dec.chain);
+    if (dec.kind === 'decided') {
+      var op = dec.criterion.dir > 0 ? '>' : '<';
+      var cmp = (dec.criterion.key !== 'origin' && dec.cmpVal !== null) ? ' (' + dec.bestVal + ' ' + op + ' ' + dec.cmpVal + ')' : '';
+      return '<div class="bgp-reason">★ ' + p + ' → best path by <b>' + dec.criterion.label + '</b>' + cmp + '</div>' + ch;
+    }
+    if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>' + ch;
+    if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all attributes equal — <b>tiebreak by Router ID</b></div>' + ch;
+    return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>no single decider</b> — lower-level tiebreak</div>' + ch;
+  }
+  function _bgpBuildView(routes) {
+    var order = [], groups = {};
+    routes.forEach(function (r) { var p = r.prefix || ''; if (!groups[p]) { groups[p] = []; order.push(p); } groups[p].push(r); });
+    var html = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>Metric</th><th>LocPrf</th><th>Weight</th><th>Path</th></tr></thead><tbody>';
+    var reasons = '';
+    order.forEach(function (p) {
+      var grp = groups[p], dec = _bgpDecision(grp), decCol = (dec && dec.kind === 'decided') ? dec.col : null;
+      grp.forEach(function (rt) {
+        var isBest = _bIsBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
+        var nh = rt.next_hop || rt.nexthop || '';
+        var pathDisp = (rt.as_path || '') + (rt.origin ? ((rt.as_path ? ' ' : '') + rt.origin) : '');
+        var lpDisp = (rt.local_pref != null && rt.local_pref !== '') ? rt.local_pref : '<span class="bgp-default">100</span>';
+        function cell(name, val) { return '<td' + (isBest && decCol === name ? ' class="bgp-decider"' : '') + '>' + val + '</td>'; }
+        html += '<tr' + (isBest ? ' class="bgp-best"' : '') + '>' +
+          '<td><span class="bgp-st">' + (rt.status || '') + '</span></td>' +
+          '<td>' + (rt.prefix || '') + '</td>' +
+          '<td>' + nh + '</td>' +
+          cell('metric', rt.metric || '') + cell('locprf', lpDisp) + cell('weight', w) + cell('path', pathDisp) +
+          '</tr>';
+      });
+      reasons += _bgpReason(p, dec);
+    });
+    html += '</tbody></table>';
+    if (reasons) reasons += '<div class="bgp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED</div>';
+    return { table: html, decision: reasons };
+  }
+  function _bgpInjectCss() {
+    if (document.getElementById('xray-bgp-decision-css')) return;
+    var s = document.createElement('style'); s.id = 'xray-bgp-decision-css';
+    s.textContent = '.bgp-chain{margin-top:3px;font-size:10px;color:#888;line-height:1.6;letter-spacing:0.2px}'
+      + '.bgp-chain .bgp-step-tie{color:#6b7b8c}.bgp-chain .bgp-step-win{color:#ffd54f;font-weight:700}.bgp-chain .bgp-step-amb{color:#e0a060;font-weight:700}'
+      + '.de-bgp-decision-panel .bgp-reason.bgp-reason-note{color:#7facc9}'
+      + '.de-bgp-panel .de-bgp-table,.de-bgp-panel .de-bgp-table td{font-size:calc(12px * var(--xbgp-fs,1))}'
+      + '.de-bgp-panel .de-bgp-table th{font-size:calc(11px * var(--xbgp-fs,1))}'
+      + '.de-bgp-decision-panel .bgp-reason{font-size:calc(12px * var(--xbgp-fs,1))}'
+      + '.de-bgp-decision-panel .bgp-chain,.de-bgp-decision-panel .bgp-legend{font-size:calc(10px * var(--xbgp-fs,1))}'
+      + '.xbgp-fs-ctl{float:right;font-weight:400}'
+      + '.xbgp-fs-ctl button{background:#16202b;color:#9fb6c2;border:1px solid #2b3a44;border-radius:3px;font-size:11px;line-height:1;padding:1px 6px;margin-left:3px;cursor:pointer}'
+      + '.xbgp-fs-ctl button:hover{color:#cfe8ee;border-color:#4dd0e1}';
+    document.head.appendChild(s);
+  }
+  function _paintBgpTable() {
+    var dz0 = document.getElementById('de-bgp-decision-panel');
+    if (!_bgpSrc) { if (dz0) dz0.style.display = 'none'; return; }
     var re = document.getElementById('de-re-panel');
     if (!re || !re.parentElement) return;   // cylinder not rendered yet
+    _bgpInjectCss();
     var tgt = (window._xrayTargetNode || 'topo-node-r1').replace('topo-node-', '');
     var panel = document.getElementById('de-bgp-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.className = 'de-panel de-bgp-panel';   // reuse the engine's built-in CSS
-      panel.id = 'de-bgp-panel';
-      re.parentElement.appendChild(panel);
-    }
-    var rows = _bgpRows(), body;
+    if (!panel) { panel = document.createElement('div'); panel.className = 'de-panel de-bgp-panel'; panel.id = 'de-bgp-panel'; re.parentElement.appendChild(panel); }
+    var dpanel = document.getElementById('de-bgp-decision-panel');
+    if (!dpanel) { dpanel = document.createElement('div'); dpanel.className = 'de-panel de-bgp-decision-panel'; dpanel.id = 'de-bgp-decision-panel'; re.parentElement.appendChild(dpanel); }
+    var rows = _bgpRows(), body, decision = '';
     if (!rows || !rows.length) {
       body = '<div class="de-dim">no routes<br>(BGP session not established)</div>';
     } else {
-      // RCL-style columns: St / Network / Next-Hop / LocPrf / Weight / Path. Best path row is
-      // highlighted (tr.bgp-best) and an unset LocPref shows the implicit default (100) dimmed —
-      // all via the engine's built-in de-bgp-table CSS.
-      body = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>LocPrf</th><th>Weight</th><th>Path</th></tr></thead><tbody>';
-      rows.forEach(function (rt) {
-        var best = rt.best || (rt.status && rt.status.indexOf('>') >= 0);
-        body += '<tr class="' + (best ? 'bgp-best' : '') + '">' +
-          '<td><span class="bgp-st">' + (rt.status || (best ? '*>' : '* ')) + '</span></td>' +
-          '<td>' + (rt.prefix || '') + '</td>' +
-          '<td>' + (rt.nexthop || '') + '</td>' +
-          '<td>' + (rt.local_pref != null ? rt.local_pref : '<span class="bgp-default">100</span>') + '</td>' +
-          '<td>' + (rt.weight != null ? rt.weight : '') + '</td>' +
-          '<td>' + (rt.as_path || '') + '</td></tr>';
-      });
-      body += '</tbody></table>';
+      var view = _bgpBuildView(rows); body = view.table; decision = view.decision;   // table + WHY-best
     }
-    panel.innerHTML = '<div class="de-title">BGP Table (' + tgt + ')</div><div class="de-bgp-rows">' + body + '</div>';
+    panel.innerHTML = '<div class="de-title">BGP Table (' + tgt + ')<span class="xbgp-fs-ctl">'
+      + '<button data-fs="dn" title="smaller text">A−</button><button data-fs="up" title="larger text">A+</button></span></div>'
+      + '<div class="de-bgp-rows">' + body + '</div>';
+    if (decision) { dpanel.innerHTML = '<div class="de-title">Best-Path Decision</div><div class="de-bgp-decision-rows">' + decision + '</div>'; dpanel.style.display = ''; }
+    else { dpanel.style.display = 'none'; }
+    _bgpFontInit();
+    var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs || 1);
+    // Stack the Decision box directly UNDER the Table box so they never overlap. Both are top-right
+    // absolute; the engine's default bottom-anchor on the decision panel collides when the table is
+    // tall, so we measure the table and pin the decision just below it.
+    if (decision) { dpanel.style.bottom = 'auto'; dpanel.style.top = (panel.offsetTop + panel.offsetHeight + 10) + 'px'; }
+  }
+  function _bgpFontInit() {
+    if (window.__xbgpFsInit) return; window.__xbgpFsInit = true; if (window.__xbgpFs == null) window.__xbgpFs = 1;
+    document.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest && e.target.closest('.xbgp-fs-ctl button'); if (!b) return;
+      window.__xbgpFs = Math.max(0.7, Math.min(1.5, (window.__xbgpFs || 1) + (b.getAttribute('data-fs') === 'up' ? 0.1 : -0.1)));
+      var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs);
+      var t = document.getElementById('de-bgp-panel'), dz = document.getElementById('de-bgp-decision-panel');
+      if (t && dz && dz.style.display !== 'none') { dz.style.bottom = 'auto'; dz.style.top = (t.offsetTop + t.offsetHeight + 10) + 'px'; }
+    });
   }
 
   // DeepDive — the "inside the router" cylinder view (forwarding plane, OSPF/BGP
