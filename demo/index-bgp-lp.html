@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  xray-graph.html — a drop-in containerlab graph template (worker7 + worker1, §12-5).
+  Usage:  containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
+  static-dir (this gallery root) must contain: xray-core.js, xray-api.js, clab-xray-bridge.js
+
+  Clean 3-layer split (2026-06-21 dedupe):
+    outer shell (this file) = clab graph overview + node/peer selection UX
+    bridge  clabXray.deepViews(fullConfig, nodeId) = enumerate the DeepDive views (per peer-pair)
+    facade  xrayCore.openDeepDiveFor(nodeId, state) = render one view (OSS xray-core 80e3f88+)
+
+  containerlab renders this with Go html/template and passes:
+    xray-bgp-lp — lab name (string)
+    {"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up 30 minutes","ipv4_address":"172.20.20.9/24","ipv6_address":"3fff:172:20:20::9/64"},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up 30 minutes","ipv4_address":"172.20.20.10/24","ipv6_address":"3fff:172:20:20::a/64"},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up 30 minutes","ipv4_address":"172.20.20.8/24","ipv6_address":"3fff:172:20:20::8/64"}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r1","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]} — JSON string of { nodes:[{name,kind,...}], links:[{source,source_endpoint,target,target_endpoint}] }
+-->
+<title>X-Ray graph — xray-bgp-lp</title>
+<!-- deps are loaded by the base-path detector at the end of <body> (works for both GitHub Pages
+     root-serving and `containerlab graph --static-dir`, which serves assets under /static/). -->
+<style>
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  h1{font-size:19px;margin:0 0 2px}h1 .x{color:#4dd0e1}h1 small{color:#78909c;font-weight:400;font-size:13px}
+  .sub{color:#90a4ae;font-size:13px;margin:0 0 10px;line-height:1.5}
+  .ov{position:relative;width:560px;height:360px;margin:6px auto;background:#16202b;border-radius:10px;border:1px solid #24323e}
+  .ov svg{position:absolute;inset:0;pointer-events:none}
+  .ov-node{position:absolute;transform:translate(-50%,-50%);background:#141b24;border:2px solid #4dd0e1;border-radius:8px;
+    padding:7px 12px;cursor:pointer;font-weight:700;color:#4dd0e1;font-size:13px;white-space:nowrap;text-align:center}
+  .ov-node .k{display:block;font-size:9px;color:#78909c;font-weight:400}
+  .ov-node:hover{box-shadow:0 0 12px rgba(77,208,225,.6)}
+  .ov-node.sel{border-color:#ef5350;color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.5)}
+  #peers{text-align:center;margin:8px 0;min-height:28px}
+  #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
+  #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
+  #peers button.cur{background:#26c6da;color:#06222a;border-color:#26c6da;font-weight:700}
+  .topology{position:relative;margin:8px 0;min-height:420px;background:#1e2a38;border-radius:10px}
+  #topo{display:none}.xray-deep-engine{min-height:420px}
+  .err{display:none;margin:10px 0;padding:10px 12px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px}
+</style>
+</head>
+<body class="is-xray-mode">
+<div class="wrap">
+  <h1><span class="x">X-Ray</span> graph — <span id="labname">xray-bgp-lp</span> <small>(containerlab × X-Ray DeepDive)</small></h1>
+  <p class="sub">Overview = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
+    OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.</p>
+  <div class="ov" id="ov"></div>
+  <div id="peers"></div>
+  <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
+  <div class="err" id="err"></div>
+</div>
+
+<!-- containerlab injects the topology JSON here (Go html/template). -->
+<script id="clab-data" type="application/json">{"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up 30 minutes","ipv4_address":"172.20.20.9/24","ipv6_address":"3fff:172:20:20::9/64"},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up 30 minutes","ipv4_address":"172.20.20.10/24","ipv6_address":"3fff:172:20:20::a/64"},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up 30 minutes","ipv4_address":"172.20.20.8/24","ipv6_address":"3fff:172:20:20::8/64"}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r1","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]}</script>
+
+<script>
+window.__xrayGraphBoot = function () {
+  function showErr(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;}
+  if (typeof window.clabXray === 'undefined' || typeof window.clabXray.deepViews !== 'function')
+    return showErr('clabXray.deepViews missing — static-dir needs clab-xray-bridge.js (b8b3afb+).');
+  if (typeof window.xrayCore === 'undefined' || typeof window.xrayCore.openDeepDiveFor !== 'function')
+    return showErr('xrayCore.openDeepDiveFor missing — static-dir needs xray-api.js (80e3f88+).');
+
+  // ---- parse containerlab's injected data ----
+  // This file is a containerlab `graph --template`: clab substitutes the topology JSON into the
+  // clab-data script. Opened directly (e.g. on GitHub Pages) that placeholder is left as the raw
+  // Go-template action — show a friendly pointer to the browser demo instead of a parse error.
+  // NB: write the "{"+"{" probe split so containerlab's Go text/template (which renders this whole
+  // file) doesn't read it as an action and panic with "unterminated character constant".
+  var _raw = (document.getElementById('clab-data').textContent || '').trim();
+  if (!_raw || _raw.indexOf('{' + '{') >= 0) {
+    var _e = document.getElementById('err'); _e.style.display = 'block';
+    _e.innerHTML = 'This page is a <b>containerlab graph template</b> — render it with '
+      + '<code>containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir &lt;this dir&gt;</code>.'
+      + '<br>To try X-Ray in the browser (no containerlab needed), open '
+      + '<a href="clab-paste.html" style="color:#80cbc4">clab-paste.html</a> and paste a <code>.clab.yml</code>.';
+    return;
+  }
+  var DATA;
+  try { DATA = JSON.parse(_raw); }
+  catch (e) { return showErr('Could not parse containerlab topology data: ' + e.message); }
+  var rawNodes = DATA.nodes || [], rawLinks = DATA.links || [];
+
+  var NAMES = rawNodes.map(function (n) { return n.name; }).filter(Boolean);
+  var KIND = {}; rawNodes.forEach(function (n) { KIND[n.name] = n.kind || ''; });
+  function roleOf(n){ var k=(KIND[n]||'').toLowerCase();
+    return (k==='host'||k==='linux-host'||/^(sv|server|host|client|pc|h\d+)$/i.test(n)) ? 'server' : 'router'; }
+
+  // adjacency from links (Link.source / Link.target are node short-names)
+  var ADJ = {}; NAMES.forEach(function (n) { ADJ[n] = []; });
+  var EDGES = [];
+  rawLinks.forEach(function (l) {
+    var a = l.source, b = l.target; if (!a || !b || a === b) return;
+    if (!ADJ[a]) ADJ[a] = []; if (!ADJ[b]) ADJ[b] = [];
+    if (ADJ[a].indexOf(b) < 0) { ADJ[a].push(b); }
+    if (ADJ[b].indexOf(a) < 0) { ADJ[b].push(a); }
+    var k=[a,b].sort().join('|'); if (EDGES.indexOf(k)<0) EDGES.push(k);
+  });
+  Object.keys(ADJ).forEach(function (n) { if (NAMES.indexOf(n) < 0) NAMES.push(n); });
+
+  // ---- build the FULL X-Ray config (all nodes + all networks) that deepViews consumes ----
+  var fullCfg = {
+    id: (document.getElementById('labname').textContent || 'clab'),
+    topology_type: 'multi', layout: '',
+    nodes: NAMES.map(function (n) { var r=roleOf(n); return { id:n, type:r, role: r==='server'?'Server':'Router' }; }),
+    networks: EDGES.map(function (k) { var p=k.split('|');
+      return { name: 'net-'+p[0]+p[1], members:[{node:p[0],host_id:10},{node:p[1],host_id:20}] }; }),
+    modes: ['troubleshoot']
+  };
+
+  // ---- hub-and-spoke / circular auto-layout (any N nodes) ----
+  var W=560,H=360,cx=W/2,cy=H/2,R=Math.min(W,H)/2-60, POS={};
+  // Put the highest-degree node (hub) at top-center with its leaves on the bottom row (NAMES
+  // order, L->R) so the overview's left/right match the hub's DeepDive left/right. Only for >=3
+  // nodes where the hub connects to every leaf; otherwise fall back to the circle (non-breaking).
+  (function(){ var deg=function(n){return (ADJ[n]||[]).length;};
+    if(NAMES.length===1){POS[NAMES[0]]=[cx,cy];return;}
+    var hub=NAMES.slice().sort(function(a,b){return deg(b)-deg(a);})[0];
+    var leaves=NAMES.filter(function(n){return n!==hub;});
+    if(NAMES.length>=3 && deg(hub)>=leaves.length){ POS[hub]=[cx,70];
+      leaves.forEach(function(n,i){ var x=leaves.length===1?cx:(W*0.18+(W*0.64)*(i/(leaves.length-1))); POS[n]=[x,H-70]; }); }
+    else { var order=[hub].concat(leaves); order.forEach(function(n,i){ var a=(i/order.length)*Math.PI*2-Math.PI/2; POS[n]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]; }); }
+  })();
+
+  // ================= render one deepView =================
+  // 3-layer: bridge deepViews → facade openDeepDiveFor. (自前 subYaml/pairsOf は撤去)
+  function renderView(v, nodeId){
+    // Prefer the REAL collected state for this node (xray-states.js) when present; otherwise use the
+    // topology-derived synthetic scaffold from the bridge.
+    var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
+    // Protocol: the collector marks BGP states (s.protocol==='bgp'). Switch the scene to BGP so the
+    // panel, tunnels and direction render as BGP instead of the bridge's OSPF default.
+    if (_st && _st.protocol === 'bgp') {
+      _cfg.xray.protocol = 'bgp';
+      var _others0 = (_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      _cfg.xray.pattern = _others0.length >= 2 ? 'bgp_multi' : 'bgp';
+    }
+    // Overview-geometry alignment: order the node's peers so left-in-overview = left face. For a
+    // single link this sets single_link 'left'/'right'; for a transit (two peers) it reorders the
+    // two peer nodes by their overview x, so leftNode/rightNode (and the forward direction derived
+    // from route_resolution.out_iface) are deterministic and match the overview, instead of the
+    // bridge's adjacency-order which can swap run-to-run.
+    try{
+      var _tn=(_cfg.nodes||[]).filter(function(n){return n.id===nodeId;})[0];
+      if(_tn && _tn.single_link){ var _pe=(ADJ[nodeId]||[])[0];
+        if(_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; }
+      var _peers=(_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      if(_peers.length===2 && _tn && POS[_peers[0].id] && POS[_peers[1].id]
+         && POS[_peers[0].id][0] > POS[_peers[1].id][0]){
+        _cfg.nodes = [_peers[1], _tn, _peers[0]];   // index0 = geometrically-left peer
+      }
+    }catch(e){}
+    document.body.classList.remove('is-xray-deep');
+    window.xrayCore.renderTopology('#topo', _cfg, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
+    window.xrayCore.openDeepDiveFor(nodeId, _st);   // facade (a)
+    // BGP: show learned routes in the dedicated right-side BGP table panel (de-bgp-panel) via the
+    // facade, not as Routing-Engine lines. A function source repaints per applyState frame. OSPF
+    // nodes clear it. Maps the collector's bgp_routes (next_hop) to the facade row shape (nexthop).
+    if (window.xrayCore && typeof window.xrayCore.setBgpTable === 'function') {
+      if (_st && _st.protocol === 'bgp') {
+        // pass the collector's bgp_routes as-is (all candidate paths, with status/metric/origin/
+        // local_pref/weight/as_path) so the facade can build the BGP Table + Best-Path Decision.
+        window.xrayCore.setBgpTable(function(st){ return (st && st.bgp_routes) || []; });
+      } else {
+        window.xrayCore.setBgpTable(null);
+      }
+    }
+    var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
+    return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
+  }
+
+  // ================= node click → deepViews + (b) peer-pair selector =================
+  function showNode(nodeId){
+    window.__xrayCurNode = nodeId;   // remember the open node so the live poll can refresh it in place
+    document.querySelectorAll('.ov-node').forEach(function(e){e.classList.toggle('sel', e.getAttribute('data-n')===nodeId);});
+    var box=document.getElementById('peers'); box.innerHTML='';
+    var views = window.clabXray.deepViews(fullCfg, nodeId);   // ← bridge (b)
+    if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
+    if (views.length > 1) {
+      box.innerHTML='<span class="lbl">'+nodeId+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      views.forEach(function(v,idx){
+        var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
+        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
+        if(idx===0) b.classList.add('cur'); box.appendChild(b);
+      });
+    }
+    renderView(views[0], nodeId);
+  }
+  window.__xrayShowNode = showNode;   // exposed for tests / external triggers
+
+  // ---- draw overview ----
+  var ov=document.getElementById('ov'); var svg='<svg viewBox="0 0 '+W+' '+H+'">'; var drawn={};
+  NAMES.forEach(function(n){ (ADJ[n]||[]).forEach(function(m){
+    var k=[n,m].sort().join('|'); if(drawn[k]||!POS[m])return; drawn[k]=1;
+    svg+='<line x1="'+POS[n][0]+'" y1="'+POS[n][1]+'" x2="'+POS[m][0]+'" y2="'+POS[m][1]+'" stroke="#455a64" stroke-width="2"/>';
+  });}); svg+='</svg>'; ov.innerHTML=svg;
+  NAMES.forEach(function(n){
+    var b=document.createElement('div'); b.className='ov-node'; b.setAttribute('data-n',n);
+    b.innerHTML=n+(KIND[n]?'<span class="k">'+KIND[n]+'</span>':'');
+    b.style.left=POS[n][0]+'px'; b.style.top=POS[n][1]+'px';
+    b.onclick=function(){ showNode(n); };
+    ov.appendChild(b);
+  });
+
+  if(!NAMES.length){ return showErr('No nodes found in topology data.'); }
+  var start = NAMES.slice().sort(function(a,b){ return (ADJ[b]||[]).length-(ADJ[a]||[]).length; })[0];
+  showNode(start);
+};
+</script>
+
+<!-- Base-path detector + dependency loader. `containerlab graph --static-dir <dir>` serves the
+     assets under /static/ while GitHub Pages serves them next to this page. A wrong base returns
+     THIS html with status 200 (so onload still fires) — we detect success by the globals, not the
+     load event, and fall back to the other base. -->
+<script>
+(function(){
+  var FILES = ['xray-core.js','xray-api.js','clab-xray-bridge.js'];
+  function loadSeq(base, done){
+    var i = 0;
+    (function next(){
+      if (i >= FILES.length) { done(); return; }
+      var s = document.createElement('script');
+      s.src = base + FILES[i++] + '?v=1782440799009';
+      s.onload = next; s.onerror = next;   // continue regardless; we verify by globals below
+      document.head.appendChild(s);
+    })();
+  }
+  function ready(){
+    return window.clabXray && typeof window.clabXray.deepViews === 'function'
+        && window.xrayCore && typeof window.xrayCore.openDeepDiveFor === 'function';
+  }
+  // Optional real per-node state: clab-xray-collect.js writes xray-states.js
+  // (window.LIVE_STATES) next to the assets. Load it from the working base, ignore if absent
+  // (the graph then uses the topology-derived synthetic scaffold).
+  function withStates(base, done){
+    var s = document.createElement('script');
+    s.src = base + 'xray-states.js?v=1782440799009';
+    s.onload = done; s.onerror = done;   // optional; 404/HTML is fine
+    document.head.appendChild(s);
+  }
+  function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
+  // Live mode (opt-in): only when the collector ran with --watch (it sets window.LIVE_WATCH) do we
+  // poll xray-states.js from the resolved base. Change-detection skips a redraw when nothing moved
+  // (no idle flicker); when it changes we applyState() the open node in place (smooth) and only fall
+  // back to a full showNode() if applyState isn't available. A one-shot / static graph never polls.
+  function startLivePoll(base){
+    if (!window.LIVE_WATCH) return;
+    var POLL_MS = 3000;
+    window.__xrayLastStates = JSON.stringify(window.LIVE_STATES || {});
+    setInterval(function(){
+      var s = document.createElement('script');
+      s.src = base + 'xray-states.js?t=' + (+new Date());
+      s.onload = function(){
+        try {
+          var cur = JSON.stringify(window.LIVE_STATES || {});
+          if (cur !== window.__xrayLastStates) {
+            window.__xrayLastStates = cur;
+            var n = window.__xrayCurNode, st = n && window.LIVE_STATES && window.LIVE_STATES[n];
+            if (st && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
+              try { window.xrayCore.applyState(st); } catch (e) { if (window.__xrayShowNode) window.__xrayShowNode(n); }
+            } else if (n && window.__xrayShowNode) { window.__xrayShowNode(n); }
+          }
+        } catch (e) {}
+        s.remove();
+      };
+      s.onerror = function(){ s.remove(); };
+      document.head.appendChild(s);
+    }, POLL_MS);
+  }
+  // This demo lives in /demo/ and reuses the published OSS engine one level up (no duplicated
+  // engine, no backend) — load from '../' first, fall back to the page-relative base just in case.
+  loadSeq('../', function(){
+    if (ready()) withStates('../', function(){ boot(); startLivePoll('../'); });
+    else loadSeq('', function(){ withStates('', function(){ boot(); startLivePoll(''); }); });
+  });
+})();
+</script>
+<style>#replaybar{position:fixed;left:0;right:0;top:0;z-index:9999;background:#10202c;border-bottom:1px solid #26c6da;color:#cfe8ee;font:13px -apple-system,Segoe UI,Roboto,sans-serif;padding:7px 12px;display:flex;align-items:center;gap:12px}#replaybar .tag{background:#26c6da;color:#06222a;font-weight:700;border-radius:4px;padding:2px 8px;font-size:11px}#replaybar .st{font-weight:700;color:#4dd0e1}#replaybar .src{color:#78909c;margin-left:auto;font-size:11px}#replaybar button{background:#16202b;color:#cfe8ee;border:1px solid #2b3a44;border-radius:4px;padding:3px 10px;cursor:pointer}#replaybar .dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2b3a44;margin:0 2px}#replaybar .dots i.on{background:#26c6da}.wrap{padding-top:46px}</style><div id="replaybar"><span class="tag">▶ RECORDED REPLAY</span><span>frame <b id="rb-i">1</b>/3:</span> <span class="st" id="rb-st">…</span><span class="dots" id="rb-dots"></span><button id="rb-toggle">pause</button><span class="src">real frames captured from a live FRR / containerlab lab · no backend</span></div><script>(function(){var FRAMES=[{"r1":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r1","peer_node":"r2","interfaces":{"eth0":{"up":true,"ip":"172.20.20.9/24"},"eth1":{"up":true,"ip":"10.1.12.1/24"},"eth2":{"up":true,"ip":"10.1.13.1/24"},"lo":{"up":true,"ip":"1.1.1.1/32"}},"wan_iface":"eth1","lan_iface":"eth1","neighbor_state":"Full","has_full":true,"full_count":2,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"2.2.2.2","next_hop":"10.1.12.2","as_path":"65002","best":true,"status":"*>","local_pref":100,"weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"10.1.13.3","as_path":"65003","best":true,"status":"*>","local_pref":50,"weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"10.1.12.2","as_path":"65002","best":true,"status":"*>","local_pref":100,"weight":0,"metric":0,"origin":"IGP","reason":"Local Pref"},{"prefix":"8.8.8.0","next_hop":"10.1.13.3","as_path":"65003","best":false,"status":"* ","local_pref":50,"weight":0,"metric":0,"origin":"IGP"}],"pfx_rcvd":4,"route_resolution":{"target":"2.2.2.2","resolved":true,"protocol":"bgp","out_iface":"eth1","next_hop":"10.1.12.2","matched_prefix":"2.2.2.2/32"},"r2_has_full":true,"r2_iface":"eth1","r2_neighbor_state":"Full","r3_has_full":true,"r3_iface":"eth2","r3_neighbor_state":"Full"},"r2":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r2","peer_node":"r1","interfaces":{"eth0":{"up":true,"ip":"172.20.20.10/24"},"eth1":{"up":true,"ip":"10.1.12.2/24"},"lo":{"up":true,"ip":"2.2.2.2/32"}},"wan_iface":"eth1","lan_iface":"eth1","neighbor_state":"Full","has_full":true,"full_count":1,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"10.1.12.1","as_path":"65001","best":true,"status":"*>","weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"2.2.2.2","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"10.1.12.1","as_path":"65001 65003","best":true,"status":"*>","weight":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"}],"pfx_rcvd":4,"route_resolution":{"target":"1.1.1.1","resolved":true,"protocol":"bgp","out_iface":"eth1","next_hop":"10.1.12.1","matched_prefix":"1.1.1.1/32"},"r1_has_full":true,"r1_iface":"eth1","r1_neighbor_state":"Full"},"r3":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r3","peer_node":"r1","interfaces":{"eth0":{"up":true,"ip":"172.20.20.8/24"},"eth1":{"up":true,"ip":"10.1.13.3/24"},"lo":{"up":true,"ip":"3.3.3.3/32"}},"wan_iface":"eth1","lan_iface":"eth1","neighbor_state":"Full","has_full":true,"full_count":1,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"10.1.13.1","as_path":"65001","best":true,"status":"*>","weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"2.2.2.2","next_hop":"10.1.13.1","as_path":"65001 65002","best":true,"status":"*>","weight":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"10.1.13.1","as_path":"65001 65002","best":false,"status":"* ","weight":0,"origin":"IGP"},{"prefix":"8.8.8.0","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"Weight"}],"pfx_rcvd":4,"route_resolution":{"target":"1.1.1.1","resolved":true,"protocol":"bgp","out_iface":"eth1","next_hop":"10.1.13.1","matched_prefix":"1.1.1.1/32"},"r1_has_full":true,"r1_iface":"eth1","r1_neighbor_state":"Full"}},{"r1":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r1","peer_node":"r3","interfaces":{"eth0":{"up":true,"ip":"172.20.20.9/24"},"eth1":{"up":false,"ip":"10.1.12.1/24"},"eth2":{"up":true,"ip":"10.1.13.1/24"},"lo":{"up":true,"ip":"1.1.1.1/32"}},"wan_iface":"eth2","lan_iface":"eth0","neighbor_state":"Full","has_full":true,"full_count":1,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"10.1.13.3","as_path":"65003","best":true,"status":"*>","local_pref":50,"weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"10.1.13.3","as_path":"65003","best":true,"status":"*>","local_pref":50,"weight":0,"metric":0,"origin":"IGP","reason":"First path received"}],"pfx_rcvd":3,"route_resolution":{"target":"3.3.3.3","resolved":true,"protocol":"bgp","out_iface":"eth2","next_hop":"10.1.13.3","matched_prefix":"3.3.3.3/32"},"r2_has_full":false,"r2_iface":"","r2_neighbor_state":"Active","r3_has_full":true,"r3_iface":"eth2","r3_neighbor_state":"Full"},"r2":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r2","peer_node":"r1","interfaces":{"eth0":{"up":true,"ip":"172.20.20.10/24"},"eth1":{"up":false,"ip":"10.1.12.2/24"},"lo":{"up":true,"ip":"2.2.2.2/32"}},"wan_iface":"eth0","lan_iface":"eth0","neighbor_state":"Active","has_full":false,"full_count":0,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":false,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":false,"is_established":false,"has_bgp_route":false,"protocol":"bgp","ping_ok":false,"has_ospf_route":false,"bgp_configured":true,"bgp_state":"Active","bgp_routes":[{"prefix":"2.2.2.2","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"}],"pfx_rcvd":2,"route_resolution":{"target":"","resolved":false,"protocol":"","out_iface":"","next_hop":"","matched_prefix":""},"r1_has_full":false,"r1_iface":"","r1_neighbor_state":"Active"},"r3":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r3","peer_node":"r1","interfaces":{"eth0":{"up":true,"ip":"172.20.20.8/24"},"eth1":{"up":true,"ip":"10.1.13.3/24"},"lo":{"up":true,"ip":"3.3.3.3/32"}},"wan_iface":"eth1","lan_iface":"eth1","neighbor_state":"Full","has_full":true,"full_count":1,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"10.1.13.1","as_path":"65001","best":true,"status":"*>","weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"}],"pfx_rcvd":3,"route_resolution":{"target":"1.1.1.1","resolved":true,"protocol":"bgp","out_iface":"eth1","next_hop":"10.1.13.1","matched_prefix":"1.1.1.1/32"},"r1_has_full":true,"r1_iface":"eth1","r1_neighbor_state":"Full"}},{"r1":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r1","peer_node":"r2","interfaces":{"eth0":{"up":true,"ip":"172.20.20.9/24"},"eth1":{"up":true,"ip":"10.1.12.1/24"},"eth2":{"up":true,"ip":"10.1.13.1/24"},"lo":{"up":true,"ip":"1.1.1.1/32"}},"wan_iface":"eth1","lan_iface":"eth1","neighbor_state":"Full","has_full":true,"full_count":2,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"2.2.2.2","next_hop":"10.1.12.2","as_path":"65002","best":true,"status":"*>","local_pref":100,"weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"10.1.13.3","as_path":"65003","best":true,"status":"*>","local_pref":50,"weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"10.1.12.2","as_path":"65002","best":true,"status":"*>","local_pref":100,"weight":0,"metric":0,"origin":"IGP","reason":"Local Pref"},{"prefix":"8.8.8.0","next_hop":"10.1.13.3","as_path":"65003","best":false,"status":"* ","local_pref":50,"weight":0,"metric":0,"origin":"IGP"}],"pfx_rcvd":4,"route_resolution":{"target":"2.2.2.2","resolved":true,"protocol":"bgp","out_iface":"eth1","next_hop":"10.1.12.2","matched_prefix":"2.2.2.2/32"},"r2_has_full":true,"r2_iface":"eth1","r2_neighbor_state":"Full","r3_has_full":true,"r3_iface":"eth2","r3_neighbor_state":"Full"},"r2":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r2","peer_node":"r1","interfaces":{"eth0":{"up":true,"ip":"172.20.20.10/24"},"eth1":{"up":true,"ip":"10.1.12.2/24"},"lo":{"up":true,"ip":"2.2.2.2/32"}},"wan_iface":"eth1","lan_iface":"eth1","neighbor_state":"Full","has_full":true,"full_count":1,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"10.1.12.1","as_path":"65001","best":true,"status":"*>","weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"2.2.2.2","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"10.1.12.1","as_path":"65001 65003","best":true,"status":"*>","weight":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"}],"pfx_rcvd":4,"route_resolution":{"target":"1.1.1.1","resolved":true,"protocol":"bgp","out_iface":"eth1","next_hop":"10.1.12.1","matched_prefix":"1.1.1.1/32"},"r1_has_full":true,"r1_iface":"eth1","r1_neighbor_state":"Full"},"r3":{"success":true,"id":"xray-bgp-lp","scenario":"xray-bgp-lp","target_node":"r3","peer_node":"r1","interfaces":{"eth0":{"up":true,"ip":"172.20.20.8/24"},"eth1":{"up":true,"ip":"10.1.13.3/24"},"lo":{"up":true,"ip":"3.3.3.3/32"}},"wan_iface":"eth1","lan_iface":"eth1","neighbor_state":"Full","has_full":true,"full_count":1,"ospf_configured":false,"ospf_active_on_interface":false,"peer_sending_hello":true,"iface_hellos":{},"peer_hellos":{},"target_on_path":false,"cleared":true,"is_established":true,"has_bgp_route":true,"protocol":"bgp","ping_ok":true,"has_ospf_route":false,"bgp_configured":true,"bgp_routes":[{"prefix":"1.1.1.1","next_hop":"10.1.13.1","as_path":"65001","best":true,"status":"*>","weight":0,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"2.2.2.2","next_hop":"10.1.13.1","as_path":"65001 65002","best":true,"status":"*>","weight":0,"origin":"IGP","reason":"First path received"},{"prefix":"3.3.3.3","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"First path received"},{"prefix":"8.8.8.0","next_hop":"10.1.13.1","as_path":"65001 65002","best":false,"status":"* ","weight":0,"origin":"IGP"},{"prefix":"8.8.8.0","next_hop":"0.0.0.0","as_path":"","best":true,"status":"*>","weight":32768,"metric":0,"origin":"IGP","reason":"Weight"}],"pfx_rcvd":4,"route_resolution":{"target":"1.1.1.1","resolved":true,"protocol":"bgp","out_iface":"eth1","next_hop":"10.1.13.1","matched_prefix":"1.1.1.1/32"},"r1_has_full":true,"r1_iface":"eth1","r1_neighbor_state":"Full"}}];var LABELS=["both upstreams up — 8.8.8.0/24 best by LocPref (100 > 50)","r1–r2 link down — 8.8.8.0/24 now only via r3 (only path)","restored — LocPref decides again (100 > 50)"];var STEP=2600,i=0,paused=false,timer=null;window.LIVE_STATES=FRAMES[0];var dots=document.getElementById("rb-dots");for(var d=0;d<FRAMES.length;d++)dots.appendChild(document.createElement("i"));function paint(){document.getElementById("rb-i").textContent=(i+1);document.getElementById("rb-st").textContent=LABELS[i];var ii=dots.querySelectorAll("i");for(var k=0;k<ii.length;k++)ii[k].className=(k===i?"on":"");}function apply(){window.LIVE_STATES=FRAMES[i];var n=window.__xrayCurNode,st=n&&FRAMES[i]&&FRAMES[i][n];if(st&&window.xrayCore&&typeof window.xrayCore.applyState==="function"){try{window.xrayCore.applyState(st);}catch(e){if(window.__xrayShowNode)window.__xrayShowNode(n);}}else if(n&&window.__xrayShowNode){window.__xrayShowNode(n);}paint();}var FOCUS="r1";var wait=setInterval(function(){if(window.xrayCore&&typeof window.xrayCore.applyState==="function"&&window.__xrayCurNode){clearInterval(wait);if(window.__xrayShowNode&&FRAMES[0]&&FRAMES[0][FOCUS]){window.__xrayShowNode(FOCUS);}start();}},150);function start(){paint();timer=setInterval(function(){if(paused)return;i=(i+1)%FRAMES.length;apply();},STEP);}document.getElementById("rb-toggle").onclick=function(){paused=!paused;this.textContent=paused?"play":"pause";};})();</script>
+</body>
+</html>

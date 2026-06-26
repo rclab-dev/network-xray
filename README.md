@@ -39,7 +39,8 @@ router to look inside. **<https://rclab-dev.github.io/xray-core/>** (or jump str
 **▶ Or watch a real lab converge & recover** — frames captured from a running FRR/containerlab lab,
 replayed in the browser with no backend (steady → link down / router isolated → re-forms → converged):
 **[OSPF replay](https://rclab-dev.github.io/xray-core/demo/)** ·
-**[BGP replay](https://rclab-dev.github.io/xray-core/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table).
+**[BGP replay](https://rclab-dev.github.io/xray-core/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table) ·
+**[Best-Path Decision](https://rclab-dev.github.io/xray-core/demo/index-bgp-lp.html)** (eBGP: competing LocPref → why one path wins).
 
 ## Run it
 
