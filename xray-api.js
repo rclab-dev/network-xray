@@ -83,7 +83,7 @@
   ];
   function _bnum(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : n; }
   function _bNbrAS(r) { var t = (r.as_path || '').split(/\s+/).filter(Boolean); return t.length ? t[0] : ''; }
-  function _bIsBest(r) { return (r.status || '').indexOf('>') !== -1; }
+  function _bIsBest(r) { return (r.status || '').indexOf('>') !== -1 || r.best === true; }
   function _bgpDecision(group) {
     if (!group || !group.length) return null;
     var best = null; for (var i = 0; i < group.length; i++) { if (_bIsBest(group[i])) { best = group[i]; break; } }
@@ -148,7 +148,7 @@
         var lpDisp = (rt.local_pref != null && rt.local_pref !== '') ? rt.local_pref : '<span class="bgp-default">100</span>';
         function cell(name, val) { return '<td' + (isBest && decCol === name ? ' class="bgp-decider"' : '') + '>' + val + '</td>'; }
         html += '<tr' + (isBest ? ' class="bgp-best"' : '') + '>' +
-          '<td><span class="bgp-st">' + (rt.status || '') + '</span></td>' +
+          '<td><span class="bgp-st">' + (rt.status || (rt.best ? '*>' : '* ')) + '</span></td>' +
           '<td>' + (rt.prefix || '') + '</td>' +
           '<td>' + nh + '</td>' +
           cell('metric', rt.metric || '') + cell('locprf', lpDisp) + cell('weight', w) + cell('path', pathDisp) +
