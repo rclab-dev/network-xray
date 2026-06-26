@@ -28,6 +28,13 @@ router at the forwarding decision (the deepdive).
 
 ## See it
 
+**A real lab, recorded** — OSPF goes Full (green tunnels, full LSDB), a link drops and a router is
+isolated (OSPF not running, route lost, packet dropped), then it recovers and re-converges. Captured
+straight from the [live replay demo](https://rclab-dev.github.io/xray-core/demo/) — what you see is what
+a `containerlab graph` draws:
+
+![OSPF adjacency goes Full, a link drops and the route is lost, then it recovers — recorded from a real FRR/containerlab lab](docs/ospf-fail-recover.gif)
+
 **Inside the router — the DeepDive cylinder** (an OSPF adjacency at Full: hello, synced LSDB, the route it installs):
 
 ![Inside the router — the DeepDive cylinder](docs/deepdive.png)
