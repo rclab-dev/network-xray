@@ -107,6 +107,9 @@ Clone this repo and point `--static-dir` at it. The overview comes from clab's o
 `{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so node/link count is unbounded — X-Ray adds
 the per-node DeepDive on top.
 
+Want it as a panel inside your own GUI instead of a standalone graph? → see
+[Embed the DeepDive in your own tool](#embed-the-deepdive-in-your-own-tool).
+
 **Live state (optional):** `clab-collect.js` is a small Node tool that reads ONE node's real FRR
 state from a running lab (`docker exec clab-<lab>-<node> vtysh -c "show … json"`) and emits a `state`
 object you feed straight to the DeepDive — so the cylinder shows the *actual* OSPF/BGP adjacency,
@@ -187,6 +190,35 @@ Today this is **drop-in for the browser**: include the two `<script>` tags (abov
 `window.xrayCore` global. There is **no npm package, ES module, or TypeScript types yet** — it is
 embedding-first (blog posts, dashboards, internal tools), not a bundler dependency. If you need
 ESM/types, fork and wrap it.
+
+## Embed the DeepDive in your own tool
+
+X-Ray's per-node **DeepDive** is a self-contained component you can drop into another UI —
+a containerlab GUI, a NOC dashboard, an internal tool — **without any co-development**. You give
+it one node's `state`; it renders the inside-the-router view. That is the whole contract.
+
+```html
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script>
+<div id="topo"></div>
+<div class="xray-deep-engine"></div>   <!-- DeepDive host; hide #topo if you already have an overview -->
+
+<script>
+  var view = xrayCore.renderTopology('#topo', config, { topology });
+  // when the user selects a node in *your* UI, hand X-Ray that node's state:
+  view.openDeepDiveFor('r1', stateForR1);   // state = one show-command dump — see DATA-CONTRACT §4
+  view.startPolling(() => fetch('/state/r1').then(r => r.json()), 3000);  // …keep it live
+</script>
+```
+
+**Where `state` comes from is up to you** — anything that can emit the documented shape. For
+containerlab / FRR, **`clab-collect.js`** builds it per node from `vtysh … json` (routes, OSPF/BGP
+adjacency, the installed next-hop). Any other vendor: map its `show` output the same way (FRR↔Cisco
+table in DATA-CONTRACT).
+
+**Already have a topology GUI** (containerlab's `graph`, a VS Code view, …)? Keep your overview —
+X-Ray only needs the DeepDive host (`.xray-deep-engine`) and a per-node `state`. It complements a
+topology view; it doesn't replace it.
 
 ## Scope & maintenance
 
