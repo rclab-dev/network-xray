@@ -205,9 +205,11 @@ picture (the single-node panel looks *inside* one router; this one looks *across
 1. **Every link is coloured by its adjacency** — OSPF Full = green tunnel, BGP Established = purple
    tunnel, no session = a dashed gray wire. You watch a lab converge, or a link break, at a glance.
 2. **Trace a prefix across the graph** — pick a destination and click a source node, and the
-   **forwarding path lights up hop by hop**, each router consulting *its own* routing table
-   (longest-prefix match). A router with no route shows a **✕ DROP**; the packet arriving shows a
-   **DELIVERED** verdict. Break a link and the path re-routes — because the collected state changed.
+   **forwarding path lights up hop by hop** with arrows, each router consulting *its own* routing table
+   (longest-prefix match). A router with no route shows a **✕ DROP**; when the last hop delivers the
+   packet off a connected (leaf) interface, the **destination network is drawn as a stub node** and the
+   final arrow lands on it — a **DELIVERED** verdict. Break a link and the path re-routes — because the
+   collected state changed.
 
 ```html
 <script src="xray-topo-overlay.js"></script>

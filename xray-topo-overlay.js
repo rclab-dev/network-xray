@@ -153,29 +153,57 @@
     return { minX: minX - pad, minY: minY - pad, w: (maxX - minX) + pad * 2, h: (maxY - minY) + pad * 2 };
   }
   function nodeBoxW(name) { return Math.max(46, name.length * 8 + 18); }
+  function stubW(label) { return Math.max(64, String(label).length * 7 + 22); }
+
+  // The traced prefix's DESTINATION network as a stub node: when the last hop delivers the packet off a
+  // connected egress interface (not lo) that faces no known router, that egress is the leaf/dest network
+  // (e.g. r4 eth2 -> 8.8.8.0/24). We synthesise a node for it just beyond the delivering router, in the
+  // direction away from that router's neighbours, so the forwarding arrow completes onto a real endpoint.
+  function destStub(states, positions, edges, hops, prefix) {
+    if (!hops.length) return null;
+    var last = hops[hops.length - 1];
+    if (last.drop || last.loop || !last.terminal) return null;
+    if (!last.out_iface || last.out_iface === 'lo') return null;
+    var byState = states[last.node]; if (!byState) return null;
+    var facing = peerByIface(byState, last.out_iface);
+    if (facing && positions[facing]) return null;               // egress faces a known router -> no separate stub
+    var rp = positions[last.node]; if (!rp) return null;
+    var nb = [];
+    edges.forEach(function (e) { var o = e.a === last.node ? e.b : (e.b === last.node ? e.a : null); if (o && positions[o]) nb.push(positions[o]); });
+    var dx = 1, dy = 0;
+    if (nb.length) { var cx = 0, cy = 0; nb.forEach(function (p) { cx += p.x; cy += p.y; }); cx /= nb.length; cy /= nb.length; dx = rp.x - cx; dy = rp.y - cy; var m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m; }
+    return { label: prefix, iface: last.out_iface, by: last.node, rp: rp, dx: dx, dy: dy, x: rp.x + dx * 118, y: rp.y + dy * 118 };
+  }
 
   function svgFor(states, positions, sel) {
     var names = Object.keys(states);
     // include peer-only endpoints (hosts) that appear in edges but have no collected state
     var edges = deriveEdges(states);
     edges.forEach(function (e) { if (names.indexOf(e.b) < 0 && positions[e.b]) names.push(e.b); });
+    var hops = (sel.prefix && sel.source) ? trace(states, positions, sel.source, sel.prefix) : [];
+    var stub = destStub(states, positions, edges, hops, sel.prefix);
+
     var bb = bounds(positions, names);
+    if (stub) { var pd = 66, x0 = Math.min(bb.minX, stub.x - pd), y0 = Math.min(bb.minY, stub.y - pd), x1 = Math.max(bb.minX + bb.w, stub.x + pd), y1 = Math.max(bb.minY + bb.h, stub.y + pd); bb = { minX: x0, minY: y0, w: x1 - x0, h: y1 - y0 }; }
     var s = '<svg class="xto-svg" viewBox="' + num(bb.minX) + ' ' + num(bb.minY) + ' ' + num(bb.w) + ' ' + num(bb.h) + '" width="100%" preserveAspectRatio="xMidYMid meet">';
 
-    // trace path first (so adjacency tunnels & nodes sit on top of the glow)
-    var hops = (sel.prefix && sel.source) ? trace(states, positions, sel.source, sel.prefix) : [];
-    var pathEdges = {};   // key "a|b" -> direction a->b, for de-emphasising the plain link under it
-    for (var h = 0; h + 1 < hops.length; h++) {
-      var from = hops[h].node, to = hops[h + 1].node;
-      if (!positions[from] || !positions[to]) continue;
-      pathEdges[[from, to].sort().join('|')] = 1;
-      var pa = positions[from], pb = positions[to];
+    // trace path first (so adjacency tunnels & nodes sit on top of the glow). One amber flow arrow per hop.
+    function flowArrow(pa, pb, frac) {
       s += '<line class="xto-flow" x1="' + num(pa.x) + '" y1="' + num(pa.y) + '" x2="' + num(pb.x) + '" y2="' + num(pb.y) + '" stroke="var(--xto-trace)" stroke-width="9" stroke-linecap="round" opacity="0.85"/>';
-      // directional arrowhead at 62% along the hop
-      var ang = Math.atan2(pb.y - pa.y, pb.x - pa.x), mx = pa.x + (pb.x - pa.x) * 0.62, my = pa.y + (pb.y - pa.y) * 0.62, hs = 13;
+      var ang = Math.atan2(pb.y - pa.y, pb.x - pa.x), mx = pa.x + (pb.x - pa.x) * frac, my = pa.y + (pb.y - pa.y) * frac, hs = 13;
       s += '<polygon fill="var(--xto-trace)" points="' + num(mx) + ',' + num(my) + ' ' +
         num(mx - Math.cos(ang - 0.5) * hs) + ',' + num(my - Math.sin(ang - 0.5) * hs) + ' ' +
         num(mx - Math.cos(ang + 0.5) * hs) + ',' + num(my - Math.sin(ang + 0.5) * hs) + '"/>';
+    }
+    for (var h = 0; h + 1 < hops.length; h++) {
+      var from = hops[h].node, to = hops[h + 1].node;
+      if (!positions[from] || !positions[to]) continue;
+      flowArrow(positions[from], positions[to], 0.62);
+    }
+    if (stub) {   // final delivery arrow: from the last router INTO the destination stub pill's near edge
+      var sw = stubW(stub.label), fdx = stub.rp.x - stub.x, fdy = stub.rp.y - stub.y, fm = Math.hypot(fdx, fdy) || 1;
+      var ux = fdx / fm, uy = fdy / fm, t = Math.min(ux ? (sw / 2) / Math.abs(ux) : 1e9, uy ? 13 / Math.abs(uy) : 1e9);
+      flowArrow(stub.rp, { x: stub.x + ux * t, y: stub.y + uy * t }, 1.0);
     }
 
     // links: gray physical wire + protocol-coloured tunnel overlay when the adjacency is up
@@ -202,6 +230,14 @@
       s += '<text class="xto-nlabel" x="' + num(p.x) + '" y="' + num(p.y + 4) + '" text-anchor="middle" fill="' + ring + '" data-n="' + esc(n) + '">' + esc(n) + '</text>';
       if (stat[n] === 'drop') s += '<text x="' + num(p.x + w / 2 + 10) + '" y="' + num(p.y + 4) + '" fill="var(--xto-drop)" font-size="14" font-weight="700">✕ DROP</text>';
     });
+
+    // destination stub network (the leaf prefix the trace delivers to) — a green pill, drawn on top
+    if (stub) {
+      var sw2 = stubW(stub.label), hh2 = 13;
+      s += '<rect class="xto-stub" x="' + num(stub.x - sw2 / 2) + '" y="' + num(stub.y - hh2) + '" width="' + num(sw2) + '" height="' + (hh2 * 2) + '" rx="13" fill="var(--xto-bg)" stroke="var(--xto-ok)" stroke-width="2.5"/>' +
+        '<text x="' + num(stub.x) + '" y="' + num(stub.y - hh2 - 5) + '" text-anchor="middle" fill="var(--xto-muted)" font-size="9" font-family="monospace">' + esc(stub.iface) + ' · dest net</text>' +
+        '<text x="' + num(stub.x) + '" y="' + num(stub.y + 4) + '" text-anchor="middle" fill="var(--xto-ok)" font-size="11" font-weight="700" font-family="monospace">' + esc(stub.label) + '</text>';
+    }
 
     s += '</svg>';
     return { svg: s, hops: hops };
