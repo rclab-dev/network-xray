@@ -121,19 +121,67 @@
   }
 
   // ---------- Routing table (prefix -> out-iface) ----------
-  function routingHtml(state) {
+  function routingHtml(state, sel, clickable) {
     var rt = state.routing_table || [];
     if (!rt.length) return '';
-    var sel = (state.route_resolution && state.route_resolution.matched_prefix) || '';
     var rows = rt.map(function (r) {
       var on = sel && r.prefix === sel;
       var dst = r.out_iface || r.next_hop || '—';
-      return '<tr' + (on ? ' class="xnp-sel"' : '') + '>' +
+      return '<tr' + (on ? ' class="xnp-sel"' : '') + (clickable ? ' data-prefix="' + esc(r.prefix) + '"' : '') + '>' +
         '<td>' + esc(r.prefix) + '</td>' +
         '<td>→ ' + esc(dst) + '</td>' +
         '<td class="xnp-proto">' + esc(r.protocol || '') + '</td></tr>';
     }).join('');
-    return panel('Routing table', '<table class="xnp-rt"><tbody>' + rows + '</tbody></table>');
+    return panel('Routing table', '<table class="xnp-rt' + (clickable ? ' xnp-click' : '') + '"><tbody>' + rows + '</tbody></table>');
+  }
+
+  // ---------- Node figure (position-INDEPENDENT: own fan layout, never reads graph coords) ----------
+  function ifaceMap(state) {
+    var ifs = state.interfaces || {}, out = {};
+    Object.keys(ifs).forEach(function (ifn) {
+      var peer = '';
+      Object.keys(state).forEach(function (k) { var m = /^(.+)_iface$/.exec(k); if (m && state[k] === ifn) peer = m[1]; });
+      out[ifn] = { peer: peer, ip: (ifs[ifn] && ifs[ifn].ip) || '' };
+    });
+    // if the collector gave no interface list, fall back to the out-ifaces seen in the routing table
+    if (!Object.keys(out).length) {
+      (state.routing_table || []).forEach(function (r) { if (r.out_iface && r.out_iface !== 'lo' && !out[r.out_iface]) out[r.out_iface] = { peer: '', ip: '' }; });
+    }
+    return out;
+  }
+  function selOutIface(state, sel) {
+    var row = (state.routing_table || []).filter(function (r) { return r.prefix === sel; })[0];
+    return row ? (row.out_iface || '') : '';
+  }
+  function figureSvg(state, sel) {
+    var ifm = ifaceMap(state);
+    var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
+    var n = Math.max(1, names.length);
+    var W = 520, H = 60 + n * 64, BX = 56, BW = 200, RER = 30;
+    var CX = BX + BW / 2, CY = H / 2, EX = W - 66, ports = {};
+    var s = '<svg class="xnp-fig" viewBox="0 0 ' + W + ' ' + H + '" width="100%" preserveAspectRatio="xMidYMid meet">';
+    s += '<rect x="' + BX + '" y="' + (CY - 66) + '" width="' + BW + '" height="132" rx="12" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2"/>';
+    names.forEach(function (ifn, i) {
+      var ey = 46 + i * 64, py = Math.max(CY - 52, Math.min(CY + 52, ey));
+      ports[ifn] = [BX + BW, py];
+      s += '<line x1="' + (BX + BW) + '" y1="' + py + '" x2="' + EX + '" y2="' + ey + '" stroke="var(--xnp-accent)" stroke-width="4"/>' +
+        '<rect x="' + (BX + BW - 6) + '" y="' + (py - 5) + '" width="12" height="10" fill="var(--xnp-bg)" stroke="var(--xnp-accent)" stroke-width="1.5"/>' +
+        '<text x="' + (EX + 8) + '" y="' + (ey + 4) + '" fill="var(--xnp-accent)" font-size="12" font-family="monospace">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
+    });
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2"/>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="6" fill="#a678e0"/>';
+    var oif = selOutIface(state, sel);
+    if (oif && ports[oif]) {                                   // arrow: RE -> selected out-iface port
+      var p = ports[oif], a = Math.atan2(p[1] - CY, p[0] - CX), tx = p[0] - 8, ty = p[1], hs = 10;
+      var ix = CX + Math.cos(a) * RER, iy = CY + Math.sin(a) * RER;
+      s += '<line x1="' + ix + '" y1="' + iy + '" x2="' + tx + '" y2="' + ty + '" stroke="var(--xnp-ok)" stroke-width="4"/>' +
+        '<polygon fill="var(--xnp-ok)" points="' + tx + ',' + ty + ' ' + (tx - Math.cos(a - 0.4) * hs) + ',' + (ty - Math.sin(a - 0.4) * hs) + ' ' + (tx - Math.cos(a + 0.4) * hs) + ',' + (ty - Math.sin(a + 0.4) * hs) + '"/>';
+    } else if (oif === 'lo') {
+      s += '<text x="' + CX + '" y="' + (CY - RER - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>';
+    }
+    var cap = esc(state.target_node || 'node') + (sel ? '  selected: ' + esc(sel) + (oif ? ' → ' + esc(oif) : '') : '');
+    s += '<text x="' + CX + '" y="' + (CY + 66 + 18) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="middle" font-family="monospace">' + cap + '</text></svg>';
+    return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
 
   function bgpHtml(state) {
@@ -179,18 +227,38 @@
       '.xnp-chain{margin-top:3px;font-size:10px;color:var(--xnp-muted);line-height:1.6}' +
       '.xnp-chain .xnp-step-tie{color:var(--xnp-muted)}.xnp-chain .xnp-step-win{color:var(--xnp-decider-strong);font-weight:700}.xnp-chain .xnp-step-amb{color:var(--xnp-decider);font-weight:700}' +
       '.xnp-legend{margin-top:6px;font-size:10px;color:var(--xnp-muted)}' +
-      '.xnp-dim{color:var(--xnp-muted)}';
+      '.xnp-dim{color:var(--xnp-muted)}' +
+      '.xnp-figpanel{padding:6px 8px}.xnp-fig{display:block;max-height:280px}' +
+      '.xnp-rt.xnp-click tr[data-prefix]{cursor:pointer}' +
+      '.xnp-rt.xnp-click tr[data-prefix]:hover td{background:var(--xnp-sel-bg)}';
     document.head.appendChild(s);
   }
 
-  function render(container, state) {
+  function defaultSel(state) {
+    if (state.route_resolution && state.route_resolution.matched_prefix) return state.route_resolution.matched_prefix;
+    var rt = state.routing_table || [];
+    var nonLocal = rt.filter(function (r) { return r.out_iface && r.out_iface !== 'lo'; })[0];
+    return (nonLocal || rt[0] || {}).prefix || '';
+  }
+  // render(container, state, opts?)  —  opts.figure:true adds the node figure with a clickable route arrow
+  function render(container, state, opts) {
     if (typeof document === 'undefined') return;
     if (typeof container === 'string') container = document.getElementById(container.replace(/^#/, '')) || document.querySelector(container);
     if (!container) return;
     injectCss();
+    opts = opts || {};
     state = state || {};
     container.classList.add('xnp-root');
-    container.innerHTML = routingHtml(state) + bgpHtml(state);
+    var fig = !!opts.figure;
+    var sel = fig ? (container._xnpSel || defaultSel(state)) : ((state.route_resolution && state.route_resolution.matched_prefix) || '');
+    if (fig) container._xnpSel = sel;
+    container.innerHTML = (fig ? figureSvg(state, sel) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
+    if (fig) {   // click a routing row -> move the arrow to that prefix's out-iface (interactive)
+      var rows = container.querySelectorAll('.xnp-rt.xnp-click tr[data-prefix]');
+      Array.prototype.forEach.call(rows, function (tr) {
+        tr.addEventListener('click', function () { container._xnpSel = tr.getAttribute('data-prefix'); render(container, state, opts); });
+      });
+    }
   }
 
   var api = { render: render, buildBgpView: bgpView };   // buildBgpView exposed for custom layouts

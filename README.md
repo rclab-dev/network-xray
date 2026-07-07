@@ -174,11 +174,17 @@ node, you drop that node's state in and get the "inside the router" view the gra
 <script>
   // nodeState = the object clab-collect.js emits for one node (see DATA-CONTRACT.md)
   XrayNodePanel.render(document.getElementById('xray-panel'), nodeState);
+
+  // want the little picture too? add the node figure with a clickable route arrow:
+  XrayNodePanel.render(document.getElementById('xray-panel'), nodeState, { figure: true });
 </script>
 ```
 
 - **Position-independent:** nothing reads the graph geometry, so the output is identical no matter
   where the node sits — perfect when nodes are dragged around freely.
+- **`{ figure: true }`:** adds a small node picture (router + interfaces) with a green forwarding arrow;
+  click any routing-table row and the arrow swings to that prefix's out-interface. Draws its own
+  fan layout — still position-independent. Omit it for tables only.
 - **Same Best-Path logic** as the DeepDive (Weight → LocPrf → AS-Path → Origin → MED), so *why a path
   won* is explained the same way.
 - **Data:** `routing_table`, `bgp_routes`, `route_resolution` from `clab-collect.js` (already emitted).

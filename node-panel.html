@@ -22,6 +22,7 @@
     <select id="node"></select>
     <label for="theme" style="margin-left:18px">Theme</label>
     <select id="theme"></select>
+    <label style="margin-left:18px"><input type="checkbox" id="figure" checked/> Figure (click a route → arrow)</label>
   </div>
 
   <!-- the panel renders into this container (this is all a host tab needs) -->
@@ -42,6 +43,8 @@
 var STATES = {
   'r1 (BGP · contested prefix)': {
     target_node: 'r1', protocol: 'bgp', bgp_configured: true,
+    interfaces: { eth0: { ip: '10.11.0.10' }, eth1: { ip: '10.12.0.10' }, lo: { ip: '1.1.1.1' } },
+    r2_iface: 'eth0', r3_iface: 'eth1',
     route_resolution: { matched_prefix: '8.8.8.0/24', resolved: true, out_iface: 'eth0' },
     routing_table: [
       { prefix: '1.1.1.1/32', out_iface: 'lo',   protocol: 'local' },
@@ -56,6 +59,8 @@ var STATES = {
   },
   'r2 (OSPF · no BGP)': {
     target_node: 'r2', protocol: 'ospf',
+    interfaces: { eth0: { ip: '10.11.0.20' }, eth1: { ip: '10.12.0.20' }, lo: { ip: '2.2.2.2' } },
+    r1_iface: 'eth0', r3_iface: 'eth1',
     route_resolution: { matched_prefix: '3.3.3.3/32', resolved: true, out_iface: 'eth1' },
     routing_table: [
       { prefix: '2.2.2.2/32',  out_iface: 'lo',   protocol: 'local' },
@@ -85,9 +90,11 @@ function applyTheme() {
   var t = THEMES[theme.value] || {};
   Object.keys(t).forEach(function (v) { panel.style.setProperty(v, t[v]); });
 }
-function draw() { applyTheme(); XrayNodePanel.render(panel, STATES[sel.value]); applyTheme(); }
+var figure = document.getElementById('figure');
+function draw() { panel._xnpSel = null; applyTheme(); XrayNodePanel.render(panel, STATES[sel.value], { figure: figure.checked }); applyTheme(); }
 sel.addEventListener('change', draw);
 theme.addEventListener('change', draw);
+figure.addEventListener('change', draw);
 draw();
 </script>
 </body></html>
