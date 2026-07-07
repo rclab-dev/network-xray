@@ -253,8 +253,10 @@ and the overview becomes a **click-through explorer** — the graph on the left,
 </script>
 ```
 
-The same `clab-collect.js` states drive both, so there's nothing to keep in sync. **Live example:**
-open `topo-explorer.html` (overview + detail side by side, draggable, with the link-break scenario).
+The same `clab-collect.js` states drive both, so there's nothing to keep in sync. Add
+`onMoving(name, {x,y})` (fires continuously while dragging) and re-render the detail from it, and the
+figure's **interface link angles follow the layout live** as you drag nodes around. **Live example:**
+open `topo-explorer.html` (overview + detail side by side, draggable with live follow, link-break scenario).
 
 ## What people build with it
 

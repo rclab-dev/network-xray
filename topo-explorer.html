@@ -115,15 +115,22 @@ function applyTheme(){ var t=THEMES[theme.value]||{};
   [overview,detail].forEach(function(el){ el.style.cssText=''; Object.keys(t).forEach(function(v){ el.style.setProperty(v,t[v]); }); }); }
 function broken(){ return SCN[scn.value]; }
 
-// clicking a node in the overview -> render that node's inside-the-router detail on the right
-function showDetail(name, state){ curnode.textContent = name; detail._xnpSel=null; XrayNodePanel.render(detail, state, { figure:true, positions:POS }); applyTheme(); }
+// the right view tracks the current node + the live POS. renderDetail() re-reads POS every time, so it
+// FOLLOWS the layout while you drag; selectNode() switches which node is shown (and resets its prefix).
+var curName=null, curStates=null;
+function renderDetail(){ if(!curName || !curStates || !curStates[curName]) return;
+  curnode.textContent = curName; XrayNodePanel.render(detail, curStates[curName], { figure:true, positions:POS }); applyTheme(); }
+function selectNode(name){ if(name!==curName){ curName=name; detail._xnpSel=null; } renderDetail(); }
 
 function draw(){
-  var states = labStates(broken());
+  curStates = labStates(broken());
   overview._xtoSel=null; applyTheme();
-  XrayTopoOverlay.render(overview, { states:states, positions:POS },
-    { draggable:true, onSelect:showDetail, onMove:function(n,p){ /* host persists p to annotations here */ } });
-  var src = overview._xtoSel && overview._xtoSel.source; if(src) showDetail(src, states[src]);
+  XrayTopoOverlay.render(overview, { states:curStates, positions:POS }, {
+    draggable:true,
+    onSelect:function(name){ selectNode(name); },
+    onMoving:function(){ renderDetail(); },              // dragging any node -> right view re-angles live
+    onMove:function(n,p){ /* host persists p to annotations here */ } });
+  var src = overview._xtoSel && overview._xtoSel.source; if(src) selectNode(src);
   applyTheme();
   fail.classList.toggle('on', broken()); fail.textContent = broken()?'Restore r1↔r2 link':'Break r1↔r2 link';
 }

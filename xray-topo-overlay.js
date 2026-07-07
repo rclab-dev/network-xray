@@ -257,7 +257,9 @@
   //   highest-degree node. Click any node to re-source the trace; change the picker to re-target it.
   //   opts.draggable:true  — drag nodes to reposition them (like the containerlab TopoViewer); a click
   //     that doesn't move still just re-sources the trace.  opts.onMove(name,{x,y}) fires after a drag
-  //     so the host can persist the new coordinate (e.g. back into the topology annotations).
+  //     so the host can persist the new coordinate (e.g. back into the topology annotations); pass
+  //     opts.onMoving(name,{x,y}) to also fire continuously DURING the drag — wire it to re-render a
+  //     detail view so the node figure's link angles follow the layout live.
   //   opts.onSelect(name,state) — fires when a node is CLICKED (and once on first render for the default
   //     node). Wire it to XrayNodePanel.render(...) to show that node's inside-the-router detail, so the
   //     overview becomes a click-through explorer: graph -> node -> Routing/BGP/Best-Path + figure.
@@ -270,7 +272,8 @@
     var states = data.states || {}, positions = data.positions || {};
     container._xtoData = data;                                   // latest data for the (once-bound) drag handlers
     if (opts.draggable != null) container._xtoDraggable = !!opts.draggable;
-    if (opts.onMove) container._xtoOnMove = opts.onMove;
+    if (opts.onMove) container._xtoOnMove = opts.onMove;         // drag END — persist the coordinate
+    if (opts.onMoving) container._xtoOnMoving = opts.onMoving;   // DURING drag — for live UI that follows (e.g. a detail view)
     if (opts.onSelect) container._xtoOnSelect = opts.onSelect;   // fired when a node is clicked (not dragged)
     var draggable = !!container._xtoDraggable;
     function fireSelect(n) { if (container._xtoOnSelect && states[n]) { try { container._xtoOnSelect(n, states[n]); } catch (e) {} } }
@@ -324,8 +327,9 @@
           var cd = container._xtoData, svg = container.querySelector('svg.xto-svg'); if (!svg) return;
           var loc = clientToSvg(svg, ev.clientX, ev.clientY);
           if (Math.abs(ev.clientX - d.cx0) + Math.abs(ev.clientY - d.cy0) > 3) d.moved = true;
-          (cd.positions || (cd.positions = {}))[d.n] = { x: loc.x - d.dx, y: loc.y - d.dy };
+          var np = (cd.positions || (cd.positions = {}))[d.n] = { x: loc.x - d.dx, y: loc.y - d.dy };
           render(container, cd, {});
+          if (d.moved && container._xtoOnMoving) { try { container._xtoOnMoving(d.n, np); } catch (e) {} }
         });
         document.addEventListener('pointerup', function () {
           var d = container._xtoDrag; if (!d) return;
