@@ -258,6 +258,9 @@
   //   opts.draggable:true  — drag nodes to reposition them (like the containerlab TopoViewer); a click
   //     that doesn't move still just re-sources the trace.  opts.onMove(name,{x,y}) fires after a drag
   //     so the host can persist the new coordinate (e.g. back into the topology annotations).
+  //   opts.onSelect(name,state) — fires when a node is CLICKED (and once on first render for the default
+  //     node). Wire it to XrayNodePanel.render(...) to show that node's inside-the-router detail, so the
+  //     overview becomes a click-through explorer: graph -> node -> Routing/BGP/Best-Path + figure.
   function render(container, data, opts) {
     if (typeof document === 'undefined') return;
     if (typeof container === 'string') container = document.getElementById(container.replace(/^#/, '')) || document.querySelector(container);
@@ -268,7 +271,9 @@
     container._xtoData = data;                                   // latest data for the (once-bound) drag handlers
     if (opts.draggable != null) container._xtoDraggable = !!opts.draggable;
     if (opts.onMove) container._xtoOnMove = opts.onMove;
+    if (opts.onSelect) container._xtoOnSelect = opts.onSelect;   // fired when a node is clicked (not dragged)
     var draggable = !!container._xtoDraggable;
+    function fireSelect(n) { if (container._xtoOnSelect && states[n]) { try { container._xtoOnSelect(n, states[n]); } catch (e) {} } }
     container.classList.add('xto-root');
     if (draggable) container.classList.add('xto-grabbable');
 
@@ -298,7 +303,7 @@
     var nodes = container.querySelectorAll('[data-n]');
     if (!draggable) {
       Array.prototype.forEach.call(nodes, function (el) {
-        el.addEventListener('click', function () { var n = el.getAttribute('data-n'); if (states[n]) { container._xtoSel.source = n; render(container, data, {}); } });
+        el.addEventListener('click', function () { var n = el.getAttribute('data-n'); if (states[n]) { container._xtoSel.source = n; render(container, data, {}); fireSelect(n); } });
       });
     } else {
       // pointerdown starts a potential drag; the once-bound document move/up handlers below finish it
@@ -326,14 +331,15 @@
           var d = container._xtoDrag; if (!d) return;
           container._xtoDrag = null; container.classList.remove('xto-dragging');
           var cd = container._xtoData;
-          if (!d.moved) {                                        // a click, not a drag -> re-source the trace
-            if (cd.states && cd.states[d.n]) { container._xtoSel.source = d.n; render(container, cd, {}); }
+          if (!d.moved) {                                        // a click, not a drag -> re-source the trace + open detail
+            if (cd.states && cd.states[d.n]) { container._xtoSel.source = d.n; render(container, cd, {}); if (container._xtoOnSelect) { try { container._xtoOnSelect(d.n, cd.states[d.n]); } catch (e) {} } }
           } else if (container._xtoOnMove) {
             try { container._xtoOnMove(d.n, (cd.positions || {})[d.n]); } catch (e) {}
           }
         });
       }
     }
+    if (!container._xtoInited) { container._xtoInited = true; fireSelect(sel.source); }   // seed the host's detail view once
     return built.hops;
   }
 

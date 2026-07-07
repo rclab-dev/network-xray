@@ -231,6 +231,31 @@ picture (the single-node panel looks *inside* one router; this one looks *across
 - **Live example:** open `topo-overlay.html` (scenario + theme picker, a one-click link-break button,
   draggable nodes).
 
+### Click a node → look inside it (the two modules composed)
+
+The overlay and the single-node panel are meant to click together: `onSelect(name, state)` fires when
+a node is clicked (and once for the default node), so you wire it straight to `XrayNodePanel.render`
+and the overview becomes a **click-through explorer** — the graph on the left, the selected router's
+**Routing / BGP / Best-Path + figure** on the right, exactly like a "Node Properties" tab:
+
+```html
+<script src="xray-topo-overlay.js"></script>
+<script src="xray-node-panel.js"></script>
+<div id="graph"></div><div id="detail"></div>
+<script>
+  var positions = { r1:{x,y}, r2:{x,y}, … };          // from the topology JSON / annotations
+  XrayTopoOverlay.render(document.getElementById('graph'), { states, positions }, {
+    draggable: true,
+    onSelect: function (name, state) {                 // ← click a node in the graph
+      XrayNodePanel.render(document.getElementById('detail'), state, { figure: true, positions });
+    }
+  });
+</script>
+```
+
+The same `clab-collect.js` states drive both, so there's nothing to keep in sync. **Live example:**
+open `topo-explorer.html` (overview + detail side by side, draggable, with the link-break scenario).
+
 ## What people build with it
 
 - **Interactive teaching modules** — embed an OSPF/BGP walkthrough in a blog post or course.

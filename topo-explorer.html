@@ -1,0 +1,135 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/>
+<title>X-Ray explorer — click a node in the graph, look inside the router</title>
+<style>
+  html,body{margin:0;background:#0a1016;color:#cfe8ee;font:13px/1.5 Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:18px}
+  h1{font-size:16px;color:#4dd0e1;margin:0 0 4px}
+  p.sub{color:#7f97a6;margin:0 0 14px;font-size:12px}
+  .pick{margin:0 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pick label{color:#9fb6c2}
+  select{background:#12202b;color:#cfe8ee;border:1px solid #2b3a44;border-radius:4px;padding:4px 8px;font:12px monospace}
+  .btn{background:#12202b;color:#cfe8ee;border:1px solid #2b3a44;border-radius:4px;padding:4px 10px;font:12px monospace;cursor:pointer}
+  .btn.on{background:#26313a;border-color:#4dd0e1;color:#8fe}
+  .cols{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .col-graph{flex:1 1 460px;min-width:340px}
+  .col-detail{flex:1 1 380px;min-width:320px}
+  .col h2{font-size:12px;color:#80cbc4;margin:0 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .col h2 b{color:#4dd0e1}
+  .note{margin-top:16px;color:#5f7d8a;font-size:11px;line-height:1.6}
+  code{color:#8fd;background:#0d1a12;padding:1px 4px;border-radius:3px}
+</style></head>
+<body><div class="wrap">
+  <h1>X-Ray — explorer</h1>
+  <p class="sub">The whole flow in one screen: the <b>overview</b> shows adjacency + a live prefix
+  trace; <b>click any node</b> and its <b>inside-the-router detail</b> (Routing / BGP / Best-Path + the
+  figure) opens on the right — exactly what a containerlab / vscode-containerlab "Node Properties" tab
+  would show. Drag nodes to rearrange; break a link and watch the path re-route.</p>
+
+  <div class="pick">
+    <label for="scn">Scenario</label>
+    <select id="scn"></select>
+    <label for="theme" style="margin-left:8px">Theme</label>
+    <select id="theme"></select>
+    <button class="btn" id="fail" style="margin-left:8px">Break r1↔r2 link</button>
+  </div>
+
+  <div class="cols">
+    <div class="col col-graph">
+      <h2>Overview — adjacency &amp; forwarding trace</h2>
+      <div id="xray-topo"></div>
+    </div>
+    <div class="col col-detail">
+      <h2>Inside <b id="curnode">—</b> — click a node to open</h2>
+      <div id="xray-detail"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    Two drop-in modules, composed by the host in a few lines:
+    <code>XrayTopoOverlay.render(graphEl, {states,positions}, { onSelect: n =&gt; XrayNodePanel.render(detailEl, states[n], {figure:true, positions}) })</code>.<br>
+    The overlay fires <code>onSelect(name,state)</code> on click; the panel draws that node's control plane.
+    Same <code>clab-collect.js</code> states feed both. Colours are CSS variables on <code>.xto-root</code> / <code>.xnp-root</code>.
+  </div>
+</div>
+
+<script src="xray-topo-overlay.js"></script>
+<script src="xray-node-panel.js"></script>
+<script>
+// 4-node lab: r1(BGP edge) — r2/r3(core) — r4(dest, owns 8.8.8.0/24). Two paths; r1 prefers r2 (LP 150).
+function labStates(broken) {
+  return {
+    r1: { target_node:'r1', protocol:'bgp', bgp_configured:true,
+      interfaces:{ eth0:{ip:'10.12.0.1'}, eth1:{ip:'10.13.0.1'}, lo:{ip:'1.1.1.1'} },
+      r2_iface:'eth0', r3_iface:'eth1', r2_has_full:!broken, r3_has_full:true,
+      route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface: broken?'eth1':'eth0' },
+      routing_table:[
+        { prefix:'1.1.1.1/32', out_iface:'lo', protocol:'local' },
+        { prefix:'3.3.3.3/32', out_iface:'eth1', next_hop:'10.13.0.3', protocol:'ospf' },
+        { prefix:'8.8.8.0/24', out_iface: broken?'eth1':'eth0', next_hop: broken?'10.13.0.3':'10.12.0.2', protocol:'bgp', selected:true } ],
+      bgp_routes: broken ? [
+        { prefix:'8.8.8.0/24', next_hop:'10.13.0.3', as_path:'65003 65100', local_pref:100, weight:0, metric:0, origin:'i', best:true, status:'*>' } ] : [
+        { prefix:'8.8.8.0/24', next_hop:'10.12.0.2', as_path:'65002 65100', local_pref:150, weight:0, metric:0, origin:'i', best:true,  status:'*>' },
+        { prefix:'8.8.8.0/24', next_hop:'10.13.0.3', as_path:'65003 65100', local_pref:100, weight:0, metric:0, origin:'i', best:false, status:'* ' } ] },
+    r2: { target_node:'r2', protocol:'ospf',
+      interfaces:{ eth0:{ip:'10.12.0.2'}, eth1:{ip:'10.24.0.2'}, lo:{ip:'2.2.2.2'} },
+      r1_iface:'eth0', r4_iface:'eth1', r1_has_full:!broken, r4_has_full:true,
+      route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface:'eth1' },
+      routing_table:[
+        { prefix:'2.2.2.2/32', out_iface:'lo', protocol:'local' },
+        { prefix:'8.8.8.0/24', out_iface:'eth1', next_hop:'10.24.0.4', protocol:'ospf', selected:true } ] },
+    r3: { target_node:'r3', protocol:'bgp', bgp_configured:true,
+      interfaces:{ eth0:{ip:'10.13.0.3'}, eth1:{ip:'10.34.0.3'}, lo:{ip:'3.3.3.3'} },
+      r1_iface:'eth0', r4_iface:'eth1', r1_has_full:true, r4_has_full:true,
+      route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface:'eth1' },
+      routing_table:[
+        { prefix:'3.3.3.3/32', out_iface:'lo', protocol:'local' },
+        { prefix:'8.8.8.0/24', out_iface:'eth1', next_hop:'10.34.0.4', protocol:'ospf', selected:true } ],
+      bgp_routes:[
+        { prefix:'8.8.8.0/24', next_hop:'10.34.0.4', as_path:'65100', local_pref:100, weight:0, metric:0, origin:'i', best:true, status:'*>' } ] },
+    r4: { target_node:'r4', protocol:'ospf',
+      interfaces:{ eth0:{ip:'10.24.0.4'}, eth1:{ip:'10.34.0.4'}, eth2:{ip:'8.8.8.1'}, lo:{ip:'4.4.4.4'} },
+      r2_iface:'eth0', r3_iface:'eth1', r2_has_full:true, r3_has_full:true,
+      route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface:'eth2' },
+      routing_table:[
+        { prefix:'4.4.4.4/32', out_iface:'lo', protocol:'local' },
+        { prefix:'8.8.8.0/24', out_iface:'eth2', protocol:'connected', selected:true } ] }
+  };
+}
+var POS = { r1:{x:90,y:180}, r2:{x:250,y:80}, r3:{x:250,y:280}, r4:{x:430,y:180} };
+
+var SCN = { 'Converged (r1 prefers r2, LP 150)': false, 'r1↔r2 down (reroute via r3)': true };
+// one theme object drives BOTH modules (unused vars on the other namespace are harmless).
+var THEMES = {
+  'Dark (default)': {},
+  'Light': { '--xto-fg':'#1c2b36','--xto-bg':'#f4f8fb','--xto-panel':'#eef4f8','--xto-border':'#c8d6df','--xto-accent':'#0b7285','--xto-muted':'#7a8a96','--xto-ok':'#1b8a2e','--xto-ospf':'#1b8a2e','--xto-bgp':'#6d3fb0','--xto-phys':'#9fb2be','--xto-trace':'#e69500','--xto-drop':'#d84343',
+             '--xnp-fg':'#1c2b36','--xnp-bg':'#f4f8fb','--xnp-border':'#c8d6df','--xnp-accent':'#0b7285','--xnp-route-fg':'#1f6f3a','--xnp-muted':'#7a8a96','--xnp-sel-bg':'#d7f0dd','--xnp-ok':'#1b8a2e','--xnp-bgp-header':'#6d3fb0','--xnp-note':'#2f6f9c','--xnp-ospf':'#1b8a2e','--xnp-bgp':'#6d3fb0','--xnp-phys':'#9fb2be' },
+  'Amber accent': { '--xto-accent':'#e0a84d','--xto-trace':'#ffd54f','--xto-bgp':'#e0a84d','--xnp-accent':'#e0a84d','--xnp-bgp-header':'#e0a84d','--xnp-ok':'#ffd54f','--xnp-route-fg':'#f0d9a8' }
+};
+
+var scn=document.getElementById('scn'), theme=document.getElementById('theme'), fail=document.getElementById('fail'),
+    overview=document.getElementById('xray-topo'), detail=document.getElementById('xray-detail'), curnode=document.getElementById('curnode');
+Object.keys(SCN).forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=k; scn.appendChild(o); });
+Object.keys(THEMES).forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=k; theme.appendChild(o); });
+function applyTheme(){ var t=THEMES[theme.value]||{};
+  [overview,detail].forEach(function(el){ el.style.cssText=''; Object.keys(t).forEach(function(v){ el.style.setProperty(v,t[v]); }); }); }
+function broken(){ return SCN[scn.value]; }
+
+// clicking a node in the overview -> render that node's inside-the-router detail on the right
+function showDetail(name, state){ curnode.textContent = name; detail._xnpSel=null; XrayNodePanel.render(detail, state, { figure:true, positions:POS }); applyTheme(); }
+
+function draw(){
+  var states = labStates(broken());
+  overview._xtoSel=null; applyTheme();
+  XrayTopoOverlay.render(overview, { states:states, positions:POS },
+    { draggable:true, onSelect:showDetail, onMove:function(n,p){ /* host persists p to annotations here */ } });
+  var src = overview._xtoSel && overview._xtoSel.source; if(src) showDetail(src, states[src]);
+  applyTheme();
+  fail.classList.toggle('on', broken()); fail.textContent = broken()?'Restore r1↔r2 link':'Break r1↔r2 link';
+}
+scn.addEventListener('change', draw);
+theme.addEventListener('change', draw);
+fail.addEventListener('click', function(){ scn.value = broken()? 'Converged (r1 prefers r2, LP 150)' : 'r1↔r2 down (reroute via r3)'; draw(); });
+draw();
+</script>
+</body></html>
