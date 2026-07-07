@@ -150,6 +150,42 @@ containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <
 # shut a link in the lab → the open node's DeepDive updates within a few seconds.
 ```
 
+**Hide the management interface (optional):** containerlab attaches a management network (default
+`172.20.20.0/24`) to every node. Add `--exclude-mgmt` so the collector drops that interface and the
+DeepDive panel shows only your topology's data links. If your lab uses a non-default mgmt subnet, pass
+`--mgmt-subnet <cidr>` instead. It matches by **subnet, not interface name**, so a lab that legitimately
+uses `eth0` as a data link is left untouched. Default is off (nothing hidden):
+
+```
+node clab-xray-collect.js lab.clab.yml <this gallery dir> --exclude-mgmt
+```
+
+## Single-node panel — drop-in for a "Node Properties" tab
+
+Don't need the full graph? `xray-node-panel.js` renders **one** node's control-plane tables —
+**Routing table + BGP table + Best-Path Decision** — as plain, **position-independent** panels
+(no D3, no coordinates, zero dependencies). It's built for embedding beside a topology GUI whose
+layout you don't control — e.g. a **containerlab / vscode-containerlab node panel**: the user picks a
+node, you drop that node's state in and get the "inside the router" view the graph doesn't show.
+
+```html
+<script src="xray-node-panel.js"></script>
+<div id="xray-panel"></div>
+<script>
+  // nodeState = the object clab-collect.js emits for one node (see DATA-CONTRACT.md)
+  XrayNodePanel.render(document.getElementById('xray-panel'), nodeState);
+</script>
+```
+
+- **Position-independent:** nothing reads the graph geometry, so the output is identical no matter
+  where the node sits — perfect when nodes are dragged around freely.
+- **Same Best-Path logic** as the DeepDive (Weight → LocPrf → AS-Path → Origin → MED), so *why a path
+  won* is explained the same way.
+- **Data:** `routing_table`, `bgp_routes`, `route_resolution` from `clab-collect.js` (already emitted).
+- **Themeable:** every colour is a CSS variable (`--xnp-bg`, `--xnp-accent`, `--xnp-ok`, …) with a dark
+  default — override them on `.xnp-root` to match your UI, e.g. `--xnp-bg: var(--vscode-editor-background)`.
+- **Live example:** open `node-panel.html` (node picker + theme picker + the panel, no backend).
+
 ## What people build with it
 
 - **Interactive teaching modules** — embed an OSPF/BGP walkthrough in a blog post or course.

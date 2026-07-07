@@ -186,6 +186,17 @@ function buildState(opts) {
 
   // interfaces from ospf-interface json (preferred) else `show interface` fallback
   var ifaceNames = Object.keys(ifs).length ? Object.keys(ifs) : Object.keys(ifFallback);
+  // Optional: drop clab management interfaces so the DeepDive panel shows only the topology's data
+  // links. Opt-in via --exclude-mgmt (default mgmt subnet 172.20.20.0/24) / --mgmt-subnet <cidr>.
+  // ★Identified by SUBNET, not iface name: some labs & the self-test fixtures legitimately use eth0
+  // as a DATA interface, so a blanket "drop eth0" would hide real links. Default off = no change.
+  var mgmtSubnet = opts.mgmtSubnet || '';
+  if (mgmtSubnet) {
+    ifaceNames = ifaceNames.filter(function (ifn) {
+      var d = ifs[ifn] || ifFallback[ifn] || {};
+      return !(d.ip && _sameSubnet(mgmtSubnet, d.ip));
+    });
+  }
   var interfaces = {}, ifaceHellos = {}, peerHellos = {};
   ifaceNames.forEach(function (ifn) {
     var d = ifs[ifn] || ifFallback[ifn] || {};
@@ -326,6 +337,14 @@ function buildState(opts) {
     });
   }
 
+  // Full routing table (prefix -> out-iface) for the single-node panel (xray-node-panel.js).
+  // Position-independent: just the RIB rows this node holds, for a text table beside any topology GUI.
+  s.routing_table = routes.map(function (r) {
+    var nh = (r.nexthops && r.nexthops[0]) || {};
+    return { prefix: r.prefix, out_iface: nh.iface || '', next_hop: nh.ip || '',
+             protocol: r.protocol, selected: !!r.selected };
+  });
+
   Object.keys(_area).forEach(function (k) { s[k] = _area[k]; });
   Object.keys(_hello).forEach(function (k) { s[k] = _hello[k]; });
 
@@ -359,7 +378,7 @@ function collectFromJson(args) {
   var proto = (args.proto || 'ospf').toLowerCase();
   return buildState({
     selfName: args.node, id: args.id || args.node, proto: proto,
-    adjacency: args.adjacency || [],
+    adjacency: args.adjacency || [], mgmtSubnet: args.mgmtSubnet || '',
     ospfNei: parseOspfNeighbors(args.ospfNeighbor),
     ospfIf: parseOspfInterfaces(args.ospfInterface),
     ifaces: parseInterfaces(args.interface),
@@ -391,6 +410,7 @@ function collectLive(opts) {
     raw.ospfInterface = _safe(function () { return _vtyshJson(container, 'show ip ospf interface'); });
   }
   return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [],
+    mgmtSubnet: opts.mgmtSubnet || '',
     ospfNeighbor: raw.ospfNeighbor, ospfInterface: raw.ospfInterface, interface: raw.interface,
     route: raw.route, bgpSummary: raw.bgpSummary, bgp: raw.bgp });
 }
@@ -480,28 +500,41 @@ function selfTest() {
   _assert(sb.bgp_routes.length === 1 && sb.bgp_routes[0].prefix === '203.0.113.0/24', 'bgp_routes carries best prefix');
   _assert(sb.r2_has_full === true, 'bgp peer mapped to clab node r2 via connected subnet');
 
+  // --- clab mgmt-interface exclusion (opt-in, identified by SUBNET not iface name) ---
+  var _mgIf = { eth0: { up: true, ip: '172.20.20.3', prefix: 24 }, eth1: { up: true, ip: '10.0.0.1', prefix: 24 } };
+  var _mgAdj = [{ iface: 'eth1', peer: 'r2' }];
+  var sKeep = buildState({ selfName: 'r1', proto: 'ospf', ifaces: _mgIf, adjacency: _mgAdj });
+  _assert(sKeep.interfaces.eth0 && sKeep.interfaces.eth1, 'mgmt: default off keeps both eth0(mgmt) and eth1(data)');
+  var sDrop = buildState({ selfName: 'r1', proto: 'ospf', ifaces: _mgIf, adjacency: _mgAdj, mgmtSubnet: '172.20.20.0/24' });
+  _assert(!sDrop.interfaces.eth0 && sDrop.interfaces.eth1, 'mgmt: --mgmt-subnet drops eth0(172.20.20.x) by subnet, keeps eth1(data)');
+  var sEth0Data = buildState({ selfName: 'r1', proto: 'ospf', ifaces: { eth0: { up: true, ip: '10.0.0.1', prefix: 24 } }, adjacency: [{ iface: 'eth0', peer: 'r2' }], mgmtSubnet: '172.20.20.0/24' });
+  _assert(sEth0Data.interfaces.eth0, 'mgmt: eth0 as DATA iface (10.0.0.x) NOT dropped by mgmt-subnet (subnet-based, not name-based)');
+
   console.log('\nALL SELF-TESTS PASSED');
 }
 
 // ---- main -----------------------------------------------------------------------------------
 if (typeof require !== 'undefined' && require.main === module) {
   var a = _argMap(process.argv.slice(2));
+  // --mgmt-subnet <cidr> (explicit) or --exclude-mgmt (default clab mgmt 172.20.20.0/24); else off.
+  var _mgmt = (a['mgmt-subnet'] && a['mgmt-subnet'] !== true) ? a['mgmt-subnet']
+    : (a['exclude-mgmt'] ? '172.20.20.0/24' : '');
   if (a['self-test']) { selfTest(); }
   else if (a.fixtures) {
     var dir = a.fixtures, rd = function (f) { try { return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); } catch (e) { return null; } };
-    var st = collectFromJson({ node: a.node, id: a.lab || a.node, proto: a.proto, adjacency: _parseAdj(a.adj),
+    var st = collectFromJson({ node: a.node, id: a.lab || a.node, proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: _mgmt,
       ospfNeighbor: rd('ospf-neighbor.json'), ospfInterface: rd('ospf-interface.json'), interface: rd('interface.json'),
       route: rd('route.json'), bgpSummary: rd('bgp-summary.json'), bgp: rd('bgp.json') });
     var out = JSON.stringify(st, null, 2);
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, out); console.log('wrote ' + a.out); } else console.log(out);
   }
   else if (a.lab && a.node) {
-    var stl = collectLive({ lab: a.lab, node: a.node, proto: a.proto, adjacency: _parseAdj(a.adj) });
+    var stl = collectLive({ lab: a.lab, node: a.node, proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: _mgmt });
     var outl = JSON.stringify(stl, null, 2);
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, outl); console.log('wrote ' + a.out); } else console.log(outl);
   }
   else {
-    console.log('usage:\n  --self-test\n  --fixtures <dir> --node <n> [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--out f]\n  --lab <lab> --node <n> [--proto ospf|bgp] [--adj eth0:r2] [--out f]');
+    console.log('usage:\n  --self-test\n  --fixtures <dir> --node <n> [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--exclude-mgmt|--mgmt-subnet <cidr>] [--out f]\n  --lab <lab> --node <n> [--proto ospf|bgp] [--adj eth0:r2] [--exclude-mgmt|--mgmt-subnet <cidr>] [--out f]');
   }
 }
 

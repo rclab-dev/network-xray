@@ -1,0 +1,93 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/>
+<title>X-Ray single-node panel — drop-in for a Node Properties tab</title>
+<style>
+  html,body{margin:0;background:#0a1016;color:#cfe8ee;font:13px/1.5 Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:560px;margin:0 auto;padding:18px}
+  h1{font-size:16px;color:#4dd0e1;margin:0 0 4px}
+  p.sub{color:#7f97a6;margin:0 0 14px;font-size:12px}
+  .pick{margin:0 0 14px}
+  .pick label{color:#9fb6c2;margin-right:8px}
+  select{background:#12202b;color:#cfe8ee;border:1px solid #2b3a44;border-radius:4px;padding:4px 8px;font:12px monospace}
+  .note{margin-top:16px;color:#5f7d8a;font-size:11px;line-height:1.6}
+  code{color:#8fd;background:#0d1a12;padding:1px 4px;border-radius:3px}
+</style></head>
+<body><div class="wrap">
+  <h1>X-Ray — single-node panel</h1>
+  <p class="sub">Position-independent control-plane view for ONE node (Routing + BGP + Best-Path). Drop it into
+  any topology GUI's node panel — pick a node, pass its <code>clab-collect.js</code> state, done.</p>
+
+  <div class="pick">
+    <label for="node">Node</label>
+    <select id="node"></select>
+    <label for="theme" style="margin-left:18px">Theme</label>
+    <select id="theme"></select>
+  </div>
+
+  <!-- the panel renders into this container (this is all a host tab needs) -->
+  <div id="xray-panel"></div>
+
+  <div class="note">
+    Wiring is one line — <code>XrayNodePanel.render(document.getElementById('xray-panel'), nodeState)</code>.<br>
+    No graph, no coordinates: identical output wherever the node sits in the topology.<br>
+    <b>Colours are CSS variables</b> — override <code>--xnp-*</code> on <code>.xnp-root</code> (the Theme picker
+    above just sets those). In VS Code, map them to theme vars, e.g.
+    <code>--xnp-bg: var(--vscode-editor-background)</code>.
+  </div>
+</div>
+
+<script src="xray-node-panel.js"></script>
+<script>
+// Two sample node states in the exact shape clab-collect.js emits (see DATA-CONTRACT.md).
+var STATES = {
+  'r1 (BGP · contested prefix)': {
+    target_node: 'r1', protocol: 'bgp', bgp_configured: true,
+    route_resolution: { matched_prefix: '8.8.8.0/24', resolved: true, out_iface: 'eth0' },
+    routing_table: [
+      { prefix: '1.1.1.1/32', out_iface: 'lo',   protocol: 'local' },
+      { prefix: '2.2.2.2/32', out_iface: 'eth0', next_hop: '10.11.0.20', protocol: 'ospf' },
+      { prefix: '3.3.3.3/32', out_iface: 'eth1', next_hop: '10.12.0.30', protocol: 'ospf' },
+      { prefix: '8.8.8.0/24', out_iface: 'eth0', next_hop: '10.11.0.20', protocol: 'bgp', selected: true }
+    ],
+    bgp_routes: [
+      { prefix: '8.8.8.0/24', next_hop: '10.11.0.20', as_path: '65003', local_pref: 100, weight: 0, metric: 0, origin: 'i', best: true,  status: '*>' },
+      { prefix: '8.8.8.0/24', next_hop: '10.10.0.20', as_path: '65002', local_pref: 50,  weight: 0, metric: 0, origin: 'i', best: false, status: '* ' }
+    ]
+  },
+  'r2 (OSPF · no BGP)': {
+    target_node: 'r2', protocol: 'ospf',
+    route_resolution: { matched_prefix: '3.3.3.3/32', resolved: true, out_iface: 'eth1' },
+    routing_table: [
+      { prefix: '2.2.2.2/32',  out_iface: 'lo',   protocol: 'local' },
+      { prefix: '10.11.0.0/24', out_iface: 'eth0', protocol: 'connected' },
+      { prefix: '10.12.0.0/24', out_iface: 'eth1', protocol: 'connected' },
+      { prefix: '1.1.1.1/32',  out_iface: 'eth0', next_hop: '10.11.0.10', protocol: 'ospf' },
+      { prefix: '3.3.3.3/32',  out_iface: 'eth1', next_hop: '10.12.0.30', protocol: 'ospf', selected: true }
+    ]
+  }
+};
+
+// Themes = just a set of --xnp-* overrides applied to the panel container. Add your own freely.
+var THEMES = {
+  'Dark (default)': {},
+  'Light': { '--xnp-fg': '#1c2b36', '--xnp-bg': '#f4f8fb', '--xnp-border': '#c8d6df', '--xnp-accent': '#0b7285',
+             '--xnp-route-fg': '#1f6f3a', '--xnp-muted': '#7a8a96', '--xnp-sel-bg': '#d7f0dd', '--xnp-ok': '#1b8a2e',
+             '--xnp-bgp-header': '#6d3fb0', '--xnp-note': '#2f6f9c' },
+  'Amber accent': { '--xnp-accent': '#e0a84d', '--xnp-bgp-header': '#e0a84d', '--xnp-ok': '#ffd54f', '--xnp-route-fg': '#f0d9a8' },
+  'Mono (slate)': { '--xnp-accent': '#9fb6c2', '--xnp-bgp-header': '#9fb6c2', '--xnp-ok': '#cfe8ee', '--xnp-route-fg': '#aebfca', '--xnp-decider': '#cfe8ee', '--xnp-decider-strong': '#ffffff' }
+};
+
+var sel = document.getElementById('node'), theme = document.getElementById('theme'), panel = document.getElementById('xray-panel');
+Object.keys(STATES).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
+Object.keys(THEMES).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = k; theme.appendChild(o); });
+function applyTheme() {
+  panel.style.cssText = '';
+  var t = THEMES[theme.value] || {};
+  Object.keys(t).forEach(function (v) { panel.style.setProperty(v, t[v]); });
+}
+function draw() { applyTheme(); XrayNodePanel.render(panel, STATES[sel.value]); applyTheme(); }
+sel.addEventListener('change', draw);
+theme.addEventListener('change', draw);
+draw();
+</script>
+</body></html>

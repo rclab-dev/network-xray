@@ -20,16 +20,18 @@
 'use strict';
 var fs = require('fs'), cp = require('child_process'), path = require('path'), os = require('os');
 
-// flags (--watch / --interval N) may appear after the positional args in any order
-var argv = process.argv.slice(2), watch = false, intervalMs = 3000, pos = [];
+// flags (--watch / --interval N / --exclude-mgmt / --mgmt-subnet <cidr>) may appear in any order
+var argv = process.argv.slice(2), watch = false, intervalMs = 3000, mgmtArg = '', pos = [];
 for (var ai = 0; ai < argv.length; ai++) {
   if (argv[ai] === '--watch') watch = true;
   else if (argv[ai] === '--interval') intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000;
+  else if (argv[ai] === '--exclude-mgmt') mgmtArg = ' --exclude-mgmt';                       // drop clab mgmt IF (172.20.20.0/24)
+  else if (argv[ai] === '--mgmt-subnet') mgmtArg = ' --mgmt-subnet ' + JSON.stringify(argv[++ai] || '');
   else pos.push(argv[ai]);
 }
 var topoPath = pos[0], outDir = pos[1], proto = pos[2] || 'ospf';
 if (!topoPath || !outDir) {
-  console.error('usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs]');
+  console.error('usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>]');
   process.exit(2);
 }
 var topo = fs.readFileSync(topoPath, 'utf8');
@@ -58,7 +60,7 @@ function collectAll() {
     var out = path.join(os.tmpdir(), 'xray-state-' + n + '.json');
     try {
       cp.execSync('node ' + JSON.stringify(collect) + ' --lab ' + lab + ' --node ' + n +
-        ' --proto ' + proto + ' --adj ' + adjStr + ' --out ' + JSON.stringify(out),
+        ' --proto ' + proto + ' --adj ' + adjStr + mgmtArg + ' --out ' + JSON.stringify(out),
         { stdio: ['ignore', 'ignore', 'ignore'] });
       states[n] = JSON.parse(fs.readFileSync(out, 'utf8'));
       ok++;
