@@ -179,39 +179,40 @@
   function figureSvg(state, sel, positions) {
     var ifm = ifaceMap(state);
     var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
-    var W = 420, H = 360, CX = W / 2, CY = H / 2 - 8, HW = 58, HH = 46, LID = 15, RER = 34, R = 130;
+    var W = 420, H = 340, CX = W / 2, CY = H / 2, HW = 70, HH = 52, RER = 38, R = 132;
     var proto = (state.protocol === 'bgp') ? 'bgp' : 'ospf';
     var pcol = proto === 'bgp' ? 'var(--xnp-bgp)' : 'var(--xnp-ospf)';
     var ang = ifaceAngles(state, names, ifm, positions);
     function edge(a) { var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? HW / Math.abs(dx) : 1e9, dy ? HH / Math.abs(dy) : 1e9); return [CX + dx * t, CY + dy * t]; }
+    function re(a) { return [CX + Math.cos(a) * RER, CY + Math.sin(a) * RER]; }   // point on the white RE circle
     var num = function (v) { return v.toFixed(1); };
     var s = '<svg class="xnp-fig" viewBox="0 0 ' + W + ' ' + H + '" width="100%" preserveAspectRatio="xMidYMid meet">';
-    // interface links: gray PHYSICAL base + a protocol-coloured TUNNEL overlay when the adjacency is up
+    // node box (rounded rect) — drawn first so links/circle sit on top
+    s += '<rect x="' + (CX - HW) + '" y="' + (CY - HH) + '" width="' + (HW * 2) + '" height="' + (HH * 2) + '" rx="12" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2"/>';
+    // interface links: run from the white RE circle all the way out to the peer — gray PHYSICAL wire +
+    // a protocol-coloured TUNNEL overlay when the adjacency is up (green=OSPF Full, purple=BGP Established)
     names.forEach(function (ifn) {
-      var a = ang[ifn], p = edge(a), ex = CX + Math.cos(a) * R, ey = CY + Math.sin(a) * R, up = adjUp(state, ifn, ifm[ifn].peer);
+      var a = ang[ifn], r0 = re(a), ex = CX + Math.cos(a) * R, ey = CY + Math.sin(a) * R, bp = edge(a), up = adjUp(state, ifn, ifm[ifn].peer);
       var anchor = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
       var lx = CX + Math.cos(a) * (R + 8), ly = CY + Math.sin(a) * (R + 8) + 4;
-      s += '<line x1="' + num(p[0]) + '" y1="' + num(p[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="7" stroke-linecap="round"/>';
-      if (up) s += '<line x1="' + num(p[0]) + '" y1="' + num(p[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="3.5" stroke-linecap="round"/>';
-      s += '<rect x="' + num(p[0] - 5) + '" y="' + num(p[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="' + (up ? pcol : 'var(--xnp-phys)') + '" stroke-width="1.5"/>' +
+      s += '<line x1="' + num(r0[0]) + '" y1="' + num(r0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="7" stroke-linecap="round"/>';
+      if (up) s += '<line x1="' + num(r0[0]) + '" y1="' + num(r0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="3.5" stroke-linecap="round"/>';
+      s += '<rect x="' + num(bp[0] - 5) + '" y="' + num(bp[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="' + (up ? pcol : 'var(--xnp-phys)') + '" stroke-width="1.5"/>' +
         '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
     });
-    // node CYLINDER (body + bottom arc, then top lid) with the RoutingEngine inside
-    s += '<path d="M' + (CX - HW) + ' ' + (CY - HH) + ' L' + (CX - HW) + ' ' + (CY + HH) +
-      ' A' + HW + ' ' + LID + ' 0 0 0 ' + (CX + HW) + ' ' + (CY + HH) + ' L' + (CX + HW) + ' ' + (CY - HH) + ' Z" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2.5"/>' +
-      '<ellipse cx="' + CX + '" cy="' + (CY - HH) + '" rx="' + HW + '" ry="' + LID + '" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2.5"/>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2"/>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="8" fill="#a678e0"/>';
-    // green forwarding arrow INSIDE the cylinder, from the RoutingEngine toward the selected out-iface
+    // white RoutingEngine circle on top (links terminate at its edge)
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2.5"/>';
+    // green forwarding arrow INSIDE the white circle, pointing toward the selected out-iface
     var oif = selOutIface(state, sel);
     if (oif && ang[oif] != null) {
-      var a2 = ang[oif], tp = edge(a2), hs = 11, ix = CX + Math.cos(a2) * RER, iy = CY + Math.sin(a2) * RER;
-      s += '<line x1="' + num(ix) + '" y1="' + num(iy) + '" x2="' + num(tp[0]) + '" y2="' + num(tp[1]) + '" stroke="var(--xnp-ok)" stroke-width="4.5"/>' +
-        '<polygon fill="var(--xnp-ok)" points="' + num(tp[0]) + ',' + num(tp[1]) + ' ' + num(tp[0] - Math.cos(a2 - 0.4) * hs) + ',' + num(tp[1] - Math.sin(a2 - 0.4) * hs) + ' ' + num(tp[0] - Math.cos(a2 + 0.4) * hs) + ',' + num(tp[1] - Math.sin(a2 + 0.4) * hs) + '"/>';
-    } else if (oif === 'lo') {
-      s += '<text x="' + CX + '" y="' + (CY - HH - LID - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>';
+      var a2 = ang[oif], ti = [CX + Math.cos(a2) * (RER - 9), CY + Math.sin(a2) * (RER - 9)], hs = 9;
+      s += '<line x1="' + CX + '" y1="' + CY + '" x2="' + num(ti[0]) + '" y2="' + num(ti[1]) + '" stroke="var(--xnp-ok)" stroke-width="4"/>' +
+        '<polygon fill="var(--xnp-ok)" points="' + num(ti[0]) + ',' + num(ti[1]) + ' ' + num(ti[0] - Math.cos(a2 - 0.5) * hs) + ',' + num(ti[1] - Math.sin(a2 - 0.5) * hs) + ' ' + num(ti[0] - Math.cos(a2 + 0.5) * hs) + ',' + num(ti[1] - Math.sin(a2 + 0.5) * hs) + '"/>';
+    } else {
+      s += '<circle cx="' + CX + '" cy="' + CY + '" r="5" fill="#a678e0"/>' +
+        (oif === 'lo' ? '<text x="' + CX + '" y="' + (CY - HH - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>' : '');
     }
-    // legend (protocol tunnel / physical) + caption (selected prefix -> out-iface)
+    // legend + caption
     s += '<text x="14" y="' + (H - 26) + '" fill="' + pcol + '" font-size="11" font-family="monospace">━ ' + (proto === 'bgp' ? 'BGP' : 'OSPF') + ' tunnel (up)</text>' +
       '<text x="14" y="' + (H - 11) + '" fill="var(--xnp-phys)" font-size="11" font-family="monospace">━ physical link</text>';
     var cap = esc(state.target_node || 'node') + (sel ? '  ' + esc(sel) + (oif ? ' → ' + esc(oif) : '') : '');
