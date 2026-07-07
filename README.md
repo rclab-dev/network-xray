@@ -182,8 +182,10 @@ node, you drop that node's state in and get the "inside the router" view the gra
 
 - **Position-independent:** nothing reads the graph geometry, so the output is identical no matter
   where the node sits — perfect when nodes are dragged around freely.
-- **`{ figure: true }`:** adds a small node picture (router + interfaces) with a green forwarding arrow;
-  click any routing-table row and the arrow swings to that prefix's out-interface. Omit it for tables only.
+- **`{ figure: true }`:** draws the node as a cylinder with its RoutingEngine and interfaces, plus a
+  green forwarding arrow inside; click any routing-table row and the arrow swings to that prefix's
+  out-interface. Each link shows a **gray physical wire** with a **protocol tunnel** over it when the
+  adjacency is up — **green for OSPF, purple for BGP** (down/none stays gray). Omit for tables only.
 - **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** pass the node coordinates straight from the
   topology JSON / TopoViewer annotations and each interface link is drawn at the **real angle toward its
   peer** (so the picture matches the graph). Without `positions` it falls back to a neutral fan.

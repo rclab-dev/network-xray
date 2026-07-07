@@ -170,35 +170,52 @@
     }
     return ang;
   }
+  // is the adjacency/session on this interface up? (OSPF Full / BGP Established -> colour the tunnel)
+  function adjUp(state, ifn, peer) {
+    if (peer && state[peer + '_has_full'] != null) return !!state[peer + '_has_full'];
+    var i = state.interfaces && state.interfaces[ifn];
+    return i ? i.up !== false : true;
+  }
   function figureSvg(state, sel, positions) {
     var ifm = ifaceMap(state);
     var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
-    var W = 420, H = 340, CX = W / 2, CY = H / 2, HW = 70, HH = 52, RER = 38, R = 128;
+    var W = 420, H = 360, CX = W / 2, CY = H / 2 - 8, HW = 58, HH = 46, LID = 15, RER = 34, R = 130;
+    var proto = (state.protocol === 'bgp') ? 'bgp' : 'ospf';
+    var pcol = proto === 'bgp' ? 'var(--xnp-bgp)' : 'var(--xnp-ospf)';
     var ang = ifaceAngles(state, names, ifm, positions);
     function edge(a) { var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? HW / Math.abs(dx) : 1e9, dy ? HH / Math.abs(dy) : 1e9); return [CX + dx * t, CY + dy * t]; }
     var num = function (v) { return v.toFixed(1); };
     var s = '<svg class="xnp-fig" viewBox="0 0 ' + W + ' ' + H + '" width="100%" preserveAspectRatio="xMidYMid meet">';
-    names.forEach(function (ifn) {                            // interface links at their real angle
-      var a = ang[ifn], p = edge(a), ex = CX + Math.cos(a) * R, ey = CY + Math.sin(a) * R;
+    // interface links: gray PHYSICAL base + a protocol-coloured TUNNEL overlay when the adjacency is up
+    names.forEach(function (ifn) {
+      var a = ang[ifn], p = edge(a), ex = CX + Math.cos(a) * R, ey = CY + Math.sin(a) * R, up = adjUp(state, ifn, ifm[ifn].peer);
       var anchor = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
       var lx = CX + Math.cos(a) * (R + 8), ly = CY + Math.sin(a) * (R + 8) + 4;
-      s += '<line x1="' + num(p[0]) + '" y1="' + num(p[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-accent)" stroke-width="4"/>' +
-        '<rect x="' + num(p[0] - 5) + '" y="' + num(p[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="var(--xnp-accent)" stroke-width="1.5"/>' +
+      s += '<line x1="' + num(p[0]) + '" y1="' + num(p[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="7" stroke-linecap="round"/>';
+      if (up) s += '<line x1="' + num(p[0]) + '" y1="' + num(p[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="3.5" stroke-linecap="round"/>';
+      s += '<rect x="' + num(p[0] - 5) + '" y="' + num(p[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="' + (up ? pcol : 'var(--xnp-phys)') + '" stroke-width="1.5"/>' +
         '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
     });
-    s += '<rect x="' + (CX - HW) + '" y="' + (CY - HH) + '" width="' + (HW * 2) + '" height="' + (HH * 2) + '" rx="10" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2"/>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2.5"/>' +
+    // node CYLINDER (body + bottom arc, then top lid) with the RoutingEngine inside
+    s += '<path d="M' + (CX - HW) + ' ' + (CY - HH) + ' L' + (CX - HW) + ' ' + (CY + HH) +
+      ' A' + HW + ' ' + LID + ' 0 0 0 ' + (CX + HW) + ' ' + (CY + HH) + ' L' + (CX + HW) + ' ' + (CY - HH) + ' Z" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2.5"/>' +
+      '<ellipse cx="' + CX + '" cy="' + (CY - HH) + '" rx="' + HW + '" ry="' + LID + '" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2.5"/>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2"/>' +
       '<circle cx="' + CX + '" cy="' + CY + '" r="8" fill="#a678e0"/>';
+    // green forwarding arrow INSIDE the cylinder, from the RoutingEngine toward the selected out-iface
     var oif = selOutIface(state, sel);
-    if (oif && ang[oif] != null) {                            // forwarding arrow at the selected out-iface angle
-      var a2 = ang[oif], tp = edge(a2), hs = 10, ix = CX + Math.cos(a2) * RER, iy = CY + Math.sin(a2) * RER;
-      s += '<line x1="' + num(ix) + '" y1="' + num(iy) + '" x2="' + num(tp[0]) + '" y2="' + num(tp[1]) + '" stroke="var(--xnp-ok)" stroke-width="4"/>' +
+    if (oif && ang[oif] != null) {
+      var a2 = ang[oif], tp = edge(a2), hs = 11, ix = CX + Math.cos(a2) * RER, iy = CY + Math.sin(a2) * RER;
+      s += '<line x1="' + num(ix) + '" y1="' + num(iy) + '" x2="' + num(tp[0]) + '" y2="' + num(tp[1]) + '" stroke="var(--xnp-ok)" stroke-width="4.5"/>' +
         '<polygon fill="var(--xnp-ok)" points="' + num(tp[0]) + ',' + num(tp[1]) + ' ' + num(tp[0] - Math.cos(a2 - 0.4) * hs) + ',' + num(tp[1] - Math.sin(a2 - 0.4) * hs) + ' ' + num(tp[0] - Math.cos(a2 + 0.4) * hs) + ',' + num(tp[1] - Math.sin(a2 + 0.4) * hs) + '"/>';
     } else if (oif === 'lo') {
-      s += '<text x="' + CX + '" y="' + (CY - HH - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>';
+      s += '<text x="' + CX + '" y="' + (CY - HH - LID - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>';
     }
-    var cap = esc(state.target_node || 'node') + (sel ? '  selected: ' + esc(sel) + (oif ? ' → ' + esc(oif) : '') : '');
-    s += '<text x="' + CX + '" y="' + (H - 8) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="middle" font-family="monospace">' + esc(cap) + '</text></svg>';
+    // legend (protocol tunnel / physical) + caption (selected prefix -> out-iface)
+    s += '<text x="14" y="' + (H - 26) + '" fill="' + pcol + '" font-size="11" font-family="monospace">━ ' + (proto === 'bgp' ? 'BGP' : 'OSPF') + ' tunnel (up)</text>' +
+      '<text x="14" y="' + (H - 11) + '" fill="var(--xnp-phys)" font-size="11" font-family="monospace">━ physical link</text>';
+    var cap = esc(state.target_node || 'node') + (sel ? '  ' + esc(sel) + (oif ? ' → ' + esc(oif) : '') : '');
+    s += '<text x="' + (W - 14) + '" y="' + (H - 11) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
     return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
 
@@ -225,6 +242,7 @@
         '--xnp-fg:#cfe8ee;--xnp-bg:#0b141c;--xnp-border:#1f3a2a;--xnp-accent:#4dd0e1;' +
         '--xnp-route-fg:#bfe8c8;--xnp-muted:#5f7d8a;--xnp-sel-bg:#12331f;--xnp-ok:#39e639;' +
         '--xnp-bgp-header:#9a7fd1;--xnp-decider:#e0a84d;--xnp-decider-strong:#ffd54f;--xnp-note:#7facc9;' +
+        '--xnp-ospf:#39e639;--xnp-bgp:#9a7fd1;--xnp-phys:#46586a;' +
         '--xnp-font:12px/1.45 "Cascadia Code",Consolas,Menlo,monospace;' +
         'font:var(--xnp-font);color:var(--xnp-fg)}' +
       '.xnp-panel{background:var(--xnp-bg);border:1px solid var(--xnp-border);border-radius:6px;padding:8px 10px;margin:0 0 10px 0}' +
