@@ -225,7 +225,11 @@ picture (the single-node panel looks *inside* one router; this one looks *across
   up is what the routers actually installed — including reroute after a failure.
 - **Themeable:** every colour is a CSS variable (`--xto-ospf`, `--xto-bgp`, `--xto-trace`, …) on
   `.xto-root`, the same hook as the node panel — map them to your UI / VS Code theme vars.
-- **Live example:** open `topo-overlay.html` (scenario + theme picker, a one-click link-break button).
+- **`{ draggable: true }`:** drag nodes to reposition them (like the containerlab TopoViewer) — a
+  click that doesn't move still just re-sources the trace. Pass `onMove(name, {x,y})` to persist the
+  new coordinate back into your topology annotations. Touch works too (pointer events).
+- **Live example:** open `topo-overlay.html` (scenario + theme picker, a one-click link-break button,
+  draggable nodes).
 
 ## What people build with it
 

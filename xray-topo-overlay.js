@@ -30,6 +30,13 @@
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function num(v) { return (Math.round(v * 10) / 10); }
+  // map a client (screen) pixel to SVG user units — honours the viewBox scale + xMidYMid centering
+  function clientToSvg(svg, cx, cy) {
+    if (!svg || !svg.createSVGPoint || !svg.getScreenCTM) return { x: cx, y: cy };
+    var m = svg.getScreenCTM(); if (!m) return { x: cx, y: cy };
+    var pt = svg.createSVGPoint(); pt.x = cx; pt.y = cy;
+    var p = pt.matrixTransform(m.inverse()); return { x: p.x, y: p.y };
+  }
 
   // ---------- role / adjacency helpers (shared idiom with xray-node-panel.js) ----------
   function roleOf(name, st) {
@@ -228,6 +235,9 @@
       '.xto-svg{display:block;width:100%;max-height:440px}' +
       '.xto-node{cursor:pointer}.xto-nlabel{cursor:pointer;font:700 12px "Cascadia Code",Consolas,monospace;pointer-events:auto}' +
       '.xto-node:hover{filter:brightness(1.35)}' +
+      '.xto-grabbable .xto-svg{touch-action:none}' +
+      '.xto-grabbable .xto-node,.xto-grabbable .xto-nlabel{cursor:grab}' +
+      '.xto-grabbable.xto-dragging .xto-node,.xto-grabbable.xto-dragging .xto-nlabel{cursor:grabbing}' +
       '.xto-flow{stroke-dasharray:10 8;animation:xto-flow 0.7s linear infinite}' +
       '@keyframes xto-flow{to{stroke-dashoffset:-18}}' +
       '.xto-legend{margin-top:6px;font-size:11px;color:var(--xto-muted);display:flex;gap:14px;flex-wrap:wrap}' +
@@ -245,6 +255,9 @@
   // render(container, { states, positions }, opts?)
   //   opts.prefix / opts.source seed the trace; otherwise it defaults to a resolvable prefix and the
   //   highest-degree node. Click any node to re-source the trace; change the picker to re-target it.
+  //   opts.draggable:true  — drag nodes to reposition them (like the containerlab TopoViewer); a click
+  //     that doesn't move still just re-sources the trace.  opts.onMove(name,{x,y}) fires after a drag
+  //     so the host can persist the new coordinate (e.g. back into the topology annotations).
   function render(container, data, opts) {
     if (typeof document === 'undefined') return;
     if (typeof container === 'string') container = document.getElementById(container.replace(/^#/, '')) || document.querySelector(container);
@@ -252,7 +265,12 @@
     injectCss();
     data = data || {}; opts = opts || {};
     var states = data.states || {}, positions = data.positions || {};
+    container._xtoData = data;                                   // latest data for the (once-bound) drag handlers
+    if (opts.draggable != null) container._xtoDraggable = !!opts.draggable;
+    if (opts.onMove) container._xtoOnMove = opts.onMove;
+    var draggable = !!container._xtoDraggable;
     container.classList.add('xto-root');
+    if (draggable) container.classList.add('xto-grabbable');
 
     var prefixes = prefixList(states);
     var sel = container._xtoSel || {};
@@ -267,7 +285,7 @@
     var built = svgFor(states, positions, sel);
     var picker = '<div class="xto-bar"><label for="xto-dst">Trace destination</label>' +
       '<select id="xto-dst">' + prefixes.map(function (p) { return '<option value="' + esc(p) + '"' + (p === sel.prefix ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' +
-      '<span class="xto-hint">source: <b>' + esc(sel.source || '—') + '</b> · click a node to change</span></div>';
+      '<span class="xto-hint">source: <b>' + esc(sel.source || '—') + '</b> · ' + (draggable ? 'drag a node to move it, click to trace from it' : 'click a node to change') + '</span></div>';
     var legend = '<div class="xto-legend">' +
       '<i><span class="xto-sw" style="border-color:var(--xto-ospf)"></span>OSPF Full</i>' +
       '<i><span class="xto-sw" style="border-color:var(--xto-bgp)"></span>BGP Established</i>' +
@@ -278,9 +296,44 @@
     var dst = container.querySelector('#xto-dst');
     if (dst) dst.addEventListener('change', function () { container._xtoSel.prefix = dst.value; render(container, data, {}); });
     var nodes = container.querySelectorAll('[data-n]');
-    Array.prototype.forEach.call(nodes, function (el) {
-      el.addEventListener('click', function () { var n = el.getAttribute('data-n'); if (states[n]) { container._xtoSel.source = n; render(container, data, {}); } });
-    });
+    if (!draggable) {
+      Array.prototype.forEach.call(nodes, function (el) {
+        el.addEventListener('click', function () { var n = el.getAttribute('data-n'); if (states[n]) { container._xtoSel.source = n; render(container, data, {}); } });
+      });
+    } else {
+      // pointerdown starts a potential drag; the once-bound document move/up handlers below finish it
+      Array.prototype.forEach.call(nodes, function (el) {
+        el.addEventListener('pointerdown', function (ev) {
+          ev.preventDefault();
+          var n = el.getAttribute('data-n'), svg = container.querySelector('svg.xto-svg');
+          var loc = clientToSvg(svg, ev.clientX, ev.clientY);
+          var pos = (container._xtoData.positions || {})[n] || { x: loc.x, y: loc.y };
+          container._xtoDrag = { n: n, dx: loc.x - pos.x, dy: loc.y - pos.y, cx0: ev.clientX, cy0: ev.clientY, moved: false };
+          container.classList.add('xto-dragging');
+        });
+      });
+      if (!container._xtoDragBound) {                            // bind ONCE — survives innerHTML re-renders
+        container._xtoDragBound = true;
+        document.addEventListener('pointermove', function (ev) {
+          var d = container._xtoDrag; if (!d) return;
+          var cd = container._xtoData, svg = container.querySelector('svg.xto-svg'); if (!svg) return;
+          var loc = clientToSvg(svg, ev.clientX, ev.clientY);
+          if (Math.abs(ev.clientX - d.cx0) + Math.abs(ev.clientY - d.cy0) > 3) d.moved = true;
+          (cd.positions || (cd.positions = {}))[d.n] = { x: loc.x - d.dx, y: loc.y - d.dy };
+          render(container, cd, {});
+        });
+        document.addEventListener('pointerup', function () {
+          var d = container._xtoDrag; if (!d) return;
+          container._xtoDrag = null; container.classList.remove('xto-dragging');
+          var cd = container._xtoData;
+          if (!d.moved) {                                        // a click, not a drag -> re-source the trace
+            if (cd.states && cd.states[d.n]) { container._xtoSel.source = d.n; render(container, cd, {}); }
+          } else if (container._xtoOnMove) {
+            try { container._xtoOnMove(d.n, (cd.positions || {})[d.n]); } catch (e) {}
+          }
+        });
+      }
+    }
     return built.hops;
   }
 

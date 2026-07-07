@@ -91,7 +91,9 @@ Object.keys(SCN).forEach(function(k){ var o=document.createElement('option'); o.
 Object.keys(THEMES).forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=k; theme.appendChild(o); });
 function applyTheme(){ panel.style.cssText=''; var t=THEMES[theme.value]||{}; Object.keys(t).forEach(function(v){ panel.style.setProperty(v,t[v]); }); }
 function broken(){ return SCN[scn.value]; }
-function draw(){ panel._xtoSel=null; applyTheme(); XrayTopoOverlay.render(panel, { states: labStates(broken()), positions: POS }); applyTheme(); fail.classList.toggle('on', broken()); fail.textContent = broken()?'Restore r1↔r2 link':'Break r1↔r2 link'; }
+function draw(){ panel._xtoSel=null; applyTheme(); XrayTopoOverlay.render(panel, { states: labStates(broken()), positions: POS },
+  { draggable:true, onMove:function(n,p){ /* host would persist p back to the topology annotations here */ } }); applyTheme();
+  fail.classList.toggle('on', broken()); fail.textContent = broken()?'Restore r1↔r2 link':'Break r1↔r2 link'; }
 scn.addEventListener('change', draw);
 theme.addEventListener('change', draw);
 fail.addEventListener('click', function(){ scn.value = broken()? 'Converged (r1 prefers r2, LP 150)' : 'r1↔r2 down (reroute via r3)'; draw(); });
