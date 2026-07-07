@@ -182,10 +182,11 @@ node, you drop that node's state in and get the "inside the router" view the gra
 
 - **Position-independent:** nothing reads the graph geometry, so the output is identical no matter
   where the node sits — perfect when nodes are dragged around freely.
-- **`{ figure: true }`:** draws the node as a cylinder with its RoutingEngine and interfaces, plus a
-  green forwarding arrow inside; click any routing-table row and the arrow swings to that prefix's
-  out-interface. Each link shows a **gray physical wire** with a **protocol tunnel** over it when the
-  adjacency is up — **green for OSPF, purple for BGP** (down/none stays gray). Omit for tables only.
+- **`{ figure: true }`:** draws the node as a box with its RoutingEngine circle and interfaces, plus a
+  green forwarding arrow inside that circle; click any routing-table row and the arrow swings to that
+  prefix's out-interface. Each link runs from the RoutingEngine out to the peer as a **gray physical
+  wire** with a **protocol tunnel** over it when the adjacency is up — **green for OSPF, purple for
+  BGP** (down/none stays gray). Omit for tables only.
 - **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** pass the node coordinates straight from the
   topology JSON / TopoViewer annotations and each interface link is drawn at the **real angle toward its
   peer** (so the picture matches the graph). Without `positions` it falls back to a neutral fan.
@@ -195,6 +196,36 @@ node, you drop that node's state in and get the "inside the router" view the gra
 - **Themeable:** every colour is a CSS variable (`--xnp-bg`, `--xnp-accent`, `--xnp-ok`, …) with a dark
   default — override them on `.xnp-root` to match your UI, e.g. `--xnp-bg: var(--vscode-editor-background)`.
 - **Live example:** open `node-panel.html` (node picker + theme picker + the panel, no backend).
+
+## Topology overlay — the whole graph, live
+
+`xray-topo-overlay.js` is the companion that turns the **overview itself** into a live control-plane
+picture (the single-node panel looks *inside* one router; this one looks *across all of them*):
+
+1. **Every link is coloured by its adjacency** — OSPF Full = green tunnel, BGP Established = purple
+   tunnel, no session = a dashed gray wire. You watch a lab converge, or a link break, at a glance.
+2. **Trace a prefix across the graph** — pick a destination and click a source node, and the
+   **forwarding path lights up hop by hop**, each router consulting *its own* routing table
+   (longest-prefix match). A router with no route shows a **✕ DROP**; the packet arriving shows a
+   **DELIVERED** verdict. Break a link and the path re-routes — because the collected state changed.
+
+```html
+<script src="xray-topo-overlay.js"></script>
+<div id="xray-topo"></div>
+<script>
+  // states = clab-xray-collect.js's window.LIVE_STATES ({ r1:{…}, r2:{…} });
+  // positions = node coords from the topology JSON / TopoViewer annotations.
+  XrayTopoOverlay.render(document.getElementById('xray-topo'), { states, positions });
+</script>
+```
+
+- **Drop-in & zero-deps:** plain DOM + SVG, no D3. Derives the graph from each node's `<peer>_iface`
+  fields, so you only pass the per-node states the collector already emits — no separate edge list.
+- **Real forwarding, not a sim:** the trace follows `routing_table` (longest-prefix), so what lights
+  up is what the routers actually installed — including reroute after a failure.
+- **Themeable:** every colour is a CSS variable (`--xto-ospf`, `--xto-bgp`, `--xto-trace`, …) on
+  `.xto-root`, the same hook as the node panel — map them to your UI / VS Code theme vars.
+- **Live example:** open `topo-overlay.html` (scenario + theme picker, a one-click link-break button).
 
 ## What people build with it
 
