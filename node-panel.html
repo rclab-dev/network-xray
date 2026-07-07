@@ -90,8 +90,12 @@ function applyTheme() {
   var t = THEMES[theme.value] || {};
   Object.keys(t).forEach(function (v) { panel.style.setProperty(v, t[v]); });
 }
+// Node positions straight from the topology JSON / TopoViewer annotations (screen coords, y down).
+// Passing these makes each interface link point at the REAL angle toward its peer (matches the graph).
+var POS = { r1: { x: 110, y: 210 }, r2: { x: 270, y: 80 }, r3: { x: 320, y: 250 } };
+
 var figure = document.getElementById('figure');
-function draw() { panel._xnpSel = null; applyTheme(); XrayNodePanel.render(panel, STATES[sel.value], { figure: figure.checked }); applyTheme(); }
+function draw() { panel._xnpSel = null; applyTheme(); XrayNodePanel.render(panel, STATES[sel.value], { figure: figure.checked, positions: POS }); applyTheme(); }
 sel.addEventListener('change', draw);
 theme.addEventListener('change', draw);
 figure.addEventListener('change', draw);

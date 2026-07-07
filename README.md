@@ -183,8 +183,10 @@ node, you drop that node's state in and get the "inside the router" view the gra
 - **Position-independent:** nothing reads the graph geometry, so the output is identical no matter
   where the node sits — perfect when nodes are dragged around freely.
 - **`{ figure: true }`:** adds a small node picture (router + interfaces) with a green forwarding arrow;
-  click any routing-table row and the arrow swings to that prefix's out-interface. Draws its own
-  fan layout — still position-independent. Omit it for tables only.
+  click any routing-table row and the arrow swings to that prefix's out-interface. Omit it for tables only.
+- **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** pass the node coordinates straight from the
+  topology JSON / TopoViewer annotations and each interface link is drawn at the **real angle toward its
+  peer** (so the picture matches the graph). Without `positions` it falls back to a neutral fan.
 - **Same Best-Path logic** as the DeepDive (Weight → LocPrf → AS-Path → Origin → MED), so *why a path
   won* is explained the same way.
 - **Data:** `routing_table`, `bgp_routes`, `route_resolution` from `clab-collect.js` (already emitted).

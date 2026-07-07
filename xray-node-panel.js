@@ -153,34 +153,52 @@
     var row = (state.routing_table || []).filter(function (r) { return r.prefix === sel; })[0];
     return row ? (row.out_iface || '') : '';
   }
-  function figureSvg(state, sel) {
+  // positions (optional) = { nodeName: {x,y} } straight from the topology JSON / annotations. When
+  // given, each interface link is drawn at the REAL angle toward its peer (matches the graph); without
+  // them it falls back to a fixed fan (still works, just position-independent).
+  function ifaceAngles(state, names, ifm, positions) {
+    var self = (positions && state.target_node) ? positions[state.target_node] : null, ang = {};
+    if (self) {
+      names.forEach(function (ifn) {
+        var pp = ifm[ifn].peer && positions[ifm[ifn].peer];
+        ang[ifn] = pp ? Math.atan2(pp.y - self.y, pp.x - self.x) : null;   // screen coords (y down) = graph dir
+      });
+      var miss = names.filter(function (n) { return ang[n] == null; });     // peers without a position: spread
+      miss.forEach(function (ifn, i) { ang[ifn] = -Math.PI / 2 + (i + 1) * (Math.PI / (miss.length + 1)); });
+    } else {
+      names.forEach(function (ifn, i) { ang[ifn] = names.length === 1 ? 0 : (-0.62 + i * (1.24 / (names.length - 1))); });
+    }
+    return ang;
+  }
+  function figureSvg(state, sel, positions) {
     var ifm = ifaceMap(state);
     var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
-    var n = Math.max(1, names.length);
-    var W = 520, H = 60 + n * 64, BX = 56, BW = 200, RER = 30;
-    var CX = BX + BW / 2, CY = H / 2, EX = W - 66, ports = {};
+    var W = 380, H = 300, CX = W / 2, CY = H / 2, HW = 46, HH = 34, RER = 24, R = 116;
+    var ang = ifaceAngles(state, names, ifm, positions);
+    function edge(a) { var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? HW / Math.abs(dx) : 1e9, dy ? HH / Math.abs(dy) : 1e9); return [CX + dx * t, CY + dy * t]; }
+    var num = function (v) { return v.toFixed(1); };
     var s = '<svg class="xnp-fig" viewBox="0 0 ' + W + ' ' + H + '" width="100%" preserveAspectRatio="xMidYMid meet">';
-    s += '<rect x="' + BX + '" y="' + (CY - 66) + '" width="' + BW + '" height="132" rx="12" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2"/>';
-    names.forEach(function (ifn, i) {
-      var ey = 46 + i * 64, py = Math.max(CY - 52, Math.min(CY + 52, ey));
-      ports[ifn] = [BX + BW, py];
-      s += '<line x1="' + (BX + BW) + '" y1="' + py + '" x2="' + EX + '" y2="' + ey + '" stroke="var(--xnp-accent)" stroke-width="4"/>' +
-        '<rect x="' + (BX + BW - 6) + '" y="' + (py - 5) + '" width="12" height="10" fill="var(--xnp-bg)" stroke="var(--xnp-accent)" stroke-width="1.5"/>' +
-        '<text x="' + (EX + 8) + '" y="' + (ey + 4) + '" fill="var(--xnp-accent)" font-size="12" font-family="monospace">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
+    names.forEach(function (ifn) {                            // interface links at their real angle
+      var a = ang[ifn], p = edge(a), ex = CX + Math.cos(a) * R, ey = CY + Math.sin(a) * R;
+      var anchor = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
+      var lx = CX + Math.cos(a) * (R + 8), ly = CY + Math.sin(a) * (R + 8) + 4;
+      s += '<line x1="' + num(p[0]) + '" y1="' + num(p[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-accent)" stroke-width="4"/>' +
+        '<rect x="' + num(p[0] - 5) + '" y="' + num(p[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="var(--xnp-accent)" stroke-width="1.5"/>' +
+        '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="12" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
     });
-    s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2"/>' +
+    s += '<rect x="' + (CX - HW) + '" y="' + (CY - HH) + '" width="' + (HW * 2) + '" height="' + (HH * 2) + '" rx="10" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2"/>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2"/>' +
       '<circle cx="' + CX + '" cy="' + CY + '" r="6" fill="#a678e0"/>';
     var oif = selOutIface(state, sel);
-    if (oif && ports[oif]) {                                   // arrow: RE -> selected out-iface port
-      var p = ports[oif], a = Math.atan2(p[1] - CY, p[0] - CX), tx = p[0] - 8, ty = p[1], hs = 10;
-      var ix = CX + Math.cos(a) * RER, iy = CY + Math.sin(a) * RER;
-      s += '<line x1="' + ix + '" y1="' + iy + '" x2="' + tx + '" y2="' + ty + '" stroke="var(--xnp-ok)" stroke-width="4"/>' +
-        '<polygon fill="var(--xnp-ok)" points="' + tx + ',' + ty + ' ' + (tx - Math.cos(a - 0.4) * hs) + ',' + (ty - Math.sin(a - 0.4) * hs) + ' ' + (tx - Math.cos(a + 0.4) * hs) + ',' + (ty - Math.sin(a + 0.4) * hs) + '"/>';
+    if (oif && ang[oif] != null) {                            // forwarding arrow at the selected out-iface angle
+      var a2 = ang[oif], tp = edge(a2), hs = 10, ix = CX + Math.cos(a2) * RER, iy = CY + Math.sin(a2) * RER;
+      s += '<line x1="' + num(ix) + '" y1="' + num(iy) + '" x2="' + num(tp[0]) + '" y2="' + num(tp[1]) + '" stroke="var(--xnp-ok)" stroke-width="4"/>' +
+        '<polygon fill="var(--xnp-ok)" points="' + num(tp[0]) + ',' + num(tp[1]) + ' ' + num(tp[0] - Math.cos(a2 - 0.4) * hs) + ',' + num(tp[1] - Math.sin(a2 - 0.4) * hs) + ' ' + num(tp[0] - Math.cos(a2 + 0.4) * hs) + ',' + num(tp[1] - Math.sin(a2 + 0.4) * hs) + '"/>';
     } else if (oif === 'lo') {
-      s += '<text x="' + CX + '" y="' + (CY - RER - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>';
+      s += '<text x="' + CX + '" y="' + (CY - HH - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>';
     }
     var cap = esc(state.target_node || 'node') + (sel ? '  selected: ' + esc(sel) + (oif ? ' → ' + esc(oif) : '') : '');
-    s += '<text x="' + CX + '" y="' + (CY + 66 + 18) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="middle" font-family="monospace">' + cap + '</text></svg>';
+    s += '<text x="' + CX + '" y="' + (H - 8) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="middle" font-family="monospace">' + esc(cap) + '</text></svg>';
     return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
 
@@ -252,7 +270,7 @@
     var fig = !!opts.figure;
     var sel = fig ? (container._xnpSel || defaultSel(state)) : ((state.route_resolution && state.route_resolution.matched_prefix) || '');
     if (fig) container._xnpSel = sel;
-    container.innerHTML = (fig ? figureSvg(state, sel) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
+    container.innerHTML = (fig ? figureSvg(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
     if (fig) {   // click a routing row -> move the arrow to that prefix's out-iface (interactive)
       var rows = container.querySelectorAll('.xnp-rt.xnp-click tr[data-prefix]');
       Array.prototype.forEach.call(rows, function (tr) {
