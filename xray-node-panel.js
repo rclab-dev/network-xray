@@ -173,7 +173,7 @@
   function figureSvg(state, sel, positions) {
     var ifm = ifaceMap(state);
     var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
-    var W = 380, H = 300, CX = W / 2, CY = H / 2, HW = 46, HH = 34, RER = 24, R = 116;
+    var W = 420, H = 340, CX = W / 2, CY = H / 2, HW = 70, HH = 52, RER = 38, R = 128;
     var ang = ifaceAngles(state, names, ifm, positions);
     function edge(a) { var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? HW / Math.abs(dx) : 1e9, dy ? HH / Math.abs(dy) : 1e9); return [CX + dx * t, CY + dy * t]; }
     var num = function (v) { return v.toFixed(1); };
@@ -184,11 +184,11 @@
       var lx = CX + Math.cos(a) * (R + 8), ly = CY + Math.sin(a) * (R + 8) + 4;
       s += '<line x1="' + num(p[0]) + '" y1="' + num(p[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-accent)" stroke-width="4"/>' +
         '<rect x="' + num(p[0] - 5) + '" y="' + num(p[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="var(--xnp-accent)" stroke-width="1.5"/>' +
-        '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="12" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
+        '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
     });
     s += '<rect x="' + (CX - HW) + '" y="' + (CY - HH) + '" width="' + (HW * 2) + '" height="' + (HH * 2) + '" rx="10" fill="var(--xnp-bg)" stroke="var(--xnp-ok)" stroke-width="2"/>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2"/>' +
-      '<circle cx="' + CX + '" cy="' + CY + '" r="6" fill="#a678e0"/>';
+      '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2.5"/>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="8" fill="#a678e0"/>';
     var oif = selOutIface(state, sel);
     if (oif && ang[oif] != null) {                            // forwarding arrow at the selected out-iface angle
       var a2 = ang[oif], tp = edge(a2), hs = 10, ix = CX + Math.cos(a2) * RER, iy = CY + Math.sin(a2) * RER;
@@ -246,7 +246,7 @@
       '.xnp-chain .xnp-step-tie{color:var(--xnp-muted)}.xnp-chain .xnp-step-win{color:var(--xnp-decider-strong);font-weight:700}.xnp-chain .xnp-step-amb{color:var(--xnp-decider);font-weight:700}' +
       '.xnp-legend{margin-top:6px;font-size:10px;color:var(--xnp-muted)}' +
       '.xnp-dim{color:var(--xnp-muted)}' +
-      '.xnp-figpanel{padding:6px 8px}.xnp-fig{display:block;max-height:280px}' +
+      '.xnp-figpanel{padding:6px 8px}.xnp-fig{display:block;max-height:360px}' +
       '.xnp-rt.xnp-click tr[data-prefix]{cursor:pointer}' +
       '.xnp-rt.xnp-click tr[data-prefix]:hover td{background:var(--xnp-sel-bg)}';
     document.head.appendChild(s);
