@@ -247,6 +247,15 @@ scenario needs; everything is optional and defaults sensibly.
 > use per-node fields named `<nodeId>_<field>`: `r3_has_full`, `r2_hello`, `r3_established`, …
 > 複数ピア(三角等)では `<nodeId>_<field>` 形式のノード別フィールドを使います。
 
+> **Per-link fields (drop-in overlay / node panel) / リンク別フィールド** — `xray-topo-overlay.js`
+> and `xray-node-panel.js` read these `<peer>_…` keys to draw each adjacency:
+> `<peer>_iface` (interface facing that peer), `<peer>_has_full` (adjacency Full / session Established),
+> and **`<peer>_proto`** (`"bgp"` | `"ospf"` — the protocol of the session *on that link*).
+> The tunnel colour is a **per-link** property, so both ends must carry the same `<peer>_proto`
+> (e.g. `r1.r2_proto === r2.r1_proto === "bgp"`) or the same link would be coloured differently from
+> each end. If `<peer>_proto` is absent the renderers fall back to the node's overall `protocol`.
+> トンネル色はリンク別属性。両端が同じ `<peer>_proto` を持たせること(無ければ node の `protocol` に fallback)。
+
 ### 4.4 BGP
 
 | Field | Type | Meaning / 意味 |

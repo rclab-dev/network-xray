@@ -62,6 +62,7 @@ function labStates(broken) {
     r1: { target_node:'r1', protocol:'bgp', bgp_configured:true,
       interfaces:{ eth0:{ip:'10.12.0.1'}, eth1:{ip:'10.13.0.1'}, lo:{ip:'1.1.1.1'} },
       r2_iface:'eth0', r3_iface:'eth1', r2_has_full:!broken, r3_has_full:true,
+      r2_proto:'bgp', r3_proto:'bgp',                       // r1 peers eBGP with r2 and r3 (edge)
       route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface: broken?'eth1':'eth0' },
       routing_table:[
         { prefix:'1.1.1.1/32', out_iface:'lo', protocol:'local' },
@@ -74,6 +75,7 @@ function labStates(broken) {
     r2: { target_node:'r2', protocol:'ospf',
       interfaces:{ eth0:{ip:'10.12.0.2'}, eth1:{ip:'10.24.0.2'}, lo:{ip:'2.2.2.2'} },
       r1_iface:'eth0', r4_iface:'eth1', r1_has_full:!broken, r4_has_full:true,
+      r1_proto:'bgp', r4_proto:'ospf',                      // r2 speaks eBGP to r1, OSPF to the core (r4)
       route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface:'eth1' },
       routing_table:[
         { prefix:'2.2.2.2/32', out_iface:'lo', protocol:'local' },
@@ -81,6 +83,7 @@ function labStates(broken) {
     r3: { target_node:'r3', protocol:'bgp', bgp_configured:true,
       interfaces:{ eth0:{ip:'10.13.0.3'}, eth1:{ip:'10.34.0.3'}, lo:{ip:'3.3.3.3'} },
       r1_iface:'eth0', r4_iface:'eth1', r1_has_full:true, r4_has_full:true,
+      r1_proto:'bgp', r4_proto:'ospf',                      // r3 speaks eBGP to r1, OSPF to the core (r4)
       route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface:'eth1' },
       routing_table:[
         { prefix:'3.3.3.3/32', out_iface:'lo', protocol:'local' },
@@ -89,7 +92,7 @@ function labStates(broken) {
         { prefix:'8.8.8.0/24', next_hop:'10.34.0.4', as_path:'65100', local_pref:100, weight:0, metric:0, origin:'i', best:true, status:'*>' } ] },
     r4: { target_node:'r4', protocol:'ospf',
       interfaces:{ eth0:{ip:'10.24.0.4'}, eth1:{ip:'10.34.0.4'}, eth2:{ip:'8.8.8.1'}, lo:{ip:'4.4.4.4'} },
-      r2_iface:'eth0', r3_iface:'eth1', r2_has_full:true, r3_has_full:true,
+      r2_iface:'eth0', r3_iface:'eth1', r2_has_full:true, r3_has_full:true, r2_proto:'ospf', r3_proto:'ospf',
       route_resolution:{ matched_prefix:'8.8.8.0/24', resolved:true, out_iface:'eth2' },
       routing_table:[
         { prefix:'4.4.4.4/32', out_iface:'lo', protocol:'local' },

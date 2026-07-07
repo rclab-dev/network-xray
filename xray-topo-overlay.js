@@ -80,6 +80,10 @@
     return ua && ub;
   }
   function edgeProto(states, e) {
+    // per-link protocol first (both ends carry <peer>_proto, so the edge is coloured consistently);
+    // fall back to "either endpoint speaks BGP" only when the collector didn't tag the adjacency.
+    var p = (states[e.a] && states[e.a][e.b + '_proto']) || (states[e.b] && states[e.b][e.a + '_proto']);
+    if (p) return p === 'bgp' ? 'bgp' : 'ospf';
     return (protoOf(states[e.a]) === 'bgp' || (states[e.b] && protoOf(states[e.b]) === 'bgp')) ? 'bgp' : 'ospf';
   }
 

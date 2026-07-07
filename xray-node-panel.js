@@ -176,12 +176,15 @@
     var i = state.interfaces && state.interfaces[ifn];
     return i ? i.up !== false : true;
   }
+  // tunnel colour is a PER-LINK property (the adjacency/session on that link), not a per-node one:
+  // read <peer>_proto for this interface's neighbour, falling back to the node's overall protocol.
+  // Both ends carry the same <peer>_proto, so the same link is coloured identically from either side.
+  function linkProto(state, peer) { var p = (peer && state[peer + '_proto']) || state.protocol; return p === 'bgp' ? 'bgp' : 'ospf'; }
+  function pcolOf(state, peer) { return linkProto(state, peer) === 'bgp' ? 'var(--xnp-bgp)' : 'var(--xnp-ospf)'; }
   function figureSvg(state, sel, positions) {
     var ifm = ifaceMap(state);
     var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
     var W = 420, H = 340, CX = W / 2, CY = H / 2, HW = 70, HH = 52, RER = 38, R = 132;
-    var proto = (state.protocol === 'bgp') ? 'bgp' : 'ospf';
-    var pcol = proto === 'bgp' ? 'var(--xnp-bgp)' : 'var(--xnp-ospf)';
     var ang = ifaceAngles(state, names, ifm, positions);
     function edge(a) { var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? HW / Math.abs(dx) : 1e9, dy ? HH / Math.abs(dy) : 1e9); return [CX + dx * t, CY + dy * t]; }
     function re(a) { return [CX + Math.cos(a) * RER, CY + Math.sin(a) * RER]; }   // point on the white RE circle
@@ -193,6 +196,7 @@
     // a protocol-coloured TUNNEL overlay when the adjacency is up (green=OSPF Full, purple=BGP Established)
     names.forEach(function (ifn) {
       var a = ang[ifn], r0 = re(a), ex = CX + Math.cos(a) * R, ey = CY + Math.sin(a) * R, bp = edge(a), up = adjUp(state, ifn, ifm[ifn].peer);
+      var pcol = pcolOf(state, ifm[ifn].peer);   // colour THIS link by ITS adjacency protocol
       var anchor = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
       var lx = CX + Math.cos(a) * (R + 8), ly = CY + Math.sin(a) * (R + 8) + 4;
       s += '<line x1="' + num(r0[0]) + '" y1="' + num(r0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="7" stroke-linecap="round"/>';
@@ -212,8 +216,9 @@
       s += '<circle cx="' + CX + '" cy="' + CY + '" r="5" fill="#a678e0"/>' +
         (oif === 'lo' ? '<text x="' + CX + '" y="' + (CY - HH - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>' : '');
     }
-    // legend + caption
-    s += '<text x="14" y="' + (H - 26) + '" fill="' + pcol + '" font-size="11" font-family="monospace">━ ' + (proto === 'bgp' ? 'BGP' : 'OSPF') + ' tunnel (up)</text>' +
+    // legend + caption (a node can now have both OSPF and BGP links, so show both tunnel swatches)
+    s += '<text x="14" y="' + (H - 26) + '" fill="var(--xnp-ospf)" font-size="11" font-family="monospace">━ OSPF</text>' +
+      '<text x="72" y="' + (H - 26) + '" fill="var(--xnp-bgp)" font-size="11" font-family="monospace">━ BGP tunnel</text>' +
       '<text x="14" y="' + (H - 11) + '" fill="var(--xnp-phys)" font-size="11" font-family="monospace">━ physical link</text>';
     var cap = esc(state.target_node || 'node') + (sel ? '  ' + esc(sel) + (oif ? ' → ' + esc(oif) : '') : '');
     s += '<text x="' + (W - 14) + '" y="' + (H - 11) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
