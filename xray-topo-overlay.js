@@ -187,23 +187,32 @@
     if (stub) { var pd = 66, x0 = Math.min(bb.minX, stub.x - pd), y0 = Math.min(bb.minY, stub.y - pd), x1 = Math.max(bb.minX + bb.w, stub.x + pd), y1 = Math.max(bb.minY + bb.h, stub.y + pd); bb = { minX: x0, minY: y0, w: x1 - x0, h: y1 - y0 }; }
     var s = '<svg class="xto-svg" viewBox="' + num(bb.minX) + ' ' + num(bb.minY) + ' ' + num(bb.w) + ' ' + num(bb.h) + '" width="100%" preserveAspectRatio="xMidYMid meet">';
 
-    // trace path first (so adjacency tunnels & nodes sit on top of the glow). One amber flow arrow per hop.
-    function flowArrow(pa, pb, frac) {
-      s += '<line class="xto-flow" x1="' + num(pa.x) + '" y1="' + num(pa.y) + '" x2="' + num(pb.x) + '" y2="' + num(pb.y) + '" stroke="var(--xto-trace)" stroke-width="9" stroke-linecap="round" opacity="0.85"/>';
-      var ang = Math.atan2(pb.y - pa.y, pb.x - pa.x), mx = pa.x + (pb.x - pa.x) * frac, my = pa.y + (pb.y - pa.y) * frac, hs = 13;
-      s += '<polygon fill="var(--xto-trace)" points="' + num(mx) + ',' + num(my) + ' ' +
-        num(mx - Math.cos(ang - 0.5) * hs) + ',' + num(my - Math.sin(ang - 0.5) * hs) + ' ' +
-        num(mx - Math.cos(ang + 0.5) * hs) + ',' + num(my - Math.sin(ang + 0.5) * hs) + '"/>';
+    // trace path first (so adjacency tunnels & nodes sit on top of the amber glow). The path is a SOLID
+    // amber underlay (no animation, so a screenshot reads the same as the live view); the directional
+    // arrowheads are collected in `heads` and drawn LAST, on top of everything, so direction stays crisp.
+    var heads = '';
+    function traceLine(pa, pb) {
+      s += '<line x1="' + num(pa.x) + '" y1="' + num(pa.y) + '" x2="' + num(pb.x) + '" y2="' + num(pb.y) + '" stroke="var(--xto-trace)" stroke-width="9" stroke-linecap="round" opacity="0.9"/>';
+    }
+    function traceHead(pb, ang, off) {   // arrowhead `off` px before pb (i.e. just outside the receiving node)
+      var hx = pb.x - Math.cos(ang) * off, hy = pb.y - Math.sin(ang) * off, hs = 15;
+      heads += '<polygon fill="var(--xto-trace)" stroke="var(--xto-bg)" stroke-width="1" points="' + num(hx) + ',' + num(hy) + ' ' +
+        num(hx - Math.cos(ang - 0.5) * hs) + ',' + num(hy - Math.sin(ang - 0.5) * hs) + ' ' +
+        num(hx - Math.cos(ang + 0.5) * hs) + ',' + num(hy - Math.sin(ang + 0.5) * hs) + '"/>';
     }
     for (var h = 0; h + 1 < hops.length; h++) {
       var from = hops[h].node, to = hops[h + 1].node;
       if (!positions[from] || !positions[to]) continue;
-      flowArrow(positions[from], positions[to], 0.62);
+      var pa = positions[from], pb = positions[to];
+      traceLine(pa, pb);
+      traceHead(pb, Math.atan2(pb.y - pa.y, pb.x - pa.x), nodeBoxW(to) / 2 + 7);
     }
     if (stub) {   // final delivery arrow: from the last router INTO the destination stub pill's near edge
       var sw = stubW(stub.label), fdx = stub.rp.x - stub.x, fdy = stub.rp.y - stub.y, fm = Math.hypot(fdx, fdy) || 1;
       var ux = fdx / fm, uy = fdy / fm, t = Math.min(ux ? (sw / 2) / Math.abs(ux) : 1e9, uy ? 13 / Math.abs(uy) : 1e9);
-      flowArrow(stub.rp, { x: stub.x + ux * t, y: stub.y + uy * t }, 1.0);
+      var pe = { x: stub.x + ux * t, y: stub.y + uy * t };
+      traceLine(stub.rp, pe);
+      traceHead(pe, Math.atan2(pe.y - stub.rp.y, pe.x - stub.rp.x), 3);
     }
 
     // links: gray physical wire + protocol-coloured tunnel overlay when the adjacency is up
@@ -239,7 +248,7 @@
         '<text x="' + num(stub.x) + '" y="' + num(stub.y + 4) + '" text-anchor="middle" fill="var(--xto-ok)" font-size="11" font-weight="700" font-family="monospace">' + esc(stub.label) + '</text>';
     }
 
-    s += '</svg>';
+    s += heads + '</svg>';   // directional arrowheads on top, so the path direction is unambiguous in a still
     return { svg: s, hops: hops };
   }
 
@@ -278,8 +287,6 @@
       '.xto-grabbable .xto-svg{touch-action:none}' +
       '.xto-grabbable .xto-node,.xto-grabbable .xto-nlabel{cursor:grab}' +
       '.xto-grabbable.xto-dragging .xto-node,.xto-grabbable.xto-dragging .xto-nlabel{cursor:grabbing}' +
-      '.xto-flow{stroke-dasharray:10 8;animation:xto-flow 0.7s linear infinite}' +
-      '@keyframes xto-flow{to{stroke-dashoffset:-18}}' +
       '.xto-legend{margin-top:6px;font-size:11px;color:var(--xto-muted);display:flex;gap:14px;flex-wrap:wrap}' +
       '.xto-legend i{font-style:normal}' +
       '.xto-sw{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}' +
