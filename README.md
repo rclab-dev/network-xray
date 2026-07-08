@@ -49,6 +49,15 @@ replayed in the browser with no backend (steady → link down / router isolated 
 **[BGP replay](https://rclab-dev.github.io/xray-core/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table) ·
 **[Best-Path Decision](https://rclab-dev.github.io/xray-core/demo/index-bgp-lp.html)** (eBGP: competing LocPref → why one path wins).
 
+## Try it live
+
+The same X-Ray visualizations power **[RouteCrushLab](https://routecrushlab.com)** —
+hands-on FRR network-troubleshooting labs you run in your browser to see *why* a
+network behaves the way it does. No install, no signup.
+
+→ **[Start with a BGP best-path lab (English, beta)](https://routecrushlab.com/lab/tl/q21?try=guest&lang=en)**
+Two ISPs advertise the same route — watch why traffic takes the slow one, then fix it.
+
 ## Run it
 
 Open **`index.html`** in a browser — no build, no server, no install. (Or
