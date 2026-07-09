@@ -20,6 +20,11 @@
 var cp = require('child_process');
 
 function ipOnly(pfx) { return pfx ? String(pfx).split('/')[0] : ''; }
+// loose subnet check (first 3 octets) for recursive next-hop -> connected-route iface resolution.
+function sameNet24(prefix, ip) {
+  if (!prefix || !ip) return false;
+  return ipOnly(prefix).split('.').slice(0, 3).join('.') === String(ip).split('.').slice(0, 3).join('.');
+}
 function splitIf(sub) { var m = /^(.*)\.(\d+)$/.exec(sub); return m ? { base: m[1], sub: m[2] } : { base: sub, sub: '0' }; }
 var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 'ip-vrf': 'connected', static: 'static', 'bgp': 'bgp', 'bgp-vpn': 'bgp', arpnd: 'connected', 'arp-nd': 'connected' };
 
@@ -85,28 +90,58 @@ function buildState(fetch, node, adj, proto) {
     return { prefix: r['ipv4-prefix'], out_iface: oif, next_hop: resolved.ip || undefined, protocol: protocol, selected: true };
   });
 
-  // BGP RIB -> bgp_routes (network / next-hop / AS-path / local-pref / origin / best)
+  // recursive next-hop resolution: an indirect (BGP) route reports a next-hop IP but no out-iface --
+  // srl resolves it via a connected route. Inherit the out-iface of the connected route toward that
+  // next-hop so the forwarding decision / DeepDive can show the real egress interface.
+  state.routing_table.forEach(function (r) {
+    if (r.next_hop && !r.out_iface) {
+      var via = state.routing_table.filter(function (c) {
+        return c.out_iface && c.out_iface.indexOf('system0') !== 0 && sameNet24(c.prefix, r.next_hop);
+      })[0];
+      if (via) r.out_iface = via.out_iface;
+    }
+  });
+
+  // BGP RIB -> bgp_routes. SR Linux separates the received routes (rib-in-pre: prefix + neighbor +
+  // attr-id) from the path attributes (attr-sets, keyed by index). So join them: route.attr-id ->
+  // attr-set.index. (Live-verified against srl v24 on containerlab; the older inline-attributes shape
+  // this file first assumed does not exist.) `best` = the prefix that actually won into the route-table.
   if (isBgp) {
-    var rib = fetch('network-instance default bgp-rib afi-safi ipv4-unicast rib-in-out rib-in-post routes *');
-    state.bgp_routes = ((rib && rib.route) || []).map(function (r) {
-      var attr = r.attributes || r;
-      var aspath = (attr['as-path'] && (attr['as-path'].segment || []).map(function (s) { return (s.member || []).join(' '); }).join(' ')) || attr['as-path-str'] || '';
-      return {
-        prefix: r.prefix || r['ipv4-prefix'] || '',
-        next_hop: r['next-hop'] || attr['next-hop'] || '',
+    var rib = fetch('network-instance default bgp-rib afi-safi ipv4-unicast ipv4-unicast rib-in-out rib-in-pre');
+    var attrJson = fetch('network-instance default bgp-rib attr-sets');
+    var attrById = {};
+    (((attrJson && attrJson['attr-set']) || [])).forEach(function (a) {
+      var aspath = (a['as-path'] && (a['as-path'].segment || []).map(function (s) { return (s.member || []).join(' '); }).join(' ')) || '';
+      var o = String(a.origin || 'igp');
+      attrById[String(a.index)] = {
+        next_hop: a['next-hop'] || '',
         as_path: aspath.trim(),
-        local_pref: attr['local-pref'] != null ? attr['local-pref'] : (attr['local-preference'] != null ? attr['local-preference'] : 100),
-        weight: 0,
-        metric: attr.med != null ? attr.med : (attr['multi-exit-disc'] != null ? attr['multi-exit-disc'] : 0),
-        origin: (attr.origin || 'i').charAt(0),
-        best: r['best-route'] === true || r.best === true,
-        status: (r['best-route'] === true || r.best === true) ? '*>' : '* '
+        local_pref: a['local-pref'] != null ? a['local-pref'] : 100,
+        med: a.med != null ? a.med : 0,
+        origin: o === 'incomplete' ? '?' : o.charAt(0)
+      };
+    });
+    var bgpBest = {};   // prefix installed as bgp in the route-table = the best/used path
+    state.routing_table.forEach(function (r) { if (r.protocol === 'bgp') bgpBest[r.prefix] = true; });
+    state.bgp_routes = (((rib && rib.route) || [])).map(function (r) {
+      var at = attrById[String(r['attr-id'])] || {};
+      var nh = (at.next_hop && at.next_hop !== '0.0.0.0') ? at.next_hop : (r.neighbor || '');
+      var best = !!bgpBest[r.prefix];
+      return {
+        prefix: r.prefix || '', next_hop: nh, as_path: at.as_path || '',
+        local_pref: at.local_pref != null ? at.local_pref : 100, weight: 0,
+        metric: at.med || 0, origin: at.origin || 'i',
+        best: best, status: best ? '*>' : '* '
       };
     });
   }
 
-  // a forwarding decision to highlight (first non-local route with a real next hop off a real iface)
-  var pick = state.routing_table.filter(function (r) { return r.next_hop && r.out_iface && r.out_iface.indexOf('system0') !== 0; })[0];
+  // a forwarding decision to highlight: prefer a route learned via THIS node's protocol (a remote
+  // loopback /32 first), else any off-box route. Avoids picking a local connected /30 over the
+  // ospf/bgp-learned destination the DeepDive should showcase.
+  var offbox = state.routing_table.filter(function (r) { return r.next_hop && r.out_iface && r.out_iface.indexOf('system0') !== 0; });
+  var protoRoutes = offbox.filter(function (r) { return r.protocol === state.protocol; });
+  var pick = protoRoutes.filter(function (r) { return /\/32$/.test(r.prefix); })[0] || protoRoutes[0] || offbox[0];
   var routeOk = !!pick;
   state.route_resolution = pick
     ? { target: ipOnly(pick.prefix), resolved: true, protocol: pick.protocol, out_iface: pick.out_iface, next_hop: pick.next_hop, matched_prefix: pick.prefix }
@@ -134,7 +169,9 @@ function buildState(fetch, node, adj, proto) {
     state.is_established = fullCount > 0;
     state.bgp_state = fullCount > 0 ? 'Established' : 'Active';
     state.has_bgp_route = reach;
-    state.pfx_rcvd = (state.bgp_routes || []).filter(function (r) { return r.best; }).length;
+    // prefixes received = distinct prefixes in the rib-in (received), matching srl's "Rx" count.
+    var _rcvd = {}; (state.bgp_routes || []).forEach(function (r) { _rcvd[r.prefix] = true; });
+    state.pfx_rcvd = Object.keys(_rcvd).length;
     peers.forEach(function (p) { state[p + '_established'] = !!state[p + '_has_full']; });
   } else {
     state.ospf_configured = true;
@@ -190,15 +227,23 @@ function selfTest() {
     'interface ethernet-1/1 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.0.0.1/30' }] },
     'interface system0 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '1.1.1.1/32' }] },
     'protocols bgp neighbor': { neighbor: [{ 'peer-address': '10.0.0.2', 'session-state': 'established' }] },
-    'bgp-rib': { route: [{ prefix: '8.8.8.0/24', 'next-hop': '10.0.0.2', 'best-route': true, attributes: { 'as-path': { segment: [{ member: [65002, 65100] }] }, 'local-pref': 100, origin: 'igp' } }] },
-    'next-hop-group': { 'next-hop-group': [{ index: 'g1', 'next-hop': [{ 'next-hop': 'n1' }] }] },
-    'next-hop *': { 'next-hop': [{ index: 'n1', type: 'direct', 'ip-address': '10.0.0.2', subinterface: 'ethernet-1/1.0' }] },
-    'route-table ipv4-unicast': { route: [{ 'ipv4-prefix': '8.8.8.0/24', 'route-type': 'bgp', 'next-hop-group': 'g1', active: true }] }
+    // real srl model: received route (rib-in-pre) references an attr-id; the attributes live in attr-sets.
+    'rib-in-out rib-in-pre': { route: [{ prefix: '8.8.8.0/24', neighbor: '10.0.0.2', 'path-id': 0, 'attr-id': '5' }] },
+    'attr-sets': { 'attr-set': [{ index: '5', origin: 'igp', 'next-hop': '10.0.0.2', 'local-pref': 100, 'as-path': { segment: [{ member: [65002, 65100] }] } }] },
+    // bgp next-hop (n1) is INDIRECT: it has the peer IP but no subinterface (srl resolves it via the
+    // connected route). A connected 10.0.0.0/30 (nC -> ethernet-1/1.0) is present so recursive
+    // resolution can inherit the egress iface -- exactly the live srl shape.
+    'next-hop-group': { 'next-hop-group': [{ index: 'g1', 'next-hop': [{ 'next-hop': 'n1' }] }, { index: 'gC', 'next-hop': [{ 'next-hop': 'nC' }] }] },
+    'next-hop *': { 'next-hop': [{ index: 'n1', type: 'indirect', 'ip-address': '10.0.0.2', subinterface: '' }, { index: 'nC', type: 'direct', 'ip-address': '10.0.0.1', subinterface: 'ethernet-1/1.0' }] },
+    'route-table ipv4-unicast': { route: [{ 'ipv4-prefix': '8.8.8.0/24', 'route-type': 'bgp', 'next-hop-group': 'g1', active: true }, { 'ipv4-prefix': '10.0.0.0/30', 'route-type': 'arpnd', 'next-hop-group': 'gC', active: true }] }
   });
   var b = buildState(bgpFetch, 'r1', { 'ethernet-1/1.0': 'r2' }, 'bgp');
   ok('bgp: protocol=bgp + bgp_configured', b.protocol === 'bgp' && b.bgp_configured === true);
   ok('bgp: r2 session Established -> has_full, proto bgp', b.r2_has_full === true && b.r2_proto === 'bgp');
-  ok('bgp: route 8.8.8.0/24 proto bgp via ethernet-1/1.0', (b.routing_table.filter(function (r) { return r.prefix === '8.8.8.0/24'; })[0] || {}).protocol === 'bgp');
+  var bgpRt = b.routing_table.filter(function (r) { return r.prefix === '8.8.8.0/24'; })[0] || {};
+  ok('bgp: route 8.8.8.0/24 proto bgp', bgpRt.protocol === 'bgp');
+  ok('bgp: indirect next-hop recursively resolved to ethernet-1/1.0 (out_iface)', bgpRt.out_iface === 'ethernet-1/1.0');
+  ok('bgp: route_resolution picks the bgp /24 (not the connected /30)', b.route_resolution.matched_prefix === '8.8.8.0/24' && b.route_resolution.protocol === 'bgp');
   var br = (b.bgp_routes || [])[0];
   ok('bgp: bgp_routes has 8.8.8.0/24, as-path "65002 65100", best', !!br && br.prefix === '8.8.8.0/24' && br.as_path === '65002 65100' && br.best === true && br.next_hop === '10.0.0.2');
   // full DeepDive contract (DATA-CONTRACT §4.4) parity
