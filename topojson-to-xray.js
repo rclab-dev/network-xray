@@ -28,6 +28,7 @@
  * 使い方:
  *   node topojson-to-xray.js <topo.json> [--inverted-v] [--target <node>]
  *   node topojson-to-xray.js fixtures/ospf_single_area.json
+ *   node topojson-to-xray.js <topo.json> --emit graph-data   # xray-graph.html 直食い shape (4+ノード俯瞰)
  *   node topojson-to-xray.js --selftest         # golden fixture で回帰
  */
 'use strict';
@@ -303,8 +304,20 @@ function buildGraphConfig(graph, cls, opts) {
   };
 }
 
+// worker4 Path A: down-convert to the RAW graph-data shape xray-graph.html ingests directly
+// ({nodes:[{name,kind}], links:[{source,target,*_endpoint}]} = clab `graph` Data). xray-graph.html
+// builds its own fullCfg from this, so 4+ node topotests overview needs NO frontend change. Per-node
+// richness (RID/LSDB/routes) rides window.LIVE_STATES = frr-collect per-node state, not this overview.
+function toGraphData(graph) {
+  const edges = dedupeEdges(graph.edges);
+  return {
+    nodes: graph.nodes.map((n) => ({ name: n.name, kind: inferRole(n) === 'server' ? 'host' : 'frr' })),
+    links: edges.map((e) => ({ source: e[0], target: e[1], source_endpoint: 'eth0', target_endpoint: 'eth0' })),
+  };
+}
+
 /* ----------------------------------------------------------------------------
- * 6. convert: JSON テキスト → {ok, config} (CLI/ブラウザ共通)
+ * 6. convert: JSON テキスト → {ok, config|graphData} (CLI/ブラウザ共通)
  * -------------------------------------------------------------------------- */
 function convert(text, opts) {
   opts = opts || {};
@@ -315,6 +328,7 @@ function convert(text, opts) {
     return { ok: false, reason: 'topojson に routers が 2 未満 = トポロジ不成立。',
       nodes: graph.nodes.map((n) => n.name), links: [] };
   }
+  if (opts.emit === 'graph-data') return { ok: true, graphData: toGraphData(graph) };
   const config = (cls.shape === 'graph')
     ? buildGraphConfig(graph, cls, opts)
     : buildConfig(graph, cls, opts);
@@ -356,6 +370,16 @@ function selftest() {
   const badNet = (cfg.networks || []).find((nw) => /link\d/.test(nw.name));
   assert(!badNet, 'dummy 由来ネットなし: 実際=' + (badNet ? badNet.name : 'none'));
 
+  // --emit graph-data: xray-graph.html が直接食う shape (worker4 Path A)
+  const gd = convert(src, { emit: 'graph-data' }).graphData || {};
+  const gnames = (gd.nodes || []).map((n) => n.name).sort();
+  assert(JSON.stringify(gnames) === JSON.stringify(['r0', 'r1', 'r2', 'r3']),
+    'graph-data: nodes r0..r3 のみ (幽霊 link ノードなし): 実際=' + JSON.stringify(gnames));
+  assert((gd.nodes || []).length === 4 && (gd.nodes || []).every((n) => n.kind === 'frr'),
+    'graph-data: 全ノード kind=frr');
+  assert((gd.links || []).length === 6 && (gd.links || []).every((l) => l.source && l.target && l.source_endpoint && l.target_endpoint),
+    'graph-data: 6 links (full-mesh) で source/target/endpoint 完備: 実際=' + (gd.links || []).length);
+
   if (fail.length) {
     process.stderr.write('[SELFTEST FAIL]\n  - ' + fail.join('\n  - ') + '\n');
     process.exit(1);
@@ -373,14 +397,17 @@ function main(argv) {
   if (args.includes('--selftest')) { selftest(); return; }
   if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
     process.stderr.write(
-      'usage: node topojson-to-xray.js <topo.json> [--inverted-v] [--target <node>]\n' +
-      '       node topojson-to-xray.js --selftest\n');
+      'usage: node topojson-to-xray.js <topo.json> [--inverted-v] [--target <node>] [--emit graph-data]\n' +
+      '       node topojson-to-xray.js --selftest\n' +
+      '  --emit graph-data : raw {nodes,links} for xray-graph.html (any-size overview lane)\n');
     process.exit(args.length === 0 ? 1 : 0);
   }
-  const opts = { invertedV: args.includes('--inverted-v'), target: null };
+  const opts = { invertedV: args.includes('--inverted-v'), target: null, emit: null };
   const ti = args.indexOf('--target');
   if (ti >= 0 && args[ti + 1]) opts.target = args[ti + 1];
-  const file = args.find((a) => !a.startsWith('--') && a !== opts.target);
+  const ei = args.indexOf('--emit');
+  if (ei >= 0 && args[ei + 1]) opts.emit = args[ei + 1];
+  const file = args.find((a) => !a.startsWith('--') && a !== opts.target && a !== opts.emit);
 
   const src = fs.readFileSync(file, 'utf8');
   const res = convert(src, opts);
@@ -389,7 +416,7 @@ function main(argv) {
     process.stderr.write('  routers: ' + res.nodes.join(', ') + '\n');
     process.exit(2);
   }
-  process.stdout.write(JSON.stringify(res.config, null, 2) + '\n');
+  process.stdout.write(JSON.stringify(opts.emit === 'graph-data' ? res.graphData : res.config, null, 2) + '\n');
 }
 
 const _api = {
@@ -398,6 +425,7 @@ const _api = {
   classify: classify,
   buildConfig: buildConfig,
   buildGraphConfig: buildGraphConfig,
+  toGraphData: toGraphData,
   convert: convert,
 };
 if (typeof require === 'function' && typeof module !== 'undefined' && require.main === module) main(process.argv);
