@@ -1,0 +1,5 @@
+{
+  "interfaces": {
+    "eth0": { "ifUp": true, "ospfEnabled": true, "ipAddress": "10.1.0.10", "ipAddressPrefixlen": 24, "area": "0.0.0.0", "timerMsecs": 10000 }
+  }
+}
