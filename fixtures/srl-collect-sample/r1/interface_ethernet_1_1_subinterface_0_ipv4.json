@@ -1,0 +1,35 @@
+{
+  "admin-state": "enable",
+  "allow-directed-broadcast": false,
+  "address": [
+    {
+      "ip-prefix": "10.0.0.1/30",
+      "origin": "static",
+      "primary": [
+        null
+      ],
+      "status": "preferred"
+    }
+  ],
+  "unnumbered": {
+    "admin-state": "disable"
+  },
+  "arp": {
+    "duplicate-address-detection": true,
+    "timeout": 14400,
+    "learn-unsolicited": false,
+    "proxy-arp": false,
+    "neighbor": [
+      {
+        "ipv4-address": "10.0.0.2",
+        "link-layer-address": "1A:7E:01:FF:00:01",
+        "origin": "dynamic",
+        "expiration-time": "2026-07-10T02:07:14.195Z (3 hours from now)",
+        "group-based-policy-tag": 0,
+        "datapath-programming": {
+          "status": "success"
+        }
+      }
+    ]
+  }
+}

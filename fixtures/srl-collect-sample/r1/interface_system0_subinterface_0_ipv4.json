@@ -1,0 +1,20 @@
+{
+  "admin-state": "enable",
+  "allow-directed-broadcast": false,
+  "address": [
+    {
+      "ip-prefix": "1.1.1.1/32",
+      "origin": "static",
+      "status": "preferred"
+    }
+  ],
+  "unnumbered": {
+    "admin-state": "disable"
+  },
+  "arp": {
+    "duplicate-address-detection": true,
+    "timeout": 14400,
+    "learn-unsolicited": false,
+    "proxy-arp": false
+  }
+}

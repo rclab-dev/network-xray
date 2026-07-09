@@ -18,6 +18,20 @@
  */
 'use strict';
 var cp = require('child_process');
+var fs = require('fs');
+var pathMod = require('path');
+
+// --capture / --from-dir round-trip: map each state path to a stable filename with the SAME function
+// both directions, so a live --capture run records exactly the files a later --from-dir run reads
+// (the user never has to know the paths). Non-alnum -> '_' (e.g. "ethernet-1/1" -> "ethernet_1_1").
+function pathToFile(p) { return String(p).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '') + '.json'; }
+function dirFetch(dir) {
+  return function (p) { try { return JSON.parse(fs.readFileSync(pathMod.join(dir, pathToFile(p)), 'utf8')); } catch (e) { return null; } };
+}
+function teeFetch(liveFn, dir) {
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+  return function (p) { var r = liveFn(p); try { fs.writeFileSync(pathMod.join(dir, pathToFile(p)), JSON.stringify(r == null ? null : r, null, 2)); } catch (e) {} return r; };
+}
 
 function ipOnly(pfx) { return pfx ? String(pfx).split('/')[0] : ''; }
 // loose subnet check (first 3 octets) for recursive next-hop -> connected-route iface resolution.
@@ -252,6 +266,12 @@ function selfTest() {
   ok('bgp: per-peer <peer>_established', b.r2_established === true);
   ok('bgp: reachability (ping_ok/cleared) + route_resolution bgp', b.ping_ok === true && b.cleared === true && b.route_resolution.protocol === 'bgp');
 
+  // -- --from-dir round-trip against the bundled REAL srl capture (no docker / no lab) --
+  var sampleDir = pathMod.join(__dirname, 'fixtures', 'srl-collect-sample', 'r1');
+  var fd = buildState(dirFetch(sampleDir), 'r1', { 'ethernet-1/1.0': 'r2' }, 'ospf');
+  ok('from-dir: replays bundled real srl capture (r1 OSPF Full)', fd.target_node === 'r1' && fd.full_count === 1 && fd.r2_has_full === true);
+  ok('from-dir: route_resolution from recorded json (2.2.2.2/32 nh 10.0.0.2)', fd.route_resolution.matched_prefix === '2.2.2.2/32' && fd.route_resolution.next_hop === '10.0.0.2');
+
   console.log('\nSUMMARY: ' + pass + '/' + tot + ' PASS');
   return pass === tot;
 }
@@ -263,21 +283,36 @@ if (process.argv.indexOf('--self-test') >= 0) {
   process.exit(selfTest() ? 0 : 1);
 }
 
-var lab = arg('--lab'), node = arg('--node'), proto = arg('--proto', 'ospf'), out = arg('--out');
-if (!lab || !node) { console.error('usage: node clab-srl-collect.js --lab <lab> --node <node> --adj if:peer,... [--proto ospf|bgp] [--out file]  |  --self-test'); process.exit(2); }
-var container = 'clab-' + lab + '-' + node;
+var node = arg('--node'), proto = arg('--proto', 'ospf'), out = arg('--out');
+var fromDir = arg('--from-dir'), lab = arg('--lab'), capture = arg('--capture');
 var adj = {};
 arg('--adj', '').split(',').filter(Boolean).forEach(function (p) { var i = p.indexOf(':'); if (i > 0) adj[p.slice(0, i)] = p.slice(i + 1); });
 
-// live fetch: run `sr_cli "info from state <path> | as json"` inside the node
-function srl(path) {
-  try {
-    var o = cp.execSync('docker exec ' + container + ' sr_cli "info from state ' + path + ' | as json"',
-      { encoding: 'utf8', maxBuffer: 1024 * 1024 * 32, stdio: ['ignore', 'pipe', 'ignore'] });
-    return JSON.parse(o);
-  } catch (e) { return null; }
+var fetchFn;
+if (fromDir) {
+  // offline replay: read the recorded `info from state ... | as json` files (no docker / no lab).
+  if (!node) { console.error('usage: --from-dir <dir> --node <node> --adj if:peer,... [--proto ospf|bgp] [--out f]'); process.exit(2); }
+  fetchFn = dirFetch(fromDir);
+} else if (lab && node) {
+  // live: run `sr_cli "info from state <path> | as json"` inside clab-<lab>-<node>.
+  var container = 'clab-' + lab + '-' + node;
+  var live = function (p) {
+    try {
+      var o = cp.execSync('docker exec ' + container + ' sr_cli "info from state ' + p + ' | as json"',
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 * 32, stdio: ['ignore', 'pipe', 'ignore'] });
+      return JSON.parse(o);
+    } catch (e) { return null; }
+  };
+  fetchFn = capture ? teeFetch(live, capture) : live;   // --capture <dir> records for later --from-dir
+} else {
+  console.error('usage:\n' +
+    '  --lab <lab> --node <node> --adj if:peer,... [--proto ospf|bgp] [--capture <dir>] [--out f]   (live via docker exec)\n' +
+    '  --from-dir <dir> --node <node> --adj if:peer,... [--proto ospf|bgp] [--out f]                (offline replay)\n' +
+    '  --self-test');
+  process.exit(2);
 }
 
-var state = buildState(srl, node, adj, proto);
+var state = buildState(fetchFn, node, adj, proto);
 var json = JSON.stringify(state, null, 2);
-if (out) require('fs').writeFileSync(out, json); else process.stdout.write(json + '\n');
+if (out) fs.writeFileSync(out, json); else process.stdout.write(json + '\n');
+if (capture && lab) console.error('captured state paths to ' + capture + '/ (replay: --from-dir ' + capture + ' --node ' + node + ' --adj <same> --proto ' + proto + ')');

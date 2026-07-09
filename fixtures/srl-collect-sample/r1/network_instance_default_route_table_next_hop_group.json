@@ -1,0 +1,99 @@
+{
+  "next-hop-group": [
+    {
+      "index": "8340207830",
+      "backup-next-hop-group": "0",
+      "backup-active": false,
+      "fib-programming": {
+        "last-successful-operation-type": "add",
+        "last-successful-operation-timestamp": "2026-07-08T02:12:27.932Z (a day ago)",
+        "pending-operation-type": "none",
+        "last-failed-operation-type": "none"
+      },
+      "next-hop": [
+        {
+          "id": 0,
+          "next-hop": "8340207829",
+          "resolved": "not-applicable",
+          "resource-allocation-failed": false
+        }
+      ]
+    },
+    {
+      "index": "8340207831",
+      "backup-next-hop-group": "0",
+      "backup-active": false,
+      "fib-programming": {
+        "last-successful-operation-type": "add",
+        "last-successful-operation-timestamp": "2026-07-08T02:12:33.502Z (a day ago)",
+        "pending-operation-type": "none",
+        "last-failed-operation-type": "none"
+      },
+      "next-hop": [
+        {
+          "id": 0,
+          "next-hop": "8340207830",
+          "resolved": "not-applicable",
+          "resource-allocation-failed": false
+        }
+      ]
+    },
+    {
+      "index": "8340207832",
+      "backup-next-hop-group": "0",
+      "backup-active": false,
+      "fib-programming": {
+        "last-successful-operation-type": "add",
+        "last-successful-operation-timestamp": "2026-07-08T02:12:33.502Z (a day ago)",
+        "pending-operation-type": "none",
+        "last-failed-operation-type": "none"
+      },
+      "next-hop": [
+        {
+          "id": 0,
+          "next-hop": "8340207831",
+          "resolved": "not-applicable",
+          "resource-allocation-failed": false
+        }
+      ]
+    },
+    {
+      "index": "8340207833",
+      "backup-next-hop-group": "0",
+      "backup-active": false,
+      "fib-programming": {
+        "last-successful-operation-type": "add",
+        "last-successful-operation-timestamp": "2026-07-08T02:12:33.502Z (a day ago)",
+        "pending-operation-type": "none",
+        "last-failed-operation-type": "none"
+      },
+      "next-hop": [
+        {
+          "id": 0,
+          "next-hop": "3",
+          "resolved": "not-applicable",
+          "resource-allocation-failed": false
+        }
+      ]
+    },
+    {
+      "index": "8340207834",
+      "backup-next-hop-group": "0",
+      "backup-active": false,
+      "fib-programming": {
+        "last-successful-operation-type": "add",
+        "last-successful-operation-timestamp": "2026-07-08T02:12:44.665Z (a day ago)",
+        "pending-operation-type": "none",
+        "last-failed-operation-type": "none"
+      },
+      "next-hop": [
+        {
+          "id": 0,
+          "next-hop": "8340207832",
+          "resolved": "not-applicable",
+          "resource-allocation-failed": false
+        }
+      ]
+    }
+  ]
+}

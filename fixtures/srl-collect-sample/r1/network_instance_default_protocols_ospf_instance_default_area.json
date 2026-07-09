@@ -1,0 +1,230 @@
+{
+  "name": "default",
+  "area": [
+    {
+      "area-id": "0.0.0.0",
+      "advertise-router-capability": true,
+      "blackhole-aggregate": true,
+      "full-spf-runs": 3,
+      "last-spf-run-time": "2026-07-08T02:12:44.700Z (a day ago)",
+      "area-bdr-rtr-count": 0,
+      "as-bdr-rtr-count": 0,
+      "active-interfaces": 2,
+      "lsa-totals": {
+        "router-lsa": 2,
+        "total": 2,
+        "total-lsa-cksum-sum": "0xd140"
+      },
+      "lsa-filter-totals": {
+        "export-filtered": 0,
+        "import-filtered": 0
+      },
+      "interface": [
+        {
+          "interface-name": "ethernet-1/1.0",
+          "advertise-router-capability": true,
+          "admin-state": "enable",
+          "advertise-subnet": true,
+          "interface-type": "point-to-point",
+          "lsa-filter-out": "none",
+          "metric": 16,
+          "mtu": 1500,
+          "priority": 1,
+          "hello-interval": 10,
+          "dead-interval": 40,
+          "retransmit-interval": 5,
+          "transit-delay": 1,
+          "oper-state": "point-to-point",
+          "dr-id": "0.0.0.0",
+          "bdr-id": "0.0.0.0",
+          "last-enabled-time": "2026-07-08T02:12:33.500Z (a day ago)",
+          "neighbor-count": 1,
+          "local-ip-address": "10.0.0.1",
+          "link-lsa-cksum-sum": "0x0",
+          "link-lsa-count": 0,
+          "events": 5,
+          "last-event-time": "2026-07-08T02:12:33.500Z (a day ago)",
+          "failure-detection": {
+            "enable-bfd": false
+          },
+          "neighbor": [
+            {
+              "router-id": "2.2.2.2",
+              "address": "10.0.0.2",
+              "priority": 1,
+              "dead-time": 35,
+              "designated-router": "0.0.0.0",
+              "backup-designated-router": "0.0.0.0",
+              "optional-capabilities": "42",
+              "last-established-time": "2026-07-08T02:12:43.700Z (a day ago)",
+              "adjacency-state": "full",
+              "state-changes": 6,
+              "retransmission-queue-length": 0,
+              "restart-helper-status": "not-helping",
+              "last-event-time": "2026-07-08T02:12:43.800Z (a day ago)",
+              "statistics": {
+                "events": 6,
+                "bad-nbr-states": 0,
+                "lsa-install-failed": 0,
+                "bad-seq-nums": 0,
+                "bad-mtu": 0,
+                "bad-packets": 0,
+                "lsa-not-in-lsdbs": 0,
+                "option-mismatches": 0,
+                "duplicates": 0,
+                "num-restarts": 0
+              }
+            }
+          ],
+          "packets": {
+            "tx-total": 16265,
+            "tx-hello": 16076,
+            "tx-db-description": 3,
+            "tx-ls-request": 1,
+            "tx-ls-update": 95,
+            "tx-ls-ack": 90,
+            "rx-total": 16261,
+            "rx-hello": 16073,
+            "rx-db-description": 2,
+            "rx-ls-request": 1,
+            "rx-ls-update": 91,
+            "rx-ls-ack": 94,
+            "discarded": 0,
+            "retransmits": 0
+          }
+        },
+        {
+          "interface-name": "system0.0",
+          "advertise-router-capability": true,
+          "admin-state": "enable",
+          "advertise-subnet": true,
+          "interface-type": "broadcast",
+          "lsa-filter-out": "none",
+          "metric": 0,
+          "mtu": 1500,
+          "passive": true,
+          "priority": 1,
+          "hello-interval": 10,
+          "dead-interval": 40,
+          "retransmit-interval": 5,
+          "transit-delay": 1,
+          "oper-state": "designated-router",
+          "dr-id": "1.1.1.1",
+          "bdr-id": "0.0.0.0",
+          "last-enabled-time": "2026-07-08T02:12:28.000Z (a day ago)",
+          "neighbor-count": 0,
+          "local-ip-address": "1.1.1.1",
+          "link-lsa-cksum-sum": "0x0",
+          "link-lsa-count": 0,
+          "events": 6,
+          "last-event-time": "2026-07-08T02:13:08.200Z (a day ago)",
+          "failure-detection": {
+            "enable-bfd": false
+          },
+          "packets": {
+            "tx-total": 0,
+            "tx-hello": 0,
+            "tx-db-description": 0,
+            "tx-ls-request": 0,
+            "tx-ls-update": 0,
+            "tx-ls-ack": 0,
+            "rx-total": 0,
+            "rx-hello": 0,
+            "rx-db-description": 0,
+            "rx-ls-request": 0,
+            "rx-ls-update": 0,
+            "rx-ls-ack": 0,
+            "discarded": 0,
+            "retransmits": 0
+          }
+        }
+      ],
+      "lsdb": {
+        "identifier": "0.0.0.0",
+        "lsa-types": {
+          "lsa-type": [
+            {
+              "type": "router-lsa",
+              "lsas": {
+                "lsa": [
+                  {
+                    "advertising-router": "1.1.1.1",
+                    "link-state-id": "1.1.1.1",
+                    "advertisement": "03c0020101010101010101018000006495f5003c0000000301010101ffffffff03000000020202020a000001010000100a000000fffffffc03000010",
+                    "sequence-number": "0x80000064",
+                    "checksum": "0x95f5",
+                    "age": 960,
+                    "options": "0x2",
+                    "router-lsa": {
+                      "flags": 0,
+                      "number-links": 3,
+                      "links": [
+                        {
+                          "link-id": "1.1.1.1",
+                          "type": "router-lsa-stub-network",
+                          "link-data": "255.255.255.255",
+                          "metric": 0,
+                          "number-tos-metrics": 0
+                        },
+                        {
+                          "link-id": "2.2.2.2",
+                          "type": "router-lsa-p2p",
+                          "link-data": "10.0.0.1",
+                          "metric": 16,
+                          "number-tos-metrics": 0
+                        },
+                        {
+                          "link-id": "10.0.0.0",
+                          "type": "router-lsa-stub-network",
+                          "link-data": "255.255.255.252",
+                          "metric": 16,
+                          "number-tos-metrics": 0
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "advertising-router": "2.2.2.2",
+                    "link-state-id": "2.2.2.2",
+                    "advertisement": "079d02010202020202020202800000603b4b003c0000000302020202ffffffff03000000010101010a000002010000100a000000fffffffc03000010",
+                    "sequence-number": "0x80000060",
+                    "checksum": "0x3b4b",
+                    "age": 1949,
+                    "options": "0x2",
+                    "router-lsa": {
+                      "flags": 0,
+                      "number-links": 3,
+                      "links": [
+                        {
+                          "link-id": "1.1.1.1",
+                          "type": "router-lsa-p2p",
+                          "link-data": "10.0.0.2",
+                          "metric": 16,
+                          "number-tos-metrics": 0
+                        },
+                        {
+                          "link-id": "2.2.2.2",
+                          "type": "router-lsa-stub-network",
+                          "link-data": "255.255.255.255",
+                          "metric": 0,
+                          "number-tos-metrics": 0
+                        },
+                        {
+                          "link-id": "10.0.0.0",
+                          "type": "router-lsa-stub-network",
+                          "link-data": "255.255.255.252",
+                          "metric": 16,
+                          "number-tos-metrics": 0
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

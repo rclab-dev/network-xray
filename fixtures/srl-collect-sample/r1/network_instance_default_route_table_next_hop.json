@@ -1,0 +1,33 @@
+{
+  "next-hop": [
+    {
+      "index": "3",
+      "resource-allocation-failed": false,
+      "type": "broadcast"
+    },
+    {
+      "index": "8340207829",
+      "resource-allocation-failed": false,
+      "type": "extract"
+    },
+    {
+      "index": "8340207830",
+      "resource-allocation-failed": false,
+      "type": "direct",
+      "ip-address": "10.0.0.1",
+      "subinterface": "ethernet-1/1.0"
+    },
+    {
+      "index": "8340207831",
+      "resource-allocation-failed": false,
+      "type": "extract"
+    },
+    {
+      "index": "8340207832",
+      "resource-allocation-failed": false,
+      "type": "direct",
+      "ip-address": "10.0.0.2",
+      "subinterface": "ethernet-1/1.0"
+    }
+  ]
+}
