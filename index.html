@@ -38,7 +38,8 @@
   <div class="intro">
     <b>xray-core</b> turns a router's <b>state</b> (OSPF/BGP adjacency, routes, interfaces) into a live
     visualization — an overview topology and an <b>"inside the router" DeepDive cylinder</b>. It is
-    <b>vendor-neutral</b> (feed it FRR, Cisco IOS, anything — via a small adapter) and <b>descriptive</b>
+    <b>vendor-neutral</b> — <b>FRR is the native, first-class input</b> (feed it FRR directly; Cisco IOS or
+    anything else via a small adapter) — and <b>descriptive</b>
     (it draws the state you report; it is not a simulator). You drive it with a few calls:
     <code>renderTopology</code> · <code>applyState</code> · <code>startPolling</code> · <code>openDeepDive</code>.
   </div>
@@ -47,8 +48,8 @@
   <div class="cards">
 
     <a class="card" href="frr-paste.html">
-      <span class="ttl">Paste your router output → render</span><span class="badge">bring your own data</span>
-      <div class="desc">Paste a router's <code>show ip route</code> + <code>show ip ospf neighbor</code> and press
+      <span class="ttl">Paste your FRR router output → render</span><span class="badge">FRR · bring your own data</span>
+      <div class="desc">Paste an <b>FRR</b> router's <code>show ip route</code> + <code>show ip ospf neighbor</code> and press
         Render. The local topology is reconstructed (incl. peer–peer links from equal-cost routes) and drawn.</div>
       <div class="feat">FRR show text · topology inference · DeepDive</div>
     </a>
