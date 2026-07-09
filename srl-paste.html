@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SR Linux paste &rarr; render — xray-core gallery</title>
+<style>
+  html,body{margin:0;background:#0a1016;color:#cfe8ee;font:13px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:640px;margin:0 auto;padding:22px 18px 60px}
+  h1{font-size:20px;margin:0 0 4px;color:#4dd0e1}
+  h1 small{font-size:12px;color:#7f97a6;font-weight:400}
+  p.sub{color:#90a4ae;font-size:13px;margin:0 0 14px;line-height:1.6}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px}
+  label{color:#9fb6c2}
+  select,button{background:#12202b;color:#cfe8ee;border:1px solid #2b3a44;border-radius:5px;padding:6px 10px;font:12px monospace}
+  button.render{background:#00acc1;border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;padding:8px 18px}
+  button.render:hover{background:#00838f}
+  textarea{width:100%;box-sizing:border-box;height:150px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;
+    border-radius:6px;padding:8px 10px;font-family:"Courier New",monospace;font-size:11.5px;line-height:1.4;resize:vertical}
+  #err{color:#ef9a9a;font-size:12px;min-height:16px;margin:6px 0}
+  #xray-panel{margin-top:8px}
+  .note{margin-top:18px;color:#5f7d8a;font-size:11.5px;line-height:1.7;border-top:1px solid #1c2b36;padding-top:14px}
+  code{color:#8fd4e0;background:#0d1a22;padding:1px 5px;border-radius:3px;font-size:11.5px}
+  .badge{font-size:10.5px;color:#0a1016;background:#4dd0e1;border-radius:10px;padding:1px 8px;font-weight:700;vertical-align:middle;margin-left:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SR Linux &rarr; X-Ray <span class="badge">Nokia srlinux</span><br><small>paste one node's collector state and render its control-plane panel</small></h1>
+  <p class="sub">Run <code>clab-srl-collect.js</code> against a live Nokia SR Linux node (it reads real
+    <code>sr_cli "info from state &hellip; | as json"</code>) and paste the JSON here. The same
+    <b>single-node panel</b> the FRR collector drives renders it &mdash; routing table, BGP table and
+    Best-Path decision &mdash; because the engine is vendor-neutral; only the state <i>source</i> differs.</p>
+
+  <div class="row">
+    <label for="sample">Sample</label>
+    <select id="sample"></select>
+    <label style="margin-left:10px"><input type="checkbox" id="figure" checked /> Figure (click a route &rarr; arrow)</label>
+    <button class="render" id="go" style="margin-left:auto">Render</button>
+  </div>
+  <textarea id="in" spellcheck="false"></textarea>
+  <div id="err"></div>
+
+  <!-- the panel renders here (this is all a host node-properties tab needs) -->
+  <div id="xray-panel"></div>
+
+  <div class="note">
+    Capture your own from a running lab:<br>
+    <code>node clab-srl-collect.js --lab &lt;lab&gt; --node &lt;node&gt; --adj ethernet-1/1.0:&lt;peer&gt; --proto ospf|bgp</code><br>
+    <code>--adj</code> maps each local subinterface to the containerlab peer node it faces (so
+    <code>&lt;peer&gt;_iface</code> / <code>&lt;peer&gt;_has_full</code> resolve on any IP plan). The samples above are
+    real captures from an <b>srlinux v24</b> containerlab lab. One line wires the panel into any GUI:
+    <code>XrayNodePanel.render(el, state)</code>.
+  </div>
+</div>
+
+<script src="xray-node-panel.js"></script>
+<script>
+// Real captures from a live Nokia SR Linux (srlinux v24) containerlab lab, produced by
+// clab-srl-collect.js (see DATA-CONTRACT.md for the state shape). These are not hand-written.
+var SAMPLES = {
+  'r1 — OSPF (Full with r2, learns 2.2.2.2/32)': {
+    target_node: 'r1', protocol: 'ospf',
+    interfaces: { 'ethernet-1/1.0': { ip: '10.0.0.1', up: true }, 'system0.0': { ip: '1.1.1.1', up: true } },
+    r2_iface: 'ethernet-1/1.0', r2_has_full: true, r2_proto: 'ospf', r2_neighbor_state: 'Full',
+    routing_table: [
+      { prefix: '1.1.1.1/32', out_iface: 'system0.0', protocol: 'local', selected: true },
+      { prefix: '2.2.2.2/32', out_iface: 'ethernet-1/1.0', next_hop: '10.0.0.2', protocol: 'ospf', selected: true },
+      { prefix: '10.0.0.0/30', out_iface: 'ethernet-1/1.0', next_hop: '10.0.0.1', protocol: 'connected', selected: true },
+      { prefix: '10.0.0.1/32', out_iface: 'system0.0', protocol: 'local', selected: true },
+      { prefix: '10.0.0.3/32', out_iface: 'system0.0', protocol: 'local', selected: true }
+    ],
+    route_resolution: { target: '2.2.2.2', resolved: true, protocol: 'ospf', out_iface: 'ethernet-1/1.0', next_hop: '10.0.0.2', matched_prefix: '2.2.2.2/32' },
+    success: true, id: 'r1', scenario: 'r1', has_full: true, full_count: 1, neighbor_state: 'Full',
+    wan_iface: 'ethernet-1/1.0', lan_iface: 'ethernet-1/1.0', ping_ok: true, cleared: true, target_on_path: false,
+    ospf_configured: true, ospf_active_on_interface: true, peer_sending_hello: true, has_ospf_route: true,
+    lsdb_prefixes: [ { text: '2.2.2.2/32', own: false, via: '10.0.0.2' } ]
+  },
+  'r1 — eBGP (Established with AS65002, best 2.2.2.2/32)': {
+    target_node: 'r1', protocol: 'bgp', bgp_configured: true,
+    interfaces: { 'ethernet-1/1.0': { ip: '10.0.0.1', up: true }, 'system0.0': { ip: '1.1.1.1', up: true } },
+    r2_iface: 'ethernet-1/1.0', r2_has_full: true, r2_proto: 'bgp', r2_established: true,
+    routing_table: [
+      { prefix: '1.1.1.1/32', out_iface: 'system0.0', protocol: 'local', selected: true },
+      { prefix: '2.2.2.2/32', out_iface: 'ethernet-1/1.0', next_hop: '10.0.0.2', protocol: 'bgp', selected: true },
+      { prefix: '10.0.0.0/30', out_iface: 'ethernet-1/1.0', next_hop: '10.0.0.1', protocol: 'connected', selected: true },
+      { prefix: '10.0.0.1/32', out_iface: 'system0.0', protocol: 'local', selected: true },
+      { prefix: '10.0.0.3/32', out_iface: 'system0.0', protocol: 'local', selected: true }
+    ],
+    bgp_routes: [
+      { prefix: '2.2.2.2/32', next_hop: '10.0.0.2', as_path: '65002', local_pref: 100, weight: 0, metric: 0, origin: 'i', best: true, status: '*>' },
+      { prefix: '10.0.0.0/30', next_hop: '10.0.0.2', as_path: '65002', local_pref: 100, weight: 0, metric: 0, origin: 'i', best: false, status: '* ' }
+    ],
+    route_resolution: { target: '2.2.2.2', resolved: true, protocol: 'bgp', out_iface: 'ethernet-1/1.0', next_hop: '10.0.0.2', matched_prefix: '2.2.2.2/32' },
+    success: true, id: 'r1', scenario: 'r1', has_full: true, full_count: 1, neighbor_state: 'Full',
+    wan_iface: 'ethernet-1/1.0', lan_iface: 'ethernet-1/1.0', ping_ok: true, cleared: true, target_on_path: false,
+    is_established: true, bgp_state: 'Established', has_bgp_route: true, pfx_rcvd: 2
+  }
+};
+
+var POS = { r1: { x: 130, y: 150 }, r2: { x: 330, y: 150 } };
+var selEl = document.getElementById('sample'), inEl = document.getElementById('in'),
+    panel = document.getElementById('xray-panel'), errEl = document.getElementById('err'),
+    figure = document.getElementById('figure');
+
+Object.keys(SAMPLES).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = k; selEl.appendChild(o); });
+
+function loadSample() { inEl.value = JSON.stringify(SAMPLES[selEl.value], null, 2); render(); }
+function render() {
+  errEl.textContent = '';
+  var state;
+  try { state = JSON.parse(inEl.value); }
+  catch (e) { errEl.textContent = 'Invalid JSON: ' + e.message; panel.innerHTML = ''; return; }
+  try { panel._xnpSel = null; XrayNodePanel.render(panel, state, { figure: figure.checked, positions: POS }); }
+  catch (e) { errEl.textContent = 'Render error: ' + e.message; }
+}
+selEl.addEventListener('change', loadSample);
+document.getElementById('go').addEventListener('click', render);
+figure.addEventListener('change', render);
+loadSample();
+</script>
+</body>
+</html>
