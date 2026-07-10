@@ -298,9 +298,22 @@ function xrayApplyHierarchy(state) {
   var isDestroy = !!window._xrayDestroyMode;
   isDestroy ? b.add("is-destroy-mode") : b.remove("is-destroy-mode");
   var inLabel = document.querySelector(".de-label.in");
-  if (inLabel) inLabel.textContent = "Input: " + state.lanIf;
+  // In left single-face mode the kept face IS the (left-positioned) output, so its label shows the
+  // output iface, not "Input:". Otherwise the left label is the input as usual.
+  if (inLabel) inLabel.textContent = (window._xraySingleFace && window._xraySingleSide === "left")
+    ? "Output: " + state.wanIf
+    : "Input: " + state.lanIf;
   var outLabel = document.querySelector(".de-label.out");
   if (outLabel) outLabel.textContent = "Output: " + state.wanIf;
+  // Single-face left: the kept tunnel is .de-tunnel.left-side; toggle it by adjacency state so the
+  // left leaf shows the same up/down tunnel a right one would.
+  if (window._xraySingleFace && window._xraySingleSide === "left") {
+    var _sfLt = document.querySelector(".de-tunnel.left-side");
+    if (_sfLt) {
+      if (state.ospfFull || state.bgpEstablished) _sfLt.classList.add("tunnel-active");
+      else _sfLt.classList.remove("tunnel-active");
+    }
+  }
   var fwd = document.getElementById("de-cyl-fwd-arrow");
   if (fwd) {
     var rr = window._lastXrayState && window._lastXrayState.route_resolution || {};
@@ -310,12 +323,14 @@ function xrayApplyHierarchy(state) {
     }
     var _selR = window._xraySelectedRoute;
     var _selIf = _selR && _selR.out_ifaces && _selR.out_ifaces[0];
-    var dir = _selIf && _selIf !== "lo" ? _selIf === state.lanIf ? "left" : "right" : window._xrayFwdDirection;
+    // Single-face: forward to the kept side, overriding selected-route / stale global direction.
+    var dir = window._xraySingleFace ? window._xraySingleSide
+      : (_selIf && _selIf !== "lo" ? _selIf === state.lanIf ? "left" : "right" : window._xrayFwdDirection);
     var dirKnown = true;
     if (!dir) {
       if (xrayCurrentPingMode() === "cylinder-to-left") {
         dir = "left";
-      } else if (state.singleIf) {
+      } else if (state.singleIf || window._xraySingleFace) {
         dir = "right";
       } else if (rr.out_iface) {
         dir = rr.out_iface === state.lanIf ? "left" : "right";
@@ -354,7 +369,9 @@ function xrayApplyHierarchy(state) {
   var pingMode = xrayCurrentPingMode();
   _xrayApplyPingModeClasses(b, pingMode);
   var _rr = window._lastXrayState && window._lastXrayState.route_resolution || {};
-  if (!window._xrayIsTransit && _rr.out_iface && _rr.out_iface === state.lanIf && !state.singleIf) {
+  if (window._xraySingleFace) {
+    if (window._xraySingleSide === "left") b.add("ping-left");   // ping animates on the single kept side
+  } else if (!window._xrayIsTransit && _rr.out_iface && _rr.out_iface === state.lanIf && !state.singleIf) {
     b.add("ping-left");
   }
   _xrayApplyHelloTiming(state);
@@ -3033,6 +3050,17 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   var isTriangle = (config.topology_type === "triangle" || _xrayIsDualLinkApexLayout(config)) && otherNodes.length >= 2;
   var leftNode = isTriangle ? otherNodes[0] : null;
   var rightNode = isTriangle ? otherNodes[1] : null;
+  // Single-face (stub/endpoint) mode: opt-in flag from the data layer only (gallery-only overlay;
+  // RCL scenarios never set it, so their two-face render is byte-identical). A leaf node has one
+  // real adjacency, so its DeepDive shows ONE face. Flag may be true|'right' (link on the right) or
+  // 'left' so the host can match the overview geometry. Triangle is inherently 2-face.
+  var _singleLinkVal = (targetNode && targetNode.single_link) || (xray && xray.single_face);
+  var singleFace = !isTriangle && !!_singleLinkVal;
+  var singleSide = _singleLinkVal === "left" ? "left" : "right";
+  window._xraySingleFace = singleFace;
+  window._xraySingleSide = singleSide;
+  var _supLeft = singleFace && singleSide === "right";   // keep right face -> suppress left
+  var _supRight = singleFace && singleSide === "left";   // keep left face  -> suppress right
   var html = '<button class="xray-focus-close" onclick="closeXrayDeep()">&#10005; 閉じる</button>';
   html += '<svg class="de-box-svg" viewBox="0 0 1200 700" preserveAspectRatio="none">';
   html += '<rect x="200" y="140" width="800" height="420" stroke="rgba(57,255,20,0.2)" stroke-width="1.5" fill="none"/>';
@@ -3048,8 +3076,8 @@ function xrayRenderDeepEngine(config, activeTargetId) {
     html += '<div class="de-beam in"></div>';
     html += '<div class="de-beam out"></div>';
   } else {
-    html += '<div class="de-beam in"></div>';
-    html += '<div class="de-beam out"></div>';
+    if (!_supLeft) html += '<div class="de-beam in"></div>';
+    if (!_supRight) html += '<div class="de-beam out"></div>';
   }
   if (isOspf || isBgp) {
     if (isTriangle) {
@@ -3060,10 +3088,14 @@ function xrayRenderDeepEngine(config, activeTargetId) {
       html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _protoLabel + " &#8212; " + rightNode.id + "</div></div>";
     } else {
       var _linearLabel = isBgp ? "BGP SESSION" : "OSPF ADJACENCY";
-      html += '<div class="de-tunnel left-side"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
-      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
-      html += '<div class="de-tunnel"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
-      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
+      if (!_supLeft) {
+        html += '<div class="de-tunnel left-side"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
+        html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
+      }
+      if (!_supRight) {
+        html += '<div class="de-tunnel"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
+        html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
+      }
     }
   }
   if (isTriangle) {
@@ -3072,17 +3104,17 @@ function xrayRenderDeepEngine(config, activeTargetId) {
     html += '<div class="de-label in">' + leftNode.id + ": ...</div>";
     html += '<div class="de-label out">' + rightNode.id + ": ...</div>";
   } else {
-    html += '<div class="de-energy el"></div>';
-    html += '<div class="de-energy er"></div>';
-    html += '<div class="de-label in">Input: ...</div>';
-    html += '<div class="de-label out">Output: ...</div>';
+    if (!_supLeft) html += '<div class="de-energy el"></div>';
+    if (!_supRight) html += '<div class="de-energy er"></div>';
+    if (!_supLeft) html += '<div class="de-label in">Input: ...</div>';
+    if (!_supRight) html += '<div class="de-label out">Output: ...</div>';
   }
   html += '<div class="de-packet"></div><div class="de-packet p2"></div>';
-  html += '<div class="de-ping-orb" id="de-ping-req"></div><div class="de-ping-orb reply" id="de-ping-rep"></div>';
-  html += '<div class="de-ping-orb left-req"></div><div class="de-ping-orb left-rep"></div>';
+  if (!_supRight) html += '<div class="de-ping-orb" id="de-ping-req"></div><div class="de-ping-orb reply" id="de-ping-rep"></div>';
+  if (!_supLeft) html += '<div class="de-ping-orb left-req"></div><div class="de-ping-orb left-rep"></div>';
   if (isOspf) {
-    html += '<div class="de-hello-orb out"></div><div class="de-hello-orb in"></div>';
-    html += '<div class="de-hello-orb left-out"></div><div class="de-hello-orb left-in"></div>';
+    if (!_supRight) html += '<div class="de-hello-orb out"></div><div class="de-hello-orb in"></div>';
+    if (!_supLeft) html += '<div class="de-hello-orb left-out"></div><div class="de-hello-orb left-in"></div>';
   }
   html += '<svg class="de-cyl-svg" viewBox="0 0 200 500" fill="none">';
   html += '<line x1="20" y1="40" x2="20" y2="460" stroke="#00e5ff" stroke-width="1.5" opacity="0.8"/>';
@@ -3104,7 +3136,9 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += '<ellipse cx="100" cy="340" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.25"/>';
   html += '<ellipse cx="100" cy="400" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.3"/>';
   html += '<ellipse cx="100" cy="460" rx="80" ry="22" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.02)" opacity="0.9"/>';
-  var _fwdDir0 = window._xrayFwdDirection;
+  // Single-face nodes forward to their single (kept) link; force it so a stale window._xrayFwdDirection
+  // carried over from a prior 2-face node can't point the arrow at the suppressed side.
+  var _fwdDir0 = singleFace ? singleSide : window._xrayFwdDirection;
   if (!_fwdDir0) {
     var _rr0 = window._lastXrayState && window._lastXrayState.route_resolution || {};
     if (window._xrayPingMode === "cylinder-to-left") {
@@ -3957,6 +3991,11 @@ function xrayBuildApplyState(config) {
       document.body.classList.add("xray-target-bypassed");
     } else {
       document.body.classList.remove("xray-target-bypassed");
+    }
+    if (window._xraySingleFace) {
+      document.body.classList.add("xray-single-face");
+    } else {
+      document.body.classList.remove("xray-single-face");
     }
     if (s.input_bgp_established) {
       document.body.classList.add("xray-input-session-up");
