@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /*
- * topojson-to-xray.js  —  FRR-native レーン (b) (worker7, 2026-07-09)
+ * topojson-to-xray.js  —  FRR-native lane (b)
  *
  * FRR topotests の JSON-topojson ファイル (lib/topojson.py が読む宣言的トポロジ) を読み、
  * X-Ray が食う `config` JSON を出力する。clab-to-xray.js の姉妹版。
  *
- * 【なぜ topojson が本命か / worker4 先行設計 §1-A】
+ * 【なぜ topojson が本命か】
  *   topojson はリンクを routers.<name>.links.<peer名> で「隣接を直接キー」しているため、
  *   clab の endpoints 突き合わせより X-Ray の nodes+networks へ素直に落ちる。
  *   `lo`=loopback / `ospf.router_id`=RID / `ospf.neighbors`=隣接権威 / `bgp.local_as`=AS を拾える。
  *
- * 【worker4 必須パーサ規則 (frr-native-lane_worker4設計.md §4)】
+ * 【パーサ規則 / parser rules】
  *   1. エッジ確定は ospf.neighbors を権威にする (物理リンク総当たりより正確)。
  *   2. dummy/stub インタフェース除外必須: キーが <router名>-link<N> / description に "Dummy" /
  *      ospf.neighbors に相手がいない片側 stub → エッジにしない (clab に無い FRR 固有ケース)。
@@ -35,7 +35,7 @@
 const fs = (typeof require === 'function') ? require('fs') : null;
 
 /* ----------------------------------------------------------------------------
- * 1. dummy/stub 判定 (worker4 規則 2)
+ * 1. dummy/stub 判定 (Rule 2)
  * -------------------------------------------------------------------------- */
 // キーが <router名>-link<N> パターン、または description に "Dummy" を含むリンクは実ノード間リンクでない。
 function isDummyLink(key, link, routerNames) {
@@ -63,7 +63,7 @@ function extractGraphTopojson(topo) {
     const lo = links.lo || null;
     return {
       name,
-      router_id: ospf.router_id || null,            // worker4 規則 3: DeepDive RID
+      router_id: ospf.router_id || null,            // Rule 3: DeepDive RID
       loopback: lo ? (lo.ipv4 || 'auto') : null,
       local_as: (bgp.local_as !== undefined) ? String(bgp.local_as) : null,
       _hasOspf: !!def.ospf,
@@ -81,7 +81,7 @@ function extractGraphTopojson(topo) {
     const links = def.links || {};
     const ospf = def.ospf || {};
 
-    // 権威: ospf.neighbors (規則 1)
+    // 権威: ospf.neighbors (Rule 1)
     const neigh = (ospf.neighbors && typeof ospf.neighbors === 'object')
       ? Object.keys(ospf.neighbors) : null;
 
@@ -94,7 +94,7 @@ function extractGraphTopojson(topo) {
         if (key === 'lo') continue;
         const link = links[key];
         if (link && link.type === 'loopback') continue;
-        if (isDummyLink(key, link, routerNames)) continue;   // 規則 2
+        if (isDummyLink(key, link, routerNames)) continue;   // Rule 2
         if (!routerNames.has(key)) continue;                 // peer は実 router のみ
         peers.add(key);
       }
@@ -102,7 +102,7 @@ function extractGraphTopojson(topo) {
 
     for (const peer of peers) {
       edges.push([r, peer]);
-      // per-link ospf meta (area / point-to-point) は routers[r].links[peer].ospf から (規則 4/§4-1)
+      // per-link ospf meta (area / point-to-point) は routers[r].links[peer].ospf から (Rule 4)
       const lk = links[peer];
       if (lk && lk.ospf) {
         const mk = metaKey(r, peer);
@@ -130,7 +130,7 @@ function inferRole(node) {
 }
 
 /* ----------------------------------------------------------------------------
- * 4. 形状分類 (2-3ノードは3形 / 4+ は graph レーン) — 規則 4
+ * 4. 形状分類 (2-3ノードは3形 / 4+ は graph レーン) — Rule 4
  * -------------------------------------------------------------------------- */
 function dedupeEdges(edges) {
   const seen = new Set();
@@ -159,7 +159,7 @@ function classify(graph, opts) {
   if (n === 2 && m === 1) return { shape: 'linear_2node', layout: '', edges };
   if (n === 3 && m === 3) return { shape: 'triangle', layout: '', edges };
   if (n === 3 && m === 2) return { shape: 'linear_3node', layout: opts.invertedV ? 'inverted_v' : '', edges };
-  // 4+ ノード / その他は任意サイズ graph レーン (エラーにしない = worker4 規則 4)
+  // 4+ ノード / その他は任意サイズ graph レーン (エラーにしない = Rule 4)
   return { shape: 'graph', layout: 'force', edges };
 }
 
@@ -191,7 +191,7 @@ function orderForLinear(names, edges, roleOf) {
 
 function nodeObj(nd, role, isTarget) {
   const node = { id: nd.name, type: role, role: role === 'server' ? 'Server' : 'Router' };
-  if (nd.router_id) node.router_id = nd.router_id;   // 規則 3
+  if (nd.router_id) node.router_id = nd.router_id;   // Rule 3
   if (nd.loopback) node.loopback = nd.loopback;
   if (nd.local_as) node.local_as = nd.local_as;
   if (isTarget && role === 'router') node.target = true;
@@ -304,7 +304,7 @@ function buildGraphConfig(graph, cls, opts) {
   };
 }
 
-// worker4 Path A: down-convert to the RAW graph-data shape xray-graph.html ingests directly
+// Path A: down-convert to the RAW graph-data shape xray-graph.html ingests directly
 // ({nodes:[{name,kind}], links:[{source,target,*_endpoint}]} = clab `graph` Data). xray-graph.html
 // builds its own fullCfg from this, so 4+ node topotests overview needs NO frontend change. Per-node
 // richness (RID/LSDB/routes) rides window.LIVE_STATES = frr-collect per-node state, not this overview.
@@ -336,7 +336,7 @@ function convert(text, opts) {
 }
 
 /* ----------------------------------------------------------------------------
- * 7. selftest (golden fixture 回帰 = worker4 パーサ規則の検証)
+ * 7. selftest (golden fixture 回帰 = parser-rule の検証)
  * -------------------------------------------------------------------------- */
 function selftest() {
   // スクリプト自身の場所を基準に解決 (cwd 非依存 = clone 後どこから叩いても回る)
@@ -351,18 +351,18 @@ function selftest() {
   const cfg = res.config || {};
   const ids = (cfg.nodes || []).map((n) => n.id).sort();
 
-  // 規則 2: dummy ノード (r3-link0 / r1-link0) が幽霊ノード化していない
+  // Rule 2: dummy ノード (r3-link0 / r1-link0) が幽霊ノード化していない
   assert(JSON.stringify(ids) === JSON.stringify(['r0', 'r1', 'r2', 'r3']),
     'ノードは r0..r3 の4つのみ (dummy r3-link0/r1-link0 除外): 実際=' + JSON.stringify(ids));
 
-  // 規則 1: ospf.neighbors 権威で 4ノード full-mesh = 6 エッジ
+  // Rule 1: ospf.neighbors 権威で 4ノード full-mesh = 6 エッジ
   assert((cfg.networks || []).length === 6,
     'エッジ=6 (4ノード full-mesh): 実際=' + (cfg.networks || []).length);
 
-  // 規則 4: 4ノード → graph レーン
+  // Rule 4: 4ノード → graph レーン
   assert(cfg.topology_type === 'graph', 'topology_type=graph: 実際=' + cfg.topology_type);
 
-  // 規則 3: router_id が各ノードに載る
+  // Rule 3: router_id が各ノードに載る
   const rids = (cfg.nodes || []).map((n) => n.router_id).filter(Boolean);
   assert(rids.length === 4, 'router_id が4ノード全てに: 実際=' + JSON.stringify(rids));
 
@@ -370,7 +370,7 @@ function selftest() {
   const badNet = (cfg.networks || []).find((nw) => /link\d/.test(nw.name));
   assert(!badNet, 'dummy 由来ネットなし: 実際=' + (badNet ? badNet.name : 'none'));
 
-  // --emit graph-data: xray-graph.html が直接食う shape (worker4 Path A)
+  // --emit graph-data: xray-graph.html が直接食う shape (Path A)
   const gd = convert(src, { emit: 'graph-data' }).graphData || {};
   const gnames = (gd.nodes || []).map((n) => n.name).sort();
   assert(JSON.stringify(gnames) === JSON.stringify(['r0', 'r1', 'r2', 'r3']),

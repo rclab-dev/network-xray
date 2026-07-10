@@ -13,8 +13,9 @@ calls through the tidy `xrayCore` facade.
 > not a fork — extracted as a shared module so there is no drift.
 
 It is **descriptive**, not a simulator: it draws the state your feed reports. And it is
-**vendor-neutral** — every field it reads is a standard `show`-command concept, so FRRouting,
-Cisco IOS, Arista, … all map onto it via a small adapter.
+**vendor-neutral** — every field it reads is a standard `show`-command concept. FRRouting and
+**Nokia SR Linux** are both implemented today (a mixed FRR + SR Linux lab renders uniformly); Cisco
+IOS, Arista, … map on via the same small-adapter pattern.
 
 ## Why
 
@@ -88,6 +89,7 @@ Open `index.html` for the landing, or each directly:
 | **`frr-paste.html`** | Paste your own `show ip route` + `show ip ospf neighbor` → it reconstructs the topology and draws it. *Bring your own data, zero setup.* |
 | **`bgp-paste.html`** | Paste your own `show bgp summary` + `show ip bgp` → it draws your eBGP neighbors, the session state, and the prefixes you learned; the cylinder shows the BGP processor + table. *Small eBGP, bring your own data.* |
 | **`clab-paste.html`** | Paste a **containerlab** `.clab.yml` → it maps your lab's nodes & links to an X-Ray diagram (OSPF state, fault, DeepDive). *Small FRR labs: 2–3 nodes (link / path / triangle).* |
+| **`srl-paste.html`** | Paste a **Nokia SR Linux** node's `info from state … \| as json` → it draws that node's OSPF/BGP DeepDive. *Same X-Ray view as FRR, from real `sr_cli` state.* |
 | **`xray-graph.html`** | A **containerlab `graph --template`** drop-in: render your *live* lab as an overview of **any size**, then click any node for its X-Ray DeepDive. *See [containerlab graph template](#containerlab-graph-template) below.* |
 | **`ccna-ospf.html`** | Step the 7 OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (RFC 2328 §10.1 accurate.) |
 | **`bgp-session.html`** | Step the eBGP FSM (Idle→Established) between two ASes. DeepDive shows the BGP processor and the session tunnel; at Established it learns `203.0.113.0/24`. (RFC 4271 §8.) |
@@ -146,6 +148,12 @@ falls back to the synthetic scaffold (so this step is purely additive):
 node clab-xray-collect.js lab.clab.yml <this gallery dir>     # writes <dir>/xray-states.js
 containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
 ```
+
+**Mixed FRR + SR Linux labs:** `clab-xray-collect.js` dispatches by node `kind` — `nokia_srlinux`
+nodes go to `clab-srl-collect.js` (which reads `sr_cli "info from state … | as json"`), every other
+node to `clab-collect.js` (FRR `vtysh`). Both emit the **same** `state` shape, so a lab that mixes FRR
+and SR Linux renders uniformly in one `window.LIVE_STATES`. To bring a single SR Linux node by hand,
+`srl-paste.html` takes the same `sr_cli … | as json` output directly.
 
 **Live mode (optional):** add `--watch` and the collector keeps re-collecting on an interval, only
 rewriting `xray-states.js` when something actually changed. It also sets `window.LIVE_WATCH`, which

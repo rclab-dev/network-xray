@@ -71,7 +71,7 @@
     if (!_bgpSrc) return null;
     return (typeof _bgpSrc === 'function' ? _bgpSrc(_lastState) : _bgpSrc) || [];
   }
-  // --- Best-Path Decision (ported from RCL xray_core xrayBuildBgpView — worker4 全基準化 2026-06-25) ---
+  // --- Best-Path Decision (ported from RCL xray_core xrayBuildBgpView) ---
   // Generic, hardcode-free: group candidate paths per prefix and explain WHY the best won (Weight →
   // LocPrf → AS-Path → Origin → MED tie-break). Reads the clab collector's bgp_routes shape.
   var _BGP_CRIT = [

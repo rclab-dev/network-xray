@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * clab-to-xray.js  —  案A プロトタイプ (worker7, 2026-06-19)
+ * clab-to-xray.js  —  案A プロトタイプ
  *
  * containerlab のトポロジ定義 (.clab.yml / .yaml / .json) を読み、
  * X-Ray が食う `config` JSON (= OSS gallery facade の入口手前) を出力する。
@@ -13,8 +13,8 @@
  * 【出力するもの / しないもの】
  *   出力する  : topology_type / layout / nodes(id,type,role,target,loopback) / networks(members,host_id)
  *               + capture の最小スケルトン + provenance(_clab_source) + 警告(_warnings)
- *   出力しない: xray.protocol/pattern や live state (normal/detour/dead) は facade=worker1 領域。
- *               ここでは xray は enabled スタブのみ置き、TODO コメントで worker1 に引き継ぐ。
+ *   出力しない: xray.protocol/pattern や live state (normal/detour/dead) は facade 領域。
+ *               ここでは xray は enabled スタブのみ置き、TODO コメントで facade 層に委ねる。
  *
  * 依存ゼロ (Node 標準のみ)。YAML は clab の素直なサブセット用の最小パーサで読む
  * (複雑な YAML は .json 入力推奨。--json で JSON として読む)。
@@ -24,7 +24,7 @@
  *   node clab-to-xray.js samples/2node.clab.yml
  */
 'use strict';
-// dual-mode (worker1 2026-06-19): Node CLI + ブラウザ両用。fs は Node でのみ参照 (CLI 専用)。
+// dual-mode: Node CLI + ブラウザ両用。fs は Node でのみ参照 (CLI 専用)。
 const fs = (typeof require === 'function') ? require('fs') : null;
 
 /* ----------------------------------------------------------------------------
@@ -227,7 +227,7 @@ function dedupeEdges(edges) {
   const seen = new Set();
   const out = [];
   for (const [a, b] of edges) {
-    const key = [a, b].sort().join(' ');
+    const key = [a, b].sort().join('\x00');
     if (seen.has(key)) continue;
     seen.add(key);
     out.push([a, b]);
@@ -327,7 +327,7 @@ function buildConfig(graph, cls, opts) {
   if (!nodes.some((x) => x.type === 'server')) {
     warnings.push('全ノードが router 判定。server ノードがあれば kind:host か名前(sv/host/...) を付けると改善。');
   }
-  warnings.push('xray.protocol / pattern / live state(normal/detour/dead) は未生成 = facade(worker1)領域。');
+  warnings.push('xray.protocol / pattern / live state(normal/detour/dead) は未生成 = facade 領域。');
   warnings.push('host_id とサブネットは仮 (.10/.20)。実 clab IP を使うなら inspect JSON enrichment が要る (案C)。');
 
   return {
@@ -342,13 +342,13 @@ function buildConfig(graph, cls, opts) {
     modes: ['troubleshoot', 'capture'],
     xray: {
       enabled: true,
-      protocol: 'static',          // TODO(worker1): 実プロトコルに置換 (ospf/bgp)
+      protocol: 'static',          // TODO: 実プロトコルに置換 (ospf/bgp)
       pattern: cls.shape === 'triangle' ? 'ospf_triangle' : 'static_linear', // 仮
       ping_mode: 'through',
-      holo_fields: [],             // TODO(worker1): facade で供給
+      holo_fields: [],             // TODO: facade で供給
     },
     capture: { nets: networks.map((x) => x.name), lanes: {}, hide_arp: true },
-    // ---- provenance / 引き継ぎ情報 (X-Ray は無視, worker1/人間向け) ----
+    // ---- provenance / 引き継ぎ情報 (X-Ray は無視, human-facing) ----
     _clab_source: { name: graph.name, node_count: names.length, link_count: cls.edges.length },
     _warnings: warnings,
   };

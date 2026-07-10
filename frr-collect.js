@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /*
- * frr-collect.js — FRR-native レーン (c) (worker7, 2026-07-09)
+ * frr-collect.js — FRR-native lane (c)
  *
  * clab-collect.js の containerlab 依存 (clab-<lab>-<node> 命名 / clab peer-map 前提) を外した
  * 「素の FRR collector」。稼働中の FRR / 記録済 fixture の両方から xray-core `state` を吐く。
  *
- * 【なぜ別ファイルか / worker4 先行設計 §2】
- *   state 側のパーサ・buildState は clab-collect.js が既に食っている形そのもの (worker4 §1-C:
+ * 【なぜ別ファイルか】
+ *   state 側のパーサ・buildState は clab-collect.js が既に食っている形そのもの (
  *   topotests の `show … json` = frr-parse.js/clab-collect.js が食う形)。よって本モジュールは
  *   パーサを再発明せず clab-collect.js を require して再利用し、差分 = 「FRR へのアクセス手段の
  *   一般化 (--exec prefix)」+「オフライン (--from-dir)」+「--proto auto」だけを足す。
@@ -20,7 +20,7 @@
  *   ''                    → local vtysh 直             (このホストが FRR ルータ)
  *   'docker exec r1'      → 任意コンテナ (clab/独自不問)
  *   'ssh myrouter'        → 遠隔ルータ (SSH)
- * --adj eth0:r2,eth1:r3   iface→peer 対応 (任意 IP プランで動く。topojson があれば省略可=将来 §2-C)。
+ * --adj eth0:r2,eth1:r3   iface→peer 対応 (任意 IP プランで動く。topojson があれば省略可)。
  *
  * --from-dir <dir> は記録済 json を読む (live FRR 無い CI / ブログ執筆で動く)。ファイル名は show
  * コマンドの空白を "_" にした形: show_ip_ospf_neighbor.json / show_ip_route.json / show_ip_bgp.json 等。
@@ -33,7 +33,7 @@
 var cp = (typeof require === 'function') ? require('child_process') : null;
 var fs = (typeof require === 'function') ? require('fs') : null;
 var path = (typeof require === 'function') ? require('path') : null;
-// パーサ + buildState + collectFromJson を再利用 (再発明しない = worker4 §1-C)
+// パーサ + buildState + collectFromJson を再利用 (再発明しない)
 var clab = (typeof require === 'function') ? require('./clab-collect.js') : null;
 
 // ---- FRR アクセス手段の一般化 (--exec prefix) ------------------------------------------------

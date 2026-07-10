@@ -381,6 +381,15 @@ RouteCrushLab は FRRouting の出力を渡していますが、その OS の `s
 小さな adapter を書けば、**どの**ルータ OS でも渡せます。エンジンはデータの出どころを見ないし、
 気にしません。
 
+**Already implemented — Nokia SR Linux** is a worked non-FRR adapter: `clab-srl-collect.js` reads
+`sr_cli "info from state <path> | as json"` (the SR Linux YANG state) and emits the **same** `state`
+shape as the FRR collector — live-verified against a real SR Linux lab (OSPF + BGP), and auto-dispatched
+by `clab-xray-collect.js` for `nokia_srlinux` nodes. So a non-FRR vendor here isn't hypothetical; SR
+Linux is a reference for what "write a small adapter" looks like end-to-end. / **実装済の非 FRR 例** =
+Nokia SR Linux。`clab-srl-collect.js` が `sr_cli "info from state … | as json"`(SR Linux の YANG state)を
+読み、FRR collector と同一の `state` を吐きます(実機 OSPF+BGP で live 検証済・`clab-xray-collect.js` が
+`nokia_srlinux` を自動 dispatch)。「小さな adapter を書く」の end-to-end 参照実装です。
+
 **Where each field comes from / 各フィールドの出どころ**
 
 | Engine field | FRRouting | Cisco IOS |

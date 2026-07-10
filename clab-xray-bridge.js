@@ -1,6 +1,6 @@
-// clab-xray-bridge.js — 案A 後半 (facade 統合, worker1 2026-06-19)
+// clab-xray-bridge.js — 案A 後半 (facade 統合)
 //
-// worker7 の clab-to-xray.js は描画 scaffold (topology/nodes/networks + placeholder xray) まで。
+// clab-to-xray.js は描画 scaffold (topology/nodes/networks + placeholder xray) まで。
 // このブリッジが「facade 領域」= xray.protocol/pattern/ping_mode/holo_fields の実値化 + live state
 // (normal / fault) を供給し、xrayCore facade で実際に描けるシーンに仕上げる。
 //
