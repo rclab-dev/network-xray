@@ -39,6 +39,14 @@ function sameNet24(prefix, ip) {
   if (!prefix || !ip) return false;
   return ipOnly(prefix).split('.').slice(0, 3).join('.') === String(ip).split('.').slice(0, 3).join('.');
 }
+// dotted netmask -> prefix length (255.255.255.252 -> 30), for OSPF router-LSA stub links.
+function maskToPfx(mask) {
+  if (!mask) return 32;
+  var n = 0; String(mask).split('.').forEach(function (o) { var b = parseInt(o, 10) || 0; while (b) { n += b & 1; b >>= 1; } });
+  return n;
+}
+// OSPF area id: srl prints "0.0.0.0" for the backbone; show the short "0" the labs use.
+function normArea(a) { var s = String(a == null ? '0' : a); if (s === '0.0.0.0') return '0'; var m = s.match(/^0\.0\.0\.(\d+)$/); return m ? m[1] : s; }
 function splitIf(sub) { var m = /^(.*)\.(\d+)$/.exec(sub); return m ? { base: m[1], sub: m[2] } : { base: sub, sub: '0' }; }
 var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 'ip-vrf': 'connected', static: 'static', 'bgp': 'bgp', 'bgp-vpn': 'bgp', arpnd: 'connected', 'arp-nd': 'connected' };
 
@@ -116,12 +124,13 @@ function buildState(fetch, node, adj, proto) {
     }
   });
 
-  // BGP RIB -> bgp_routes. SR Linux separates the received routes (rib-in-pre: prefix + neighbor +
-  // attr-id) from the path attributes (attr-sets, keyed by index). So join them: route.attr-id ->
-  // attr-set.index. (Live-verified against srl v24 on containerlab; the older inline-attributes shape
-  // this file first assumed does not exist.) `best` = the prefix that actually won into the route-table.
+  // BGP RIB -> bgp_routes. Use the LOCAL-RIB (the decision table): it holds BOTH this router's
+  // OWN-originated routes (origin-protocol "local", next-hop 0.0.0.0) AND routes learned from peers
+  // (origin-protocol "bgp"), each with a best-route flag and an attr-id into attr-sets (AS-path /
+  // local-pref / next-hop / origin). Live-verified against srl v24. (rib-in-pre = received-only, which
+  // dropped own-originated prefixes -- so the BGP table was missing e.g. this node's own loopback.)
   if (isBgp) {
-    var rib = fetch('network-instance default bgp-rib afi-safi ipv4-unicast ipv4-unicast rib-in-out rib-in-pre');
+    var rib = fetch('network-instance default bgp-rib afi-safi ipv4-unicast ipv4-unicast local-rib');
     var attrJson = fetch('network-instance default bgp-rib attr-sets');
     var attrById = {};
     (((attrJson && attrJson['attr-set']) || [])).forEach(function (a) {
@@ -135,17 +144,16 @@ function buildState(fetch, node, adj, proto) {
         origin: o === 'incomplete' ? '?' : o.charAt(0)
       };
     });
-    var bgpBest = {};   // prefix installed as bgp in the route-table = the best/used path
-    state.routing_table.forEach(function (r) { if (r.protocol === 'bgp') bgpBest[r.prefix] = true; });
     state.bgp_routes = (((rib && rib.route) || [])).map(function (r) {
       var at = attrById[String(r['attr-id'])] || {};
-      var nh = (at.next_hop && at.next_hop !== '0.0.0.0') ? at.next_hop : (r.neighbor || '');
-      var best = !!bgpBest[r.prefix];
+      var own = r['origin-protocol'] === 'local';
+      var nh = (at.next_hop && at.next_hop !== '0.0.0.0') ? at.next_hop : (own ? '' : (r.neighbor || ''));
+      var best = r['best-route'] === true;
       return {
         prefix: r.prefix || '', next_hop: nh, as_path: at.as_path || '',
         local_pref: at.local_pref != null ? at.local_pref : 100, weight: 0,
         metric: at.med || 0, origin: at.origin || 'i',
-        best: best, status: best ? '*>' : '* '
+        best: best, own: own, status: best ? '*>' : '* '
       };
     });
   }
@@ -183,8 +191,8 @@ function buildState(fetch, node, adj, proto) {
     state.is_established = fullCount > 0;
     state.bgp_state = fullCount > 0 ? 'Established' : 'Active';
     state.has_bgp_route = reach;
-    // prefixes received = distinct prefixes in the rib-in (received), matching srl's "Rx" count.
-    var _rcvd = {}; (state.bgp_routes || []).forEach(function (r) { _rcvd[r.prefix] = true; });
+    // prefixes received = distinct LEARNED prefixes (exclude own-originated), matching srl's "Rx" count.
+    var _rcvd = {}; (state.bgp_routes || []).forEach(function (r) { if (!r.own) _rcvd[r.prefix] = true; });
     state.pfx_rcvd = Object.keys(_rcvd).length;
     peers.forEach(function (p) { state[p + '_established'] = !!state[p + '_has_full']; });
   } else {
@@ -192,10 +200,40 @@ function buildState(fetch, node, adj, proto) {
     state.ospf_active_on_interface = fullCount > 0;
     state.peer_sending_hello = fullCount > 0;
     state.has_ospf_route = reach;
-    // LSDB view: prefixes learned via ospf (own = locally originated, no next-hop ip)
-    state.lsdb_prefixes = state.routing_table.filter(function (r) { return r.protocol === 'ospf'; }).map(function (r) {
-      return { text: r.prefix, own: !r.next_hop, via: r.next_hop || r.out_iface || '' };
+    // LSDB: parse the REAL srl OSPF link-state DB (area[].lsdb router-LSAs), not a routing-table
+    // approximation -- so it includes THIS router's OWN-originated prefixes (loopback + connected),
+    // marked own via advertising-router == our router-id (== our loopback ip). Stub-network links are
+    // prefixes; p2p links are neighbor pointers (not prefixes) and are skipped.
+    var myRid = (state.interfaces['system0.0'] && state.interfaces['system0.0'].ip) || '';
+    var lsdbSeen = {}, lsdb = [];
+    ((oa && oa.area) || []).forEach(function (a) {
+      var types = (a.lsdb && a.lsdb['lsa-types'] && a.lsdb['lsa-types']['lsa-type']) || [];
+      types.forEach(function (t) {
+        if (t.type !== 'router-lsa') return;
+        ((t.lsas && t.lsas.lsa) || []).forEach(function (L) {
+          var adv = L['advertising-router'] || '';
+          ((L['router-lsa'] && L['router-lsa'].links) || []).forEach(function (lk) {
+            if (lk.type !== 'router-lsa-stub-network') return;
+            var pfx = lk['link-id'] + '/' + maskToPfx(lk['link-data']);
+            if (lsdbSeen[pfx]) return; lsdbSeen[pfx] = true;
+            lsdb.push({ text: pfx, own: !!(myRid && adv === myRid), via: adv });
+          });
+        });
+      });
     });
+    state.lsdb_prefixes = lsdb.length ? lsdb   // fall back to the RIB approximation only if no LSDB in the fetch
+      : state.routing_table.filter(function (r) { return r.protocol === 'ospf'; }).map(function (r) {
+        return { text: r.prefix, own: !r.next_hop, via: r.next_hop || r.out_iface || '' };
+      });
+    // Area / hello: a Full adjacency GUARANTEES matching area + hello timers (OSPF never reaches Full
+    // otherwise), so mirror the target's real area/hello onto both sides -> clears the false "MISMATCH".
+    if (fullCount > 0) {
+      var _a0 = (oa && oa.area && oa.area[0]) || {};
+      var _if0 = ((_a0.interface || []).filter(function (i) { return (i.neighbor || []).length; })[0]) || (_a0.interface || [])[0] || {};
+      var tArea = normArea(_a0['area-id']), tHello = _if0['hello-interval'] || 10;
+      state.r1_area = state.r2_area = state.target_area = state.peer_area = tArea; state.area_match = true;
+      state.r1_hello = state.r2_hello = state.target_hello = state.peer_hello = tHello; state.timer_match = true;
+    }
     peers.forEach(function (p) { state[p + '_neighbor_state'] = state[p + '_has_full'] ? 'Full' : 'None'; });
   }
 
@@ -241,9 +279,16 @@ function selfTest() {
     'interface ethernet-1/1 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.0.0.1/30' }] },
     'interface system0 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '1.1.1.1/32' }] },
     'protocols bgp neighbor': { neighbor: [{ 'peer-address': '10.0.0.2', 'session-state': 'established' }] },
-    // real srl model: received route (rib-in-pre) references an attr-id; the attributes live in attr-sets.
-    'rib-in-out rib-in-pre': { route: [{ prefix: '8.8.8.0/24', neighbor: '10.0.0.2', 'path-id': 0, 'attr-id': '5' }] },
-    'attr-sets': { 'attr-set': [{ index: '5', origin: 'igp', 'next-hop': '10.0.0.2', 'local-pref': 100, 'as-path': { segment: [{ member: [65002, 65100] }] } }] },
+    // real srl model: local-rib holds OWN-originated (origin-protocol "local") + learned ("bgp") routes,
+    // each with best-route + an attr-id into attr-sets.
+    'local-rib': { route: [
+      { prefix: '8.8.8.0/24', neighbor: '10.0.0.2', 'origin-protocol': 'bgp', 'best-route': true, 'attr-id': '5' },
+      { prefix: '1.1.1.1/32', neighbor: '0.0.0.0', 'origin-protocol': 'local', 'best-route': true, 'attr-id': '6' }
+    ] },
+    'attr-sets': { 'attr-set': [
+      { index: '5', origin: 'igp', 'next-hop': '10.0.0.2', 'local-pref': 100, 'as-path': { segment: [{ member: [65002, 65100] }] } },
+      { index: '6', origin: 'igp', 'next-hop': '0.0.0.0' }
+    ] },
     // bgp next-hop (n1) is INDIRECT: it has the peer IP but no subinterface (srl resolves it via the
     // connected route). A connected 10.0.0.0/30 (nC -> ethernet-1/1.0) is present so recursive
     // resolution can inherit the egress iface -- exactly the live srl shape.
@@ -258,8 +303,10 @@ function selfTest() {
   ok('bgp: route 8.8.8.0/24 proto bgp', bgpRt.protocol === 'bgp');
   ok('bgp: indirect next-hop recursively resolved to ethernet-1/1.0 (out_iface)', bgpRt.out_iface === 'ethernet-1/1.0');
   ok('bgp: route_resolution picks the bgp /24 (not the connected /30)', b.route_resolution.matched_prefix === '8.8.8.0/24' && b.route_resolution.protocol === 'bgp');
-  var br = (b.bgp_routes || [])[0];
-  ok('bgp: bgp_routes has 8.8.8.0/24, as-path "65002 65100", best', !!br && br.prefix === '8.8.8.0/24' && br.as_path === '65002 65100' && br.best === true && br.next_hop === '10.0.0.2');
+  var brLearned = (b.bgp_routes || []).filter(function (r) { return r.prefix === '8.8.8.0/24'; })[0];
+  var brOwn = (b.bgp_routes || []).filter(function (r) { return r.prefix === '1.1.1.1/32'; })[0];
+  ok('bgp: learned 8.8.8.0/24 as-path "65002 65100" best via 10.0.0.2 (own=false)', !!brLearned && brLearned.as_path === '65002 65100' && brLearned.best === true && brLearned.next_hop === '10.0.0.2' && brLearned.own === false);
+  ok('bgp: OWN-originated 1.1.1.1/32 in table (origin local, empty as-path, own=true)', !!brOwn && brOwn.own === true && brOwn.as_path === '' && brOwn.best === true);
   // full DeepDive contract (DATA-CONTRACT §4.4) parity
   ok('bgp: is_established + bgp_state Established', b.is_established === true && b.bgp_state === 'Established');
   ok('bgp: pfx_rcvd counts best routes + has_bgp_route', b.pfx_rcvd === 1 && b.has_bgp_route === true);

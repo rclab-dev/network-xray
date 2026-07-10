@@ -117,6 +117,9 @@ window.__xrayGraphBoot = function () {
   // nodes where the hub connects to every leaf; otherwise fall back to the circle (non-breaking).
   (function(){ var deg=function(n){return (ADJ[n]||[]).length;};
     if(NAMES.length===1){POS[NAMES[0]]=[cx,cy];return;}
+    // 2 nodes: lay them out horizontally (NAMES order = left→right) so the overview reads [a]—[b] and
+    // the DeepDive's single_link left/right (derived from POS x) points the output toward the real peer.
+    if(NAMES.length===2){ POS[NAMES[0]]=[W*0.30,cy]; POS[NAMES[1]]=[W*0.70,cy]; return; }
     var hub=NAMES.slice().sort(function(a,b){return deg(b)-deg(a);})[0];
     var leaves=NAMES.filter(function(n){return n!==hub;});
     if(NAMES.length>=3 && deg(hub)>=leaves.length){ POS[hub]=[cx,70];
