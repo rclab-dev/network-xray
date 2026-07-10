@@ -1,4 +1,4 @@
-// clab-xray-bridge.js — 案A 後半 (facade 統合)
+// clab-xray-bridge.js — facade integration
 //
 // clab-to-xray.js は描画 scaffold (topology/nodes/networks + placeholder xray) まで。
 // このブリッジが「facade 領域」= xray.protocol/pattern/ping_mode/holo_fields の実値化 + live state
@@ -8,7 +8,7 @@
 //  - clab トポロジは「FRR ルータが OSPF で隣接を組む小ラボ」が最も一般的 → 既定プロトコル = OSPF。
 //    (変換器は protocol:'static' の仮値を入れるが、ここで上書きする)
 //  - state 形は frr-parse.js (frr-paste デモで実描画実証済) の OSPF state と同型に揃える
-//    = holo body / logic-line ビルダーが要求する field を全部供給 → §11 の空描画 regression を踏まない。
+//    = holo body / logic-line ビルダーが要求する field を全部供給 → the empty-render regression を踏まない。
 //  - ブラウザ/Node 両用 (window or module.exports)。live engine も OSS gallery 本体も触らない。
 //
 // 使い方 (ブラウザ):
@@ -144,7 +144,7 @@
     };
   }
 
-  // §12-5 (b) 多ピアセレクタ: 任意トポロジの node について、DeepDive で見られる「ビュー」を列挙する。
+  // Multi-peer selector: for any topology node, enumerate the DeepDive "views" it can show.
   // X-Ray シリンダーは2側 (in/out peer) ゆえ、隣接が 3+ の node は「どの2ピア対を見るか」で複数ビューになる。
   // 各ビューは node+選択2ピア = 3ノードの sub-config (X-Ray の3形制限内) なので full N-node を渡さず描ける。
   // ホスト (例: clab graph 外殻) はこの配列をボタン化 → 選択ビューを renderTopology + openDeepDiveFor で描く。

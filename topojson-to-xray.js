@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * topojson-to-xray.js  —  FRR-native lane (b)
+ * topojson-to-xray.js  —  FRR-native lane
  *
  * FRR topotests の JSON-topojson ファイル (lib/topojson.py が読む宣言的トポロジ) を読み、
  * X-Ray が食う `config` JSON を出力する。clab-to-xray.js の姉妹版。

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * frr-collect.js — FRR-native lane (c)
+ * frr-collect.js — FRR-native lane
  *
  * clab-collect.js の containerlab 依存 (clab-<lab>-<node> 命名 / clab peer-map 前提) を外した
  * 「素の FRR collector」。稼働中の FRR / 記録済 fixture の両方から xray-core `state` を吐く。

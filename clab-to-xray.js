@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /*
- * clab-to-xray.js  —  案A プロトタイプ
+ * clab-to-xray.js  —  prototype
  *
  * containerlab のトポロジ定義 (.clab.yml / .yaml / .json) を読み、
  * X-Ray が食う `config` JSON (= OSS gallery facade の入口手前) を出力する。
  *
- * 【スコープ = 13_OSS化について.txt §12 案A】
+ * 【スコープ / scope】
  *   X-Ray コアが描けるのは 3 形だけ (triangle / linear_2node / linear_3node, +layout inverted_v)。
  *   よって本変換器は「2〜3 ノードの小さな FRR ラボ」だけを既存3形にマップする。
- *   任意 N ノードの一般グラフは UNSUPPORTED として明示エラーにする (= 案B が要る領域)。
+ *   任意 N ノードの一般グラフは UNSUPPORTED として明示エラーにする (= 一般グラフ用の別レーンが要る領域)。
  *
  * 【出力するもの / しないもの】
  *   出力する  : topology_type / layout / nodes(id,type,role,target,loopback) / networks(members,host_id)
@@ -253,11 +253,11 @@ function classify(graph, opts) {
     // path: 中心 (degree 2) を挟む。inverted_v 指定なら layout を付与。
     return { shape: 'linear_3node', layout: opts.invertedV ? 'inverted_v' : '', edges };
   }
-  // それ以外は案A 非対応
+  // それ以外は非対応 (out of scope)
   return {
     shape: null,
     reason: `unsupported topology: nodes=${n}, links(dedup)=${m}. ` +
-      `案A は 2-3 ノードの triangle / linear のみ対応 (一般グラフは案B が必要)。`,
+      `2-3 node triangle / linear only; general graphs need the graph lane.`,
     edges,
   };
 }

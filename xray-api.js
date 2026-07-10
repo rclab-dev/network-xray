@@ -297,7 +297,7 @@
   // The cylinder carries a built-in "✕ 閉じる" button that calls closeXrayDeep().
   window.closeXrayDeep = closeDeepDive;
 
-  // Re-target the DeepDive cylinder to ANY node and open it (§12-5: overview lives in another
+  // Re-target the DeepDive cylinder to ANY node and open it (overview lives in another
   // graph tool, X-Ray provides per-node DeepDive). Lets a host page do node-click → look inside
   // that node, without re-rendering the overview. `state` is that node's snapshot (the caller
   // supplies it — e.g. a per-node collector or the clab bridge); pure, no server fetch.

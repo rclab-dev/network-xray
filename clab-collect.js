@@ -4,7 +4,7 @@
  * emit an xray-core `state` object (same shape as frr-parse.js / clab-xray-bridge.js synthesize,
  * but from REAL `vtysh ... json` output instead of assuming everything is Full).
  *
- * §12-5 "real clab per-node collector". Scope = ONE node + its neighbors:
+ * real clab per-node collector. Scope = ONE node + its neighbors:
  *   - run `docker exec clab-<lab>-<node> vtysh -c "show ... json"` for that node only
  *   - map each OSPF/BGP neighbor to its clab peer NODE NAME by interface (link endpoints),
  *     so it works on real labs with arbitrary IP plans (no synthetic 10.x scheme needed)
