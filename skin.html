@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>xray-core — Skin editor</title>
+<script src="xray-skin.js"></script>
+<style>
+  :root {
+    /* live skin tokens — xray-skin.js overwrites these on :root from the current skin */
+    --xto-ospf:#39ff14; --xto-bgp:#a855f7; --xto-static:#888888;
+    --xto-link:#00e5ff; --xto-idle:#ff8c00; --xto-down:#555555;
+    --rc-accent:#4dd0e1;
+  }
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 20px 64px}
+  a.back{color:#80deea;text-decoration:none;font-size:13px}
+  h1{font-size:23px;margin:10px 0 2px}h1 .x{color:var(--rc-accent)}
+  .tag{color:#80deea;font-size:13px;margin:0 0 8px}
+  .lede{background:#1c2736;border-left:3px solid var(--rc-accent);padding:12px 16px;border-radius:0 6px 6px 0;
+    font-size:13px;line-height:1.7;margin:14px 0 22px}
+  .lede b{color:var(--rc-accent)} .lede code{background:#141b24;padding:1px 6px;border-radius:3px;color:#80deea;font-size:12px}
+  .cols{display:flex;gap:22px;flex-wrap:wrap}
+  .panel{background:#141b24;border:1px solid #263238;border-radius:10px;padding:16px 18px}
+  .editor{flex:1 1 360px;min-width:320px}
+  .preview{flex:1 1 380px;min-width:320px}
+  h2{font-size:13px;color:#80deea;margin:0 0 12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+  .row{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:13px}
+  .row label.k{flex:0 0 84px;color:#b0bec5;font-family:"Courier New",monospace}
+  input[type=color]{width:44px;height:28px;border:1px solid #37474f;border-radius:5px;background:#0f1318;padding:0;cursor:pointer}
+  input[type=text].hex{width:82px;background:#0f1318;border:1px solid #37474f;border-radius:5px;color:#cfe8ee;
+    font-family:"Courier New",monospace;font-size:12px;padding:5px 7px}
+  input[type=text].hex.bad{border-color:#ef5350;color:#ef9a9a}
+  .k-note{color:#607d8b;font-size:11px}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  button{padding:7px 13px;border:1px solid #37474f;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:600;
+    color:#cfe8ee;background:#1c2736}
+  button:hover{border-color:var(--rc-accent)}
+  button.cur{background:#26c6da;color:#06232a;border-color:#26c6da}
+  button.prim{background:var(--rc-accent);color:#06232a;border-color:var(--rc-accent)}
+  .order{display:flex;gap:16px;margin:6px 0 2px}
+  .order label{display:flex;align-items:center;gap:6px;font-size:13px;color:#cfe8ee;cursor:pointer}
+  .sep{height:1px;background:#263238;margin:16px 0}
+  .io{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  textarea{width:100%;box-sizing:border-box;height:150px;background:#0c1016;border:1px solid #2b3a44;border-radius:8px;
+    color:#cfe8ee;font-family:"Courier New",monospace;font-size:12px;padding:10px;margin-top:10px;resize:vertical}
+  .msg{font-size:12px;margin-top:6px;min-height:1.2em}
+  .msg.ok{color:#81c784}.msg.err{color:#ef9a9a}
+
+  /* ── live preview (representative render driven by --xto-*) ── */
+  .pv-note{font-size:11.5px;color:#607d8b;line-height:1.6;margin:0 0 12px}
+  .pv-controls{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+  .pv-controls button{font-size:12px;padding:6px 11px}
+  .stage{position:relative;background:#1e2a38;border-radius:10px;padding:22px 16px;min-height:210px;
+    display:flex;align-items:center;gap:0}
+  /* cylinder = the router body; cyan (link) frame */
+  .cyl{position:relative;width:150px;height:150px;border:3px solid var(--xto-link);border-radius:14px;
+    background:radial-gradient(circle at 50% 40%,rgba(0,229,255,0.06),transparent 70%);flex:0 0 auto;margin-left:8px}
+  .cyl .cap{position:absolute;top:-9px;left:12px;background:#1e2a38;padding:0 6px;font:11px monospace;color:#80deea}
+  /* two process balls, stacked; order class flips which is on top */
+  .balls{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+  .balls.ospf-top{flex-direction:column-reverse}
+  .ball{text-align:center}
+  .ball .core{width:50px;height:50px;box-sizing:border-box;border-radius:50%;border:5px solid var(--xto-down);
+    display:flex;align-items:center;justify-content:center;margin:0 auto;transition:all .2s}
+  .ball .core i{width:18px;height:18px;border-radius:50%;background:var(--xto-down);transition:background .2s}
+  .ball .lbl{font:700 10px monospace;letter-spacing:.5px;color:#90a4ae;margin-top:3px}
+  /* BGP ball states */
+  .ball.bgp.up   .core{border-color:var(--xto-idle);box-shadow:0 0 9px var(--xto-idle)}
+  .ball.bgp.up   .core i{background:var(--xto-idle)} .ball.bgp.up .lbl{color:var(--xto-idle)}
+  .ball.bgp.est  .core{border-color:var(--xto-bgp);box-shadow:0 0 20px var(--xto-bgp);width:58px;height:58px}
+  .ball.bgp.est  .core i{background:var(--xto-bgp)} .ball.bgp.est .lbl{color:var(--xto-bgp)}
+  .ball.bgp.down .core{border-color:var(--xto-down)} .ball.bgp.down .core i{background:var(--xto-down)}
+  /* OSPF ball states */
+  .ball.ospf.full .core{border-color:var(--xto-ospf);box-shadow:0 0 12px var(--xto-ospf)}
+  .ball.ospf.full .core i{background:var(--xto-ospf)} .ball.ospf.full .lbl{color:var(--xto-ospf)}
+  .ball.ospf.forming .core{border-color:var(--xto-idle)} .ball.ospf.forming .core i{background:var(--xto-idle)}
+  /* concentric output tunnel + forwarding arrow to the right */
+  .out{position:relative;flex:1 1 auto;height:150px;display:flex;flex-direction:column;justify-content:center;padding-left:4px}
+  .tunnel{display:flex;flex-direction:column;gap:0}
+  .tunnel .l{height:3px;border-radius:2px;opacity:.26;transition:opacity .2s,box-shadow .2s}
+  .tunnel .l-bgp{background:var(--xto-bgp)} .tunnel .l-bgp.on{opacity:1;box-shadow:0 0 6px var(--xto-bgp)}
+  .tunnel .l-ospf{background:var(--xto-ospf)} .tunnel .l-ospf.on{opacity:1;box-shadow:0 0 6px var(--xto-ospf)}
+  .tunnel .l-fwd{background:var(--xto-link);opacity:1;margin:7px 0;box-shadow:0 0 6px var(--xto-link);position:relative}
+  .tunnel .l-fwd .orb{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--xto-idle);
+    box-shadow:0 0 8px var(--xto-idle);top:-2px;animation:orbRun 2.2s linear infinite}
+  @keyframes orbRun{0%{left:2%}100%{left:96%}}
+  .arrow{margin-top:9px;font:700 11px monospace}
+  .arrow .glyph{font-size:15px} .arrow .none{color:#607d8b}
+  .out .cap{font:9px monospace;color:#80deea;margin-top:8px}
+  .legend{font-size:11.5px;color:#90a4ae;margin-top:14px;line-height:1.9}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin:0 3px 2px 10px}
+  footer{margin-top:26px;padding-top:16px;border-top:1px solid #263238;color:#607d8b;font-size:11.5px;line-height:1.7}
+  footer code{background:#141b24;padding:1px 5px;border-radius:3px;color:#80deea}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Gallery</a>
+  <h1><span class="x">xray-core</span> — Skin editor</h1>
+  <div class="tag">Pick colors &amp; process order · export / import · bring &amp; share your own.</div>
+
+  <div class="lede">
+    A <b>skin</b> is the look of X-Ray — colors and the process stacking order. The <b>meaning</b>
+    (Overview = an x-ray of the topology, DeepDive = inside the router, and the data contract) is
+    fixed; the <b>look</b> is yours. Edit below, <b>Export</b> the JSON, and hand it to anyone.
+    Your choice is saved in this browser and every gallery demo picks it up. Frozen shape:
+    <code>SKIN-CONTRACT.md</code>. <b>Phase 1</b> = colors (process order &amp; shapes come in Phase 2).
+  </div>
+
+  <div class="cols">
+    <!-- ─────────────── editor ─────────────── -->
+    <div class="panel editor">
+      <h2>Preset</h2>
+      <div class="presets" id="presets"></div>
+
+      <div class="sep"></div>
+      <h2>Colors</h2>
+      <div id="colors"></div>
+
+      <div class="sep"></div>
+      <h2>Process order <span class="k-note" style="text-transform:none;font-weight:400">— Phase 2</span></h2>
+      <div class="k-note">Choosing the BGP/OSPF stacking order on border routers (and the shape axis)
+        arrives in Phase 2. Phase 1 ships the color axis; the default order is <b>BGP top / OSPF bottom</b>.</div>
+
+      <div class="sep"></div>
+      <h2>Share</h2>
+      <div class="io">
+        <button class="prim" id="btn-export">⬇ Export JSON</button>
+        <button id="btn-copy">⧉ Copy</button>
+        <button id="btn-import">⬆ Apply pasted JSON</button>
+        <button id="btn-reset">↺ Reset to default</button>
+      </div>
+      <textarea id="json" spellcheck="false" placeholder="skin JSON — Export writes here; paste one and press Apply"></textarea>
+      <div class="msg" id="msg">&nbsp;</div>
+    </div>
+
+    <!-- ─────────────── preview ─────────────── -->
+    <div class="panel preview">
+      <h2>Live preview</h2>
+      <p class="pv-note">Representative render of a <b>border router</b> (OSPF + iBGP co-located) DeepDive,
+        driven live by the colors + order above. The authoritative engine render is validated on dev
+        before release.</p>
+      <div class="pv-controls">
+        <button data-s="bgpWins" class="cur">Dest A → BGP wins</button>
+        <button data-s="ospfWins">Dest B → OSPF wins</button>
+        <button data-s="bgpDown">BGP session down</button>
+      </div>
+      <div class="stage">
+        <div class="cyl">
+          <span class="cap">r1</span>
+          <div class="balls" id="balls">
+            <div class="ball bgp" id="ball-bgp"><div class="core"><i></i></div><div class="lbl">BGP</div></div>
+            <div class="ball ospf" id="ball-ospf"><div class="core"><i></i></div><div class="lbl">OSPF</div></div>
+          </div>
+        </div>
+        <div class="out">
+          <div class="tunnel">
+            <div class="l l-bgp" id="t-bgp1"></div>
+            <div class="l l-ospf" id="t-ospf1"></div>
+            <div class="l l-fwd"><span class="orb"></span></div>
+            <div class="l l-ospf" id="t-ospf2"></div>
+            <div class="l l-bgp" id="t-bgp2"></div>
+          </div>
+          <div class="arrow" id="arrow"></div>
+          <div class="cap">Output: eth0</div>
+        </div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+
+  <footer>
+    Editor writes <code>localStorage['xray.skin']</code>. Gallery demos include <code>xray-skin.js</code>
+    and apply it on load. Colors take effect via the <code>--xto-*</code> CSS variables (and
+    <code>xrayCore.setSkin()</code> when the engine hook is present); process order is applied by the engine.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var S = window.XraySkin;
+  var LABELS = { ospf:'OSPF', bgp:'BGP', static:'static', link:'link', idle:'forming', down:'stopped' };
+  var skin = S.load();
+  var previewState = 'bgpWins';
+
+  // ── build color rows ──
+  var colorsBox = document.getElementById('colors');
+  S.COLOR_KEYS.forEach(function (k) {
+    var row = document.createElement('div'); row.className = 'row';
+    row.innerHTML =
+      '<label class="k">' + k + '</label>' +
+      '<input type="color" data-k="' + k + '">' +
+      '<input type="text" class="hex" data-hk="' + k + '" maxlength="7">' +
+      '<span class="k-note">' + LABELS[k] + '</span>';
+    colorsBox.appendChild(row);
+  });
+
+  // ── build preset buttons ──
+  var presetsBox = document.getElementById('presets');
+  S.PRESETS.forEach(function (p) {
+    var b = document.createElement('button');
+    b.textContent = p.id; b.setAttribute('data-preset', p.id);
+    b.addEventListener('click', function () { skin = S.normalize(p); syncControls(); applyLive(); persist(); flash('Preset “' + p.id + '” applied.', true); });
+    presetsBox.appendChild(b);
+  });
+
+  function syncControls() {
+    S.COLOR_KEYS.forEach(function (k) {
+      var v = skin.colors[k];
+      var c = colorsBox.querySelector('input[data-k="' + k + '"]');
+      var h = colorsBox.querySelector('input[data-hk="' + k + '"]');
+      if (c) c.value = v; if (h) { h.value = v; h.classList.remove('bad'); }
+    });
+    document.querySelectorAll('input[name="order"]').forEach(function (r) { r.checked = (r.value === skin.protocolOrder); });
+    // highlight the matching preset (or none = custom)
+    var pid = S.matchPresetId(skin);
+    document.querySelectorAll('#presets button').forEach(function (b) {
+      b.classList.toggle('cur', b.getAttribute('data-preset') === pid);
+    });
+  }
+
+  // ── live preview: drive --xto-* + reflect the chosen state onto the mock ──
+  function applyLive() {
+    S.applyCssVars(skin);                         // colors → CSS vars (instant)
+    // order: flip the stack
+    document.getElementById('balls').classList.toggle('ospf-top', skin.protocolOrder === 'ospf-top');
+    renderPreviewState();
+    renderLegend();
+  }
+
+  // three representative states (same as the de-risk proto)
+  var STATES = {
+    bgpWins:  { bgpEst:true,  ospfFull:true, adopted:'bgp'  },
+    ospfWins: { bgpEst:true,  ospfFull:true, adopted:'ospf' },
+    bgpDown:  { bgpEst:false, ospfFull:true, adopted:'ospf' }
+  };
+  function renderPreviewState() {
+    var st = STATES[previewState];
+    var bgp = document.getElementById('ball-bgp'), ospf = document.getElementById('ball-ospf');
+    bgp.className = 'ball bgp ' + (st.bgpEst ? 'est' : 'down');
+    ospf.className = 'ball ospf ' + (st.ospfFull ? 'full' : 'forming');
+    document.getElementById('t-bgp1').classList.toggle('on', st.bgpEst);
+    document.getElementById('t-bgp2').classList.toggle('on', st.bgpEst);
+    document.getElementById('t-ospf1').classList.toggle('on', st.ospfFull);
+    document.getElementById('t-ospf2').classList.toggle('on', st.ospfFull);
+    var col = st.adopted === 'bgp' ? 'var(--xto-bgp)' : st.adopted === 'ospf' ? 'var(--xto-ospf)' : 'var(--xto-static)';
+    var arrow = document.getElementById('arrow');
+    arrow.innerHTML = '<span class="glyph" style="color:' + col + '">→</span> ' +
+      '<span style="color:' + col + '">forwarding via ' + st.adopted.toUpperCase() + '</span>';
+    document.querySelectorAll('.pv-controls button').forEach(function (b) {
+      b.classList.toggle('cur', b.getAttribute('data-s') === previewState);
+    });
+  }
+  function renderLegend() {
+    document.getElementById('legend').innerHTML =
+      'health: <span class="sw" style="background:var(--xto-down)"></span>stopped' +
+      '<span class="sw" style="background:var(--xto-idle)"></span>forming' +
+      '<span class="sw" style="background:var(--xto-ospf)"></span>OSPF Full' +
+      '<span class="sw" style="background:var(--xto-bgp)"></span>BGP est &nbsp;·&nbsp; arrow/tunnel: ' +
+      '<span class="sw" style="background:var(--xto-ospf)"></span>OSPF' +
+      '<span class="sw" style="background:var(--xto-bgp)"></span>BGP' +
+      '<span class="sw" style="background:var(--xto-link)"></span>link';
+  }
+
+  function persist() { S.save(skin); }
+  function flash(text, ok) {
+    var m = document.getElementById('msg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err');
+  }
+
+  // ── input wiring ──
+  colorsBox.addEventListener('input', function (e) {
+    var t = e.target, k = t.getAttribute('data-k') || t.getAttribute('data-hk'); if (!k) return;
+    var v = t.value;
+    if (t.getAttribute('data-hk')) {                 // hex text box
+      if (!S.isHex(v)) { t.classList.add('bad'); return; }
+      t.classList.remove('bad');
+    }
+    v = v.toLowerCase();
+    skin.colors[k] = v; skin.id = 'custom';
+    // mirror to the paired control
+    var pair = colorsBox.querySelector((t.getAttribute('data-k') ? 'input[data-hk="' : 'input[data-k="') + k + '"]');
+    if (pair) pair.value = v;
+    document.querySelectorAll('#presets button').forEach(function (b) {
+      b.classList.toggle('cur', b.getAttribute('data-preset') === S.matchPresetId(skin));
+    });
+    applyLive(); persist();
+  });
+  document.querySelectorAll('input[name="order"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      if (r.checked) { skin.protocolOrder = r.value; skin.id = 'custom'; syncControls(); applyLive(); persist(); }
+    });
+  });
+  document.querySelectorAll('.pv-controls button').forEach(function (b) {
+    b.addEventListener('click', function () { previewState = b.getAttribute('data-s'); renderPreviewState(); });
+  });
+
+  // ── share buttons ──
+  document.getElementById('btn-export').addEventListener('click', function () {
+    var json = S.toJson(skin);
+    document.getElementById('json').value = json;
+    try {
+      var blob = new Blob([json], { type: 'application/json' });
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'xray-skin-' + (skin.id || 'custom') + '.json'; a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      flash('Exported ' + a.download + ' (also shown below).', true);
+    } catch (e) { flash('Export shown below (download blocked).', true); }
+  });
+  document.getElementById('btn-copy').addEventListener('click', function () {
+    var json = S.toJson(skin); document.getElementById('json').value = json;
+    try { navigator.clipboard.writeText(json); flash('Copied JSON to clipboard.', true); }
+    catch (e) { flash('JSON shown below — select and copy.', true); }
+  });
+  document.getElementById('btn-import').addEventListener('click', function () {
+    var text = document.getElementById('json').value.trim();
+    if (!text) { flash('Paste a skin JSON into the box first.', false); return; }
+    try {
+      skin = S.fromJson(text);            // normalizes: unknown keys ignored, missing filled, hex checked
+      syncControls(); applyLive(); persist();
+      flash('Applied. (Unknown keys ignored, missing filled from default.)', true);
+    } catch (e) { flash('Invalid JSON: ' + e.message, false); }
+  });
+  document.getElementById('btn-reset').addEventListener('click', function () {
+    skin = S.normalize(S.SIGNATURE); syncControls(); applyLive(); persist();
+    document.getElementById('json').value = '';
+    flash('Reset to the signature default.', true);
+  });
+
+  // ── boot ──
+  syncControls(); applyLive();
+})();
+</script>
+</body>
+</html>
