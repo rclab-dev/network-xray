@@ -231,3 +231,30 @@ kill-metric = スキンを作る/共有する人が出るか。出なければ P
 - Adding a **color key** or a **`protocolOrder`/reserved-key value** is backward-compatible (older
   skins omit it → default). Removing or renaming a key is a breaking change → new major version.
   / 色キー追加・値追加は後方互換(旧スキンは省略→既定)。キー削除/改名は破壊的変更→メジャー更新。
+
+---
+
+## 9. Namespace bridge — one skin, every surface / ネームスペース橋渡し (2026-07-16)
+
+- **EN** — X-Ray's engine + gallery demos read the `--xto-*` tokens; the SR-Linux node panel /
+  topo-explorer (`xray-node-panel.js`) read their own `--xnp-*` "Network Palette" namespace. So a
+  single skin drives **both**, the reader (`xray-skin.js`) maps the 6 skin colors onto the `--xnp-*`
+  **semantic** tokens too — in addition to `--xto-*` — via `applyXnpVars()`:
+  | skin | → `--xnp-*` |
+  |---|---|
+  | `ospf` | `--xnp-ospf`, `--xnp-ok` |
+  | `bgp`  | `--xnp-bgp`, `--xnp-bgp-header` |
+  | `link` | `--xnp-phys` |
+  | `down` | `--xnp-muted` |
+  Structural chrome (`--xnp-bg/fg/border/accent/sel/note/font`) is **not** a skin color and is left
+  at the panel's defaults. `--xnp-decider` (best-path amber) and `--xnp-route-fg` are independent
+  semantics, **not** mapped (deferred). `static` has no clean `--xnp` equivalent (left as default).
+  Any page that includes `xray-skin.js` gets both namespaces skinned — no engine change (all CSS vars).
+- **JA** — X-Ray engine + gallery デモは `--xto-*` を、SR-Linux ノードパネル / topo-explorer
+  (`xray-node-panel.js`)は独自 `--xnp-*`(Network Palette)を読む。1枚のスキンで**両方**を駆動する
+  ため、リーダ(`xray-skin.js`)が `applyXnpVars()` で skin の6色を `--xnp-*` **semantic** にもマップ
+  する(`--xto-*` と同時)。構造 chrome は skin 対象外・据置。`--xnp-decider`/`--xnp-route-fg` は独立
+  semantic ゆえ非マップ(defer)、`static` は相当なしで据置。`xray-skin.js` を include したページは
+  両 namespace が skin 連動(engine 改修なし・全 CSS 変数)。
+- **Schema unchanged / スキーマ不変**: this is a reader-side bridge; the skin object is still the six
+  `colors` keys (§2). / これは reader 側の橋渡しで、skin オブジェクトは §2 の6色のまま不変。

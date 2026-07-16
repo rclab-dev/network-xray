@@ -126,14 +126,39 @@
     });
   }
 
-  // Apply a skin: hand it to the engine, and always set the CSS vars.
+  // Namespace bridge (universal skin): the SR-Linux node panel / topo-explorer use their own
+  // --xnp-* "Network Palette" namespace. Map the skin's 6 colors onto the --xnp-* SEMANTIC tokens so
+  // one skin JSON drives both --xto-* (engine) and --xnp-* (panel/graph). Owner decision 2026-07-16:
+  //   - unify defaults to the skin canonical (a); idle → --xnp-decider is deferred (decider stays independent).
+  //   - structural chrome (bg/fg/border/accent/sel/note/font) is NOT a skin color — left untouched.
+  function applyXnpVars(s) {
+    var doc = global.document; if (!doc || !doc.documentElement) return;
+    // xray-node-panel.js sets its --xnp-* defaults via a `.xnp-root{...}` STYLESHEET rule, so a value
+    // set on :root is overridden by .xnp-root's own declaration for the panel subtree. Inject a
+    // higher-priority `.xnp-root{... !important}` rule instead — it wins for all panels (present and
+    // future) with no timing/observer. Only the semantic tokens are mapped; structural chrome and
+    // --xnp-decider / --xnp-route-fg stay at the panel defaults (deferred).
+    var st = doc.getElementById('xnp-skin-vars');
+    if (!st) { st = doc.createElement('style'); st.id = 'xnp-skin-vars'; (doc.head || doc.documentElement).appendChild(st); }
+    st.textContent = '.xnp-root{' +
+      '--xnp-ospf:' + s.colors.ospf + ' !important;' +
+      '--xnp-ok:' + s.colors.ospf + ' !important;' +
+      '--xnp-bgp:' + s.colors.bgp + ' !important;' +
+      '--xnp-bgp-header:' + s.colors.bgp + ' !important;' +
+      '--xnp-phys:' + s.colors.link + ' !important;' +
+      '--xnp-muted:' + s.colors.down + ' !important;' +
+    '}';
+  }
+
+  // Apply a skin: hand it to the engine, and always set the CSS vars (both namespaces).
   // Engine global (canonical) = window.xraySetSkin(skin). The xrayCore.setSkin facade (present only
   // when the OSS wrapper is loaded) is a 1:1 shim over it — call whichever is available.
   function apply(skin) {
     var s = normalize(skin);
     if (typeof global.xraySetSkin === 'function') { try { global.xraySetSkin(s); } catch (e) {} }
     else if (global.xrayCore && typeof global.xrayCore.setSkin === 'function') { try { global.xrayCore.setSkin(s); } catch (e) {} }
-    applyCssVars(s);
+    applyCssVars(s);   // --xto-* (X-Ray engine + gallery demos)
+    applyXnpVars(s);   // --xnp-* (SR-Linux node panel / topo-explorer) — universal bridge
     return s;
   }
 
@@ -160,6 +185,7 @@
     save: save,
     apply: apply,
     applyCssVars: applyCssVars,
+    applyXnpVars: applyXnpVars,
     toJson: toJson,
     fromJson: fromJson,
     init: init
