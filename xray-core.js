@@ -1455,9 +1455,9 @@ var _svgLineColors = {
     dasharray: "none"
   },
   "if-down": {
-    stroke: "#ff8c00",
+    stroke: "#ff3c3c",
     width: "3",
-    filter: "drop-shadow(0 0 6px rgba(255,140,0,0.6))",
+    filter: "drop-shadow(0 0 6px rgba(255,60,60,0.6))",
     dasharray: "6,4"
   },
   "ospf-full": {
@@ -3847,17 +3847,14 @@ function _xrayApplyDualLinkBeam(beam, linkInfo, ifaces) {
   if (!beam) return;
   var ifDown = linkInfo.ifName && ifaces[linkInfo.ifName] && !ifaces[linkInfo.ifName].up;
   if (ifDown) {
+    // 物理 DOWN = 赤破線
     beam.style.setProperty("background", "repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0px,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)", "important");
     beam.style.setProperty("box-shadow", "none", "important");
-  } else if (linkInfo.fallback) {
-    beam.style.setProperty("background", "#00e5ff", "important");
-    beam.style.setProperty("box-shadow", "0 0 12px rgba(0,229,255,0.6),0 0 30px rgba(0,229,255,0.2)", "important");
-  } else if (linkInfo.up) {
+  } else {
+    // ★契約①(2026-07-22 RCL port): 物理リンク=物理状態のみ。UP は OSPF状態(full/not-full)に依らず cyan 固定。
+    //   隣接状態は tunnel 層が担う。旧: linkInfo.up(=ospf&&full)でない物理UP が else→orange で①違反。
     beam.style.setProperty("background", "#00e5ff", "important");
     beam.style.setProperty("box-shadow", "0 0 20px rgba(0,229,255,0.7),0 0 50px rgba(0,229,255,0.3)", "important");
-  } else {
-    beam.style.setProperty("background", "#ff8c00", "important");
-    beam.style.setProperty("box-shadow", "0 0 12px rgba(255,140,0,0.6),0 0 30px rgba(255,140,0,0.2)", "important");
   }
 }
 
@@ -3874,17 +3871,10 @@ function _xrayApplyDualLinkEnergyOrb(orb, linkInfo, ifaces) {
     orb.style.setProperty("background", "radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%)", "important");
     orb.style.setProperty("box-shadow", "0 0 10px rgba(255,60,60,0.3)", "important");
     orb.style.setProperty("animation", "none", "important");
-  } else if (linkInfo.fallback) {
-    orb.style.setProperty("background", "radial-gradient(circle,#fff 0%,rgba(0,229,255,0.9) 25%,rgba(0,229,255,0.3) 50%,transparent 70%)", "important");
-    orb.style.setProperty("box-shadow", "0 0 15px 6px rgba(0,229,255,0.5),0 0 40px rgba(0,229,255,0.2)", "important");
-    orb.style.removeProperty("animation");
-  } else if (linkInfo.up) {
+  } else {
+    // ★契約①(2026-07-22 RCL port): 物理 UP のエネルギーオーブは OSPF状態に依らず cyan 固定(fallback/up/その他UP統一)。
     orb.style.setProperty("background", "radial-gradient(circle,#fff 0%,rgba(0,229,255,0.9) 25%,rgba(0,229,255,0.3) 50%,transparent 70%)", "important");
     orb.style.setProperty("box-shadow", "0 0 25px 10px rgba(0,229,255,0.5),0 0 60px rgba(0,229,255,0.25)", "important");
-    orb.style.removeProperty("animation");
-  } else {
-    orb.style.setProperty("background", "radial-gradient(circle,#fff 0%,rgba(255,140,0,0.8) 30%,transparent 60%)", "important");
-    orb.style.setProperty("box-shadow", "0 0 12px rgba(255,140,0,0.5)", "important");
     orb.style.removeProperty("animation");
   }
 }
@@ -7413,7 +7403,10 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
     }
     var showIn = up && peerSending;
     var outH = showOut && hellos[ifName] ? hellos[ifName] : 10;
-    var inH = peerNode && peerHellos[peerNode] ? peerHellos[peerNode] : outH;
+    // ★hello per-timer(2026-07-22 RCL port): 受信オーブ周期を per-node hello(s.<node>_hello)源に(peer_hellos は未populate ゆえ
+    //   従来 inH が outH に潰れ r3=5s 等が失われていた)。per-node → peer_hellos → outH の順で解決。
+    var _peerH = peerNode && s[peerNode + "_hello"] > 0 ? s[peerNode + "_hello"] : 0;
+    var inH = _peerH || (peerNode && peerHellos[peerNode] ? peerHellos[peerNode] : outH);
     if (outOrb) {
       if (showOut) {
         outOrb.style.setProperty("display", "block", "important");
