@@ -128,11 +128,92 @@
     if (dec.kind === 'decided') {
       var op = dec.criterion.dir > 0 ? '>' : '<';
       var cmp = (dec.criterion.key !== 'origin' && dec.cmpVal !== null) ? ' (' + dec.bestVal + ' ' + op + ' ' + dec.cmpVal + ')' : '';
-      return '<div class="bgp-reason">★ ' + p + ' → best path by <b>' + dec.criterion.label + '</b>' + cmp + '</div>' + ch;
+      var href = _bgpTier3Href(p, (dec._grp || []));   // routes carried on dec._grp (set in _bgpBuildView)
+      var btn = '<span class="bgp-crit-btn" role="button" tabindex="0" data-bgp-crit>' + dec.criterion.label + '</span>';
+      // pop is the IMMEDIATE next sibling of .bgp-reason (the delegated handler resolves it that way);
+      // the inline chain summary follows the pop.
+      return '<div class="bgp-reason">★ ' + p + ' → best path by ' + btn + cmp + '</div>' + _bgpBracketPop(dec, href) + ch;
     }
     if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>' + ch;
     if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all attributes equal — <b>tiebreak by Router ID</b></div>' + ch;
     return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>no single decider</b> — lower-level tiebreak</div>' + ch;
+  }
+  // --- Interactive decider: Tier2 popover (all decision steps) + Tier3 full-bracket link. ---
+  // gallery is IIFE-private, so no inline onclick — the decision panel gets ONE delegated handler
+  // (wired in _paintBgpTable); the HTML carries data-* attributes only.
+  // Language: gallery has no lang variable (xrayI18nLang / _lang don't exist here); pages declare
+  // <html lang>. Gallery pages are lang="en", so this returns 'en' for the OSS/Show HN default.
+  function _bgpLang() {
+    var l = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
+    return l.indexOf('ja') === 0 ? 'ja' : 'en';
+  }
+  // Tier3 link — relative URL to the standalone decision-bracket.html, data-driven via base64url.
+  // Encoding matches decision-bracket.html's decoder exactly (btoa(unescape(encodeURIComponent))
+  // + url-safe  ↔  decodeURIComponent(escape(atob(url-unsafe)))). Payload shape = Tier3 DEFAULT.
+  function _bgpTier3Href(prefix, grp) {
+    try {
+      var routes = (grp || []).map(function (r, i) {
+        return { id: String.fromCharCode(65 + i), via: 'via ' + (r.next_hop || r.nexthop || '?'), as: 'AS' + (_bNbrAS(r) || '?'),
+          attrs: { weight: _bnum(r.weight, 0), localpref: _bnum(r.local_pref, 100),
+            aspathlen: r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0,
+            origin: ({ i: 1, e: 1, '?': 1 }[r.origin]) ? r.origin : 'i', med: _bnum(r.metric, 0), ebgp: false,
+            routerid: r.router_id || ('0.0.0.' + (i + 1)) } };
+      });
+      var json = JSON.stringify({ prefix: prefix, routes: routes });
+      var b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_');
+      return 'decision-bracket.html?d=' + b64 + '&lang=' + _bgpLang();
+    } catch (e) { return 'decision-bracket.html?lang=' + _bgpLang(); }
+  }
+  // Tier2 popover markup — each decision step (win / tie / skipped) + a link to the Tier3 bracket.
+  function _bgpBracketPop(dec, tier3Href) {
+    var rows = (dec.chain || []).map(function (st) {
+      var op = st.crit.dir > 0 ? '&gt;' : '&lt;';
+      if (st.status === 'win') {
+        var vv = (st.crit.key === 'origin') ? '' : ('<b>' + st.bestVal + ' ' + op + ' ' + st.cmpVal + '</b> ');
+        return '<div class="bp-row win"><span class="k">' + st.crit.label + '</span><span class="v">' + vv + '✅</span></div>';
+      }
+      var vtxt = (st.crit.key === 'origin' || st.status === 'skip') ? (st.status === 'skip' ? '(skipped)' : '=') : (st.bestVal + ' = ' + st.cmpVal);
+      return '<div class="bp-row tie"><span class="k">' + st.crit.label + '</span><span class="v">' + vtxt + '</span></div>';
+    }).join('');
+    var head = dec.criterion.label + ' (' + dec.bestVal + ' ' + (dec.criterion.dir > 0 ? '&gt;' : '&lt;') + ' ' + dec.cmpVal + ')';
+    var more = _bgpLang() === 'en' ? 'See all decision steps' : '判定の全ステップを見る';
+    return '<div class="de-bgp-bracket-pop" data-bgp-pop>' +
+      '<div class="bp-h">' + head + '<button type="button" class="bp-x" data-bgp-x title="close (ESC)">✕</button></div>' +
+      rows +
+      '<a class="bp-more" href="' + tier3Href + '" target="_blank" rel="noopener" data-bgp-more>' + more + ' ⧉</a>' +
+      '</div>';
+  }
+  function _closeBgpPop() {
+    var o = document.querySelectorAll('.de-bgp-bracket-pop.open');
+    for (var i = 0; i < o.length; i++) o[i].classList.remove('open');
+    document.removeEventListener('click', _bgpOutside);
+    document.removeEventListener('keydown', _bgpEsc);
+  }
+  function _bgpOutside(e) {
+    if (!e.target.closest || (!e.target.closest('.de-bgp-bracket-pop') && !e.target.closest('[data-bgp-crit]'))) _closeBgpPop();
+  }
+  function _bgpEsc(e) { if (e.key === 'Escape') _closeBgpPop(); }
+  // Single delegated handler on the (stable) decision panel — toggles the pop, closes on ✕ / outside
+  // / ESC, opens the Tier3 link in a new tab. The pop is the immediate next sibling of .bgp-reason.
+  function _bgpPanelClick(e) {
+    var t = e.target;
+    if (t.closest('[data-bgp-x]')) { e.stopPropagation(); _closeBgpPop(); return; }
+    if (t.closest('[data-bgp-more]')) { e.preventDefault(); e.stopPropagation(); var a = t.closest('[data-bgp-more]'); window.open(a.href, '_blank', 'noopener'); return; }
+    var crit = t.closest('[data-bgp-crit]');
+    if (crit) {
+      e.stopPropagation();
+      var reason = crit.closest('.bgp-reason');
+      var pop = reason && reason.nextElementSibling && reason.nextElementSibling.hasAttribute('data-bgp-pop') ? reason.nextElementSibling : null;
+      if (!pop) return;
+      var open = pop.classList.contains('open');
+      _closeBgpPop();
+      if (!open) { pop.classList.add('open'); document.addEventListener('click', _bgpOutside); document.addEventListener('keydown', _bgpEsc); }
+    }
+  }
+  function _bgpPanelKey(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var crit = e.target && e.target.closest && e.target.closest('[data-bgp-crit]');
+    if (crit) { e.preventDefault(); _bgpPanelClick({ target: crit, stopPropagation: function () {}, preventDefault: function () {} }); }
   }
   function _bgpBuildView(routes) {
     var order = [], groups = {};
@@ -141,6 +222,7 @@
     var reasons = '';
     order.forEach(function (p) {
       var grp = groups[p], dec = _bgpDecision(grp), decCol = (dec && dec.kind === 'decided') ? dec.col : null;
+      if (dec) dec._grp = grp;   // Tier3 href needs the candidate routes (min-diff: carry on dec)
       grp.forEach(function (rt) {
         var isBest = _bIsBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
         var nh = rt.next_hop || rt.nexthop || '';
@@ -170,9 +252,33 @@
       + '.de-bgp-panel .de-bgp-table th{font-size:calc(11px * var(--xbgp-fs,1))}'
       + '.de-bgp-decision-panel .bgp-reason{font-size:calc(12px * var(--xbgp-fs,1))}'
       + '.de-bgp-decision-panel .bgp-chain,.de-bgp-decision-panel .bgp-legend{font-size:calc(10px * var(--xbgp-fs,1))}'
+      // Decision panel position — port of RCL fb④ (worker4, dev/prod live): keep it clear of the BGP
+      // Table box (both default to left:calc(50%+100px); table top-anchored, decision bottom-anchored).
+      // !important so it wins over the engine default AND the older JS measurement below (now inert).
+      + '.xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto!important;bottom:64px!important;z-index:40!important;left:calc(50% + 100px);right:auto}'
       + '.xbgp-fs-ctl{float:right;font-weight:400}'
       + '.xbgp-fs-ctl button{background:#16202b;color:#9fb6c2;border:1px solid #2b3a44;border-radius:3px;font-size:11px;line-height:1;padding:1px 6px;margin-left:3px;cursor:pointer}'
-      + '.xbgp-fs-ctl button:hover{color:#cfe8ee;border-color:#4dd0e1}';
+      + '.xbgp-fs-ctl button:hover{color:#cfe8ee;border-color:#4dd0e1}'
+      // --- interactive decider: clickable criterion + Tier2 bracket popover ---
+      + '.de-bgp-decision-panel .bgp-crit-btn{color:#ffd54f;cursor:pointer;border-bottom:1.5px dashed #ffd54f;padding:0 1px;font-weight:800}'
+      + '.de-bgp-decision-panel .bgp-crit-btn::after{content:" \\25BE";font-size:0.85em}'
+      + '.de-bgp-decision-panel .bgp-crit-btn:hover,.de-bgp-decision-panel .bgp-crit-btn:focus-visible{background:rgba(255,213,79,0.16);border-radius:4px;outline:none}'
+      + '.de-bgp-bracket-pop{position:relative;z-index:2;margin-top:8px;background:#0c1a28;border:1px solid rgba(255,213,79,0.55);border-radius:8px;padding:8px 10px;display:none;box-shadow:0 8px 24px -10px rgba(0,0,0,0.8)}'
+      + '.de-bgp-bracket-pop.open{display:block}'
+      + '.de-bgp-bracket-pop .bp-h{display:flex;align-items:center;font-size:11px;font-weight:700;color:#ffd54f;margin-bottom:6px}'
+      + '.de-bgp-bracket-pop .bp-x{margin-left:auto;cursor:pointer;color:#8fb0c8;border:none;background:transparent;font-size:13px;line-height:1;padding:0 2px}'
+      + '.de-bgp-bracket-pop .bp-x:hover{color:#ff4d4d}'
+      + '.de-bgp-bracket-pop .bp-row{display:flex;justify-content:space-between;gap:14px;font-size:11px;padding:2px 2px;font-variant-numeric:tabular-nums}'
+      + '.de-bgp-bracket-pop .bp-row .k{color:#8fb0c8}'
+      + '.de-bgp-bracket-pop .bp-row.tie .v{color:#6b7b8c}'
+      + '.de-bgp-bracket-pop .bp-row.win{background:rgba(57,255,20,0.08);border-radius:4px}'
+      + '.de-bgp-bracket-pop .bp-row.win .v b{color:#00e5ff}'
+      + '.de-bgp-bracket-pop .bp-more{display:block;margin-top:8px;padding-top:7px;border-top:1px dashed rgba(255,213,79,0.25);font-size:11px;color:#00e5ff;text-decoration:none;font-weight:700}'
+      + '.de-bgp-bracket-pop .bp-more:hover{text-decoration:underline}'
+      // belt-and-suspenders: _ensureInteractive already re-enables all a/button at (2,14,2); these
+      // explicit rules document intent for the pop controls (the real cascade winner is that rule).
+      + '.is-xray-mode .de-bgp-decision-panel a.bp-more{pointer-events:auto!important}'
+      + '.is-xray-mode .de-bgp-decision-panel button.bp-x{pointer-events:auto!important}';
     document.head.appendChild(s);
   }
   function _paintBgpTable() {
@@ -186,6 +292,8 @@
     if (!panel) { panel = document.createElement('div'); panel.className = 'de-panel de-bgp-panel'; panel.id = 'de-bgp-panel'; re.parentElement.appendChild(panel); }
     var dpanel = document.getElementById('de-bgp-decision-panel');
     if (!dpanel) { dpanel = document.createElement('div'); dpanel.className = 'de-panel de-bgp-decision-panel'; dpanel.id = 'de-bgp-decision-panel'; re.parentElement.appendChild(dpanel); }
+    // Delegated decider handler — wired once on the stable panel (survives innerHTML repaints).
+    if (!dpanel._bgpWired) { dpanel._bgpWired = true; dpanel.addEventListener('click', _bgpPanelClick); dpanel.addEventListener('keydown', _bgpPanelKey); }
     var rows = _bgpRows(), body, decision = '';
     if (!rows || !rows.length) {
       body = '<div class="de-dim">no routes<br>(BGP session not established)</div>';
@@ -195,14 +303,15 @@
     panel.innerHTML = '<div class="de-title">BGP Table (' + tgt + ')<span class="xbgp-fs-ctl">'
       + '<button data-fs="dn" title="smaller text">A−</button><button data-fs="up" title="larger text">A+</button></span></div>'
       + '<div class="de-bgp-rows">' + body + '</div>';
-    if (decision) { dpanel.innerHTML = '<div class="de-title">Best-Path Decision</div><div class="de-bgp-decision-rows">' + decision + '</div>'; dpanel.style.display = ''; }
-    else { dpanel.style.display = 'none'; }
+    // Don't repaint the decision panel while a bracket pop is open (a poll tick would wipe it) —
+    // same guard as RCL's showDecision (.de-bgp-bracket-pop.open). bgp-paste doesn't poll; noc-live does.
+    var popOpen = !!document.querySelector('.de-bgp-bracket-pop.open');
+    if (decision) { if (!popOpen) dpanel.innerHTML = '<div class="de-title">Best-Path Decision</div><div class="de-bgp-decision-rows">' + decision + '</div>'; dpanel.style.display = ''; }
+    else { if (!popOpen) dpanel.style.display = 'none'; }
     _bgpFontInit();
     var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs || 1);
-    // Stack the Decision box directly UNDER the Table box so they never overlap. Both are top-right
-    // absolute; the engine's default bottom-anchor on the decision panel collides when the table is
-    // tall, so we measure the table and pin the decision just below it.
-    if (decision) { dpanel.style.bottom = 'auto'; dpanel.style.top = (panel.offsetTop + panel.offsetHeight + 10) + 'px'; }
+    // Decision box position is now CSS-driven (RCL fb④ port in _bgpInjectCss): bottom:64px + z-index:40,
+    // clear of the Table box. (Replaces the old measure-and-stack, which the owner saw overlapping.)
   }
   function _bgpFontInit() {
     if (window.__xbgpFsInit) return; window.__xbgpFsInit = true; if (window.__xbgpFs == null) window.__xbgpFs = 1;
@@ -210,8 +319,7 @@
       var b = e.target && e.target.closest && e.target.closest('.xbgp-fs-ctl button'); if (!b) return;
       window.__xbgpFs = Math.max(0.7, Math.min(1.5, (window.__xbgpFs || 1) + (b.getAttribute('data-fs') === 'up' ? 0.1 : -0.1)));
       var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs);
-      var t = document.getElementById('de-bgp-panel'), dz = document.getElementById('de-bgp-decision-panel');
-      if (t && dz && dz.style.display !== 'none') { dz.style.bottom = 'auto'; dz.style.top = (t.offsetTop + t.offsetHeight + 10) + 'px'; }
+      // (decision panel position is CSS-driven now — no re-measure needed on font change)
     });
   }
 

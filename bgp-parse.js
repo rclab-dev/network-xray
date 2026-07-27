@@ -12,54 +12,74 @@
 
   // `show bgp summary` -> { localAs, routerId, neighbors:[{ip, remoteAs, established, pfxRcvd, state, up}] }
   function parseSummary(text) {
-    var lines = (text || '').split(/\r?\n/);
+    // Column-count-independent tokenize + Up/Down detection, PLUS terminal line-wrap join: a real FRR
+    // neighbor row can wrap across 2 physical lines (V/AS on line 1, Up/Down/State on line 2). If a
+    // start row (IP + V + AS) has no Up/Down token yet, fold in the following line(s) until it does,
+    // stopping at the next neighbor. Robust to column shifts / prompt / never / Active. (worker1 tested)
+    var raw = (text || '').split(/\r?\n/);
     var out = { localAs: null, routerId: null, neighbors: [] };
-    var mAs = (text || '').match(/local AS(?: number)?\s+(\d+)/i);
-    if (mAs) out.localAs = mAs[1];
-    var mRid = (text || '').match(/(?:router identifier|local router ID is)\s+([0-9.]+)/i);
-    if (mRid) out.routerId = mRid[1];
-    // Neighbor V AS MsgRcvd MsgSent TblVer InQ OutQ Up/Down State/PfxRcd ...
-    var re = /^([0-9.]+)\s+(\d+)\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\S+)\s+(\S+)/;
-    lines.forEach(function (ln) {
-      var m = ln.match(re);
-      if (!m) return;
-      var ip = m[1], remoteAs = m[3], up = m[4], statepfx = m[5];
-      var established = /^\d+$/.test(statepfx);
-      out.neighbors.push({
-        ip: ip, remoteAs: remoteAs,
-        established: established,
-        pfxRcvd: established ? parseInt(statepfx, 10) : 0,
-        state: established ? 'Established' : statepfx,
-        up: up
-      });
+    var mAs = (text || '').match(/local AS(?: number)?\s+(\d+)/i); if (mAs) out.localAs = mAs[1];
+    var mRid = (text || '').match(/(?:router identifier|local router ID is)\s+([0-9.]+)/i); if (mRid) out.routerId = mRid[1];
+    var ipRe = /^\d{1,3}(?:\.\d{1,3}){3}$/;
+    var timeRe = /^(?:\d+:\d{2}:\d{2}|\d+[wdhms]\d*[wdhms]?|never)$/i;  // Up/Down: hh:mm:ss / 3d04h / 1w2d / never
+    var rows = [];
+    for (var i = 0; i < raw.length; i++) {
+      var t = raw[i].trim().split(/\s+/).filter(Boolean);
+      if (t.length >= 3 && ipRe.test(t[0]) && /^\d+$/.test(t[1]) && /^\d+$/.test(t[2])) {
+        var joined = t.slice(), guard = 0;                       // fold wrapped continuation line(s)
+        while (!joined.some(function (x) { return timeRe.test(x); }) && i + 1 < raw.length && guard < 2) {
+          var nx = raw[i + 1].trim().split(/\s+/).filter(Boolean);
+          if (nx.length && ipRe.test(nx[0]) && /^\d+$/.test(nx[1] || '')) break;   // next row is another neighbor → stop
+          joined = joined.concat(nx); i++; guard++;
+        }
+        rows.push(joined);
+      }
+    }
+    rows.forEach(function (t) {
+      var si = -1; for (var k = 3; k < t.length; k++) { if (timeRe.test(t[k])) { si = k + 1; break; } }
+      var state = si >= 0 && si < t.length ? t[si] : t[t.length - 1];
+      var established = /^\d+$/.test(state);
+      out.neighbors.push({ ip: t[0], remoteAs: t[2], established: established,
+        pfxRcvd: established ? parseInt(state, 10) : 0, state: established ? 'Established' : state, up: si >= 1 ? t[si - 1] : '' });
     });
     return out;
   }
 
   // `show ip bgp` -> { localAs, routerId, routes:[{prefix, nexthop, best, aspath:[..], origin}] }
   function parseBgpTable(text) {
+    // Header-driven column slicing (robust to right-aligned numeric cols / blank cells / flags) +
+    // multipath continuation rows (`*` / blank Network → previous prefix) + attribute extraction
+    // (Metric / LocPrf[blank=default 100] / Weight). (worker1 tested)
     var lines = (text || '').split(/\r?\n/);
     var out = { localAs: null, routerId: null, routes: [] };
-    var mAs = (text || '').match(/local AS\s+(\d+)/i);
-    if (mAs) out.localAs = mAs[1];
-    var mRid = (text || '').match(/local router ID is\s+([0-9.]+)/i);
-    if (mRid) out.routerId = mRid[1];
-    // status flags (e.g. *>, *=, *>i, * i), then Network, Next Hop, ... Path, origin code.
-    var re = /^([sdhSRr*>=i ]*?)\s*([0-9.]+\/\d+)\s+([0-9.]+)\s+(.*)$/;
-    var lastPrefix = null;
+    var mAs = (text || '').match(/local AS\s+(\d+)/i); if (mAs) out.localAs = mAs[1];
+    var mRid = (text || '').match(/local router ID is\s+([0-9.]+)/i); if (mRid) out.routerId = mRid[1];
+    var cols = null;   // column start offsets from the header row
+    for (var i = 0; i < lines.length; i++) { var h = lines[i];
+      if (/\bNetwork\b/.test(h) && /Next\s*Hop/i.test(h) && /\bPath\b/.test(h)) {
+        cols = { network: h.indexOf('Network'), nexthop: h.search(/Next\s*Hop/i),
+          metric: h.indexOf('Metric'), locprf: h.indexOf('LocPrf'), weight: h.indexOf('Weight'), path: h.indexOf('Path') };
+        break; } }
+    var ipRe = /^\d{1,3}(?:\.\d{1,3}){3}$/, lastPrefix = null;
+    function num(s, d) { s = (s || '').trim(); return s === '' ? d : (isNaN(parseInt(s, 10)) ? d : parseInt(s, 10)); }
     lines.forEach(function (ln) {
-      var m = ln.match(re);
-      if (!m) return;
-      var flags = m[1] || '', prefix = m[2], nexthop = m[3], rest = m[4] || '';
-      // a path line must end in an origin code (i/e/?) to be a real BGP route row (filters headers)
-      var mp = rest.match(/(?:^|\s)((?:\d+\s+)*\d+)?\s*([ie?])\s*$/);
-      if (!mp) return;
-      var aspath = mp[1] ? mp[1].trim().split(/\s+/) : [];
-      out.routes.push({
-        prefix: prefix, nexthop: nexthop, best: /[>]/.test(flags),
-        ibgp: /i/.test(flags), aspath: aspath, origin: mp[2]
-      });
-      lastPrefix = prefix;
+      if (!cols) return;
+      if (ln.indexOf('Network') >= 0 && /Next\s*Hop/i.test(ln)) return;   // skip header
+      var flags = ln.slice(0, cols.network).trim();
+      var netRaw = ln.slice(cols.network, cols.nexthop).trim();
+      var nh = ln.slice(cols.nexthop, cols.metric).trim();
+      if (!ipRe.test(nh)) return;                              // not a route row (preamble/footer)
+      var metric = ln.slice(cols.metric, cols.locprf), locprf = ln.slice(cols.locprf, cols.weight), weight = ln.slice(cols.weight, cols.path);
+      var pathRaw = ln.slice(cols.path).trim();
+      var mPfx = netRaw.match(/\d{1,3}(?:\.\d{1,3}){3}\/\d+/);
+      var prefix = mPfx ? mPfx[0] : lastPrefix;                // blank Network = continuation → previous prefix (multipath)
+      if (!prefix) return; lastPrefix = prefix;
+      var mo = pathRaw.match(/([ie?])\s*$/); var origin = mo ? mo[1] : '';
+      var aspath = pathRaw.replace(/\s*[ie?]\s*$/, '').trim();
+      var best = />/.test(flags);
+      out.routes.push({ prefix: prefix, nexthop: nh, best: best, ibgp: /i/.test(flags.replace('>', '')),
+        metric: num(metric, 0), local_pref: num(locprf, 100), weight: num(weight, 0),   // LocPrf blank = default 100
+        as_path: aspath, origin: origin, status: best ? (/i/.test(flags.replace('>', '')) ? '*>i' : '*>') : (flags || '*') });
     });
     return out;
   }
@@ -109,9 +129,18 @@
     }
 
     // ---- config ----
-    var nodes = [];
-    peers.forEach(function (p) { nodes.push({ id: p.name, role: 'AS ' + p.remoteAs, type: 'router' }); });
-    nodes.push({ id: selfName, role: 'AS ' + localAs, type: 'router', target: true });   // observed router last (right)
+    // A self with EXACTLY 2 BGP peers is a dual-link apex: emit the engine's inverted_v contract so
+    // the Overview draws r1 at the apex with both peer sessions as spokes (inverted-V), and the
+    // DeepDive shows both tunnels (#de-tunnel-left / -right). others[] order decides left/right, so
+    // peers are placed iface-ascending (eth0 = left, eth1 = right). Single-peer / 3+ peers keep the
+    // linear layout ([peers…, self]) unchanged — no regression. (worker1 inverted_v spec)
+    var isDual = peers.length === 2;
+    var peerL = isDual ? peers[0] : null, peerR = isDual ? peers[1] : null;   // iface-ascending: eth0=left, eth1=right
+    var selfNode = { id: selfName, role: 'AS ' + localAs, type: 'router', target: true };
+    var peerNodes = peers.map(function (p) { return { id: p.name, role: 'AS ' + p.remoteAs, type: 'router' }; });
+    var nodes = isDual
+      ? [peerNodes[0], selfNode, peerNodes[1]]   // [peerL(eth0), self(apex/target), peerR(eth1)]
+      : peerNodes.concat([selfNode]);            // single peer / other: observed router last (right)
 
     var networks = peers.map(function (p) {
       return { name: 'net-' + selfName + p.name, subnet: p.subnet,
@@ -119,9 +148,9 @@
     });
 
     var config = {
-      success: true, id: 'bgp-paste', topology_type: 'linear', layout: '',
+      success: true, id: 'bgp-paste', topology_type: 'linear', layout: isDual ? 'inverted_v' : '',
       nodes: nodes, networks: networks,
-      xray: { protocol: 'bgp', pattern: 'bgp_linear', ping_mode: 'cylinder-to-left',
+      xray: { protocol: 'bgp', pattern: isDual ? 'bgp_multi' : 'bgp_linear', ping_mode: isDual ? 'from-r1' : 'cylinder-to-left',
         holo_fields: [
           { label: 'BGP Session', field: 'is_established', ok: 'Established', fallback: 'bgp_state' },
           { label: 'Prefixes received', field: 'pfx_rcvd', ok: '', err: '0' }
@@ -155,6 +184,13 @@
     };
     // per-peer established flags (engine reads `<peerNode>_established`)
     peers.forEach(function (p) { state[p.name + '_established'] = p.established; });
+    // dual-link apex (2 peers): the inverted-V DeepDive reads per-peer iface for the left/right tunnels
+    // and best_path_via for the FORWARD arrow direction (tunnel colour comes from per-peer _established).
+    if (isDual) {
+      state[peerL.name + '_iface'] = peerL.iface;
+      state[peerR.name + '_iface'] = peerR.iface;
+      state.best_path_via = primaryPeer ? primaryPeer.name : (peerR.established ? peerR.name : peerL.name);
+    }
 
     // ---- topology snapshot (Seam A) ----
     var subnets = {};
@@ -176,14 +212,42 @@
     // trace (Seam B) suppressed — this is a session/route view, not a ping path
     var trace = { success: true, reached: false, hops: [] };
 
-    // BGP table rows (Seam C) — the best routes self has learned (shown inside the cylinder)
-    var bgpRows = tbl.routes.filter(function (r) { return r.best; }).map(function (r) {
-      return { prefix: r.prefix, nexthop: r.nexthop, status: r.ibgp ? '*>i' : '*>' };
+    // BGP table rows (Seam C) — ALL candidate routes + decision attributes (shown inside the cylinder).
+    // Same-prefix ≥2 candidates → _bgpBuildView groups them → the Best-Path Decision fires. The other
+    // build() consumers (bestByPeer / topology) filter r.best separately, so they are unaffected.
+    var bgpRows = tbl.routes.map(function (r) {
+      return { prefix: r.prefix, nexthop: r.nexthop, status: r.status || (r.best ? '*>' : '*'),
+        local_pref: r.local_pref, weight: r.weight, metric: r.metric, as_path: r.as_path, origin: r.origin, best: r.best };
     });
 
     return { config: config, state: state, topo: topo, trace: trace, bgpRows: bgpRows,
       _debug: { summary: sum, table: tbl, peers: peers } };
   }
 
-  window.BGPFRR = { parseSummary: parseSummary, parseBgpTable: parseBgpTable, build: build };
+  if (typeof window !== 'undefined') window.BGPFRR = { parseSummary: parseSummary, parseBgpTable: parseBgpTable, build: build };
+
+  // Node self-test — real FRR fixture (owner's live multipath data). Run: `node bgp-parse.js`.
+  // Browser: typeof process is undefined → skipped. (Not fabricated: this is a captured FRR paste.)
+  if (typeof process !== 'undefined' && process.argv && /bgp-parse\.js$/.test(process.argv[1] || '')) {
+    var SUM = ["BGP router identifier 10.59.0.10, local AS number 65001 vrf-id 0","","Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc","10.58.0.20      4      65002        15        15        2    0    0 00:00:27            1        1 N/A","10.59.0.20      4      65003        12        13        2    0    0 00:00:26            1        1 N/A","Total number of neighbors 2"].join('\n');
+    var TBL = ["BGP table version is 2, local router ID is 10.59.0.10, vrf id 0","   Network          Next Hop            Metric LocPrf Weight Path","*> 8.8.8.0/24       10.59.0.20               0             0 65003 i","*                   10.58.0.20               0     50      0 65002 i","Displayed 1 routes and 2 total paths"].join('\n');
+    var s = parseSummary(SUM), t = parseBgpTable(TBL), r = build(SUM, TBL, 'r1');
+    var checks = [];
+    function ck(name, cond) { checks.push((cond ? 'PASS' : 'FAIL') + '  ' + name); }
+    var bestR = t.routes.filter(function (x) { return x.best; })[0], otherR = t.routes.filter(function (x) { return !x.best; })[0];
+    ck('summary: 2 neighbors', s.neighbors.length === 2);
+    ck('summary: both established (pfxRcvd)', s.neighbors.length === 2 && s.neighbors.every(function (n) { return n.established; }));
+    ck('table: 2 routes', t.routes.length === 2);
+    ck('table: same prefix 8.8.8.0/24 (multipath continuation kept)', t.routes.length === 2 && t.routes[0].prefix === '8.8.8.0/24' && t.routes[1].prefix === '8.8.8.0/24');
+    ck('table: best LocPrf 100 (blank=default) > other 50', !!bestR && !!otherR && bestR.local_pref === 100 && otherR.local_pref === 50);
+    ck('build: bgpRows = 2 candidates same prefix', r.bgpRows.length === 2 && r.bgpRows[0].prefix === r.bgpRows[1].prefix);
+    ck('build: bgpRows carry local_pref attribute', r.bgpRows.length === 2 && r.bgpRows.every(function (x) { return typeof x.local_pref === 'number'; }));
+    ck('build: topology unaffected (≥2 nodes)', r.config.nodes.length >= 2);
+    ck('config: dual-link apex (inverted_v / bgp_multi / nodes r2—r1—r3)', r.config.layout === 'inverted_v' && r.config.xray.pattern === 'bgp_multi' && r.config.nodes.map(function (n) { return n.id; }).join(',') === 'r2,r1,r3');
+    ck('state: per-peer iface (eth0/eth1) + best_path_via = winner (r3, LP100)', r.state.r2_iface === 'eth0' && r.state.r3_iface === 'eth1' && r.state.best_path_via === 'r3');
+    console.log('bgp-parse self-test (real FRR fixture — multipath / LocPrf decider):');
+    checks.forEach(function (c) { console.log('  ' + c); });
+    var pass = checks.filter(function (c) { return c.indexOf('PASS') === 0; }).length;
+    console.log('SUMMARY: ' + pass + '/' + checks.length + ' PASS');
+  }
 })();
