@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BGP Best-Path Decision</title>
+<!--
+  Tier3 standalone full decision-bracket page (pipeline step① / OSS 転用弾).
+  - i18n: ?lang=en (default ja). RCL は ja, OSS/Show HN は en で同一ファイルをリンク。
+  - data-driven: ?d=<base64url(JSON)> で {prefix, routes[], decidedHint} を注入可(engine の Tier2「full bracket」リンクが Q21 実測値を渡す)。無指定は Q21 代表値(LP 決定)。
+  - self-contained(外部依存ゼロ)=独立してリンクできる弾。
+  - ★rule 文言(ja/en)は worker4 co-spec の対訳表で最終確定予定(現状 proto 値+標準訳の暫定)。
+-->
+<style>
+  :root{
+    --bg:#0d1620; --panel:#111f30; --panel2:#0a1420;
+    --ink:#e6f2f5; --ink-dim:#8fb0c8; --line:#21344c;
+    --bgp:#a855f7; --win:#00e5ff; --gold:#ffd54f; --lose:#ff4d4d;
+    --alive:#7fd9ff; --grey:#5a6b7d; --ok:#39ff14;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#13263a 0%,var(--bg) 60%);
+    color:var(--ink);font-family:"Segoe UI",system-ui,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.5;padding:26px 16px 60px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:840px;margin:0 auto}
+  .fv-head h2{font-size:18px;margin:0 2px 3px} .fv-head h2 .b{color:var(--bgp)}
+  .fv-head .msub{font-size:12.5px;color:var(--ink-dim);margin:0 2px 16px}
+  .fv-head .msub b{color:var(--gold)}
+  .langbar{float:right;font-size:11.5px;color:var(--ink-dim)}
+  .langbar a{color:var(--win);text-decoration:none;padding:2px 6px;border:1px solid var(--line);border-radius:6px;margin-left:4px}
+  .langbar a.on{background:rgba(0,229,255,.14);border-color:var(--win);font-weight:700}
+  .cards{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .rt{flex:1 1 210px;min-width:190px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;position:relative}
+  .rt .tag{font-size:11px;color:var(--ink-dim)} .rt .name{font-size:15px;font-weight:700;margin:1px 0}
+  .rt.win{border-color:var(--win);box-shadow:0 0 0 1px var(--win)} .rt.win .name{color:var(--win)}
+  .rt.out{opacity:.42;filter:saturate(.4)} .rt.out .name{text-decoration:line-through;color:var(--grey)}
+  .rt .badge{position:absolute;top:8px;right:10px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .rt.win .badge{background:var(--win);color:#04222b}
+  .rt.out .badge{background:rgba(255,77,77,.16);color:var(--lose);border:1px solid rgba(255,77,77,.5)}
+  .bracket{width:100%;border-collapse:separate;border-spacing:0;background:var(--panel2);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .bracket th,.bracket td{padding:10px 11px;text-align:center;border-bottom:1px solid var(--line);font-size:13.5px}
+  .bracket thead th{background:#0e1d2c;font-size:12px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.05em}
+  .bracket th.crit{text-align:left;width:210px;color:var(--ink);text-transform:none;font-size:13px;letter-spacing:0}
+  .crit .rule{display:block;font-size:10.5px;color:var(--grey);font-weight:400;margin-top:1px}
+  tbody tr:last-child td{border-bottom:none}
+  td.val{font-variant-numeric:tabular-nums;font-weight:600}
+  td.alive{color:var(--alive)} td.win{color:var(--win)} td.here{color:var(--lose)} td.dead{color:var(--grey);opacity:.5} td.na{color:var(--grey);opacity:.5}
+  .x{color:var(--lose);font-weight:800;margin-right:5px} .chk{color:var(--win);margin-right:4px}
+  tr.tie{background:rgba(255,255,255,.015)}
+  tr.decide{background:linear-gradient(90deg,rgba(255,213,79,.14),rgba(255,213,79,.05));box-shadow:inset 3px 0 0 var(--gold)}
+  tr.decide th.crit{color:var(--gold);font-weight:800}
+  tr.na-row{background:repeating-linear-gradient(-45deg,transparent,transparent 8px,rgba(90,107,125,.06) 8px,rgba(90,107,125,.06) 16px)}
+  tr.na-row th.crit{color:var(--grey)}
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;margin-left:7px;vertical-align:middle}
+  .pill.tie{background:rgba(127,217,255,.12);color:var(--alive);border:1px solid rgba(127,217,255,.35)}
+  .pill.decide{background:var(--gold);color:#3a2c00} .pill.na{background:rgba(90,107,125,.14);color:var(--grey);border:1px solid rgba(90,107,125,.4)}
+  .winner{margin-top:14px;background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(168,85,247,.1));border:1px solid var(--win);border-radius:12px;padding:13px 16px;display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+  .winner .trophy{font-size:27px} .winner .wt{font-size:12px;color:var(--ink-dim)} .winner .wn{font-size:17px;font-weight:800;color:var(--win)}
+  .winner .why{margin-left:auto;font-size:12.5px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:7px 11px} .winner .why b{color:var(--gold)}
+  .legend{margin-top:14px;display:flex;gap:15px;flex-wrap:wrap;font-size:11px;color:var(--ink-dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px} .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  @media(max-width:560px){.bracket th.crit{width:130px}.bracket th,.bracket td{padding:8px 6px;font-size:12px}.winner .why{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="fv-head">
+    <div class="langbar" id="langbar"></div>
+    <h2><span class="b">Best-Path Decision</span> — <span id="hTitle"></span></h2>
+    <p class="msub" id="hSub"></p>
+  </div>
+  <div class="cards" id="cards"></div>
+  <table class="bracket"><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
+  <div class="winner" id="winner"></div>
+  <div class="legend" id="legend"></div>
+  <p class="msub" id="hNote" style="margin-top:14px;font-size:11px;color:var(--grey);line-height:1.5"></p>
+</div>
+
+<script>
+"use strict";
+// ── i18n（★rule/chrome は worker4 対訳表で最終確定予定・現状 proto+標準訳の暫定）──
+var LANG = (function(){
+  var q = new URLSearchParams(location.search).get('lang');
+  if (q === 'en' || q === 'ja') return q;
+  return 'ja';   // RCL 既定=ja。OSS/Show HN は ?lang=en でリンク
+})();
+// ★worker4 co-spec 2026-07-27 の C表(chrome)に統一。★rule/文言の最終確定は事業主目視(プロトコル解説カテゴリ)。
+var I18N = {
+  ja: {
+    title:'判定の全ステップを見る',
+    sub:'上の基準から順に勝ち抜き戦。<b>勝者が決まった行で評価は止まり</b>、それより下は評価されない。',
+    critHead:'判定基準（上から順に）',
+    pillTie:'引分 → 継続', pillDecide:'★ 決定', pillCut:'一部脱落', pillNa:'未評価',
+    winnerLabel:'ベストパス', why:'決め手：<b>{crit}</b>（{a} {op} {b}）。以降の基準は見ていない。',
+    legAlive:'生存（引分で継続）', legDecide:'★決定ラウンド', legOut:'この行で脱落 ✗', legNa:'未評価（決定後は見ない）',
+    routeA:'経路A', routeB:'経路B', rid:'Router ID',
+    note:'※ 簡略版の主要順序。実 FRR のベストパス選択はさらに多段（locally-originated / AIGP / neighbor-type / 最古経路 / peer-IP 等）。'
+  },
+  en: {
+    title:'See all decision steps',
+    sub:'A tournament down the criteria, top to bottom. <b>Evaluation stops at the row that decides the winner</b>; rows below are never evaluated.',
+    critHead:'Criterion (top to bottom)',
+    pillTie:'tie → continue', pillDecide:'★ decides', pillCut:'some eliminated', pillNa:'not evaluated',
+    winnerLabel:'Best path', why:'Decided by <b>{crit}</b> ({a} {op} {b}). Criteria below were never evaluated.',
+    legAlive:'alive (tie → continues)', legDecide:'★ deciding round', legOut:'eliminated here ✗', legNa:'not evaluated (after the decision)',
+    routeA:'Path A', routeB:'Path B', rid:'Router ID',
+    note:"Simplified core order. FRR's full best-path procedure has more steps (locally-originated / AIGP / neighbor-type / oldest route / peer IP, etc.)."
+  }
+};
+var T = I18N[LANG];
+
+// ── criteria（FRR best-path 順・attr 名は英語原語で言語非依存・rule のみ i18n）──
+// ★worker4 co-spec 2026-07-27 B表。short(Weight/LocPrf/AS-Path/Origin/MED/eBGP/RID)は ja/en 共通ゆえ label に集約。
+//   rule 内の < > は innerHTML 挿入ゆえ HTML エンティティ(&lt;/&gt;)。label は esc() 経由で描画。
+var originRank = { i:0, e:1, '?':2 };
+var CRITERIA = [
+  { key:'weight',    label:{ja:'Weight',           en:'Weight'},           rule:{ja:'大きい方が勝ち（ローカル）', en:'Higher wins (router-local, not advertised)'}, dir:'high',   fmt:function(v){return v;} },
+  { key:'localpref', label:{ja:'Local Preference', en:'Local Preference'}, rule:{ja:'大きい方が勝ち',           en:'Higher wins'},            dir:'high',   fmt:function(v){return v;} },
+  { key:'aspathlen', label:{ja:'AS-Path 長',       en:'AS-Path Length'},   rule:{ja:'短い方が勝ち',            en:'Shorter wins'},           dir:'low',    fmt:function(v){return v + (LANG==='en' ? (v===1?' hop':' hops') : ' hop');} },
+  { key:'origin',    label:{ja:'Origin コード',    en:'Origin Code'},      rule:{ja:'i &lt; e &lt; ?（i が最強）', en:'i &lt; e &lt; ? (IGP is best)'}, dir:'origin', fmt:function(v){return ({i:'IGP (i)',e:'EGP (e)','?':'Incomplete (?)'})[v]||v;} },
+  { key:'med',       label:{ja:'MED',              en:'MED'},              rule:{ja:'小さい方が勝ち',          en:'Lower wins'},             dir:'low',    fmt:function(v){return v;} },
+  { key:'ebgp',      label:{ja:'eBGP > iBGP',      en:'eBGP > iBGP'},      rule:{ja:'eBGP が勝ち',            en:'eBGP over iBGP'},         dir:'ebgp',   fmt:function(v){return v?'eBGP':'iBGP';} },
+  { key:'routerid',  label:{ja:'Router ID',        en:'Router ID'},        rule:{ja:'小さい方が勝ち（最終手段）', en:'Lowest wins (final tie-breaker)'}, dir:'low', fmt:function(v){return v;} }
+];
+
+// ── default data（Q21 代表: A=LP200 / B=LP100・Weight 引分 → LP 決定）──
+var DEFAULT = {
+  prefix:'8.8.8.0/24',
+  routes:[
+    { id:'A', via:'via r2', as:'AS65002', attrs:{ weight:0, localpref:100, aspathlen:1, origin:'i', med:0, ebgp:false, routerid:'10.0.0.2' } },
+    { id:'B', via:'via r3', as:'AS65003', attrs:{ weight:0, localpref:50,  aspathlen:1, origin:'i', med:0, ebgp:false, routerid:'10.0.0.3' } }
+  ]
+};
+// ?d=<base64url(JSON)> で engine が Q21 実測値を注入可能。壊れていれば DEFAULT。
+function loadData(){
+  var d = new URLSearchParams(location.search).get('d');
+  if (!d) return DEFAULT;
+  try {
+    var b = d.replace(/-/g,'+').replace(/_/g,'/');
+    var json = decodeURIComponent(escape(atob(b)));
+    var obj = JSON.parse(json);
+    if (obj && obj.routes && obj.routes.length) return obj;
+  } catch(e){}
+  return DEFAULT;
+}
+var data = loadData();
+var prefix = data.prefix || '';
+var routes = data.routes;
+// route 表示名（i18n・data 側 name があれば優先）
+routes.forEach(function(r){ if (!r.name) r.name = (r.id === 'A') ? T.routeA : (r.id === 'B') ? T.routeB : ('Route ' + r.id); });
+
+// ── 勝ち抜き戦シミュレーション（proto と同一ロジック）──
+function betterSet(alive, crit){
+  function val(r){ var v = r.attrs[crit.key];
+    if (crit.dir === 'origin') return -originRank[v];
+    if (crit.dir === 'ebgp')   return v ? 1 : 0;
+    if (crit.dir === 'low')    return -v;
+    return v; }
+  var best = Math.max.apply(null, alive.map(val));
+  return alive.filter(function(r){ return val(r) === best; });
+}
+var alive = routes.slice(), rowState = [], decidedAt = -1;
+for (var i=0;i<CRITERIA.length;i++){
+  if (decidedAt >= 0){ rowState.push({type:'na'}); continue; }
+  var survivors = betterSet(alive, CRITERIA[i]);
+  var eliminated = alive.filter(function(r){ return survivors.indexOf(r) < 0; });
+  if (eliminated.length === 0){ rowState.push({type:'tie'}); }
+  else {
+    var decided = survivors.length === 1;
+    rowState.push({ type: decided ? 'decide' : 'cut', eliminatedHere: eliminated.map(function(r){return r.id;}) });
+    alive = survivors; if (decided) decidedAt = i;
+  }
+}
+var elimRow = {};
+rowState.forEach(function(rs,i){ (rs.eliminatedHere||[]).forEach(function(id){ if (!(id in elimRow)) elimRow[id] = i; }); });
+var winnerId = alive.length === 1 ? alive[0].id : null;
+var rById = {}; routes.forEach(function(r){ rById[r.id] = r; });
+var decCrit = CRITERIA[decidedAt] || CRITERIA[0];
+var wR = rById[winnerId] || routes[0];
+var lR = routes.filter(function(r){ return r.id !== winnerId; })[0] || routes[1] || routes[0];
+function opFor(c){ return c.dir === 'low' ? '&lt;' : '&gt;'; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── render ──
+document.title = 'BGP Best-Path Decision — ' + T.title;
+document.getElementById('hTitle').textContent = T.title;
+document.getElementById('hSub').innerHTML = T.sub;
+// lang toggle
+(function(){
+  function lnk(l,txt){ var on = (LANG===l)?' class="on"':''; var u = new URLSearchParams(location.search); u.set('lang',l); return '<a href="?'+u.toString()+'"'+on+'>'+txt+'</a>'; }
+  document.getElementById('langbar').innerHTML = lnk('ja','日本語') + lnk('en','EN');
+})();
+
+document.getElementById('cards').innerHTML = routes.map(function(r){
+  var out = (r.id in elimRow), win = (r.id === winnerId);
+  return '<div class="rt '+(win?'win':'')+' '+(out?'out':'')+'"><span class="tag">'+esc(r.via)+' · '+esc(r.as)+'</span>'+
+    '<div class="name">'+esc(r.name)+'</div><span class="tag">'+T.rid+' '+esc(r.attrs.routerid)+'</span>'+
+    (win?'<span class="badge">🏆 WIN</span>':'')+(out?'<span class="badge">✗ OUT</span>':'')+'</div>';
+}).join('');
+
+document.getElementById('head').innerHTML = '<th class="crit">'+T.critHead+'</th>'+
+  routes.map(function(r){ return '<th>'+esc(r.name)+'<br><span style="font-weight:400;color:var(--grey);font-size:11px">'+esc(r.via)+'</span></th>'; }).join('');
+
+document.getElementById('body').innerHTML = CRITERIA.map(function(c,i){
+  var rs = rowState[i], cls='', pill='';
+  if (rs.type==='tie'){ cls='tie'; pill='<span class="pill tie">'+T.pillTie+'</span>'; }
+  else if (rs.type==='decide'){ cls='decide'; pill='<span class="pill decide">'+T.pillDecide+'</span>'; }
+  else if (rs.type==='cut'){ cls='tie'; pill='<span class="pill tie">'+T.pillCut+'</span>'; }
+  else { cls='na-row'; pill='<span class="pill na">'+T.pillNa+'</span>'; }
+  var cells = routes.map(function(r){
+    var v = c.fmt(r.attrs[c.key]);
+    if (rs.type==='na') return '<td class="val na">—</td>';
+    var er = elimRow[r.id];
+    if (er!==undefined && i>er) return '<td class="val dead">'+esc(v)+'</td>';
+    if (er===i) return '<td class="val here"><span class="x">✗</span>'+esc(v)+'</td>';
+    if (rs.type==='decide' && r.id===winnerId) return '<td class="val win"><span class="chk">✔</span>'+esc(v)+'</td>';
+    return '<td class="val alive">'+esc(v)+'</td>';
+  }).join('');
+  return '<tr class="'+cls+'"><th class="crit">'+esc(c.label[LANG])+pill+'<span class="rule">'+c.rule[LANG]+'</span></th>'+cells+'</tr>';
+}).join('');
+
+document.getElementById('winner').innerHTML =
+  '<span class="trophy">🏆</span><div><div class="wt">'+T.winnerLabel+'</div><div class="wn">'+esc(wR.name)+'（'+esc(wR.via)+' · '+esc(wR.as)+'）</div></div>'+
+  '<div class="why">'+T.why.replace('{crit}', esc(decCrit.label[LANG])).replace('{a}', esc(wR.attrs[decCrit.key])).replace('{op}', opFor(decCrit)).replace('{b}', esc(lR.attrs[decCrit.key]))+'</div>';
+
+document.getElementById('legend').innerHTML =
+  '<span><span class="sw" style="background:var(--alive)"></span>'+T.legAlive+'</span>'+
+  '<span><span class="sw" style="background:var(--gold)"></span>'+T.legDecide+'</span>'+
+  '<span><span class="sw" style="background:var(--lose)"></span>'+T.legOut+'</span>'+
+  '<span><span class="sw" style="background:var(--grey)"></span>'+T.legNa+'</span>';
+document.getElementById('hNote').textContent = T.note;   // ★over-claim 回避(worker4/Josh): 7段は簡略版=FRR全手順でない旨を明示
+</script>
+</body>
+</html>
