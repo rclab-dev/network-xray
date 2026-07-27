@@ -3030,6 +3030,14 @@ function _xrayRenderInvertedVTopology(config) {
       svg.appendChild(line);
       var _ivTunId = d.lineId.replace("tri-line-", "tri-tunnel-").replace("iv-line-", "iv-tunnel-");
       _xrayDrawTunnelPipe(svg, pA, pB, _ivTunId);
+      // This SVG is (re)drawn on a deferred timer (setTimeout below) and on zoom-out redraw — both AFTER
+      // applyXrayState has already coloured the tunnels — so the freshly-created elements would stay gray.
+      // Re-apply the per-link BGP tunnel colour here from the last applied state (mirrors apply L4206).
+      if (window._lastXrayState && (config.xray && config.xray.pattern) === "bgp_multi" && typeof xraySetSvgTunnel === "function") {
+        var _ivS = window._lastXrayState;
+        var _ivOn = (document.body.classList.contains("is-xray-mode") || document.body.classList.contains("is-replaying")) && !!_ivS[d.bottomId + "_established"];
+        xraySetSvgTunnel(_ivTunId, _ivOn ? "Full" : "None", _ivOn ? "bgp" : "ospf");
+      }
       var lbl = document.getElementById("iv-label-" + d.labelPos);
       if (lbl) {
         var midX = (pA.x + pB.x) / 2;
