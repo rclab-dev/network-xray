@@ -159,6 +159,11 @@ view.openDeepDive();</pre>
       // self node (r1) is always present; require at least one parsed BGP neighbor, otherwise show the hint.
       if (r.config.nodes.length < 2) throw new Error('no BGP neighbors parsed — is this FRR `show bgp summary` + `show ip bgp`?');
       document.getElementById('err').style.display = 'none';
+      // If a DeepDive is open, return to the overview first (same reset as the "Back to overview"
+      // button) — otherwise the freshly rendered overview stays hidden behind the DeepDive overlay.
+      if (view && document.body.classList.contains('is-xray-deep') && typeof view.closeDeepDive === 'function') {
+        try { view.closeDeepDive(); } catch (e) {}
+      }
       document.body.classList.remove('is-xray-deep');
       view = xrayCore.renderTopology('#topo', r.config, { topology: r.topo, trace: r.trace });
       view.setBgpTable(r.bgpRows);

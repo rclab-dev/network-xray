@@ -550,4 +550,17 @@
     startPolling: startPolling,
     stopPolling: stopPolling
   };
+
+  // Drop the node "Ping:" overlay line on paste demos: a standalone paste tool can't know the ping
+  // target (RCL knows Q21 = 8.8.8.8, but arbitrary pasted output carries no destination), so ping_ok is
+  // always false → a misleading "Ping: FAIL". Wrap the two CORE line generators (loaded before this
+  // facade) to filter that line; the BGP/OSPF status lines stay. RCL never loads this file → unaffected.
+  ['xrayBgpLogicLines', 'xrayOspfLogicLines'].forEach(function (fn) {
+    var orig = window[fn];
+    if (typeof orig === 'function') {
+      window[fn] = function (s) {
+        return (orig(s) || []).filter(function (l) { return !/^Ping:/.test((l && l.text) || ''); });
+      };
+    }
+  });
 })();
