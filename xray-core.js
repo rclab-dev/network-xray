@@ -88,7 +88,7 @@ window.xrayApplyTheme = function(labMode) {
   if (document.getElementById("xray-core-css")) return;
   var s = document.createElement("style");
   s.id = "xray-core-css";
-  s.textContent = [ ".is-xray-deep:not(.xray-state-ready) .de-beam," + ".is-xray-deep:not(.xray-state-ready) .de-energy," + ".is-xray-deep:not(.xray-state-ready) .de-label," + ".is-xray-deep:not(.xray-state-ready) .de-tunnel," + ".is-xray-deep:not(.xray-state-ready) .de-hello-orb," + ".is-xray-deep:not(.xray-state-ready) .de-ping-orb," + ".is-xray-deep:not(.xray-state-ready) .de-packet," + ".is-xray-deep:not(.xray-state-ready) .de-panel{visibility:hidden!important}", '.xray-deep-engine::before{content:"✖";position:absolute;left:1.7%;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-input-down.is-xray-deep .xray-deep-engine::before{opacity:1}", ".is-input-down .de-beam.in{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-input-down .de-label.in{color:#ef5350!important;text-shadow:0 0 6px rgba(239,83,80,0.5)!important}", ".is-input-down .de-energy.el{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%)!important;box-shadow:0 0 10px rgba(255,60,60,0.3)!important;animation:none!important}", ".is-input-down.is-xray-deep .de-packet,.is-input-down.is-xray-deep .de-packet.p2{animation:none!important;opacity:0!important}", '.xray-deep-engine::after{content:"✖";position:absolute;right:1.7%;top:50%;transform:translate(50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-output-down.is-xray-deep .xray-deep-engine::after{opacity:1}", ".is-output-down.is-xray-deep .de-beam.out{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-output-down.is-xray-deep .de-energy.er{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%);box-shadow:0 0 10px rgba(255,60,60,0.3);animation:none}", ".is-output-down.is-xray-deep .de-label.out{color:#ef5350;text-shadow:0 0 6px rgba(239,83,80,0.5)}", ".is-cleared .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-cleared .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 60px rgba(var(--xto-link-rgb,0,229,255),0.25);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-cleared .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-packet{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 10px 4px rgba(255,255,255,0.7),0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.8);transform:translateY(-50%);z-index:6;opacity:0;display:none}", ".xray-state-ready .de-packet{display:block}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet{animation:xrayDeepPacketStop 2s ease-in-out infinite}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet.p2{animation-delay:1s}", ":not(.ping-ok).is-xray-deep.ping-from-r1 .de-packet{display:none}", ".is-xray-deep.ping-from-r1 .de-beam.in{display:none!important}", ".is-xray-deep.ping-from-r1 .de-energy.el{display:none!important}", ".is-xray-deep.ping-from-r1 .de-label.in{display:none!important}", ":not(.ping-ok).is-xray-deep.ping-cylinder-to-left .de-packet{display:none}", ".is-xray-deep.ping-cylinder-to-left .de-beam.out{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-energy.er{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-label.out{display:none!important}", ".xray-advertiser-view .de-beam.out,.xray-advertiser-view .de-tunnel:not(.left-side),.xray-advertiser-view .de-energy.er,.xray-advertiser-view .de-label.out,.xray-advertiser-view #de-ping-req,.xray-advertiser-view .de-ping-orb.reply{display:none!important}", ".xray-advertiser-view .de-packet,.xray-advertiser-view .de-packet.p2{display:none!important}", ".is-xray-deep.ping-from-r1 .de-beam.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-beam.in{display:none}", ".is-xray-deep.ping-from-r1 .de-energy.el,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-energy.el{display:none}", ".is-xray-deep.ping-from-r1 .de-label.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-label.in{display:none}", "[data-topo-triangle].is-xray-deep .de-beam.in{display:block!important}", "[data-topo-triangle].is-xray-deep .de-energy.el{display:block!important}", "[data-topo-triangle].is-xray-deep .de-label.in{display:block!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.out{display:none!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.in{display:none!important}", "[data-topo-triangle].is-xray-deep.hello-out .de-hello-orb.left-out{display:block!important}", "[data-topo-triangle].is-xray-deep.hello-in .de-hello-orb.left-in{display:block!important}", "@keyframes xrayDeepPacketStop{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}10%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% - 60px);transform:translateY(-50%) scale(1.3)}55%{left:calc(50% - 60px);opacity:0.5;transform:translateY(-50%) scale(0.7)}80%{left:calc(50% - 60px);opacity:0}100%{left:calc(50% - 60px);opacity:0}}", ".ping-ok.is-xray-deep .de-packet{animation:xrayDeepPacket 2.8s ease-in-out infinite}", ".ping-ok.is-xray-deep .de-packet.p2{animation-delay:1.4s}", "@keyframes xrayDeepPacket{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}42%{left:47%;transform:translateY(-50%) scale(1.5)}58%{left:53%;transform:translateY(-50%) scale(1.5)}92%{opacity:1;transform:translateY(-50%) scale(1)}100%{left:97%;opacity:0;transform:translateY(-50%) scale(0.4)}}", "@keyframes xrayEnergyPulse{0%{transform:translate(-50%,-50%) scale(0.7);opacity:0.6}100%{transform:translate(-50%,-50%) scale(1.3);opacity:1}}", ".de-ping-orb{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-link-rgb,0,229,255),0.8));box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.7);transform:translateY(-50%);z-index:8;opacity:0;display:none}", ".ping-ok.is-xray-deep .de-ping-orb{display:block}", ".ping-ok.is-xray-deep .de-packet{display:none}", ".ping-ok.is-xray-deep .de-packet.p2{display:none}", ":not(.ping-ok).is-xray-deep .de-ping-orb{display:none!important}", ".xray-target-bypassed.is-xray-deep .de-ping-orb{display:none!important;animation:none!important}", ".xray-target-bypassed.is-xray-deep .de-packet{display:none!important;animation:none!important}", ".xray-target-bypassed.is-xray-deep .de-packet.p2{display:none!important;animation:none!important}", ".xray-target-bypassed:not(.xray-input-session-up).is-xray-deep .de-tunnel.left-side{height:0!important;opacity:0!important}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb{animation:dePingR1Req 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb.reply{animation:dePingR1Rep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingR1Req{0%{left:calc(50% + 10px);opacity:0}6%{opacity:1}40%{left:calc(100% - 14px);opacity:0.8}44%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingR1Rep{0%{left:calc(100% - 14px);opacity:0}6%{opacity:1}40%{left:calc(50% + 10px);opacity:0.8}44%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb{animation:dePingThruReq 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb.reply{animation:dePingThruRep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingThruReq{0%{left:3%;opacity:0}4%{opacity:1}20%{left:calc(50% - 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% + 10px);transform:translateY(-50%) scale(1.3)}45%{left:calc(100% - 14px);opacity:0.8}48%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingThruRep{0%{left:calc(100% - 14px);opacity:0}4%{opacity:1}20%{left:calc(50% + 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% - 10px);transform:translateY(-50%) scale(1.3)}45%{left:3%;opacity:0.8}48%{left:3%;opacity:0}100%{opacity:0}}", ".de-hello-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-idle-rgb,255,140,0),0.9));box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.7);z-index:7;opacity:0;display:none}", ".de-hello-orb.out{top:calc(50% + 10px)}", ".de-hello-orb.in{top:calc(50% - 18px)}", ".is-xray-deep.hello-out .de-hello-orb.out{display:block;animation:deHelloOut 10s ease-in-out infinite}", ".is-xray-deep.hello-in .de-hello-orb.in{display:block;animation:deHelloIn 10s ease-in-out 5s infinite}", "@keyframes deHelloOut{0%{left:calc(50% + 10px);opacity:0}2%{opacity:1}15%{left:calc(100% - 12px);opacity:0.8}18%{left:calc(100% - 12px);opacity:0}100%{opacity:0}}", "@keyframes deHelloIn{0%{left:calc(100% - 12px);opacity:0}2%{opacity:1}15%{left:calc(50% + 10px);opacity:0.8}18%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".de-hello-orb.left-out{top:calc(50% + 10px)}", ".de-hello-orb.left-in{top:calc(50% - 18px)}", ".is-xray-deep.hello-left-out .de-hello-orb.left-out{display:block;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.hello-left-in .de-hello-orb.left-in{display:block;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", "@keyframes deHelloLeftOut{0%{left:calc(50% - 10px);opacity:0}2%{opacity:1}15%{left:12px;opacity:0.8}18%{left:12px;opacity:0}100%{opacity:0}}", "@keyframes deHelloLeftIn{0%{left:12px;opacity:0}2%{opacity:1}15%{left:calc(50% - 10px);opacity:0.8}18%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".is-input-down .de-hello-orb.left-out{display:none!important}", ".is-input-down .de-hello-orb.left-in{display:none!important}", '.de-panel{position:absolute;z-index:8;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:5px;padding:12px 14px;font-family:"Courier New",monospace;font-size:11px;line-height:1.8;color:rgba(var(--xto-link-rgb,0,229,255),0.95);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.1);backdrop-filter:blur(8px);min-width:220px;max-width:280px;opacity:0;transition:opacity 0.5s ease 0.3s}', ".xray-deep-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto}", ".is-xray-deep .de-panel{opacity:1}", ".dd-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto;opacity:1}", ".xray-deep-engine .de-bgp-panel,.dd-engine .de-bgp-panel{top:30px;bottom:auto;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px;max-height:360px;overflow-y:auto;overflow-x:auto}", "body.trace-active .xray-deep-engine .de-bgp-panel,body.trace-active .xray-deep-engine .de-bgp-decision-panel{max-width:calc(50% - 120px)}", "body.trace-active .de-bgp-panel{min-width:0}", "body.trace-active .de-bgp-panel .de-bgp-table{font-size:10px}", "body.trace-active .de-bgp-panel .de-bgp-table th{padding:2px 6px 3px 0;font-size:9px;letter-spacing:0}", "body.trace-active .de-bgp-panel .de-bgp-table td{padding:2px 6px 2px 0}", ".de-bgp-panel .de-title{color:#bb86fc;text-shadow:0 0 8px rgba(187,134,252,0.55)}", ".de-bgp-panel .de-bgp-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}", ".de-bgp-panel .de-bgp-table th{color:#bb86fc;text-align:left;font-weight:700;padding:2px 11px 4px 0;border-bottom:1px solid rgba(187,134,252,0.3);font-size:11px;letter-spacing:0.3px}", ".de-bgp-panel .de-bgp-table td{color:rgba(var(--xto-link-rgb,0,229,255),0.9);padding:2px 11px 2px 0;white-space:nowrap}", ".de-bgp-panel .bgp-st{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-bgp-panel .de-bgp-table tr.bgp-best td{color:#aef5b0;background:rgba(var(--xto-ospf-rgb,57,255,20),0.10)}", ".de-bgp-panel .de-bgp-table tr.bgp-best .bgp-st{color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".de-bgp-panel .de-bgp-table td.bgp-decider{background:rgba(255,193,7,0.22);color:#ffd54f;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,193,7,0.55)}", ".de-bgp-panel .de-bgp-table .bgp-default{color:rgba(var(--xto-link-rgb,0,229,255),0.45);font-style:italic}", ".de-bgp-panel .de-bgp-table td.bgp-decider .bgp-default{color:#ffd54f;font-style:normal}", ".xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto;bottom:30px;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px}", ".de-bgp-decision-panel .de-title{color:#ffd54f;text-shadow:0 0 8px rgba(255,193,7,0.5)}", ".de-bgp-decision-panel .bgp-reason{margin-top:6px;font-size:12px;color:#66bb6a;line-height:1.5}", ".de-bgp-decision-panel .bgp-reason b{color:#ffd54f}", ".de-bgp-decision-panel .bgp-reason.bgp-reason-note{color:#7facc9}", ".de-bgp-decision-panel .bgp-chain{margin-top:3px;font-size:10px;color:var(--xto-static,#888);line-height:1.6;letter-spacing:0.2px}", ".de-bgp-decision-panel .bgp-chain .bgp-step-tie{color:#6b7b8c}", ".de-bgp-decision-panel .bgp-chain .bgp-step-win{color:#ffd54f;font-weight:700}", ".de-bgp-decision-panel .bgp-chain .bgp-step-amb{color:#e0a060;font-weight:700}", ".de-bgp-decision-panel .bgp-legend{margin-top:5px;font-size:10px;color:#999;letter-spacing:0.3px}", ".de-panel .de-title{color:var(--xto-link,#00e5ff);font-weight:700;font-size:12px;margin-bottom:6px;letter-spacing:1px;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-panel .de-hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-panel .de-dim{color:rgba(var(--xto-link-rgb,0,229,255),0.35);font-size:10px}", ".de-panel .de-err{color:#ff4444;font-weight:700}", ".de-panel .de-warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".de-tunnel{position:absolute;top:50%;left:calc(50% + 60px);right:0;height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:all 0.8s cubic-bezier(0.23,1,0.32,1)}", ".is-xray-deep.xray-state-full .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 100%)}", ".is-xray-deep.xray-bgp-established .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-idle .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px);opacity:0.42;box-shadow:none}", ".is-xray-deep.xray-bgp-idle .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 100%)}", ".is-xray-deep.xray-bgp-idle .de-tunnel-label{opacity:0.55;color:var(--xto-bgp,#a855f7);text-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.3)}", ".is-xray-deep.xray-ospftun-init .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-2way .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-exchange .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-2way.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-exchange.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)}", ".is-xray-deep.xray-ospftun-2way .de-tunnel > .de-tunnel-wall{background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-fill,.is-xray-deep.xray-ospftun-2way .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.06) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.06) 100%)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 100%)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-label,.is-xray-deep.xray-ospftun-2way .de-tunnel-label{opacity:0.85;color:var(--xto-idle,#ff8c00);text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-label{opacity:0.85;color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.4)}", "@keyframes xBgpTunnelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-bgp-rgb,168,85,247),0.8)}}", ".de-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".de-tunnel-wall.top{top:0}", ".de-tunnel-wall.bot{bottom:0}", ".de-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0.3s}", ".is-xray-deep.xray-state-full .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", '.de-tunnel-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:9px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:1px;opacity:0;white-space:nowrap;transition:opacity 0.6s ease 0.8s}', ".is-xray-deep.xray-state-full .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", "@keyframes xtunnelLabelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-ospf-rgb,57,255,20),0.8)}}", ".de-panel-initial{display:block}", ".de-panel-cleared{display:none}", ".is-cleared .de-panel-initial{display:none}", ".is-cleared .de-panel-cleared{display:block}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-energy.er{animation:none}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-beam.out{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-energy.er{background:radial-gradient(circle,rgba(var(--xto-idle-rgb,255,140,0),0.5) 0%,transparent 60%);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.3);animation:none}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-label.out{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".xray-deep-engine{position:relative;width:100%;height:0;overflow:hidden;opacity:0;transition:opacity 0.4s,height 0.4s;border-radius:6px;margin-top:10px;display:none}", ".xray-deep-engine::before,.xray-deep-engine::after{display:none!important}", ".is-xray-deep .xray-deep-engine{display:block}", ".is-xray-deep .xray-deep-engine::before,.is-xray-deep .xray-deep-engine::after{display:block!important}", ".is-xray-deep .xray-deep-engine{opacity:1;height:400px}", ".is-xray-deep .topo-diagram{display:none!important}", ".is-xray-deep .topo-header{display:none!important}", ".is-xray-deep .topology{background:transparent!important;padding:0!important;border-radius:0!important}", ".is-xray-deep .btn-xray{display:none!important}", ".is-xray-deep .neighbor-panel,.is-xray-deep .link-status,.is-xray-deep .topo-tri-arrows,.is-replaying .neighbor-panel,.is-replaying .link-status,.is-replaying .topo-tri-arrows,.is-replaying .panels-row{display:none!important}", ".de-box-svg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}", ".de-cyl-svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:160px;height:320px;z-index:3}", ".de-beam{position:absolute;top:50%;height:4px;z-index:2;box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-beam.out{left:calc(50% + 60px);right:0;background:var(--xto-link,#00e5ff)}", ".de-energy{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);z-index:4;background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 15px 6px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 40px rgba(var(--xto-link-rgb,0,229,255),0.2);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".de-energy.er{left:calc(50% + 60px)}", '.de-label{position:absolute;top:50%;z-index:5;font-family:"Courier New",monospace;font-size:12px;font-weight:700;color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5);white-space:nowrap}', ".de-label.out{right:10px;transform:translateY(14px)}", ".de-r1-label{position:absolute;top:24px;left:60px;z-index:7;text-align:left;opacity:0;transition:opacity 0.4s ease 0.2s}", ".is-xray-deep .de-r1-label{opacity:1}", ".de-r1-name{font-size:22px;font-weight:700;color:var(--xto-ospf,#39ff14);text-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.5);letter-spacing:3px}", ".de-r1-sub{font-size:10px;color:rgba(var(--xto-ospf-rgb,57,255,20),0.4);margin-top:2px}", ".is-xray-deep.xray-state-init .de-beam.out,.is-xray-deep.xray-state-exchange .de-beam.out{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.5)!important}", ".is-xray-deep.xray-state-init .de-energy.er,.is-xray-deep.xray-state-exchange .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-idle-rgb,255,140,0),0.8) 30%,transparent 60%);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-deep.xray-state-init .de-label.out,.is-xray-deep.xray-state-exchange .de-label.out{color:var(--xto-idle,#ff8c00)!important;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)!important}", ".is-xray-deep.xray-state-full .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-state-full .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-state-full .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-ospf{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-ospf-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-ospf-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-state-init .de-ospf-core,.is-xray-deep.xray-state-exchange .de-ospf-core,.is-xray-deep.xray-state-full .de-ospf-core{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", '.de-ospf-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-state-init .de-ospf-label,.is-xray-deep.xray-state-exchange .de-ospf-label{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-full .de-ospf-label{color:var(--xto-ospf,#39ff14)}", ".de-bgp-proc{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-bgp-proc-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-bgp-proc-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core .inner{background:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core{border-color:var(--xto-bgp,#a855f7);box-shadow:0 0 20px rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core .inner{background:var(--xto-bgp,#a855f7)}", '.de-bgp-proc-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-label{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-label{color:var(--xto-bgp,#a855f7)}", '.de-lsdb{position:absolute;bottom:14%;left:50%;transform:translateX(-50%);z-index:5;width:180px;background:rgba(0,8,16,0.9);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.3);border-radius:5px;padding:10px 12px;font-family:"Courier New",monospace;font-size:9px;color:rgba(var(--xto-idle-rgb,255,140,0),0.7);backdrop-filter:blur(4px);transition:all 0.5s}', ".de-lsdb .lsdb-hd{font-weight:700;font-size:10px;color:var(--xto-idle,#ff8c00);margin-bottom:4px;letter-spacing:1px;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".de-lsdb .lsdb-bar{height:4px;background:#1a1a1a;border-radius:3px;overflow:hidden;margin-bottom:6px}", ".de-lsdb .lsdb-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--xto-idle,#ff8c00),#ffb347);border-radius:3px;transition:width 0.4s}", ".de-lsdb .lsdb-row{padding:2px 0;border-bottom:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.1)}", ".de-lsdb .lsdb-row .type{color:var(--xto-idle,#ff8c00);font-weight:700}", ".de-beam.in{left:0;right:calc(50% + 60px);background:var(--xto-link,#00e5ff);box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-if-marker{position:absolute;top:calc(50% + 2px);width:8px;height:8px;background:var(--xto-bg,#0d1620);border:1.5px solid var(--xto-link,#00e5ff);box-sizing:border-box;z-index:4;pointer-events:none}", ".de-if-marker.left{left:1.67%;transform:translate(-50%,-50%)}", ".de-if-marker.right{right:1.67%;transform:translate(50%,-50%)}", ".is-input-down .de-if-marker.left,.is-output-down .de-if-marker.right{border-color:var(--xto-linkDown,#ff4d4d)}", ".de-energy.el{right:calc(50% + 60px);left:auto}", ".de-label.in{left:1.7%;transform:translateY(20px);text-align:left}", ".de-tunnel.left-side{position:absolute;top:50%;left:0;right:calc(50% + 60px);height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:all 0.8s cubic-bezier(0.23,1,0.32,1)}", ".de-tunnel.left-side.tunnel-active{height:36px;opacity:1}", "#de-tunnel-left:not(.tunnel-active):not(.tunnel-2way),#de-tunnel-right:not(.tunnel-active):not(.tunnel-2way){height:0!important;opacity:0!important}", "#de-tunnel-left.tunnel-active,#de-tunnel-right.tunnel-active{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-active .de-tunnel-fill,#de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-active .de-tunnel-wall,#de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", "#de-tunnel-left.tunnel-active .de-tunnel-label,#de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", "#de-tunnel-left.tunnel-2way,#de-tunnel-right.tunnel-2way{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-2way .de-tunnel-fill,#de-tunnel-right.tunnel-2way .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-2way .de-tunnel-wall,#de-tunnel-right.tunnel-2way .de-tunnel-wall{background:#ffcc80;box-shadow:0 0 6px rgba(255,204,128,0.5),0 0 14px rgba(255,204,128,0.2)}", "#de-tunnel-left.tunnel-2way .de-tunnel-label,#de-tunnel-right.tunnel-2way .de-tunnel-label{opacity:1;color:#ffcc80;text-shadow:0 0 8px rgba(255,204,128,0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-wall,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-fill,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 100%)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-label,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", ".de-tunnel.left-side .de-tunnel-fill{opacity:1}", ".de-tunnel.left-side .de-tunnel-label{opacity:1;animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".de-ping-orb.left-req{animation:none;display:none}", ".de-ping-orb.left-rep{animation:none;display:none}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-req{display:block;animation:dePingLeftReq 4s ease-in-out infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-rep{display:block;animation:dePingLeftRep 4s ease-in-out 2s infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb:not(.left-req):not(.left-rep){display:none}", "@keyframes dePingLeftReq{0%{left:calc(50% - 10px);opacity:0}6%{opacity:1}40%{left:14px;opacity:0.8}44%{left:14px;opacity:0}100%{opacity:0}}", "@keyframes dePingLeftRep{0%{left:14px;opacity:0}6%{opacity:1}40%{left:calc(50% - 10px);opacity:0.8}44%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".xray-ospf-unit{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(var(--xto-down-rgb,85,85,85),0.3);transition:all 0.6s;z-index:2;display:none}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".xray-ospf-unit .xray-ospf-dot{width:10px;height:10px;border-radius:50%;background:var(--xto-down,#555);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".xray-ospf-unit.ospf-active{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-ospf-unit.ospf-active .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-packet{top:calc(50% - 18px)}", ".is-output-down .de-hello-orb.out{display:none!important}", ".is-output-down .de-hello-orb.in{display:none!important}", ".is-output-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-output-down:not([data-topo-triangle]) .de-tunnel{opacity:0!important;height:0!important}", ".is-input-down .de-hello-orb.in{display:none!important}", ".is-input-down .de-hello-orb.out{display:none!important}", ".is-input-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-input-down .de-packet{display:none!important}", ".is-input-down .de-packet.p2{display:none!important}", ".is-input-down.is-output-down .de-hello-orb{display:none!important}", ".is-input-down.is-output-down .de-packet{display:none!important}", ".btn-xray{position:absolute;top:16px;right:16px;z-index:12;background:rgba(var(--xto-ospf-rgb,57,255,20),0.12);color:var(--xto-ospf,#39ff14);border:1px solid rgba(var(--xto-ospf-rgb,57,255,20),0.3);font-size:11px;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:bold;transition:all 0.3s;animation:xrayBtnBlink 1.5s ease-in-out infinite alternate}", ".btn-xray:hover{background:rgba(var(--xto-ospf-rgb,57,255,20),0.22)}", ".btn-xray.active{background:rgba(var(--xto-ospf-rgb,57,255,20),0.35);border-color:var(--xto-ospf,#39ff14);box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4);animation:xrayBtnActive 0.8s ease-in-out infinite alternate}", "@keyframes xrayBtnBlink{0%{box-shadow:0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}100%{box-shadow:0 0 16px rgba(var(--xto-ospf-rgb,57,255,20),0.6),0 0 30px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}}", "@keyframes xrayBtnActive{0%{box-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.4);transform:scale(1)}100%{box-shadow:0 0 24px rgba(var(--xto-ospf-rgb,57,255,20),0.8),0 0 50px rgba(var(--xto-ospf-rgb,57,255,20),0.3);transform:scale(1.08)}}", ".xray-packet-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,0.7),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.8);top:50%;transform:translateY(-50%);opacity:0;pointer-events:none;z-index:5}", ".is-xray-mode:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-mode.ping-through .xray-packet-orb{animation:xrayPktDyn 2.4s ease-in-out infinite;animation-delay:2s}", ".is-xray-mode .xray-packet-orb.orb2{animation-delay:3.2s;width:7px;height:7px;box-shadow:0 0 8px 3px rgba(255,255,255,0.5),0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ":not(.is-cleared).is-xray-mode.ping-through .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-from-r1 .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-cylinder-to-left .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-deep.ping-cylinder-to-left .de-tunnel:not(.left-side){display:none!important}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.out{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.in{display:none!important}", ".is-xray-deep.ping-cylinder-to-left.hello-out .de-hello-orb.left-out{display:block!important;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.ping-cylinder-to-left.hello-in .de-hello-orb.left-in{display:block!important;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", ".is-input-down.is-xray-mode .xray-packet-orb{animation:none!important;opacity:0!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb{animation:xrayOvPingReq 4s ease-in-out infinite!important;animation-delay:0s!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb.orb2{animation:xrayOvPingRep 4s ease-in-out infinite!important;animation-delay:2s!important}", ".is-xray-mode .topology{background:rgba(5,15,25,0.4)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important;overflow:hidden}", ".is-xray-mode .topo-box{background:rgba(0,15,30,0.95)!important;border-color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.3),inset 0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.08)!important;position:relative;z-index:1}", ".is-xray-mode .topo-box:not(.target) h4{color:var(--xto-link,#00e5ff)!important;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5)}", ".is-xray-mode .topo-box:not(.target) .role{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", ".is-xray-mode .topo-box:not(.target) .terminal-hint{visibility:hidden}", ".is-xray-mode .topo-iface .ip,.is-xray-mode .topo-link-subnet{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode a.topo-box-link{pointer-events:none!important;cursor:default!important}", ".is-xray-mode .topo-box.target .role,.is-xray-mode .topo-box.target .topo-iface,.is-xray-mode .topo-box.target .terminal-hint{visibility:hidden}", ".is-xray-mode .xray-logic .label{color:#78909c!important}", ".is-xray-mode .xray-logic .ip{color:var(--rc-topo-ip)!important;cursor:pointer;border-radius:2px;padding:0 2px;pointer-events:auto;position:relative;z-index:6}", ".is-xray-mode .xray-logic .ip.copied{background:#27ae60!important;color:#fff!important}", ".is-xray-mode .topo-box.target{border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:none!important;outline:none;animation:xrayR1Blink 1.5s ease-in-out infinite alternate}", ".is-xray-mode .topo-box.target h4{visibility:visible!important;color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 10px rgba(var(--xto-ospf-rgb,57,255,20),0.6);position:relative;z-index:8}", ".is-xray-mode .topo-box.deepdive-target:not(.target){border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important;cursor:pointer}", ".is-xray-mode .topo-box.deepdive-target:not(.target) h4{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".is-xray-mode a.topo-box-link:has(> .topo-box.deepdive-target){cursor:pointer;pointer-events:auto!important}", ".is-xray-mode .topo-link-line{background:#607d8b!important;box-shadow:none!important;height:4px!important;position:relative;z-index:1}", ".is-xray-mode .topo-link-label{color:rgba(var(--xto-link-rgb,0,229,255),0.8)!important;text-shadow:0 0 6px rgba(var(--xto-link-rgb,0,229,255),0.4)}", ".is-xray-mode .topo-link-subnet{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", "@keyframes xrayR1Blink{from{outline:2px solid transparent;outline-offset:2px;filter:drop-shadow(0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2))}to{outline:3px solid var(--xto-ospf,#39ff14);outline-offset:4px;filter:drop-shadow(0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.8)) drop-shadow(0 0 40px rgba(var(--xto-ospf-rgb,57,255,20),0.4))}}", ".is-xray-mode .topo-link-line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".is-xray-mode{background:#03030a!important;color:#b0d4e8!important}", ".is-xray-mode .header{background:rgba(3,5,12,0.98)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .header h1,.is-xray-mode .header h1 a{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .scenario-title{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .difficulty{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .lab-timer{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .lab-plan{color:rgba(var(--xto-link-rgb,0,229,255),0.4)!important}", ".is-xray-mode .user-info{border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .user-name{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .user-rank-ja,.is-xray-mode .user-rank-en{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .question-map{background:rgba(3,5,12,0.95)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.15)!important}", ".is-xray-mode .qmap-sep{color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .topo-target-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".rcl-refonly-badge{position:absolute;top:3px;right:3px;background:rgba(255,183,77,0.18);color:#ffb74d;border:1px solid rgba(255,183,77,0.5);border-radius:3px;font-size:9px;font-weight:bold;padding:1px 5px;z-index:9;pointer-events:none;line-height:1.3}", ".is-xray-mode .xray-grid-overlay{opacity:1}", ".is-xray-mode .xray-logic{opacity:1;transition:none}", ".is-cleared .xray-initial{display:none}", ".is-cleared .xray-cleared{display:flex}", ".xray-focus-close{position:absolute;top:8px;right:8px;z-index:20;background:rgba(255,100,60,0.15);color:#f96;border:1px solid rgba(255,100,60,0.4);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;transition:opacity 0.3s}", ".is-xray-deep .xray-holo-panel{display:none!important}", ".is-xray-deep .xray-focus-close{opacity:1;pointer-events:auto}", ".trace-active .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-xray-mode .topo-diagram{position:relative;overflow:visible!important}", ".is-xray-mode .xray-flash-scene{display:block}", ".is-cleared .xray-trace{display:none}", ".is-xray-mode .topo-box.target{cursor:pointer}", ".is-xray-mode a.topo-box-link:has(> .topo-box.target){cursor:pointer}", ".is-xray-mode .capture-panel,.is-xray-mode .hint,.is-xray-mode .problem,.is-xray-mode .explanation,.is-xray-mode .info,.is-xray-mode .result-panel,.is-xray-mode .link-status,.is-xray-mode .neighbor-panel{background:rgba(3,8,16,0.9)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important;color:#b0d4e8!important}", ".is-xray-mode .capture-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .capture-header h3{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .capture-body{background:rgba(3,8,16,0.6)!important}", ".is-xray-mode .tab-btn{background:rgba(0,15,30,0.6)!important;color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .tab-btn.active{background:rgba(var(--xto-link-rgb,0,229,255),0.12)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .tab-content{background:rgba(3,8,16,0.8)!important}", ".is-xray-mode .hint h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .problem h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .hint code,.is-xray-mode .problem code{background:rgba(var(--xto-link-rgb,0,229,255),0.08)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .hint-level{background:rgba(0,15,30,0.5)!important;border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:#b0d4e8!important}", ".is-xray-mode .hint-level.standard-tier{background:rgba(123,44,191,0.1)!important;border-left-color:rgba(167,139,250,0.5)!important}", ".is-xray-mode .hint-level.standard-tier strong{color:#a78bfa!important}", ".is-xray-mode .hint-btn{background:rgba(var(--xto-link-rgb,0,229,255),0.1)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .topo-flow-node{background:rgba(0,15,30,0.6)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .seg-label,.is-xray-mode .seg-arrow,.is-xray-mode .arrow-line{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .ttyd-card{background:rgba(3,8,16,0.9)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .ttyd-card-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .ttyd-card-header h3{color:#0f0!important}", ".is-xray-mode .ttyd-toggle{color:#0f0!important}", ".is-xray-mode .ttyd-radios label{color:rgba(0,255,0,0.7)!important}", '.is-xray-mode .ttyd-radios input[type="radio"]{accent-color:var(--xto-link,#00e5ff)!important}', ".is-xray-mode .ttyd-card,.is-xray-mode .ttyd-card *{pointer-events:auto!important;cursor:auto!important}", ".is-xray-mode .ttyd-card a,.is-xray-mode .ttyd-card button{pointer-events:auto!important;cursor:pointer!important;opacity:1!important}", ".is-xray-mode .floating-action button{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .scroll-top button{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode a:not(.critical-tl-btn):not(.unlock-btn):not(.logo-link),.is-xray-mode button:not(.btn-xray):not(.xray-focus-close):not(.xray-trace-btn):not(.topo-zoom button):not(.trace-close):not(.trace-back):not(.trace-next):not(.critical-btn):not(.end-mode):not(.replay-skip):not(.shutdown-btn):not(#font-size-btn){pointer-events:none!important;cursor:default!important}", ".is-xray-mode .controls .btn,.is-xray-mode .floating-action .check-float,.is-xray-mode .floating-action .reset-mode,.is-xray-mode .floating-action .fb-float-btn{opacity:0.3!important}", ".is-xray-mode .capture-btn,.is-xray-mode .hint-btn,.is-xray-mode .check-btn,.is-xray-mode .reset-btn{opacity:0.3!important}", ".is-xray-mode .header h1 a,.is-xray-mode .logo-link{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode .qmap-item,.is-xray-mode .qmap-nav{pointer-events:none!important;cursor:default!important;opacity:0.4!important}", ".is-xray-mode .capture-header{pointer-events:none!important}", ".is-xray-mode .tab-btn{pointer-events:none!important;opacity:0.4!important}", ".is-xray-mode .scroll-top button{pointer-events:none!important;opacity:0.3!important}", ".is-xray-mode .help-guide-btn{pointer-events:none!important;opacity:0.3!important}", ".xray-flash{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;opacity:0}", ".xray-flash.active{animation:xrayFlashBang 0.8s ease-out}", "@keyframes xrayFlashBang{0%{opacity:0.9;background:radial-gradient(circle,rgba(255,200,100,0.95),rgba(var(--xto-idle-rgb,255,140,0),0.7) 40%,transparent 70%)}30%{opacity:0.6;background:linear-gradient(90deg,transparent 15%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 85%)}100%{opacity:0}}", ".is-xray-deep .capture-panel,.is-xray-deep .hint,.is-xray-deep .hint-level,.is-xray-deep .problem,.is-xray-deep .explanation,.is-xray-deep .result-panel,.is-xray-deep .next-question,.is-xray-deep .question-map,.is-xray-deep .floating-action,.is-xray-deep .scroll-top{display:none!important}", ".is-xray-deep .mode-title{display:none!important}", ".is-xray-deep .xray-spark-container{display:none!important}", ".is-xray-deep .xray-hello-container{display:none!important}", ".is-xray-deep .xray-packet-orb{display:none!important}", ".is-xray-deep .xray-ping-orb{display:none!important}", ".is-xray-deep .xray-fib-entry{display:none!important}", "body.trace-active .main{margin-left:370px;transition:margin-left 0.3s}", "body.trace-active .header{margin-left:370px;transition:margin-left 0.3s}", "@media (max-width:800px){body.trace-active .main,body.trace-active .header{margin-left:0}}", ".is-xray-deep .xray-ospf-tunnel{display:none!important}", '.xray-logic{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;padding:8px 10px;font-family:"Courier New",monospace;font-size:11px;line-height:1.7;color:rgba(var(--xto-link-rgb,0,229,255),0.85);text-align:left;opacity:0;pointer-events:none;z-index:5;overflow:hidden}', ".xray-logic .hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-logic .warn{color:#ff6b35}", ".xray-logic .dim{color:rgba(var(--xto-link-rgb,0,229,255),0.4);font-size:11px}", ".xray-logic .off{color:#78909c;font-weight:700}", ".is-xray-mode .xray-logic{background:rgba(0,15,30,0.95)!important;border-radius:6px!important}", ".is-xray-mode .xray-ospf-unit{z-index:8!important}", ".is-xray-mode .xray-spark{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px var(--xto-idle,#ff8c00)!important}", ".is-xray-mode .xray-spark-container{opacity:0!important}", ".is-xray-mode .route-arrow{display:none!important}", ".is-xray-mode .topo-link-subnet{display:none!important}", ".is-xray-mode .topo-tri-label{color:rgba(100,100,100,0.5)!important}", ".is-xray-mode .anim-status{display:none!important}", '.xray-holo-panel{position:absolute;top:50px;left:140px;z-index:10;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.35);border-radius:6px;padding:14px 18px;font-family:"Courier New",monospace;font-size:11px;line-height:1.9;color:rgba(var(--xto-idle-rgb,255,140,0),0.9);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.08);backdrop-filter:blur(8px);min-width:240px;max-width:280px;transition:all 0.5s;display:none}', ".is-xray-mode .xray-holo-panel{display:block}", ".xray-holo-panel .title{font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:6px;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-holo-panel .ok{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-holo-panel .err{color:#ff4444;font-weight:700}", ".xray-holo-panel .dim{color:rgba(var(--xto-idle-rgb,255,140,0),0.35);font-size:10px}", ".xray-holo-panel .warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".topo-diagram:has(.topo-triangle) .xray-holo-panel{left:10px;top:10px}", ".topo-diagram:has(.topo-multi-node) ~ .xray-holo-panel{top:auto!important;bottom:16px!important;right:auto!important;left:16px!important}", ".xray-deep-engine{transition:none!important}", ":not(.ping-ok) .xray-ping-orb{display:none!important}", ".xray-flash-scene{position:absolute;top:0;left:0;width:100%;height:100%;z-index:50;pointer-events:none;opacity:0;display:none}", ".is-xray-mode .xray-flash-scene{display:block}", ".xray-flash-scene.fire{animation:xflashFire 0.8s ease-out forwards}", ".xray-flash-scene.full{animation:xflashFull 1.2s ease-out forwards}", "@keyframes xflashFull{0%{opacity:0.8;background:linear-gradient(90deg,transparent 20%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 80%)}40%{opacity:0.4}100%{opacity:0}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-spark-container{position:absolute;top:calc(50% - 10px);transform:translate(50%,-50%);z-index:5;pointer-events:none;opacity:0;display:none}", ".xray-spark{position:absolute;width:3px;height:3px;border-radius:50%;background:#ff4444;box-shadow:0 0 6px #ff4444}", ".xray-spark:nth-child(1){top:-8px;left:0;animation:xsparkFly1 0.4s ease-out infinite}", ".xray-spark:nth-child(2){top:0;left:8px;animation:xsparkFly2 0.4s ease-out infinite}", ".xray-spark:nth-child(3){top:8px;left:2px;animation:xsparkFly3 0.4s ease-out infinite}", ".xray-spark:nth-child(4){top:-4px;left:-6px;animation:xsparkFly4 0.4s ease-out infinite}", ".xray-ospf-tunnel{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:hidden;display:none}", ".xray-bgp-established .xray-ospf-tunnel{display:block!important}", ".xray-bgp-established .xray-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".xray-bgp-established .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 100%)}", ".xray-bgp-established .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-bgp-rgb,168,85,247),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-bgp-rgb,168,85,247),0.4)!important}", ".xray-bgp-established .xray-tunnel-ring{background:rgba(var(--xto-bgp-rgb,168,85,247),0.12);box-shadow:0 0 3px rgba(var(--xto-bgp-rgb,168,85,247),0.08)}", ".xray-bgp-established .xray-tunnel-label{color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}", "#topo-diagram:not(.xray-overview-ready) .xray-tunnel-body,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-portal,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-label,#topo-diagram:not(.xray-overview-ready) .xray-ospf-tunnel{opacity:0!important;visibility:hidden!important;transition:none!important}", ".xray-tunnel-body{position:absolute;top:50%;left:var(--xr1,38%);right:var(--xr2r,30%);height:0;transform:translateY(-50%);border-radius:3px;overflow:hidden;opacity:0;transition:all 0.8s cubic-bezier(0.23,1,0.32,1)}", ".xray-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".xray-tunnel-wall.top{top:0}", ".xray-tunnel-wall.bot{bottom:0}", ".xray-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0.3s}", ".xray-tunnel-ring{position:absolute;top:50%;height:100%;width:1px;background:rgba(var(--xto-idle-rgb,255,140,0),0.12);transform:translateY(-50%);box-shadow:0 0 3px rgba(var(--xto-idle-rgb,255,140,0),0.08);opacity:0;transition:opacity 0.4s}", ".xray-tunnel-portal{position:absolute;top:50%;width:4px;height:36px;transform:translateY(-50%);border-radius:2px;opacity:0;transition:all 0.6s ease 0.2s;z-index:3}", ".xray-tunnel-portal.entry{left:var(--xr1,38%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".xray-tunnel-portal.exit{right:var(--xr2r,30%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", '.xray-tunnel-label{position:absolute;top:calc(50% + 28px);left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:11px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:2px;opacity:0;z-index:4;transition:opacity 0.6s ease 0.8s;white-space:nowrap}', ".xray-state-full .xray-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".xray-state-full .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)!important}", ".xray-state-full .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-ospf-rgb,57,255,20),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4)!important}", ".xray-state-full .xray-tunnel-ring{background:rgba(var(--xto-ospf-rgb,57,255,20),0.12)!important;box-shadow:0 0 3px rgba(var(--xto-ospf-rgb,57,255,20),0.08)!important}", ".xray-state-full .xray-tunnel-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)!important}", ".xray-ping-orb{position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#fff 30%,rgba(255,255,255,0.6) 60%,transparent 100%);box-shadow:0 0 10px 3px rgba(255,255,255,0.6),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.4);top:50%;transform:translateY(-50%);z-index:8;opacity:0;pointer-events:none;display:none}", '.xray-fib-entry{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:10;font-family:"Courier New",monospace;font-size:14px;font-weight:700;color:var(--xto-link,#00e5ff);text-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6);opacity:0;pointer-events:none;white-space:nowrap;transition:opacity 0.3s;display:none}', ".is-xray-mode .topo-triangle .topo-box{background:rgba(0,15,30,0.95)!important}", ".is-xray-mode .topo-triangle .topo-box.target{background:rgba(0,20,10,0.95)!important}", ".topo-triangle svg line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".topo-link{position:relative}", ".topo-link-pipe{position:absolute;top:0;left:0;right:0;height:4px;display:none;pointer-events:none;z-index:0}", ".topo-link-pipe.pipe-full,.topo-link-pipe.pipe-2way,.topo-link-pipe.pipe-bgp{display:block}", ".topo-link-pipe.pipe-full{--pipe-col:var(--xto-ospf,#39ff14);--pipe-glow:rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".topo-link-pipe.pipe-2way{--pipe-col:#ffcc80;--pipe-glow:rgba(255,204,128,0.6)}", ".topo-link-pipe.pipe-bgp{--pipe-col:var(--xto-bgp,#a855f7);--pipe-glow:rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", '.topo-link-pipe::before,.topo-link-pipe::after{content:"";position:absolute;left:0;right:0;height:2.5px;background:repeating-linear-gradient(90deg,var(--pipe-col) 0 10px,transparent 10px 16px);background-size:16px 100%;animation:pipeFlow 1.2s linear infinite;filter:drop-shadow(0 0 6px var(--pipe-glow))}', ".topo-link-pipe::before{top:-4px}", ".topo-link-pipe::after{bottom:-4px}", "@keyframes pipeFlow{to{background-position:16px 0}}", ".topo-diagram:has(.topo-link-pipe) .xray-ping-orb,.topo-diagram:has(.topo-link-pipe) .xray-packet-orb,.topo-diagram:has(.topo-link-pipe) .xray-hello-pkt{top:calc(50% - 9px)}", ".is-xray-mode .topo-diagram:has(.topo-link-pipe) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-packet-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-hello-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ping-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-spark-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-lsa-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-fib-entry{display:none!important}", "@keyframes triRouteDash{to{stroke-dashoffset:-28}}", ".de-lsa-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:6;pointer-events:none}", ".de-lsa{position:absolute;width:8px;height:4px;border-radius:2px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.7);opacity:0}", ".is-xray-deep.xray-state-exchange .de-lsa{animation:deLsaGather var(--dur) ease-in var(--delay) infinite}", "@keyframes deLsaGather{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% + 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", "@keyframes deLsaGatherLeft{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% - 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", ".is-xray-deep.xray-state-inactive .de-packet{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 4px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.3);animation:deHelloReject 3s ease-in-out infinite!important;opacity:0}", ".is-xray-deep:not(.xray-state-init):not(.xray-state-exchange):not(.xray-state-full) .de-packet.p2{animation-delay:1.5s!important}", "@keyframes deHelloReject{0%{left:96%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% + 70px);opacity:1;transform:translateY(-50%) scale(1)}50%{left:calc(50% + 65px);opacity:1;transform:translateY(-50%) scale(1.5)}55%{left:calc(50% + 70px);opacity:0.5;transform:translateY(-50%) scale(0.5)}65%{left:calc(50% + 80px);opacity:0}100%{left:calc(50% + 80px);opacity:0}}", ".is-xray-deep.xray-state-init .de-packet,.is-xray-deep.xray-state-exchange .de-packet{animation:none!important;opacity:0!important}", "@keyframes ospfCorePulse{0%{transform:translate(-50%,-50%) scale(0.8);box-shadow:0 0 6px var(--xto-idle,#ff8c00)}100%{transform:translate(-50%,-50%) scale(1.3);box-shadow:0 0 16px var(--xto-idle,#ff8c00)}}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit .xray-ospf-dot,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00);animation:ospfCorePulse 0.8s ease-in-out infinite alternate}", ".is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px var(--xto-idle,#ff8c00)}", ".xray-fib-entry{display:none!important}", ".is-xray-mode.xray-state-inactive .topo-link-line{background:rgba(var(--xto-idle-rgb,255,140,0),0.2)!important;box-shadow:0 0 4px rgba(var(--xto-idle-rgb,255,140,0),0.15)!important}", ".is-xray-mode.xray-state-init .topo-link-line{background:rgba(var(--xto-idle-rgb,255,140,0),0.5)!important;box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.3)!important}", ".is-xray-mode.xray-state-exchange .topo-link-line{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.6)!important;animation:xlinkPulse 0.6s ease-in-out infinite alternate}", ".is-xray-mode.xray-state-full .topo-link-line,.is-xray-mode.xray-bgp-established .topo-link-line{background:#607d8b!important;box-shadow:none!important;height:4px!important}", "@keyframes xlinkPulse{0%{box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.4)}100%{box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.8)}}", "@keyframes xlineBlink{0%{opacity:1}100%{opacity:0.35}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".is-xray-mode.hello-out .xray-hello-container,.is-xray-mode.hello-in .xray-hello-container{display:block}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-iface-dot,.xray-if-dot{display:none}", ".is-xray-mode .xray-iface-dot,.is-xray-mode .xray-if-dot{display:inline-block}", ".is-xray-mode .topo-box:not(.target) .xray-logic{display:none!important}", ".is-replaying .btn-xray{display:none!important}", ".is-replaying .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-replaying .xray-holo-panel{display:none!important}", ".replay-skip{position:fixed;bottom:24px;right:24px;z-index:9999;background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.3);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:bold;cursor:pointer;pointer-events:auto;transition:all 0.3s;backdrop-filter:blur(6px);display:none}", ".replay-skip:hover{background:rgba(255,255,255,0.25);color:#fff;transform:translateY(-2px)}", ".is-replaying .replay-skip{display:block}", '[data-mode="troubleshoot"] .xray-trace-btn{color:#ccc;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);box-shadow:none}', '[data-mode="troubleshoot"] .xray-trace-btn:hover{background:rgba(255,255,255,0.2);color:#fff}', '[data-mode="destroy"] .xray-trace-btn{color:#fff;background:#e74c3c!important;border-color:#c0392b;box-shadow:0 0 25px rgba(231,76,60,0.6);z-index:8200!important;opacity:1!important;pointer-events:auto!important}', '[data-mode="destroy"] .xray-trace-btn:hover{background:rgba(231,76,60,0.2);color:#ff6b6b;box-shadow:0 0 30px rgba(231,76,60,0.3)}', ".capture-toggle{order:-1!important}", "#next-question-content a{color:var(--rc-accent,#4dd0e1);text-decoration:underline;font-weight:600}", "#next-question-content a:hover{color:#fff}" ].join("\n");
+  s.textContent = [ ".is-xray-deep:not(.xray-state-ready) .de-beam," + ".is-xray-deep:not(.xray-state-ready) .de-energy," + ".is-xray-deep:not(.xray-state-ready) .de-label," + ".is-xray-deep:not(.xray-state-ready) .de-tunnel," + ".is-xray-deep:not(.xray-state-ready) .de-hello-orb," + ".is-xray-deep:not(.xray-state-ready) .de-ping-orb," + ".is-xray-deep:not(.xray-state-ready) .de-packet," + ".is-xray-deep:not(.xray-state-ready) .de-panel{visibility:hidden!important}", ".is-xray-deep.xray-switching .de-beam," + ".is-xray-deep.xray-switching .de-energy," + ".is-xray-deep.xray-switching .de-label," + ".is-xray-deep.xray-switching .de-tunnel," + ".is-xray-deep.xray-switching .de-hello-orb," + ".is-xray-deep.xray-switching .de-ping-orb," + ".is-xray-deep.xray-switching .de-packet," + ".is-xray-deep.xray-switching .de-panel{visibility:hidden!important}", '.xray-deep-engine::before{content:"✖";position:absolute;left:1.7%;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-input-down.is-xray-deep .de-if-marker.left,.is-output-down.is-xray-deep .de-if-marker.right{z-index:11}", '.is-input-down.is-xray-deep .de-if-marker.left::after,.is-output-down.is-xray-deep .de-if-marker.right::after{content:"✖";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:24px;text-align:center;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);pointer-events:none;z-index:11}', ".is-input-down .de-beam.in{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-input-down .de-label.in{color:#ef5350!important;text-shadow:0 0 6px rgba(239,83,80,0.5)!important}", ".is-input-down .de-energy.el{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%)!important;box-shadow:0 0 10px rgba(255,60,60,0.3)!important;animation:none!important}", ".is-input-down.is-xray-deep .de-packet,.is-input-down.is-xray-deep .de-packet.p2{animation:none!important;opacity:0!important}", '.xray-deep-engine::after{content:"✖";position:absolute;right:1.7%;top:50%;transform:translate(50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-output-down.is-xray-deep .xray-deep-engine::after{opacity:0}", ".is-output-down.is-xray-deep .de-beam.out{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-output-down.is-xray-deep .de-energy.er{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%);box-shadow:0 0 10px rgba(255,60,60,0.3);animation:none}", ".is-output-down.is-xray-deep .de-label.out{color:#ef5350;text-shadow:0 0 6px rgba(239,83,80,0.5)}", ".is-cleared .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-cleared .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 60px rgba(var(--xto-link-rgb,0,229,255),0.25);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-cleared .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-packet{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 10px 4px rgba(255,255,255,0.7),0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.8);transform:translateY(-50%);z-index:6;opacity:0;display:none}", ".xray-state-ready .de-packet{display:block}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet{animation:xrayDeepPacketStop 2s ease-in-out infinite}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet.p2{animation-delay:1s}", ":not(.ping-ok).is-xray-deep.ping-from-r1 .de-packet{display:none}", ".is-xray-deep.ping-from-r1 .de-beam.in{display:none!important}", ".is-xray-deep.ping-from-r1 .de-energy.el{display:none!important}", ".is-xray-deep.ping-from-r1 .de-label.in{display:none!important}", ":not(.ping-ok).is-xray-deep.ping-cylinder-to-left .de-packet{display:none}", ".is-xray-deep.ping-cylinder-to-left .de-beam.out,.is-xray-deep.ping-cylinder-to-left .de-if-marker.right{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-energy.er{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-label.out{display:none!important}", ".xray-advertiser-view .de-beam.out,.xray-advertiser-view .de-tunnel:not(.left-side),.xray-advertiser-view .de-energy.er,.xray-advertiser-view .de-label.out,.xray-advertiser-view #de-ping-req,.xray-advertiser-view .de-ping-orb.reply,.xray-advertiser-view .de-if-marker.right{display:none!important}", ".xray-advertiser-view .de-packet,.xray-advertiser-view .de-packet.p2{display:none!important}", ".is-xray-deep.ping-from-r1 .de-beam.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-beam.in,.is-xray-deep.ping-from-r1 .de-if-marker.left,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-if-marker.left{display:none}", ".is-xray-deep.ping-from-r1 .de-energy.el,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-energy.el{display:none}", ".is-xray-deep.ping-from-r1 .de-label.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-label.in{display:none}", "[data-topo-triangle].is-xray-deep .de-beam.in,[data-topo-triangle].is-xray-deep .de-if-marker.left{display:block!important}", "[data-topo-triangle].is-xray-deep .de-energy.el{display:block!important}", "[data-topo-triangle].is-xray-deep .de-label.in{display:block!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.out{display:none!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.in{display:none!important}", "[data-topo-triangle].is-xray-deep.hello-out .de-hello-orb.left-out{display:block!important}", "[data-topo-triangle].is-xray-deep.hello-in .de-hello-orb.left-in{display:block!important}", "@keyframes xrayDeepPacketStop{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}10%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% - 60px);transform:translateY(-50%) scale(1.3)}55%{left:calc(50% - 60px);opacity:0.5;transform:translateY(-50%) scale(0.7)}80%{left:calc(50% - 60px);opacity:0}100%{left:calc(50% - 60px);opacity:0}}", ".ping-ok.is-xray-deep .de-packet{animation:xrayDeepPacket 2.8s ease-in-out infinite}", ".ping-ok.is-xray-deep .de-packet.p2{animation-delay:1.4s}", "@keyframes xrayDeepPacket{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}42%{left:47%;transform:translateY(-50%) scale(1.5)}58%{left:53%;transform:translateY(-50%) scale(1.5)}92%{opacity:1;transform:translateY(-50%) scale(1)}100%{left:97%;opacity:0;transform:translateY(-50%) scale(0.4)}}", "@keyframes xrayEnergyPulse{0%{transform:translate(-50%,-50%) scale(0.7);opacity:0.6}100%{transform:translate(-50%,-50%) scale(1.3);opacity:1}}", ".de-ping-orb{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-link-rgb,0,229,255),0.8));box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.7);transform:translateY(-50%);z-index:8;opacity:0;display:none}", ".ping-ok.is-xray-deep .de-ping-orb{display:block}", ".ping-ok.is-xray-deep .de-packet{display:none}", ".ping-ok.is-xray-deep .de-packet.p2{display:none}", ":not(.ping-ok).is-xray-deep .de-ping-orb{display:none!important}", ".xray-target-bypassed.is-xray-deep .de-ping-orb{display:none!important;animation:none!important}", ".xray-target-bypassed.is-xray-deep .de-packet{display:none!important;animation:none!important}", ".xray-target-bypassed.is-xray-deep .de-packet.p2{display:none!important;animation:none!important}", ".xray-target-bypassed:not(.xray-input-session-up).is-xray-deep .de-tunnel.left-side{height:0!important;opacity:0!important}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb{animation:dePingR1Req 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb.reply{animation:dePingR1Rep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingR1Req{0%{left:calc(50% + 10px);opacity:0}6%{opacity:1}40%{left:calc(100% - 14px);opacity:0.8}44%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingR1Rep{0%{left:calc(100% - 14px);opacity:0}6%{opacity:1}40%{left:calc(50% + 10px);opacity:0.8}44%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb{animation:dePingThruReq 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb.reply{animation:dePingThruRep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingThruReq{0%{left:3%;opacity:0}4%{opacity:1}20%{left:calc(50% - 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% + 10px);transform:translateY(-50%) scale(1.3)}45%{left:calc(100% - 14px);opacity:0.8}48%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingThruRep{0%{left:calc(100% - 14px);opacity:0}4%{opacity:1}20%{left:calc(50% + 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% - 10px);transform:translateY(-50%) scale(1.3)}45%{left:3%;opacity:0.8}48%{left:3%;opacity:0}100%{opacity:0}}", ".de-hello-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-idle-rgb,255,140,0),0.9));box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.7);z-index:7;opacity:0;display:none}", ".de-hello-orb.out{top:calc(50% + 10px)}", ".de-hello-orb.in{top:calc(50% - 18px)}", ".is-xray-deep.hello-out .de-hello-orb.out{display:block;animation:deHelloOut 10s ease-in-out infinite}", ".is-xray-deep.hello-in .de-hello-orb.in{display:block;animation:deHelloIn 10s ease-in-out 5s infinite}", "@keyframes deHelloOut{0%{left:calc(50% + 10px);opacity:0}2%{opacity:1}15%{left:calc(100% - 12px);opacity:0.8}18%{left:calc(100% - 12px);opacity:0}100%{opacity:0}}", "@keyframes deHelloIn{0%{left:calc(100% - 12px);opacity:0}2%{opacity:1}15%{left:calc(50% + 10px);opacity:0.8}18%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".de-hello-orb.left-out{top:calc(50% + 10px)}", ".de-hello-orb.left-in{top:calc(50% - 18px)}", ".is-xray-deep.hello-left-out .de-hello-orb.left-out{display:block;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.hello-left-in .de-hello-orb.left-in{display:block;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", "@keyframes deHelloLeftOut{0%{left:calc(50% - 10px);opacity:0}2%{opacity:1}15%{left:12px;opacity:0.8}18%{left:12px;opacity:0}100%{opacity:0}}", "@keyframes deHelloLeftIn{0%{left:12px;opacity:0}2%{opacity:1}15%{left:calc(50% - 10px);opacity:0.8}18%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".is-input-down .de-hello-orb.left-out{display:none!important}", ".is-input-down .de-hello-orb.left-in{display:none!important}", '.de-panel{position:absolute;z-index:8;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:5px;padding:12px 14px;font-family:"Courier New",monospace;font-size:11px;line-height:1.8;color:rgba(var(--xto-link-rgb,0,229,255),0.95);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.1);backdrop-filter:blur(8px);min-width:220px;max-width:280px;opacity:0;transition:opacity 0.5s ease 0.3s}', ".xray-deep-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto}", ".is-xray-deep .de-panel{opacity:1}", ".dd-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto;opacity:1}", ".xray-deep-engine .de-bgp-panel,.dd-engine .de-bgp-panel{top:30px;bottom:auto;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px;max-height:360px;overflow-y:auto;overflow-x:auto}", "body.trace-active .xray-deep-engine .de-bgp-panel,body.trace-active .xray-deep-engine .de-bgp-decision-panel{max-width:calc(50% - 120px)}", "body.trace-active .de-bgp-panel{min-width:0}", "body.trace-active .de-bgp-panel .de-bgp-table{font-size:calc(10px * var(--de-bgp-fs,1))}", "body.trace-active .de-bgp-panel .de-bgp-table th{padding:2px 6px 3px 0;font-size:calc(9px * var(--de-bgp-fs,1));letter-spacing:0}", "body.trace-active .de-bgp-panel .de-bgp-table td{padding:2px 6px 2px 0}", ".de-bgp-panel .de-title{color:#bb86fc;text-shadow:0 0 8px rgba(187,134,252,0.55)}", ".de-bgp-panel .de-title,.de-bgp-decision-panel .de-title{font-size:calc(12px * var(--de-bgp-fs,1))}", ".de-bgp-panel .de-bgp-table{width:100%;border-collapse:collapse;font-size:calc(12px * var(--de-bgp-fs,1));margin-top:4px}", ".de-bgp-panel .de-bgp-table th{color:#bb86fc;text-align:left;font-weight:700;padding:2px 11px 4px 0;border-bottom:1px solid rgba(187,134,252,0.3);font-size:calc(11px * var(--de-bgp-fs,1));letter-spacing:0.3px}", ".de-bgp-fs-ctl{float:right;display:inline-flex;gap:3px;margin-left:8px}", ".de-bgp-fs-ctl button{background:rgba(187,134,252,0.12);border:1px solid rgba(187,134,252,0.4);color:#bb86fc;font-size:11px;line-height:1.1;padding:1px 6px;border-radius:4px;cursor:pointer;pointer-events:auto!important}", ".de-bgp-fs-ctl button:hover{background:rgba(187,134,252,0.28)}", ".de-bgp-panel .de-bgp-table td{color:rgba(var(--xto-link-rgb,0,229,255),0.9);padding:2px 11px 2px 0;white-space:nowrap}", ".de-bgp-panel .bgp-st{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-bgp-panel .de-bgp-table tr.bgp-best td{color:#aef5b0;background:rgba(var(--xto-ospf-rgb,57,255,20),0.10)}", ".de-bgp-panel .de-bgp-table tr.bgp-best .bgp-st{color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".de-bgp-panel .de-bgp-table td.bgp-decider{background:rgba(255,193,7,0.22);color:#ffd54f;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,193,7,0.55)}", ".de-bgp-panel .de-bgp-table .bgp-default{color:rgba(var(--xto-link-rgb,0,229,255),0.45);font-style:italic}", ".de-bgp-panel .de-bgp-table td.bgp-decider .bgp-default{color:#ffd54f;font-style:normal}", ".xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto;bottom:64px;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px;z-index:40}", ".xray-deep-engine.xray-unified-mode .de-bgp-decision-panel{top:calc(50% + 64px);bottom:auto;max-height:calc(50% - 84px);overflow-y:auto}", ".de-bgp-decision-panel .de-title{color:#ffd54f;text-shadow:0 0 8px rgba(255,193,7,0.5)}", ".de-bgp-decision-panel .bgp-reason{margin-top:6px;font-size:calc(12px * var(--de-bgp-fs,1));color:#66bb6a;line-height:1.5}", ".de-bgp-decision-panel .bgp-reason b{color:#ffd54f}", ".de-bgp-decision-panel .bgp-reason.bgp-reason-note{color:#7facc9}", ".de-bgp-decision-panel .bgp-chain{margin-top:3px;font-size:calc(10px * var(--de-bgp-fs,1));color:var(--xto-static,#888);line-height:1.6;letter-spacing:0.2px}", ".de-bgp-decision-panel .bgp-chain .bgp-step-tie{color:#6b7b8c}", ".de-bgp-decision-panel .bgp-chain .bgp-step-win{color:#ffd54f;font-weight:700}", ".de-bgp-decision-panel .bgp-chain .bgp-step-amb{color:#e0a060;font-weight:700}", ".de-bgp-decision-panel .bgp-legend{margin-top:5px;font-size:calc(10px * var(--de-bgp-fs,1));color:#999;letter-spacing:0.3px}", ".de-bgp-decision-panel .bgp-crit-btn{color:#ffd54f;cursor:pointer;border-bottom:1.5px dashed #ffd54f;padding:0 1px;font-weight:800;pointer-events:auto}", '.de-bgp-decision-panel .bgp-crit-btn::after{content:" \\25BE";font-size:0.85em}', ".de-bgp-decision-panel .bgp-crit-btn:hover,.de-bgp-decision-panel .bgp-crit-btn:focus-visible{background:rgba(255,213,79,0.16);border-radius:4px;outline:none}", ".de-bgp-bracket-pop{position:relative;z-index:2;margin-top:8px;background:#0c1a28;border:1px solid rgba(255,213,79,0.55);border-radius:8px;padding:8px 10px;display:none;box-shadow:0 8px 24px -10px rgba(0,0,0,0.8)}", ".de-bgp-bracket-pop.open{display:block}", ".de-bgp-bracket-pop .bp-h{display:flex;align-items:center;font-size:calc(11px * var(--de-bgp-fs,1));font-weight:700;color:#ffd54f;margin-bottom:6px}", ".de-bgp-bracket-pop .bp-x{margin-left:auto;cursor:pointer;color:#8fb0c8;border:none;background:transparent;font-size:13px;line-height:1;padding:0 2px;pointer-events:auto!important}", ".de-bgp-bracket-pop .bp-x:hover{color:#ff4d4d}", ".de-bgp-bracket-pop .bp-row{display:flex;justify-content:space-between;gap:14px;font-size:calc(11px * var(--de-bgp-fs,1));padding:2px 2px;font-variant-numeric:tabular-nums}", ".de-bgp-bracket-pop .bp-row .k{color:#8fb0c8}", ".de-bgp-bracket-pop .bp-row.tie .v{color:#6b7b8c}", ".de-bgp-bracket-pop .bp-row.win{background:rgba(57,255,20,0.08);border-radius:4px}", ".de-bgp-bracket-pop .bp-row.win .v b{color:#00e5ff}", ".de-bgp-bracket-pop .bp-more{display:block;margin-top:8px;padding-top:7px;border-top:1px dashed rgba(255,213,79,0.25);font-size:calc(11px * var(--de-bgp-fs,1));color:#00e5ff;text-decoration:none;font-weight:700;pointer-events:auto!important}", ".de-bgp-bracket-pop .bp-more:hover{text-decoration:underline}", ".de-panel .de-title{color:var(--xto-link,#00e5ff);font-weight:700;font-size:12px;margin-bottom:6px;letter-spacing:1px;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-panel .de-hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-panel .de-dim{color:rgba(var(--xto-link-rgb,0,229,255),0.35);font-size:10px}", ".de-panel .de-err{color:#ff4444;font-weight:700}", ".de-panel .de-warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".de-tunnel{position:absolute;top:50%;left:calc(50% + 60px);right:0;height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:all 0.8s cubic-bezier(0.23,1,0.32,1)}", ".is-xray-deep.xray-state-full .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 100%)}", ".is-xray-deep.xray-bgp-established .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", "@keyframes xBgpTunnelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-bgp-rgb,168,85,247),0.8)}}", ".is-xray-deep.xray-bgp-idle .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px);opacity:0.42;box-shadow:none}", ".is-xray-deep.xray-bgp-idle .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 100%)}", ".is-xray-deep.xray-bgp-idle .de-tunnel-label{opacity:0.55;color:var(--xto-bgp,#a855f7);text-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.3)}", ".de-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".de-tunnel-wall.top{top:0}", ".de-tunnel-wall.bot{bottom:0}", ".de-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0.3s}", ".is-xray-deep.xray-state-full .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", '.de-tunnel-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:9px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:1px;opacity:0;white-space:nowrap;transition:opacity 0.6s ease 0.8s}', ".is-xray-deep.xray-state-full .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-ospftun-init .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-2way .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-exchange .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-2way.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-exchange.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)}", ".is-xray-deep.xray-ospftun-2way .de-tunnel > .de-tunnel-wall{background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-fill,.is-xray-deep.xray-ospftun-2way .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.06) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.06) 100%)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 100%)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-label,.is-xray-deep.xray-ospftun-2way .de-tunnel-label{opacity:0.85;color:var(--xto-idle,#ff8c00);text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-label{opacity:0.85;color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.4)}", ".is-xray-deep:not(.de-angle-active).xray-ospftun-init .de-tunnel-fill,.is-xray-deep:not(.de-angle-active).xray-ospftun-2way .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.42) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.28) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.42) 100%)}", ".is-xray-deep:not(.de-angle-active).xray-ospftun-exchange .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)}", ".is-xray-deep:not(.de-angle-active).xray-state-full .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)}", ".de-tunnel-inner{position:absolute;top:3px;bottom:3px;left:0;right:0;display:none;pointer-events:none}", ".de-tunnel.de-coexist .de-tunnel-inner{display:block}", ".de-tunnel.de-coexist-init .de-tunnel-inner .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)!important}", ".de-tunnel.de-coexist-2way .de-tunnel-inner .de-tunnel-wall{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5)!important}", ".de-tunnel.de-coexist-exchange .de-tunnel-inner .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important}", ".de-tunnel.de-coexist-full .de-tunnel-inner .de-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".is-xray-deep .de-tunnel.de-coexist .de-tunnel-inner{display:none!important}", ".is-xray-deep .de-tunnel.de-coexist.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}", ".is-xray-deep .de-tunnel.de-coexist > .de-tunnel-fill{position:relative}", '.is-xray-deep .de-tunnel.de-coexist > .de-tunnel-fill::after{content:"";position:absolute;left:0;right:0;top:calc(50% + 2px);height:10px;transform:translateY(-50%);pointer-events:none;z-index:1}', ".is-xray-deep .de-tunnel.de-coexist-full > .de-tunnel-fill::after{background:rgba(var(--xto-ospf-rgb,57,255,20),0.9);box-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".is-xray-deep .de-tunnel.de-coexist-exchange > .de-tunnel-fill::after{background:repeating-linear-gradient(90deg,rgba(var(--xto-ospf-rgb,57,255,20),0.9) 0 6px,transparent 6px 11px)}", ".is-xray-deep .de-tunnel.de-coexist-2way > .de-tunnel-fill::after{background:rgba(var(--xto-idle-rgb,255,140,0),0.9);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-deep .de-tunnel.de-coexist-init > .de-tunnel-fill::after{background:repeating-linear-gradient(90deg,rgba(var(--xto-idle-rgb,255,140,0),0.9) 0 6px,transparent 6px 11px)}", ".is-xray-deep .de-tunnel.de-side-show{height:36px!important;opacity:1!important}", ".is-xray-deep .de-tunnel.de-side-show > .de-tunnel-fill{opacity:0!important}", ".is-xray-deep .de-tunnel.de-side-bgp > .de-tunnel-wall{background:var(--xto-bgp,#a855f7)!important;box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)!important}", ".is-xray-deep .de-tunnel.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}", ".is-xray-deep .de-tunnel.de-side-bgp-idle > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px)!important;opacity:0.42!important;box-shadow:none!important}", ".is-xray-deep .de-tunnel.de-side-ospf-full > .de-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-full > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-exchange > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-2way > .de-tunnel-wall{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-init > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)!important}", ".is-xray-deep .xray-deep-engine .de-tunnel.left-side.de-side-show{height:36px!important;opacity:1!important}", ".is-xray-deep .xray-deep-engine .de-tunnel:not(.left-side).de-side-show{height:36px!important;opacity:1!important}", "@keyframes xtunnelLabelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-ospf-rgb,57,255,20),0.8)}}", ".de-panel-initial{display:block}", ".de-panel-cleared{display:none}", ".is-cleared .de-panel-initial{display:none}", ".is-cleared .de-panel-cleared{display:block}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-energy.er{animation:none}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.5)}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-label.out{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".xray-deep-engine{position:relative;width:100%;height:0;overflow:hidden;opacity:0;transition:opacity 0.4s,height 0.4s;border-radius:6px;margin-top:10px;display:none}", ".xray-deep-engine::before,.xray-deep-engine::after{display:none!important}", ".is-xray-deep .xray-deep-engine{display:block}", ".is-xray-deep .xray-deep-engine::before,.is-xray-deep .xray-deep-engine::after{display:block!important}", ".is-xray-deep .xray-deep-engine{opacity:1;height:400px}", ".is-xray-deep .topo-diagram{display:none!important}", ".is-xray-deep .topo-header{display:none!important}", ".is-xray-deep .topology{background:transparent!important;padding:0!important;border-radius:0!important}", ".is-xray-deep .btn-xray{display:none!important}", ".is-xray-deep .neighbor-panel,.is-xray-deep .link-status,.is-xray-deep .topo-tri-arrows,.is-replaying .neighbor-panel,.is-replaying .link-status,.is-replaying .topo-tri-arrows,.is-replaying .panels-row{display:none!important}", ".de-box-svg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}", ".de-cyl-svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:160px;height:320px;z-index:3}", ".de-beam{position:absolute;top:50%;height:4px;z-index:2;box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-beam.out{left:calc(50% + 60px);right:0;background:var(--xto-link,#00e5ff)}", ".de-energy{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);z-index:4;background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 15px 6px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 40px rgba(var(--xto-link-rgb,0,229,255),0.2);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".de-energy.er{left:calc(50% + 60px)}", '.de-label{position:absolute;top:50%;z-index:5;font-family:"Courier New",monospace;font-size:12px;font-weight:700;color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5);white-space:nowrap}', ".de-label.out{right:10px;transform:translateY(14px)}", ".de-r1-label{position:absolute;top:24px;left:60px;z-index:7;text-align:left;opacity:0;transition:opacity 0.4s ease 0.2s}", ".is-xray-deep .de-r1-label{opacity:1}", ".de-r1-name{font-size:22px;font-weight:700;color:var(--xto-ospf,#39ff14);text-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.5);letter-spacing:3px}", ".de-r1-sub{font-size:10px;color:rgba(var(--xto-ospf-rgb,57,255,20),0.4);margin-top:2px}", ".is-xray-deep.xray-state-init .de-beam.out,.is-xray-deep.xray-state-exchange .de-beam.out{background:var(--xto-link,#00e5ff)!important;box-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-deep.xray-state-init .de-energy.er,.is-xray-deep.xray-state-exchange .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-state-init .de-label.out,.is-xray-deep.xray-state-exchange .de-label.out{color:var(--xto-idle,#ff8c00)!important;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)!important}", ".is-xray-deep.xray-state-full .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-state-full .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-state-full .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-ospf{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-ospf-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-ospf-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-state-init .de-ospf-core,.is-xray-deep.xray-state-exchange .de-ospf-core,.is-xray-deep.xray-state-full .de-ospf-core{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", '.de-ospf-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-state-init .de-ospf-label,.is-xray-deep.xray-state-exchange .de-ospf-label{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-full .de-ospf-label{color:var(--xto-ospf,#39ff14)}", ".de-ospf-coexist{display:none;top:auto;bottom:18%}", "body.de-coexist-glyph .de-ospf-coexist{display:flex;flex-direction:column-reverse;align-items:center}", ".de-ospf-coexist .de-ospf-label{margin-top:0;margin-bottom:3px}", ".de-bgp-proc{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-bgp-proc-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-bgp-proc-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core .inner{background:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core{border-color:var(--xto-bgp,#a855f7);box-shadow:0 0 20px rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core .inner{background:var(--xto-bgp,#a855f7)}", '.de-bgp-proc-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-label{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-label{color:var(--xto-bgp,#a855f7)}", '.de-lsdb{position:absolute;bottom:14%;left:50%;transform:translateX(-50%);z-index:5;width:180px;background:rgba(0,8,16,0.9);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.3);border-radius:5px;padding:10px 12px;font-family:"Courier New",monospace;font-size:9px;color:rgba(var(--xto-idle-rgb,255,140,0),0.7);backdrop-filter:blur(4px);transition:all 0.5s}', ".de-lsdb .lsdb-hd{font-weight:700;font-size:10px;color:var(--xto-idle,#ff8c00);margin-bottom:4px;letter-spacing:1px;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".de-lsdb .lsdb-bar{height:4px;background:#1a1a1a;border-radius:3px;overflow:hidden;margin-bottom:6px}", ".de-lsdb .lsdb-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--xto-idle,#ff8c00),#ffb347);border-radius:3px;transition:width 0.4s}", ".de-lsdb .lsdb-row{padding:2px 0;border-bottom:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.1)}", ".de-lsdb .lsdb-row .type{color:var(--xto-idle,#ff8c00);font-weight:700}", '.de-loading-ind{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;display:none;align-items:center;gap:8px;font-family:"Courier New",monospace;font-size:12px;color:var(--xto-idle,#ff8c00);letter-spacing:1px;text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}', ".is-xray-deep.de-loading .de-loading-ind{display:flex}", ".de-loading-ind .de-load-spin{width:14px;height:14px;border:2px solid rgba(var(--xto-idle-rgb,255,140,0),0.25);border-top-color:var(--xto-idle,#ff8c00);border-radius:50%;animation:deLoadSpin 0.8s linear infinite}", "@keyframes deLoadSpin{to{transform:rotate(360deg)}}", ".is-xray-deep.de-loading .xray-deep-engine .de-cyl-svg,.is-xray-deep.de-loading .xray-deep-engine .de-ospf,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-proc,.is-xray-deep.de-loading .xray-deep-engine .de-lsdb,.is-xray-deep.de-loading .xray-deep-engine .de-panel,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-panel,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-decision-panel,.is-xray-deep.de-loading .xray-deep-engine .de-tunnel,.is-xray-deep.de-loading .xray-deep-engine .de-beam,.is-xray-deep.de-loading .xray-deep-engine .de-energy,.is-xray-deep.de-loading .xray-deep-engine .de-label,.is-xray-deep.de-loading .xray-deep-engine .de-if-marker,.is-xray-deep.de-loading .xray-deep-engine .de-ping-orb,.is-xray-deep.de-loading .xray-deep-engine .de-hello-orb,.is-xray-deep.de-loading .xray-deep-engine .de-packet,.is-xray-deep.de-loading .xray-deep-engine .de-lsa-container{visibility:hidden!important}", ".de-beam.in{left:0;right:calc(50% + 60px);background:var(--xto-link,#00e5ff);box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-if-marker{position:absolute;top:calc(50% + 2px);width:8px;height:8px;background:var(--xto-bg,#0d1620);border:1.5px solid var(--xto-link,#00e5ff);box-sizing:border-box;z-index:4;pointer-events:none}", ".de-if-marker.left{left:1.67%;transform:translate(-50%,-50%)}", ".de-if-marker.right{right:1.67%;transform:translate(50%,-50%)}", ".is-input-down .de-if-marker.left,.is-output-down .de-if-marker.right{border-color:var(--xto-linkDown,#ff4d4d)}", ".de-energy.el{left:calc(50% - 60px);right:auto}", ".de-label.in{left:1.7%;transform:translateY(20px);text-align:left}", ".de-tunnel.left-side{position:absolute;top:50%;left:0;right:calc(50% + 60px);height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:all 0.8s cubic-bezier(0.23,1,0.32,1)}", ".de-tunnel.left-side.tunnel-active{height:36px;opacity:1}", "#de-tunnel-left:not(.tunnel-active):not(.tunnel-2way),#de-tunnel-right:not(.tunnel-active):not(.tunnel-2way){height:0!important;opacity:0!important}", "#de-tunnel-left.tunnel-active,#de-tunnel-right.tunnel-active{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-active .de-tunnel-fill,#de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-active .de-tunnel-wall,#de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", "#de-tunnel-left.tunnel-active .de-tunnel-label,#de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", "#de-tunnel-left.tunnel-2way,#de-tunnel-right.tunnel-2way{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-2way .de-tunnel-fill,#de-tunnel-right.tunnel-2way .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-2way .de-tunnel-wall,#de-tunnel-right.tunnel-2way .de-tunnel-wall{background:#ffcc80;box-shadow:0 0 6px rgba(255,204,128,0.5),0 0 14px rgba(255,204,128,0.2)}", "#de-tunnel-left.tunnel-2way .de-tunnel-label,#de-tunnel-right.tunnel-2way .de-tunnel-label{opacity:1;color:#ffcc80;text-shadow:0 0 8px rgba(255,204,128,0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-wall,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-fill,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 100%)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-label,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-wall,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px);opacity:0.42;box-shadow:none}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-fill,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 100%)}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-label,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-label{opacity:0.55;color:var(--xto-bgp,#a855f7);text-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.3)}", ".de-tunnel.left-side .de-tunnel-fill{opacity:1}", ".de-tunnel.left-side .de-tunnel-label{opacity:1;animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".de-ping-orb.left-req{animation:none;display:none}", ".de-ping-orb.left-rep{animation:none;display:none}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-req{display:block;animation:dePingLeftReq 4s ease-in-out infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-rep{display:block;animation:dePingLeftRep 4s ease-in-out 2s infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb:not(.left-req):not(.left-rep){display:none}", "@keyframes dePingLeftReq{0%{left:calc(50% - 10px);opacity:0}6%{opacity:1}40%{left:14px;opacity:0.8}44%{left:14px;opacity:0}100%{opacity:0}}", "@keyframes dePingLeftRep{0%{left:14px;opacity:0}6%{opacity:1}40%{left:calc(50% - 10px);opacity:0.8}44%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".xray-ospf-unit{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(var(--xto-down-rgb,85,85,85),0.3);transition:all 0.6s;z-index:2;display:none}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".xray-ospf-unit .xray-ospf-dot{width:10px;height:10px;border-radius:50%;background:var(--xto-down,#555);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".xray-ospf-unit.ospf-active{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-ospf-unit.ospf-active .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-packet{top:calc(50% - 18px)}", ".is-output-down .de-hello-orb.out{display:none!important}", ".is-output-down .de-hello-orb.in{display:none!important}", ".is-output-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-output-down:not([data-topo-triangle]) .de-tunnel{opacity:0!important;height:0!important}", ".is-input-down .de-hello-orb.in{display:none!important}", ".is-input-down .de-hello-orb.out{display:none!important}", ".is-input-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-input-down .de-packet{display:none!important}", ".is-input-down .de-packet.p2{display:none!important}", ".is-input-down.is-output-down .de-hello-orb{display:none!important}", ".is-input-down.is-output-down .de-packet{display:none!important}", ".btn-xray{position:absolute;top:16px;right:16px;z-index:12;background:rgba(var(--xto-ospf-rgb,57,255,20),0.12);color:var(--xto-ospf,#39ff14);border:1px solid rgba(var(--xto-ospf-rgb,57,255,20),0.3);font-size:11px;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:bold;transition:all 0.3s;animation:xrayBtnBlink 1.5s ease-in-out infinite alternate}", ".btn-xray:hover{background:rgba(var(--xto-ospf-rgb,57,255,20),0.22)}", ".btn-xray.active{background:rgba(var(--xto-ospf-rgb,57,255,20),0.35);border-color:var(--xto-ospf,#39ff14);box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4);animation:xrayBtnActive 0.8s ease-in-out infinite alternate}", "@keyframes xrayBtnBlink{0%{box-shadow:0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}100%{box-shadow:0 0 16px rgba(var(--xto-ospf-rgb,57,255,20),0.6),0 0 30px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}}", "@keyframes xrayBtnActive{0%{box-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.4);transform:scale(1)}100%{box-shadow:0 0 24px rgba(var(--xto-ospf-rgb,57,255,20),0.8),0 0 50px rgba(var(--xto-ospf-rgb,57,255,20),0.3);transform:scale(1.08)}}", ".xray-packet-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,0.7),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.8);top:50%;transform:translateY(-50%);opacity:0;pointer-events:none;z-index:5}", ".is-xray-mode:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-mode.ping-through .xray-packet-orb{animation:xrayPktDyn 2.4s ease-in-out infinite;animation-delay:2s}", ".is-xray-mode .xray-packet-orb.orb2{animation-delay:3.2s;width:7px;height:7px;box-shadow:0 0 8px 3px rgba(255,255,255,0.5),0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ":not(.is-cleared).is-xray-mode.ping-through .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-from-r1 .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-cylinder-to-left .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-deep.ping-cylinder-to-left .de-tunnel:not(.left-side){display:none!important}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.out{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.in{display:none!important}", ".is-xray-deep.ping-cylinder-to-left.hello-out .de-hello-orb.left-out{display:block!important;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.ping-cylinder-to-left.hello-in .de-hello-orb.left-in{display:block!important;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", ".is-input-down.is-xray-mode .xray-packet-orb{animation:none!important;opacity:0!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb{animation:xrayOvPingReq 4s ease-in-out infinite!important;animation-delay:0s!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb.orb2{animation:xrayOvPingRep 4s ease-in-out infinite!important;animation-delay:2s!important}", ".is-xray-mode .topology{background:rgba(5,15,25,0.4)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important;overflow:hidden}", ".is-xray-mode .topo-box{background:rgba(0,15,30,0.95)!important;border-color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.3),inset 0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.08)!important;position:relative;z-index:1}", ".is-xray-mode .topo-box:not(.target) h4{color:var(--xto-link,#00e5ff)!important;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5)}", ".is-xray-mode .topo-box:not(.target) .role{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", ".is-xray-mode .topo-box:not(.target) .terminal-hint{visibility:hidden}", ".is-xray-mode .topo-iface .ip,.is-xray-mode .topo-link-subnet{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode a.topo-box-link{pointer-events:none!important;cursor:default!important}", ".is-xray-mode .topo-box.target .role,.is-xray-mode .topo-box.target .topo-iface,.is-xray-mode .topo-box.target .terminal-hint{visibility:hidden}", ".is-xray-mode .xray-logic .label{color:#78909c!important}", ".is-xray-mode .xray-logic .ip{color:var(--rc-topo-ip)!important;cursor:pointer;border-radius:2px;padding:0 2px;pointer-events:auto;position:relative;z-index:6}", ".is-xray-mode .xray-logic .ip.copied{background:#27ae60!important;color:#fff!important}", ".is-xray-mode .topo-box.target{border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:none!important;outline:none;animation:xrayR1Blink 1.5s ease-in-out infinite alternate}", ".is-xray-mode .topo-box.target h4{visibility:visible!important;color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 10px rgba(var(--xto-ospf-rgb,57,255,20),0.6);position:relative;z-index:8}", ".is-xray-mode .topo-box.deepdive-target:not(.target){border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important;cursor:pointer}", ".is-xray-mode .topo-box.deepdive-target:not(.target) h4{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".is-xray-mode a.topo-box-link:has(> .topo-box.deepdive-target){cursor:pointer;pointer-events:auto!important}", ".is-xray-mode .topo-link-line{background:#607d8b!important;box-shadow:none!important;height:4px!important;position:relative;z-index:1}", ".is-xray-mode .topo-link-label{color:rgba(var(--xto-link-rgb,0,229,255),0.8)!important;text-shadow:0 0 6px rgba(var(--xto-link-rgb,0,229,255),0.4)}", ".is-xray-mode .topo-link-subnet{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", "@keyframes xrayR1Blink{from{outline:2px solid transparent;outline-offset:2px;filter:drop-shadow(0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2))}to{outline:3px solid var(--xto-ospf,#39ff14);outline-offset:4px;filter:drop-shadow(0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.8)) drop-shadow(0 0 40px rgba(var(--xto-ospf-rgb,57,255,20),0.4))}}", ".is-xray-mode .topo-link-line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".is-xray-mode .topo-link-line{align-self:stretch!important;width:auto!important;margin-left:-5px!important;margin-right:-5px!important}", ".is-xray-mode{background:#03030a!important;color:#b0d4e8!important}", ".is-xray-mode .header{background:rgba(3,5,12,0.98)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .header h1,.is-xray-mode .header h1 a{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .scenario-title{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .difficulty{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .lab-timer{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .lab-plan{color:rgba(var(--xto-link-rgb,0,229,255),0.4)!important}", ".is-xray-mode .user-info{border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .user-name{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .user-rank-ja,.is-xray-mode .user-rank-en{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .question-map{background:rgba(3,5,12,0.95)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.15)!important}", ".is-xray-mode .qmap-sep{color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .topo-target-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".rcl-refonly-badge{position:absolute;top:3px;right:3px;background:rgba(255,183,77,0.18);color:#ffb74d;border:1px solid rgba(255,183,77,0.5);border-radius:3px;font-size:9px;font-weight:bold;padding:1px 5px;z-index:9;pointer-events:none;line-height:1.3}", ".is-xray-mode .xray-grid-overlay{opacity:1}", ".is-xray-mode .xray-logic{opacity:1;transition:none}", ".is-cleared .xray-initial{display:none}", ".is-cleared .xray-cleared{display:flex}", ".xray-focus-close{position:absolute;top:8px;right:8px;z-index:20;background:rgba(255,100,60,0.15);color:#f96;border:1px solid rgba(255,100,60,0.4);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;transition:opacity 0.3s}", ".is-xray-deep .xray-holo-panel{display:none!important}", ".is-xray-deep .xray-focus-close{opacity:1;pointer-events:auto}", ".trace-active .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-xray-mode .topo-diagram{position:relative;overflow:visible!important}", ".is-xray-mode .xray-flash-scene{display:block}", ".is-cleared .xray-trace{display:none}", ".is-xray-mode .topo-box.target{cursor:pointer}", ".is-xray-mode a.topo-box-link:has(> .topo-box.target){cursor:pointer}", ".is-xray-mode .capture-panel,.is-xray-mode .hint,.is-xray-mode .problem,.is-xray-mode .explanation,.is-xray-mode .info,.is-xray-mode .result-panel,.is-xray-mode .link-status,.is-xray-mode .neighbor-panel{background:rgba(3,8,16,0.9)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important;color:#b0d4e8!important}", ".is-xray-mode .capture-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .capture-header h3{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .capture-body{background:rgba(3,8,16,0.6)!important}", ".is-xray-mode .tab-btn{background:rgba(0,15,30,0.6)!important;color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .tab-btn.active{background:rgba(var(--xto-link-rgb,0,229,255),0.12)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .tab-content{background:rgba(3,8,16,0.8)!important}", ".is-xray-mode .hint h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .problem h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .hint code,.is-xray-mode .problem code{background:rgba(var(--xto-link-rgb,0,229,255),0.08)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .hint-level{background:rgba(0,15,30,0.5)!important;border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:#b0d4e8!important}", ".is-xray-mode .hint-level.standard-tier{background:rgba(123,44,191,0.1)!important;border-left-color:rgba(167,139,250,0.5)!important}", ".is-xray-mode .hint-level.standard-tier strong{color:#a78bfa!important}", ".is-xray-mode .hint-btn{background:rgba(var(--xto-link-rgb,0,229,255),0.1)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .topo-flow-node{background:rgba(0,15,30,0.6)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .seg-label,.is-xray-mode .seg-arrow,.is-xray-mode .arrow-line{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .ttyd-card{background:rgba(3,8,16,0.9)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .ttyd-card-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .ttyd-card-header h3{color:#0f0!important}", ".is-xray-mode .ttyd-toggle{color:#0f0!important}", ".is-xray-mode .ttyd-radios label{color:rgba(0,255,0,0.7)!important}", '.is-xray-mode .ttyd-radios input[type="radio"]{accent-color:var(--xto-link,#00e5ff)!important}', ".is-xray-mode .ttyd-card,.is-xray-mode .ttyd-card *{pointer-events:auto!important;cursor:auto!important}", ".is-xray-mode .ttyd-card a,.is-xray-mode .ttyd-card button{pointer-events:auto!important;cursor:pointer!important;opacity:1!important}", ".is-xray-mode .floating-action button{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .scroll-top button{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode a:not(.critical-tl-btn):not(.unlock-btn):not(.logo-link):not(.bp-more),.is-xray-mode button:not(.btn-xray):not(.xray-focus-close):not(.xray-deep-mode-toggle):not(.xray-trace-btn):not(.topo-zoom button):not(.trace-close):not(.trace-back):not(.trace-next):not(.critical-btn):not(.end-mode):not(.replay-skip):not(.shutdown-btn):not(#font-size-btn):not(.bp-x){pointer-events:none!important;cursor:default!important}", ".is-xray-mode .controls .btn,.is-xray-mode .floating-action .check-float,.is-xray-mode .floating-action .reset-mode,.is-xray-mode .floating-action .fb-float-btn{opacity:0.3!important}", ".is-xray-mode .capture-btn,.is-xray-mode .hint-btn,.is-xray-mode .check-btn,.is-xray-mode .reset-btn{opacity:0.3!important}", ".is-xray-mode .header h1 a,.is-xray-mode .logo-link{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode .qmap-item,.is-xray-mode .qmap-nav{pointer-events:none!important;cursor:default!important;opacity:0.4!important}", ".is-xray-mode .capture-header{pointer-events:none!important}", ".is-xray-mode .tab-btn{pointer-events:none!important;opacity:0.4!important}", ".is-xray-mode .scroll-top button{pointer-events:none!important;opacity:0.3!important}", ".is-xray-mode .help-guide-btn{pointer-events:none!important;opacity:0.3!important}", ".xray-flash{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;opacity:0}", ".xray-flash.active{animation:xrayFlashBang 0.8s ease-out}", "@keyframes xrayFlashBang{0%{opacity:0.9;background:radial-gradient(circle,rgba(255,200,100,0.95),rgba(var(--xto-idle-rgb,255,140,0),0.7) 40%,transparent 70%)}30%{opacity:0.6;background:linear-gradient(90deg,transparent 15%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 85%)}100%{opacity:0}}", ".is-xray-deep .capture-panel,.is-xray-deep .hint,.is-xray-deep .hint-level,.is-xray-deep .problem,.is-xray-deep .explanation,.is-xray-deep .result-panel,.is-xray-deep .next-question,.is-xray-deep .question-map,.is-xray-deep .floating-action,.is-xray-deep .scroll-top{display:none!important}", ".is-xray-deep .mode-title{display:none!important}", ".is-xray-deep .xray-spark-container{display:none!important}", ".is-xray-deep .xray-hello-container{display:none!important}", ".is-xray-deep .xray-packet-orb{display:none!important}", ".is-xray-deep .xray-ping-orb{display:none!important}", ".is-xray-deep .xray-fib-entry{display:none!important}", "body.trace-active .main{margin-left:370px;transition:margin-left 0.3s}", "body.trace-active .header{margin-left:370px;transition:margin-left 0.3s}", "@media (max-width:800px){body.trace-active .main,body.trace-active .header{margin-left:0}}", ".is-xray-deep .xray-ospf-tunnel{display:none!important}", '.xray-logic{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;padding:8px 10px;font-family:"Courier New",monospace;font-size:11px;line-height:1.7;color:rgba(var(--xto-link-rgb,0,229,255),0.85);text-align:left;opacity:0;pointer-events:none;z-index:5;overflow:hidden}', ".xray-logic .hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-logic .warn{color:#ff6b35}", ".xray-logic .dim{color:rgba(var(--xto-link-rgb,0,229,255),0.4);font-size:11px}", ".xray-logic .off{color:#78909c;font-weight:700}", ".is-xray-mode .xray-logic{background:rgba(0,15,30,0.95)!important;border-radius:6px!important}", ".is-xray-mode .xray-ospf-unit{z-index:8!important}", ".is-xray-mode .xray-spark{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px var(--xto-idle,#ff8c00)!important}", ".is-xray-mode .xray-spark-container{opacity:0!important}", ".is-xray-mode .route-arrow{display:none!important}", ".is-xray-mode .topo-link-subnet{display:none!important}", ".is-xray-mode .topo-tri-label{color:rgba(100,100,100,0.5)!important}", ".is-xray-mode .anim-status{display:none!important}", '.xray-holo-panel{position:absolute;top:50px;left:16px;z-index:10;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.35);border-radius:6px;padding:14px 18px;font-family:"Courier New",monospace;font-size:11px;line-height:1.9;color:rgba(var(--xto-idle-rgb,255,140,0),0.9);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.08);backdrop-filter:blur(8px);min-width:240px;max-width:280px;transition:all 0.5s;display:none}', ".is-xray-mode .xray-holo-panel{display:block}", ".xray-holo-panel .title{font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:6px;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-holo-panel .ok{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-holo-panel .err{color:#ff4444;font-weight:700}", ".xray-holo-panel .dim{color:rgba(var(--xto-idle-rgb,255,140,0),0.35);font-size:10px}", ".xray-holo-panel .warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".topo-diagram:has(.topo-triangle) .xray-holo-panel{left:10px;top:10px}", ".topo-diagram:has(.topo-multi-node) ~ .xray-holo-panel{top:auto!important;bottom:16px!important;right:auto!important;left:16px!important}", ".xray-deep-engine{transition:none!important}", ":not(.ping-ok) .xray-ping-orb{display:none!important}", ".xray-flash-scene{position:absolute;top:0;left:0;width:100%;height:100%;z-index:50;pointer-events:none;opacity:0;display:none}", ".is-xray-mode .xray-flash-scene{display:block}", ".xray-flash-scene.fire{animation:xflashFire 0.8s ease-out forwards}", ".xray-flash-scene.full{animation:xflashFull 1.2s ease-out forwards}", "@keyframes xflashFull{0%{opacity:0.8;background:linear-gradient(90deg,transparent 20%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 80%)}40%{opacity:0.4}100%{opacity:0}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-spark-container{position:absolute;top:calc(50% - 10px);transform:translate(50%,-50%);z-index:5;pointer-events:none;opacity:0;display:none}", ".xray-spark{position:absolute;width:3px;height:3px;border-radius:50%;background:#ff4444;box-shadow:0 0 6px #ff4444}", ".xray-spark:nth-child(1){top:-8px;left:0;animation:xsparkFly1 0.4s ease-out infinite}", ".xray-spark:nth-child(2){top:0;left:8px;animation:xsparkFly2 0.4s ease-out infinite}", ".xray-spark:nth-child(3){top:8px;left:2px;animation:xsparkFly3 0.4s ease-out infinite}", ".xray-spark:nth-child(4){top:-4px;left:-6px;animation:xsparkFly4 0.4s ease-out infinite}", ".xray-ospf-tunnel{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:hidden;display:none}", ".xray-bgp-established .xray-ospf-tunnel{display:block!important}", ".xray-bgp-established .xray-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".xray-bgp-established .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.03) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.08) 100%)}", ".xray-bgp-established .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-bgp-rgb,168,85,247),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-bgp-rgb,168,85,247),0.4)!important}", ".xray-bgp-established .xray-tunnel-ring{background:rgba(var(--xto-bgp-rgb,168,85,247),0.12);box-shadow:0 0 3px rgba(var(--xto-bgp-rgb,168,85,247),0.08)}", ".xray-bgp-established .xray-tunnel-label{color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}", "#topo-diagram:not(.xray-overview-ready) .xray-tunnel-body,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-portal,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-label,#topo-diagram:not(.xray-overview-ready) .xray-ospf-tunnel{opacity:0!important;visibility:hidden!important;transition:none!important}", ".xray-tunnel-body{position:absolute;top:50%;left:var(--xr1,38%);right:var(--xr2r,30%);height:0;transform:translateY(-50%);border-radius:3px;overflow:hidden;opacity:0;transition:all 0.8s cubic-bezier(0.23,1,0.32,1)}", ".xray-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".xray-tunnel-wall.top{top:0}", ".xray-tunnel-wall.bot{bottom:0}", ".xray-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0.3s}", ".xray-tunnel-ring{position:absolute;top:50%;height:100%;width:1px;background:rgba(var(--xto-idle-rgb,255,140,0),0.12);transform:translateY(-50%);box-shadow:0 0 3px rgba(var(--xto-idle-rgb,255,140,0),0.08);opacity:0;transition:opacity 0.4s}", ".xray-tunnel-portal{position:absolute;top:50%;width:4px;height:36px;transform:translateY(-50%);border-radius:2px;opacity:0;transition:all 0.6s ease 0.2s;z-index:3}", ".xray-tunnel-portal.entry{left:var(--xr1,38%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".xray-tunnel-portal.exit{right:var(--xr2r,30%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", '.xray-tunnel-label{position:absolute;top:calc(50% + 28px);left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:11px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:2px;opacity:0;z-index:4;transition:opacity 0.6s ease 0.8s;white-space:nowrap}', ".xray-state-full .xray-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".xray-state-full .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)!important}", ".xray-state-full .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-ospf-rgb,57,255,20),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4)!important}", ".xray-state-full .xray-tunnel-ring{background:rgba(var(--xto-ospf-rgb,57,255,20),0.12)!important;box-shadow:0 0 3px rgba(var(--xto-ospf-rgb,57,255,20),0.08)!important}", ".xray-state-full .xray-tunnel-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)!important}", ".xray-ping-orb{position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#fff 30%,rgba(255,255,255,0.6) 60%,transparent 100%);box-shadow:0 0 10px 3px rgba(255,255,255,0.6),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.4);top:50%;transform:translateY(-50%);z-index:8;opacity:0;pointer-events:none;display:none}", '.xray-fib-entry{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:10;font-family:"Courier New",monospace;font-size:14px;font-weight:700;color:var(--xto-link,#00e5ff);text-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6);opacity:0;pointer-events:none;white-space:nowrap;transition:opacity 0.3s;display:none}', ".is-xray-mode .topo-triangle .topo-box{background:rgba(0,15,30,0.95)!important}", ".is-xray-mode .topo-triangle .topo-box.target{background:rgba(0,20,10,0.95)!important}", ".topo-triangle svg line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".topo-link{position:relative}", ".topo-link-pipe{position:absolute;top:0;left:0;right:0;height:4px;display:none;pointer-events:none;z-index:0}", ".topo-link-pipe.pipe-full,.topo-link-pipe.pipe-2way,.topo-link-pipe.pipe-exchange,.topo-link-pipe.pipe-init,.topo-link-pipe.pipe-bgp,.topo-link-pipe.pipe-bgp-idle{display:block}", ".topo-link-pipe.pipe-full,.topo-link-pipe.pipe-exchange{--pipe-col:var(--xto-ospf,#39ff14);--pipe-glow:rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".topo-link-pipe.pipe-2way,.topo-link-pipe.pipe-init{--pipe-col:var(--xto-idle,#ff8c00);--pipe-glow:rgba(var(--xto-idle-rgb,255,140,0),0.6)}", ".topo-link-pipe.pipe-bgp,.topo-link-pipe.pipe-bgp-idle{--pipe-col:var(--xto-bgp,#a855f7);--pipe-glow:rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", '.topo-link-pipe::before,.topo-link-pipe::after{content:"";position:absolute;left:0;right:0;height:2.5px;background:repeating-linear-gradient(90deg,var(--pipe-col) 0 10px,transparent 10px 16px);background-size:16px 100%;filter:drop-shadow(0 0 6px var(--pipe-glow))}', ".topo-link-pipe.pipe-full::before,.topo-link-pipe.pipe-full::after,.topo-link-pipe.pipe-2way::before,.topo-link-pipe.pipe-2way::after,.topo-link-pipe.pipe-bgp::before,.topo-link-pipe.pipe-bgp::after{animation:pipeFlow 1.2s linear infinite}", ".topo-link-pipe.pipe-bgp-idle::before,.topo-link-pipe.pipe-bgp-idle::after{opacity:0.42}", ".topo-link-pipe::before{top:-4px}", ".topo-link-pipe::after{bottom:-4px}", ".topo-link-pipe.pipe-inner{z-index:2}", ".topo-link-pipe.pipe-inner::before,.topo-link-pipe.pipe-inner::after{height:2px}", ".topo-link-pipe.pipe-inner::before{top:-3px}", ".topo-link-pipe.pipe-inner::after{bottom:-3px}", ".topo-link-pipe.pipe-coexist::before{top:-7px}", ".topo-link-pipe.pipe-coexist::after{bottom:-7px}", "@keyframes pipeFlow{to{background-position:16px 0}}", ".topo-diagram:has(.topo-link-pipe) .xray-ping-orb,.topo-diagram:has(.topo-link-pipe) .xray-packet-orb,.topo-diagram:has(.topo-link-pipe) .xray-hello-pkt{top:calc(50% - 9px)}", ".is-xray-mode .topo-diagram:has(.topo-link-pipe) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-packet-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-hello-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ping-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-spark-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-lsa-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-fib-entry{display:none!important}", "@keyframes triRouteDash{to{stroke-dashoffset:-28}}", ".de-lsa-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:6;pointer-events:none}", ".de-lsa{position:absolute;width:8px;height:4px;border-radius:2px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.7);opacity:0}", ".is-xray-deep.xray-state-exchange .de-lsa{animation:deLsaGather var(--dur) ease-in var(--delay) infinite}", "@keyframes deLsaGather{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% + 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", "@keyframes deLsaGatherLeft{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% - 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", "@keyframes deLsaGatherRight{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(82% - 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:82%;top:76%;opacity:0;transform:scale(0.2)}}", ".is-xray-deep.xray-state-inactive .de-packet{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 4px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.3);animation:deHelloReject 3s ease-in-out infinite!important;opacity:0}", ".is-xray-deep:not(.xray-state-init):not(.xray-state-exchange):not(.xray-state-full) .de-packet.p2{animation-delay:1.5s!important}", "@keyframes deHelloReject{0%{left:96%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% + 70px);opacity:1;transform:translateY(-50%) scale(1)}50%{left:calc(50% + 65px);opacity:1;transform:translateY(-50%) scale(1.5)}55%{left:calc(50% + 70px);opacity:0.5;transform:translateY(-50%) scale(0.5)}65%{left:calc(50% + 80px);opacity:0}100%{left:calc(50% + 80px);opacity:0}}", ".is-xray-deep.xray-state-init .de-packet,.is-xray-deep.xray-state-exchange .de-packet{animation:none!important;opacity:0!important}", "@keyframes ospfCorePulse{0%{transform:translate(-50%,-50%) scale(0.8);box-shadow:0 0 6px var(--xto-idle,#ff8c00)}100%{transform:translate(-50%,-50%) scale(1.3);box-shadow:0 0 16px var(--xto-idle,#ff8c00)}}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit .xray-ospf-dot,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00);animation:ospfCorePulse 0.8s ease-in-out infinite alternate}", ".is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px var(--xto-idle,#ff8c00)}", ".xray-fib-entry{display:none!important}", "@keyframes xlinkPulse{0%{box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.4)}100%{box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.8)}}", "@keyframes xlineBlink{0%{opacity:1}100%{opacity:0.35}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".is-xray-mode.hello-out .xray-hello-container,.is-xray-mode.hello-in .xray-hello-container{display:block}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-iface-dot,.xray-if-dot{display:none}", ".is-xray-mode .xray-iface-dot,.is-xray-mode .xray-if-dot{display:inline-block}", ".is-xray-mode .topo-box:not(.target) .xray-logic{display:none!important}", ".is-replaying .btn-xray{display:none!important}", ".is-replaying .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-replaying .xray-holo-panel{display:none!important}", ".replay-skip{position:fixed;bottom:24px;right:24px;z-index:9999;background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.3);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:bold;cursor:pointer;pointer-events:auto;transition:all 0.3s;backdrop-filter:blur(6px);display:none}", ".replay-skip:hover{background:rgba(255,255,255,0.25);color:#fff;transform:translateY(-2px)}", ".is-replaying .replay-skip{display:block}", '[data-mode="troubleshoot"] .xray-trace-btn{color:#ccc;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);box-shadow:none}', '[data-mode="troubleshoot"] .xray-trace-btn:hover{background:rgba(255,255,255,0.2);color:#fff}', '[data-mode="destroy"] .xray-trace-btn{color:#fff;background:#e74c3c!important;border-color:#c0392b;box-shadow:0 0 25px rgba(231,76,60,0.6);z-index:8200!important;opacity:1!important;pointer-events:auto!important}', '[data-mode="destroy"] .xray-trace-btn:hover{background:rgba(231,76,60,0.2);color:#ff6b6b;box-shadow:0 0 30px rgba(231,76,60,0.3)}', ".capture-toggle{order:-1!important}", "#next-question-content a{color:var(--rc-accent,#4dd0e1);text-decoration:underline;font-weight:600}", "#next-question-content a:hover{color:#fff}" ].join("\n");
   var target = document.head || document.documentElement || document.body;
   if (target) {
     target.appendChild(s);
@@ -226,10 +226,7 @@ function xrayEvaluateState(s) {
     } else {
       state.ospfPhase = "init";
     }
-    // ★契約② tunnel bucket(2026-07-22 RCL port): de-tunnel wall 専用の4状態ラダー class 駆動値(既存 ospfPhase/xray-state-* は不変)。
-    //   neighbor_state を protoStyle と同一マッピングで bucket 化。helloOut 無=iface OSPF 非参加=トンネル無(none)。
-    var _otbSt = String(ns).split("/")[0];
-    var _otb = _otbSt === "Full" ? "full" : _otbSt === "ExStart" || _otbSt === "Exchange" || _otbSt === "Loading" ? "exchange" : _otbSt === "2-Way" ? "2way" : _otbSt === "Init" || _otbSt === "Attempt" ? "init" : "none";
+    var _otb = _xrayOspfBucket(ns);
     if (_otb === "none" && s.has_full) _otb = "full";
     state.ospfTunBucket = state.helloOut ? _otb : "none";
     state.lsdbSyncing = nsLower === "exchange" || nsLower === "loading";
@@ -246,7 +243,9 @@ function xrayEvaluateState(s) {
   }
   state.routeInstalled = !!rr.resolved;
   state.pingOk = state.routeInstalled && s.ping_ok === true;
-  if (protocol === "static" && s.r1_ping_ok !== undefined) {
+  if (protocol === "static" && typeof s.nh_reachable === "boolean") {
+    state.canForward = state.routeInstalled && s.nh_reachable;
+  } else if (protocol === "static" && s.r1_ping_ok !== undefined) {
     state.canForward = state.routeInstalled && !!s.r1_ping_ok;
   } else {
     state.canForward = state.routeInstalled;
@@ -255,6 +254,14 @@ function xrayEvaluateState(s) {
   window._lastXrayHierarchy = state;
   if (protocol === "ospf") {
     state.ospfStatus = state.helloOut ? "ACTIVE" : s.ospf_configured ? "CONFIGURED" : "NOT RUNNING";
+  }
+  if (protocol === "bgp" && (s.ospf_active_on_interface || s.neighbor_state && s.neighbor_state !== "None")) {
+    state.helloIn = !!s.peer_sending_hello;
+    state.helloOut = !!s.ospf_active_on_interface;
+    var _oif = s.iface_hellos && Object.keys(s.iface_hellos).filter(function(k) {
+      return k !== "lo";
+    })[0] || s.lan_iface;
+    state.helloSide = _oif && _oif === s.lan_iface && s.lan_iface !== s.wan_iface ? "left" : "right";
   }
   return state;
 }
@@ -314,12 +321,13 @@ function xrayApplyHierarchy(state) {
     var _bgpProc = state.bgpEstablished ? "est" : state.bgpConfigured ? "up" : "down";
     b.add("xray-bgpproc-" + _bgpProc);
   }
-  var _hi = _adv ? "hello-left-in" : "hello-in";
-  var _ho = _adv ? "hello-left-out" : "hello-out";
+  var _useLeft = state.helloSide ? state.helloSide === "left" : _adv;
+  var _hi = _useLeft ? "hello-left-in" : "hello-in";
+  var _ho = _useLeft ? "hello-left-out" : "hello-out";
   state.helloIn ? b.add(_hi) : b.remove(_hi);
   state.helloOut ? b.add(_ho) : b.remove(_ho);
-  b.remove(_adv ? "hello-in" : "hello-left-in");
-  b.remove(_adv ? "hello-out" : "hello-left-out");
+  b.remove(_useLeft ? "hello-in" : "hello-left-in");
+  b.remove(_useLeft ? "hello-out" : "hello-left-out");
   state.cleared ? b.add("is-cleared") : b.remove("is-cleared");
   state.pingOk ? b.add("ping-ok") : b.remove("ping-ok");
   if (state.protocol === "ospf") {
@@ -350,7 +358,8 @@ function xrayApplyHierarchy(state) {
               el.style.animation = "deLsaGatherLeft " + dur + "s ease-in 0s infinite";
             } else {
               el.style.left = 70 + Math.random() * 25 + "%";
-              if (g) el.style.animation = "deLsaGather " + dur + "s ease-in 0s infinite";
+              var _rkf = ((window._scenarioConfig || {}).xray || {}).trace_pattern === "dual_static_rid" ? "deLsaGatherRight" : "deLsaGather";
+              if (g) el.style.animation = _rkf + " " + dur + "s ease-in 0s infinite";
             }
             el.style.top = 30 + Math.random() * 30 + "%";
             el.style.setProperty("--dur", dur + "s");
@@ -383,7 +392,17 @@ function xrayApplyHierarchy(state) {
     }
     var _selR = window._xraySelectedRoute;
     var _selIf = _selR && _selR.out_ifaces && _selR.out_ifaces[0];
-    var dir = _selIf && _selIf !== "lo" ? _selIf === state.lanIf ? "left" : "right" : window._xrayFwdDirection;
+    var _dirForSelIface = function(ifn) {
+      if (!ifn || ifn === "lo") return null;
+      if (xrayCurrentPingMode() === "cylinder-to-left") return "left";
+      if (state.singleIf) return "right";
+      var _g = window._xrayDirDbg || {};
+      if (ifn === _g.lIf) return "left";
+      if (ifn === _g.rIf) return "right";
+      if (ifn === (_g.lan || state.lanIf)) return "left";
+      return "right";
+    };
+    var dir = _selIf ? _dirForSelIface(_selIf) : window._xrayFwdDirection;
     var dirKnown = true;
     if (!dir) {
       if (xrayCurrentPingMode() === "cylinder-to-left") {
@@ -431,59 +450,94 @@ function xrayApplyHierarchy(state) {
     b.add("ping-left");
   }
   _xrayApplyHelloTiming(state);
-  var protoCore = document.querySelector(".de-ospf-core");
+  var protoCore = document.querySelector(".de-ospf:not(.de-ospf-coexist) .de-ospf-core");
   var protoInner = protoCore ? protoCore.querySelector(".inner") : null;
-  var protoLbl = document.querySelector(".de-ospf-label");
+  var protoLbl = document.querySelector(".de-ospf:not(.de-ospf-coexist) .de-ospf-label");
   if (protoCore && protoInner && protoLbl) {
     protoLbl.textContent = state.protocol === "bgp" ? "BGP" : "OSPF";
     if (state.protocol === "bgp") {
       if (state.bgpEstablished) {
-        protoCore.style.borderColor = "#a855f7";
-        protoCore.style.boxShadow = "0 0 20px rgba(168,85,247,0.5)";
-        protoInner.style.background = "#a855f7";
-        protoInner.style.boxShadow = "0 0 10px #a855f7";
+        protoCore.style.borderColor = "var(--xto-bgp,#a855f7)";
+        protoCore.style.boxShadow = "0 0 20px rgba(var(--xto-bgp-rgb,168,85,247),0.5)";
+        protoInner.style.background = "var(--xto-bgp,#a855f7)";
+        protoInner.style.boxShadow = "0 0 10px var(--xto-bgp,#a855f7)";
         protoInner.style.animation = "";
-        protoLbl.style.color = "#a855f7";
+        protoLbl.style.color = "var(--xto-bgp,#a855f7)";
       } else if (state.bgpPhase === "idle") {
-        protoCore.style.borderColor = "#ff8c00";
-        protoCore.style.boxShadow = "0 0 15px rgba(255,140,0,0.4)";
-        protoInner.style.background = "#ff8c00";
-        protoInner.style.boxShadow = "0 0 8px #ff8c00";
+        protoCore.style.borderColor = "var(--xto-idle,#ff8c00)";
+        protoCore.style.boxShadow = "0 0 15px rgba(var(--xto-idle-rgb,255,140,0),0.4)";
+        protoInner.style.background = "var(--xto-idle,#ff8c00)";
+        protoInner.style.boxShadow = "0 0 8px var(--xto-idle,#ff8c00)";
         protoInner.style.animation = "xrayEnergyPulse 1s ease-in-out infinite alternate";
-        protoLbl.style.color = "#ff8c00";
+        protoLbl.style.color = "var(--xto-idle,#ff8c00)";
       } else {
-        protoCore.style.borderColor = "#555";
+        protoCore.style.borderColor = "var(--xto-down,#555)";
         protoCore.style.boxShadow = "none";
         protoInner.style.background = "#333";
         protoInner.style.boxShadow = "none";
         protoInner.style.animation = "";
-        protoLbl.style.color = "#555";
+        protoLbl.style.color = "var(--xto-down,#555)";
       }
     } else {
       if (state.ospfFull) {
-        protoCore.style.borderColor = "#39ff14";
-        protoCore.style.boxShadow = "0 0 20px rgba(57,255,20,0.5)";
-        protoInner.style.background = "#39ff14";
-        protoInner.style.boxShadow = "0 0 10px #39ff14";
+        protoCore.style.borderColor = "var(--xto-ospf,#39ff14)";
+        protoCore.style.boxShadow = "0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.5)";
+        protoInner.style.background = "var(--xto-ospf,#39ff14)";
+        protoInner.style.boxShadow = "0 0 10px var(--xto-ospf,#39ff14)";
         protoInner.style.animation = "";
-        protoLbl.style.color = "#39ff14";
+        protoLbl.style.color = "var(--xto-ospf,#39ff14)";
       } else if (state.helloOut) {
-        protoCore.style.borderColor = "#ff8c00";
-        protoCore.style.boxShadow = "0 0 15px rgba(255,140,0,0.4)";
-        protoInner.style.background = "#ff8c00";
-        protoInner.style.boxShadow = "0 0 8px #ff8c00";
+        protoCore.style.borderColor = "var(--xto-idle,#ff8c00)";
+        protoCore.style.boxShadow = "0 0 15px rgba(var(--xto-idle-rgb,255,140,0),0.4)";
+        protoInner.style.background = "var(--xto-idle,#ff8c00)";
+        protoInner.style.boxShadow = "0 0 8px var(--xto-idle,#ff8c00)";
         protoInner.style.animation = "xrayEnergyPulse 1s ease-in-out infinite alternate";
-        protoLbl.style.color = "#ff8c00";
+        protoLbl.style.color = "var(--xto-idle,#ff8c00)";
       } else {
-        protoCore.style.borderColor = "#555";
+        protoCore.style.borderColor = "var(--xto-down,#555)";
         protoCore.style.boxShadow = "none";
         protoInner.style.background = "#333";
         protoInner.style.boxShadow = "none";
         protoInner.style.animation = "";
-        protoLbl.style.color = "#555";
+        protoLbl.style.color = "var(--xto-down,#555)";
       }
     }
   }
+  (function() {
+    var _cxCfg = window._scenarioConfig || {}, _cxSt = window._lastXrayState || {};
+    var _isCoex = !!(_cxCfg.xray && _cxCfg.xray.deep_coexist_ospf) && !!(_cxSt.lan_iface && _cxSt.wan_iface && _cxSt.lan_iface !== _cxSt.wan_iface);
+    document.body.classList.toggle("de-coexist-glyph", _isCoex);
+    var _cxCore = document.querySelector(".de-ospf-coexist .de-ospf-core");
+    var _cxInner = _cxCore ? _cxCore.querySelector(".inner") : null;
+    var _cxLbl = document.querySelector(".de-ospf-coexist .de-ospf-label");
+    if (_isCoex && _cxCore && _cxInner && _cxLbl) {
+      _cxLbl.textContent = "OSPF";
+      var _cxFull = !!(state.ospfFull || _cxSt.has_full || _cxSt.neighbor_state === "Full");
+      var _cxUp = _cxFull || !!(_cxSt.ospf_active_on_interface || _cxSt.ospf_configured || state.helloOut);
+      if (_cxFull) {
+        _cxCore.style.borderColor = "var(--xto-ospf,#39ff14)";
+        _cxCore.style.boxShadow = "0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.5)";
+        _cxInner.style.background = "var(--xto-ospf,#39ff14)";
+        _cxInner.style.boxShadow = "0 0 10px var(--xto-ospf,#39ff14)";
+        _cxInner.style.animation = "";
+        _cxLbl.style.color = "var(--xto-ospf,#39ff14)";
+      } else if (_cxUp) {
+        _cxCore.style.borderColor = "var(--xto-idle,#ff8c00)";
+        _cxCore.style.boxShadow = "0 0 15px rgba(var(--xto-idle-rgb,255,140,0),0.4)";
+        _cxInner.style.background = "var(--xto-idle,#ff8c00)";
+        _cxInner.style.boxShadow = "0 0 8px var(--xto-idle,#ff8c00)";
+        _cxInner.style.animation = "xrayEnergyPulse 1s ease-in-out infinite alternate";
+        _cxLbl.style.color = "var(--xto-idle,#ff8c00)";
+      } else {
+        _cxCore.style.borderColor = "var(--xto-down,#555)";
+        _cxCore.style.boxShadow = "none";
+        _cxInner.style.background = "#333";
+        _cxInner.style.boxShadow = "none";
+        _cxInner.style.animation = "";
+        _cxLbl.style.color = "var(--xto-down,#555)";
+      }
+    }
+  })();
   var _ps = window._lastXrayState || {};
   var _targetNodeId = window._xrayTargetNode || "topo-node-r1";
   document.querySelectorAll(".xray-ospf-unit").forEach(function(unit) {
@@ -639,10 +693,6 @@ function xrayApplyHierarchy(state) {
           xMark.style.cssText = "position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:22px;height:22px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:11px;line-height:22px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);pointer-events:none";
           linkEl.style.position = "relative";
           linkEl.appendChild(xMark);
-        } else if (state.bgpEstablished || state.ospfFull) {
-          lineEl.style.setProperty("background", "#607d8b", "important");
-          lineEl.style.setProperty("box-shadow", "none", "important");
-          lineEl.style.setProperty("height", "4px", "important");
         } else {
           lineEl.style.removeProperty("background");
           lineEl.style.removeProperty("box-shadow");
@@ -1198,15 +1248,26 @@ function _xrayBuildOvReach(name, interval, startR, endR, yOff) {
 }
 
 function _xrayApplyHelloTiming(state) {
+  if (typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {})) {
+    var _uh = document.querySelectorAll(".xray-hello-pkt, .de-hello-orb, .xray-hello-container");
+    for (var _u = 0; _u < _uh.length; _u++) {
+      if (_uh[_u].style && _uh[_u].style.setProperty) {
+        _uh[_u].style.setProperty("animation", "none", "important");
+        _uh[_u].style.setProperty("display", "none", "important");
+      }
+    }
+    return;
+  }
   var r1Hello = state._r1Hello || 10;
   var r2Hello = state._r2Hello || 10;
+  var _triDeepH = !!window._triNodes || ((window._scenarioConfig || {}).xray || {}).pattern === "ospf_triangle" || !!document.querySelector("[data-topo-triangle]");
   var outOrb = document.querySelector(".de-hello-orb.out");
   var inOrb = document.querySelector(".de-hello-orb.in");
-  if (outOrb && state.helloOut) {
+  if (!_triDeepH && outOrb && state.helloOut) {
     var kf = _xrayBuildHelloKf("deHOut", r1Hello, "out");
     outOrb.style.animation = kf + " " + r1Hello + "s ease-in-out infinite";
   }
-  if (inOrb && state.helloIn) {
+  if (!_triDeepH && inOrb && state.helloIn) {
     var kf = _xrayBuildHelloKf("deHIn", r2Hello, "in");
     inOrb.style.animation = kf + " " + r2Hello + "s ease-in-out " + Math.floor(r2Hello / 2) + "s infinite";
   }
@@ -1236,11 +1297,11 @@ function _xrayApplyHelloTiming(state) {
   }
   var leftOut = document.querySelector(".de-hello-orb.left-out");
   var leftIn = document.querySelector(".de-hello-orb.left-in");
-  if (leftOut) {
+  if (!_triDeepH && leftOut) {
     var kfLO = _xrayBuildHelloKf("deHLO", r1Hello, "left-out");
     leftOut.style.animation = kfLO + " " + r1Hello + "s ease-in-out infinite";
   }
-  if (leftIn) {
+  if (!_triDeepH && leftIn) {
     var kfLI = _xrayBuildHelloKf("deHLI", r2Hello, "left-in");
     leftIn.style.animation = kfLI + " " + r2Hello + "s ease-in-out " + Math.floor(r2Hello / 2) + "s infinite";
   }
@@ -1258,8 +1319,18 @@ function xrayCanForward(s) {
   var ifaces = s.interfaces || {};
   var outIf = rr.out_iface || s.wan_iface || "";
   var routeAndIfUp = !!(rr.resolved && ifaces[outIf] && ifaces[outIf].up);
+  if (typeof s.nh_reachable === "boolean") {
+    return routeAndIfUp && s.nh_reachable;
+  }
+  var _staticBest = rr.protocol === "static" || !!(s.has_static && s.static_is_best);
+  if (_staticBest && s.static_nh_valid === false) {
+    return false;
+  }
   if (s.r1_ping_ok !== undefined) {
     return routeAndIfUp && s.r1_ping_ok;
+  }
+  if (_staticBest && s.ping_ok !== undefined) {
+    return routeAndIfUp && !!s.ping_ok;
   }
   return routeAndIfUp;
 }
@@ -1366,6 +1437,11 @@ function xrayDeepDiveClose() {
   }
   setTimeout(function() {
     document.body.classList.remove("is-xray-deep");
+    document.body.classList.remove("de-loading", "de-applied");
+    if (window._xrayDeRevealTimer) {
+      clearTimeout(window._xrayDeRevealTimer);
+      window._xrayDeRevealTimer = null;
+    }
     var _defIds = typeof _xrayGetTargetIds === "function" ? _xrayGetTargetIds() : [];
     if (_defIds.length && window._xrayTargetNode !== "topo-node-" + _defIds[0]) {
       window._xrayTargetNode = "topo-node-" + _defIds[0];
@@ -1414,6 +1490,16 @@ function xrayDeepDiveClose() {
   }, 300);
 }
 
+function _xrayArmDeepLoading() {
+  document.body.classList.add("de-loading");
+  document.body.classList.remove("de-applied");
+  if (window._xrayDeRevealTimer) clearTimeout(window._xrayDeRevealTimer);
+  window._xrayDeRevealTimer = setTimeout(function() {
+    document.body.classList.remove("de-loading");
+    document.body.classList.add("de-applied");
+  }, 12e3);
+}
+
 function xrayDeepDiveZoomIn() {
   var nodeId = window._xrayTargetNode || "topo-node-r1";
   var node = document.getElementById(nodeId);
@@ -1441,6 +1527,7 @@ function xrayDeepDiveZoomIn() {
   if (typeof xrayStartBgpTablePoll === "function") xrayStartBgpTablePoll(window._scenarioConfig || {});
   var _liveDeep = document.body.classList.contains("is-xray-mode") && !window._replayLock && !document.body.classList.contains("trace-active") && !document.body.classList.contains("is-replaying");
   if (_liveDeep) {
+    _xrayArmDeepLoading();
     window._xrayActive = true;
     window._xrayDeepReady = false;
     if (window._xrayDeepReadyTimer) clearTimeout(window._xrayDeepReadyTimer);
@@ -1548,38 +1635,62 @@ function _xrayDrawTunnelPipe(svg, a, b, id) {
 
 function xraySetSvgTunnel(id, nbrState, kind) {
   var els = [ document.getElementById(id + "-a"), document.getElementById(id + "-b") ];
-  var col = null;
+  var col = null, animated = false, pale = false;
   if (kind === "bgp") {
-    col = "#a855f7";
+    col = "var(--xto-bgp,#a855f7)";
+    animated = true;
+  } else if (kind === "bgp-idle") {
+    col = "var(--xto-bgp,#a855f7)";
+    pale = true;
   } else {
-    var ns = (nbrState || "None").toLowerCase();
-    if (ns === "full" || ns === "dr" || ns === "bdr") col = "#39ff14"; else if (ns === "2-way" || ns === "2way") col = "#ffcc80";
+    var b = _xrayOspfBucket(nbrState);
+    if (b === "full") {
+      col = "var(--xto-ospf,#39ff14)";
+      animated = true;
+    } else if (b === "exchange") {
+      col = "var(--xto-ospf,#39ff14)";
+    } else if (b === "2way") {
+      col = "var(--xto-idle,#ff8c00)";
+      animated = true;
+    } else if (b === "init") {
+      col = "var(--xto-idle,#ff8c00)";
+    }
   }
-  var glow = col === "#a855f7" ? "rgba(168,85,247,0.6)" : col === "#ffcc80" ? "rgba(255,204,128,0.6)" : "rgba(57,255,20,0.6)";
   els.forEach(function(el) {
     if (!el) return;
     if (!col) {
       el.style.display = "none";
       el.style.animation = "";
+      el.style.opacity = "";
       return;
     }
-    var _wasHidden = el.style.display === "none" || !el.style.animation;
+    var _wasHidden = el.style.display === "none";
     el.style.display = "";
     el.setAttribute("stroke", col);
-    el.style.filter = "drop-shadow(0 0 6px " + glow + ")";
-    if (_wasHidden) el.style.animation = "triRouteDash 1.2s linear infinite";
+    el.setAttribute("stroke-dasharray", "10,6");
+    el.style.opacity = pale ? "0.42" : "";
+    el.style.filter = "drop-shadow(0 0 6px " + col + ")";
+    if (animated) {
+      if (_wasHidden || !el.style.animation) el.style.animation = "triRouteDash 1.2s linear infinite";
+    } else {
+      el.style.animation = "";
+    }
   });
 }
 
 function _xraySetCssPipe(el, nbrState, kind) {
   if (!el) return;
-  el.classList.remove("pipe-full", "pipe-2way", "pipe-bgp");
+  el.classList.remove("pipe-full", "pipe-2way", "pipe-exchange", "pipe-init", "pipe-bgp", "pipe-bgp-idle");
   if (kind === "bgp") {
     el.classList.add("pipe-bgp");
     return;
   }
-  var ns = (nbrState || "None").toLowerCase();
-  if (ns === "full" || ns === "dr" || ns === "bdr") el.classList.add("pipe-full"); else if (ns === "2-way" || ns === "2way") el.classList.add("pipe-2way");
+  if (kind === "bgp-idle") {
+    el.classList.add("pipe-bgp-idle");
+    return;
+  }
+  var b = _xrayOspfBucket(nbrState);
+  if (b !== "none") el.classList.add("pipe-" + b);
 }
 
 function xrayLinkState(hasFull, nbrState, helloActive, ifDown) {
@@ -1608,7 +1719,7 @@ function xrayUpdateLinkLines(interfaces, linkIfaceMap) {
       line.style.boxShadow = "";
       line.style.height = "";
     } else {
-      line.style.background = "repeating-linear-gradient(90deg,rgba(255,107,53,0.6) 0,rgba(255,107,53,0.6) 8px,transparent 8px,transparent 16px)";
+      line.style.background = "repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)";
       line.style.boxShadow = "none";
       line.style.height = "3px";
     }
@@ -1666,7 +1777,7 @@ function xrayUpdateLsdb(s, opts) {
         });
       }
     }
-    if (synced && rr.resolved && rr.matched_prefix) {
+    if (synced && (rr.resolved || s.lsa_in_db) && rr.matched_prefix) {
       var alreadyHas = rows.some(function(r) {
         return r.text === rr.matched_prefix;
       });
@@ -1714,6 +1825,115 @@ function xraySetDeepDive(selector, lines) {
     tag += ">" + l.text + "</div>";
     return tag;
   }).join("");
+}
+
+function _xrayApplyDualLinkApexTrace(s) {
+  var config = window._scenarioConfig || {};
+  var xr = config.xray || {};
+  var pattern = xr.pattern || "";
+  if (pattern !== "ospf_triangle") return false;
+  var pairs = xr.ospf_pairs || [];
+  if (!pairs.length) {
+    if (xr.trace_pattern === "dual_static_rid") {
+      var _leftLk = {
+        up: !!s.has_full,
+        nbrState: s.neighbor_state || "",
+        fallback: false,
+        ifName: ""
+      };
+      if (typeof _xrayApplyDualLinkTunnels === "function") {
+        _xrayApplyDualLinkTunnels(_leftLk, {
+          up: false,
+          nbrState: ""
+        });
+      }
+      if (typeof _xrayApplyDualLinkBeam === "function") {
+        _xrayApplyDualLinkBeam(document.querySelector(".de-beam.in"), _leftLk, s.interfaces || {});
+      }
+    }
+    return false;
+  }
+  var nodes = config.nodes || [];
+  var targetN = nodes.find(function(n) {
+    return n.target;
+  }) || nodes[0];
+  if (!targetN) return false;
+  var others = nodes.filter(function(n) {
+    return n !== targetN;
+  });
+  if (others.length < 2) return false;
+  var triNodes = {
+    target: targetN.id,
+    left: others[0].id,
+    right: others[1].id
+  };
+  document.body.setAttribute("data-topo-triangle", "");
+  var isOspfPeer = function(id) {
+    return pairs.indexOf([ targetN.id, id ].sort().join("_")) >= 0;
+  };
+  var full = !!s.has_full;
+  var hasStatic = !!(s.has_static || s.has_floating_static);
+  var _nonLo = Object.keys(s.interfaces || {}).filter(function(k) {
+    return k && k.indexOf("lo") !== 0;
+  });
+  var _rr = s.route_resolution || {};
+  var _ospfId = isOspfPeer(triNodes.right) ? triNodes.right : triNodes.left;
+  var _staticId = _ospfId === triNodes.right ? triNodes.left : triNodes.right;
+  if (!s[_ospfId + "_iface"]) {
+    s[_ospfId + "_iface"] = Object.keys(s.iface_hellos || {})[0] || (_rr.protocol === "ospf" && _rr.out_iface || "") || _nonLo.filter(function(k) {
+      return k !== s[_staticId + "_iface"];
+    })[0] || _nonLo[0] || "";
+  }
+  if (!s[_staticId + "_iface"]) {
+    s[_staticId + "_iface"] = _nonLo.filter(function(k) {
+      return k !== s[_ospfId + "_iface"];
+    })[0] || "";
+  }
+  var _ospfIf = s[_ospfId + "_iface"];
+  if (s.ospf_active_on_interface && _ospfIf) {
+    if (!s.iface_hellos) s.iface_hellos = {};
+    if (!s.iface_hellos[_ospfIf]) s.iface_hellos[_ospfIf] = s.r1_hello || 10;
+    if (!s.interfaces) s.interfaces = {};
+    if (!s.interfaces[_ospfIf]) s.interfaces[_ospfIf] = {
+      up: true
+    };
+  }
+  var _q9Dual = xr.trace_pattern === "dual_static_rid";
+  var _staticIf = s[_staticId + "_iface"];
+  if (_q9Dual && s._failover && _staticIf) {
+    if (!s.interfaces) s.interfaces = {};
+    if (!s.interfaces[_staticIf]) s.interfaces[_staticIf] = {};
+    s.interfaces[_staticIf].up = false;
+  }
+  if (_q9Dual && _rr && _rr.resolved) {
+    var _mainUp = _staticIf && !(s.interfaces && s.interfaces[_staticIf] && s.interfaces[_staticIf].up === false);
+    _rr.out_iface = _mainUp ? _staticIf : full ? _ospfIf : _staticIf;
+    s.route_resolution = _rr;
+  }
+  var mk = function(id) {
+    var ospf = isOspfPeer(id);
+    return {
+      up: ospf && full,
+      fallback: !ospf && hasStatic,
+      ifName: s[id + "_iface"] || ""
+    };
+  };
+  var leftLink = mk(triNodes.left);
+  var rightLink = mk(triNodes.right);
+  if (_q9Dual && s._failover) {
+    rightLink.up = false;
+    rightLink.fallback = false;
+  }
+  _xrayApplyDualLinkLabels(s, triNodes);
+  _xrayApplyDualLinkBeams(s, leftLink, rightLink);
+  _xrayApplyDualLinkEnergies(s, leftLink, rightLink);
+  _xrayApplyDualLinkTunnels(leftLink, rightLink);
+  _xrayApplyDualLinkDirection(s, triNodes);
+  _xrayApplyDualLinkHello(s, leftLink.ifName, rightLink.ifName, triNodes.left, triNodes.right);
+  var _if = s.interfaces || {};
+  document.body.classList.toggle("is-input-down", !!(leftLink.ifName && _if[leftLink.ifName] && !_if[leftLink.ifName].up));
+  document.body.classList.toggle("is-output-down", !!(rightLink.ifName && _if[rightLink.ifName] && !_if[rightLink.ifName].up));
+  return true;
 }
 
 function xrayUpdateDeepDiveIO(s) {
@@ -1767,6 +1987,9 @@ function xrayUpdateDeepDiveIO(s) {
     window._lastXrayState = s;
     if (typeof xrayRenderBgpTableReplay === "function") xrayRenderBgpTableReplay();
   }
+  try {
+    if (typeof _xrayDeAngleView === "function") _xrayDeAngleView(s);
+  } catch (_e) {}
 }
 
 function xrayStaticLogicLines(s, opts) {
@@ -1851,7 +2074,7 @@ function xrayStaticDeepLines(s, opts) {
     lines.push({
       text: '> Route: <span class="de-hl">' + (rr.protocol || "static") + " " + (rr.matched_prefix || rr.target || target) + "</span>"
     });
-    var nhReachable = s.r1_ping_ok !== false;
+    var nhReachable = typeof s.nh_reachable === "boolean" ? s.nh_reachable : s.r1_ping_ok !== false;
     if (nhReachable) {
       lines.push({
         text: '> Next-Hop: <span class="de-hl">' + (rr.next_hop || "direct") + "</span>"
@@ -2227,9 +2450,13 @@ function xrayTriDeepLines(s, opts) {
     lines.push({
       text: '> Route: <span class="de-hl">' + (rr.protocol || "ospf").toUpperCase() + " " + (rr.matched_prefix || target) + "</span>"
     });
-    if (rr.next_hop) lines.push({
-      text: '> Next-Hop: <span class="de-hl">' + rr.next_hop + "</span>"
-    });
+    if (rr.next_hop) {
+      var _nhIfUp = !rr.out_iface || ifaces[rr.out_iface] && ifaces[rr.out_iface].up;
+      var _nhUnreach = !!_nhIfUp && !xrayCanForward(s);
+      lines.push({
+        text: "> Next-Hop: <span " + (_nhUnreach ? 'style="color:#ff4444"' : 'class="de-hl"') + ">" + rr.next_hop + (_nhUnreach ? " (UNREACHABLE)" : "") + "</span>"
+      });
+    }
   } else {
     lines.push({
       text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
@@ -2463,6 +2690,7 @@ function xrayRenderTopology(config) {
       html += '<div class="topo-link" data-net="' + linkName + '">';
       html += '<div class="topo-link-line"></div>';
       html += '<div class="topo-link-pipe" data-net="' + linkName + '"></div>';
+      html += '<div class="topo-link-pipe pipe-inner" data-net="' + linkName + '"></div>';
       html += '<div class="topo-link-label">' + linkName + "</div>";
       html += '<div class="topo-link-subnet" id="topo-subnet-' + linkName.replace("net-", "") + '">...</div>';
       html += "</div>";
@@ -3030,14 +3258,6 @@ function _xrayRenderInvertedVTopology(config) {
       svg.appendChild(line);
       var _ivTunId = d.lineId.replace("tri-line-", "tri-tunnel-").replace("iv-line-", "iv-tunnel-");
       _xrayDrawTunnelPipe(svg, pA, pB, _ivTunId);
-      // This SVG is (re)drawn on a deferred timer (setTimeout below) and on zoom-out redraw — both AFTER
-      // applyXrayState has already coloured the tunnels — so the freshly-created elements would stay gray.
-      // Re-apply the per-link BGP tunnel colour here from the last applied state (mirrors apply L4206).
-      if (window._lastXrayState && (config.xray && config.xray.pattern) === "bgp_multi" && typeof xraySetSvgTunnel === "function") {
-        var _ivS = window._lastXrayState;
-        var _ivOn = (document.body.classList.contains("is-xray-mode") || document.body.classList.contains("is-replaying")) && !!_ivS[d.bottomId + "_established"];
-        xraySetSvgTunnel(_ivTunId, _ivOn ? "Full" : "None", _ivOn ? "bgp" : "ospf");
-      }
       var lbl = document.getElementById("iv-label-" + d.labelPos);
       if (lbl) {
         var midX = (pA.x + pB.x) / 2;
@@ -3081,6 +3301,62 @@ function _xrayRenderInvertedVTopology(config) {
   html += '<div class="xray-fib-entry" id="xray-fib-entry"></div>';
   html += '<div class="xray-flash-scene" id="xray-flash-scene"></div>';
   return html;
+}
+
+var _XRAY_DE = {
+  cylHeightFrac: 1,
+  cylFillRGBA: "rgba(6,20,34,0.72)",
+  zMode: "split",
+  connBallR: 6.5,
+  connBallCol: "#00e5ff",
+  fwdArrowCol: "#39ff14",
+  rePanelLeft: 90,
+  rePanelTop: 58,
+  lsdbRight: "8%",
+  rePanelMinH: "300px",
+  beamReachMxFrac: .49,
+  beamReachMyFrac: .49,
+  labelBelowOffsetPx: 16,
+  deEngineH: "460px",
+  helloZipFrac: .85,
+  helloTravelSec: 2,
+  helloSendRecvPhaseFrac: .35,
+  helloTravelPct: .6,
+  helloEndScreenMarginPx: 22,
+  helloReachEndFrac: 1.3,
+  helloSendEndInsetPx: 6,
+  deCardPadBottomPx: 44,
+  deCardPadTopPx: 32,
+  deLabelChipBg: "rgba(6,16,26,0.85)",
+  helloLeftPhaseFrac: .4
+};
+
+function _xrayDeCylSvg(frac, fwdDir) {
+  var topY = 40, bodyLen = Math.round(420 * frac), botY = topY + bodyLen, cx = 100, rx = 80, ry = 22;
+  var col = "#00e5ff", st = 'style="stroke:var(--xto-link,' + col + ')"';
+  var vbH = topY + bodyLen + 40, cssH = Math.round(160 / 200 * vbH), midY = Math.round((topY + botY) / 2);
+  var FILL = _XRAY_DE.cylFillRGBA;
+  var s = '<svg class="de-cyl-svg" style="width:160px;height:' + cssH + 'px" viewBox="0 0 200 ' + vbH + '" fill="none">';
+  s += '<rect x="' + (cx - rx) + '" y="' + topY + '" width="' + rx * 2 + '" height="' + bodyLen + '" fill="' + FILL + '"/>';
+  s += '<ellipse cx="' + cx + '" cy="' + botY + '" rx="' + rx + '" ry="' + ry + '" fill="' + FILL + '" stroke="none"/>';
+  s += '<ellipse cx="' + cx + '" cy="' + topY + '" rx="' + rx + '" ry="' + ry + '" fill="' + FILL + '" stroke="none"/>';
+  [ [ 20, .8, 1.5, 0 ], [ 180, .8, 1.5, 0 ], [ 31, .3, 1, 10 ], [ 169, .3, 1, 10 ], [ 47, .4, 1, 17 ], [ 153, .4, 1, 17 ], [ 65, .35, 1, 20 ], [ 135, .35, 1, 20 ], [ 86, .5, 1, 22 ], [ 114, .5, 1, 22 ], [ 100, .2, .5, 22 ] ].forEach(function(l) {
+    s += '<line x1="' + l[0] + '" y1="' + (topY - l[3]) + '" x2="' + l[0] + '" y2="' + (botY + l[3]) + '" stroke="' + col + '" ' + st + ' stroke-width="' + l[2] + '" opacity="' + l[1] + '"/>';
+  });
+  s += '<ellipse cx="' + cx + '" cy="' + topY + '" rx="' + rx + '" ry="' + ry + '" stroke="' + col + '" ' + st + ' stroke-width="1.5" fill="none" opacity="0.9"/>';
+  var n = Math.max(0, Math.round(bodyLen / 60) - 1);
+  for (var i = 1; i <= n; i++) {
+    var cy = Math.round(topY + bodyLen * i / (n + 1));
+    s += '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" stroke="' + col + '" ' + st + ' stroke-width="1" fill="none" opacity="0.25"/>';
+  }
+  s += '<ellipse cx="' + cx + '" cy="' + botY + '" rx="' + rx + '" ry="' + ry + '" stroke="' + col + '" ' + st + ' stroke-width="1.5" fill="none" opacity="0.9"/>';
+  var tf = fwdDir === "left" ? ' transform="translate(200, 0) scale(-1, 1)"' : "";
+  s += '<g id="de-cyl-fwd-arrow" style="display:none"' + tf + ">";
+  s += '<line x1="35" y1="' + midY + '" x2="155" y2="' + midY + '" stroke="' + _XRAY_DE.fwdArrowCol + '" stroke-width="3.5" stroke-linecap="round"/>';
+  s += '<polygon points="160,' + (midY - 10) + " 180," + midY + " 160," + (midY + 10) + '" fill="' + _XRAY_DE.fwdArrowCol + '"/>';
+  s += '<text x="100" y="' + (midY - 15) + '" text-anchor="middle" font-family="Courier New" font-size="13" font-weight="bold" fill="' + _XRAY_DE.fwdArrowCol + '" opacity="0.8"' + tf + ">FORWARD</text>";
+  s += "</g></svg>";
+  return s;
 }
 
 function xrayRenderDeepEngine(config, activeTargetId) {
@@ -3131,6 +3407,7 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += '<div class="de-if-marker left"></div><div class="de-if-marker right"></div>';
   html += '<div class="de-r1-label"><div class="de-r1-name">' + nodeId + "</div>";
   html += '<div class="de-r1-sub">Gateway Router &#8212; Internal View</div></div>';
+  html += '<div class="de-loading-ind"><span class="de-load-spin"></span><span class="de-load-txt">解析中&#8230;</span></div>';
   if (isTriangle) {
     html += '<div class="de-beam in"></div>';
     html += '<div class="de-beam out"></div>';
@@ -3147,10 +3424,11 @@ function xrayRenderDeepEngine(config, activeTargetId) {
       html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _protoLabel + " &#8212; " + rightNode.id + "</div></div>";
     } else {
       var _linearLabel = isBgp ? "BGP SESSION" : "OSPF ADJACENCY";
+      var _deInner = '<div class="de-tunnel-inner"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div></div>';
       html += '<div class="de-tunnel left-side"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
-      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
+      html += '<div class="de-tunnel-fill"></div>' + _deInner + '<div class="de-tunnel-label">' + _linearLabel + "</div></div>";
       html += '<div class="de-tunnel"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
-      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-label">' + _linearLabel + "</div></div>";
+      html += '<div class="de-tunnel-fill"></div>' + _deInner + '<div class="de-tunnel-label">' + _linearLabel + "</div></div>";
     }
   }
   if (isTriangle) {
@@ -3167,30 +3445,10 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += '<div class="de-packet"></div><div class="de-packet p2"></div>';
   html += '<div class="de-ping-orb" id="de-ping-req"></div><div class="de-ping-orb reply" id="de-ping-rep"></div>';
   html += '<div class="de-ping-orb left-req"></div><div class="de-ping-orb left-rep"></div>';
-  if (isOspf) {
+  if (isOspf || isBgp) {
     html += '<div class="de-hello-orb out"></div><div class="de-hello-orb in"></div>';
     html += '<div class="de-hello-orb left-out"></div><div class="de-hello-orb left-in"></div>';
   }
-  html += '<svg class="de-cyl-svg" viewBox="0 0 200 500" fill="none">';
-  html += '<line x1="20" y1="40" x2="20" y2="460" stroke="#00e5ff" stroke-width="1.5" opacity="0.8"/>';
-  html += '<line x1="180" y1="40" x2="180" y2="460" stroke="#00e5ff" stroke-width="1.5" opacity="0.8"/>';
-  html += '<line x1="31" y1="30" x2="31" y2="470" stroke="#00e5ff" stroke-width="1" opacity="0.3"/>';
-  html += '<line x1="169" y1="30" x2="169" y2="470" stroke="#00e5ff" stroke-width="1" opacity="0.3"/>';
-  html += '<line x1="47" y1="23" x2="47" y2="477" stroke="#00e5ff" stroke-width="1" opacity="0.4"/>';
-  html += '<line x1="153" y1="23" x2="153" y2="477" stroke="#00e5ff" stroke-width="1" opacity="0.4"/>';
-  html += '<line x1="65" y1="20" x2="65" y2="480" stroke="#00e5ff" stroke-width="1" opacity="0.35"/>';
-  html += '<line x1="135" y1="20" x2="135" y2="480" stroke="#00e5ff" stroke-width="1" opacity="0.35"/>';
-  html += '<line x1="86" y1="18" x2="86" y2="482" stroke="#00e5ff" stroke-width="1" opacity="0.5"/>';
-  html += '<line x1="114" y1="18" x2="114" y2="482" stroke="#00e5ff" stroke-width="1" opacity="0.5"/>';
-  html += '<line x1="100" y1="18" x2="100" y2="482" stroke="#00e5ff" stroke-width="0.5" opacity="0.2"/>';
-  html += '<ellipse cx="100" cy="40" rx="80" ry="22" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.02)" opacity="0.9"/>';
-  html += '<ellipse cx="100" cy="100" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.3"/>';
-  html += '<ellipse cx="100" cy="160" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.25"/>';
-  html += '<ellipse cx="100" cy="220" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.25"/>';
-  html += '<ellipse cx="100" cy="280" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.25"/>';
-  html += '<ellipse cx="100" cy="340" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.25"/>';
-  html += '<ellipse cx="100" cy="400" rx="80" ry="22" stroke="#00e5ff" stroke-width="1" fill="none" opacity="0.3"/>';
-  html += '<ellipse cx="100" cy="460" rx="80" ry="22" stroke="#00e5ff" stroke-width="1.5" fill="rgba(0,229,255,0.02)" opacity="0.9"/>';
   var _fwdDir0 = window._xrayFwdDirection;
   if (!_fwdDir0) {
     var _rr0 = window._lastXrayState && window._lastXrayState.route_resolution || {};
@@ -3201,18 +3459,16 @@ function xrayRenderDeepEngine(config, activeTargetId) {
       if (_lanIf0) _fwdDir0 = _rr0.out_iface === _lanIf0 ? "left" : "right";
     }
   }
-  var _fwdTf0 = _fwdDir0 === "left" ? ' transform="translate(200, 0) scale(-1, 1)"' : "";
-  html += '<g id="de-cyl-fwd-arrow" style="display:none"' + _fwdTf0 + ">";
-  html += '<line x1="35" y1="250" x2="155" y2="250" stroke="#39ff14" stroke-width="3.5" stroke-linecap="round"/>';
-  html += '<polygon points="160,240 180,250 160,260" fill="#39ff14"/>';
-  html += '<text x="100" y="235" text-anchor="middle" font-family="Courier New" font-size="13" font-weight="bold" fill="#39ff14" opacity="0.8"' + _fwdTf0 + ">FORWARD</text>";
-  html += "</g></svg>";
+  html += _xrayDeCylSvg(_XRAY_DE.cylHeightFrac, _fwdDir0);
   if (isOspf) {
     html += '<div class="de-ospf"><div class="de-ospf-core"><div class="inner"></div></div><div class="de-ospf-label">OSPF</div></div>';
     html += '<div class="de-lsdb" id="de-lsdb"><div class="lsdb-hd">LSDB</div><div class="lsdb-bar"><div class="lsdb-bar-fill" id="de-lsdb-fill"></div></div></div>';
     html += '<div class="de-lsa-container" id="de-lsa-container"></div>';
   } else if (isBgp) {
     html += '<div class="de-bgp-proc"><div class="de-bgp-proc-core"><div class="inner"></div></div><div class="de-bgp-proc-label">BGP</div></div>';
+  }
+  if (xray.deep_coexist_ospf) {
+    html += '<div class="de-ospf de-ospf-coexist"><div class="de-ospf-core"><div class="inner"></div></div><div class="de-ospf-label">OSPF</div></div>';
   }
   html += '<div class="de-panel" id="de-re-panel"></div>';
   return html;
@@ -3855,22 +4111,19 @@ function _xrayApplyDualLinkLabels(s, peers) {
   var rIf = s[peers.right + "_iface"] || "?";
   var lLabel = document.querySelector(".de-label.in");
   var rLabel = document.querySelector(".de-label.out");
-  if (lLabel) lLabel.textContent = "← " + peers.left + " (" + lIf + ")";
-  if (rLabel) rLabel.textContent = peers.right + " (" + rIf + ") →";
+  if (lLabel) lLabel.textContent = lIf + " - " + peers.left;
+  if (rLabel) rLabel.textContent = rIf + " - " + peers.right;
 }
 
 function _xrayApplyDualLinkBeam(beam, linkInfo, ifaces) {
   if (!beam) return;
   var ifDown = linkInfo.ifName && ifaces[linkInfo.ifName] && !ifaces[linkInfo.ifName].up;
   if (ifDown) {
-    // 物理 DOWN = 赤破線
     beam.style.setProperty("background", "repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0px,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)", "important");
     beam.style.setProperty("box-shadow", "none", "important");
   } else {
-    // ★契約①(2026-07-22 RCL port): 物理リンク=物理状態のみ。UP は OSPF状態(full/not-full)に依らず cyan 固定。
-    //   隣接状態は tunnel 層が担う。旧: linkInfo.up(=ospf&&full)でない物理UP が else→orange で①違反。
-    beam.style.setProperty("background", "#00e5ff", "important");
-    beam.style.setProperty("box-shadow", "0 0 20px rgba(0,229,255,0.7),0 0 50px rgba(0,229,255,0.3)", "important");
+    beam.style.setProperty("background", "var(--xto-link,#00e5ff)", "important");
+    beam.style.setProperty("box-shadow", "0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)", "important");
   }
 }
 
@@ -3888,9 +4141,8 @@ function _xrayApplyDualLinkEnergyOrb(orb, linkInfo, ifaces) {
     orb.style.setProperty("box-shadow", "0 0 10px rgba(255,60,60,0.3)", "important");
     orb.style.setProperty("animation", "none", "important");
   } else {
-    // ★契約①(2026-07-22 RCL port): 物理 UP のエネルギーオーブは OSPF状態に依らず cyan 固定(fallback/up/その他UP統一)。
-    orb.style.setProperty("background", "radial-gradient(circle,#fff 0%,rgba(0,229,255,0.9) 25%,rgba(0,229,255,0.3) 50%,transparent 70%)", "important");
-    orb.style.setProperty("box-shadow", "0 0 25px 10px rgba(0,229,255,0.5),0 0 60px rgba(0,229,255,0.25)", "important");
+    orb.style.setProperty("background", "radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%)", "important");
+    orb.style.setProperty("box-shadow", "0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 60px rgba(var(--xto-link-rgb,0,229,255),0.25)", "important");
     orb.style.removeProperty("animation");
   }
 }
@@ -3906,9 +4158,19 @@ function _xrayApplyDualLinkTunnels(leftLink, rightLink) {
   var tRight = document.getElementById("de-tunnel-right");
   function _apply(el, link) {
     if (!el) return;
-    var is2way = !link.up && /^2-?way$/.test((link.nbrState || "").toLowerCase());
-    el.classList.toggle("tunnel-active", !!link.up);
-    el.classList.toggle("tunnel-2way", is2way);
+    el.classList.remove("tunnel-2way", "de-side-bgp", "de-side-bgp-idle", "de-side-ospf-full", "de-side-ospf-exchange", "de-side-ospf-2way", "de-side-ospf-init");
+    if (link.proto === "bgp") {
+      el.classList.toggle("tunnel-active", true);
+      el.classList.toggle("de-side-bgp", !!link.up);
+      el.classList.toggle("de-side-bgp-idle", !link.up);
+      return;
+    }
+    var _ob = _xrayOspfBucket(link.nbrState || (link.up ? "Full" : ""));
+    var _ospf = _ob !== "none";
+    el.classList.toggle("tunnel-active", !!link.up || _ospf);
+    [ "full", "exchange", "2way", "init" ].forEach(function(b) {
+      el.classList.toggle("de-side-ospf-" + b, _ospf && b === _ob);
+    });
   }
   _apply(tLeft, leftLink);
   _apply(tRight, rightLink);
@@ -3972,6 +4234,7 @@ function xrayBuildApplyState(config) {
       };
     }
   }
+  window._triNodes = _triNodes;
   if (_triNodes) {
     document.body.setAttribute("data-topo-triangle", "");
   }
@@ -4023,6 +4286,12 @@ function xrayBuildApplyState(config) {
   window.applyXrayState = function applyXrayState(s) {
     window._lastXrayState = s;
     window._xrayProtocol = protocol;
+    try {
+      _xrayRenderUnifiedLive(s);
+    } catch (_e) {}
+    try {
+      _xrayDeAngleView(s);
+    } catch (_e) {}
     document.body.classList.toggle("xray-advertiser-view", !!s.is_advertiser);
     var _tr = _xrayResolveTransit(s);
     var _isTransit = _tr.isTransit;
@@ -4126,13 +4395,15 @@ function xrayBuildApplyState(config) {
           up: _lFull,
           fallback: _lIsStatic,
           ifName: s[_lId + "_iface"],
-          nbrState: _lNbr
+          nbrState: _lNbr,
+          proto: "ospf"
         };
         _rightLink = {
           up: _rFull,
           fallback: _rIsStatic,
           ifName: s[_rId + "_iface"],
-          nbrState: _rNbr
+          nbrState: _rNbr,
+          proto: "ospf"
         };
         deepLines = xrayTriDeepLines(s, {
           targetName: _triNodes.target,
@@ -4149,12 +4420,14 @@ function xrayBuildApplyState(config) {
         _leftLink = {
           up: !!s[_lId + "_established"],
           fallback: false,
-          ifName: s[_lId + "_iface"]
+          ifName: s[_lId + "_iface"],
+          proto: "bgp"
         };
         _rightLink = {
           up: !!s[_rId + "_established"],
           fallback: false,
-          ifName: s[_rId + "_iface"]
+          ifName: s[_rId + "_iface"],
+          proto: "bgp"
         };
         deepLines = typeof xrayBgpDeepLines === "function" ? xrayBgpDeepLines(s) : [];
       }
@@ -4230,16 +4503,35 @@ function xrayBuildApplyState(config) {
       var _linVizActive = document.body.classList.contains("is-xray-mode") || document.body.classList.contains("is-replaying");
       var _linIsBgp = pattern.indexOf("bgp") === 0;
       var _linIsOspf = pattern.indexOf("ospf") === 0;
+      var _pipeCfg = window._scenarioConfig || {};
+      var _pipeTgt = (window._xrayTargetNode ? String(window._xrayTargetNode).replace("topo-node-", "") : "") || targetId;
       for (var _lp = 0; _lp < _linPipes.length; _lp++) {
         var _pe = _linPipes[_lp];
+        var _dn = _pe.getAttribute("data-net");
+        var _isInner = _pe.classList.contains("pipe-inner");
         if (!_linVizActive) {
           _xraySetCssPipe(_pe, "None", "ospf");
           continue;
         }
+        var _bup = _xrayBgpUpForNet(s, _dn);
+        var _ofsm = _xrayOspfFsmForNet(_pipeCfg, _pipeTgt, s, _dn);
+        var _hasBgp = _bup !== undefined, _hasOspf = !!_ofsm;
+        if (_hasBgp || _hasOspf) {
+          if (_isInner) {
+            if (_bup && _hasOspf) _xraySetCssPipe(_pe, _ofsm, "ospf"); else _xraySetCssPipe(_pe, "None", "ospf");
+          } else {
+            if (_bup) _xraySetCssPipe(_pe, "None", "bgp"); else if (_hasOspf) _xraySetCssPipe(_pe, _ofsm, "ospf"); else if (_hasBgp) _xraySetCssPipe(_pe, "None", "bgp-idle"); else _xraySetCssPipe(_pe, "None", "ospf");
+            if (_bup && _hasOspf) _pe.classList.add("pipe-coexist"); else _pe.classList.remove("pipe-coexist");
+          }
+          continue;
+        }
+        if (_isInner) {
+          _xraySetCssPipe(_pe, "None", "ospf");
+          continue;
+        }
         if (_linIsBgp) {
-          var _dn = _pe.getAttribute("data-net");
           var _est = s.bgp_links && s.bgp_links[_dn] !== undefined ? !!s.bgp_links[_dn] : s.is_established !== undefined ? !!s.is_established : s.bgp_state === "Established";
-          _xraySetCssPipe(_pe, "None", _est ? "bgp" : "ospf");
+          _xraySetCssPipe(_pe, "None", _est ? "bgp" : "bgp-idle");
         } else if (_linIsOspf) {
           _xraySetCssPipe(_pe, s.has_full ? "Full" : s.neighbor_state || "None", "ospf");
         } else {
@@ -4247,10 +4539,45 @@ function xrayBuildApplyState(config) {
         }
       }
     }
+    (function() {
+      var _leftDt = document.querySelector(".de-tunnel.left-side");
+      if (!_leftDt || document.getElementById("de-tunnel-left")) return;
+      var _rightDt = document.querySelector(".de-tunnel:not(.left-side)");
+      var _dtCfg = window._scenarioConfig || {};
+      var _dtTgt = (window._xrayTargetNode ? String(window._xrayTargetNode).replace("topo-node-", "") : "") || targetId;
+      var _coexistQ = !!(_dtCfg.xray && _dtCfg.xray.deep_coexist_ospf);
+      var _crossSide = !!(s.lan_iface && s.wan_iface && s.lan_iface !== s.wan_iface);
+      function _sideCoexist(el, iface, isEgress) {
+        if (!el) return;
+        el.classList.remove("de-coexist", "de-coexist-init", "de-coexist-2way", "de-coexist-exchange", "de-coexist-full", "de-coexist-none", "de-side-show", "de-side-bgp", "de-side-bgp-idle", "de-side-ospf-init", "de-side-ospf-2way", "de-side-ospf-exchange", "de-side-ospf-full");
+        var net = iface ? _xrayNetForIface(_dtCfg, _dtTgt, s, iface) : null;
+        var bup = net ? _xrayBgpUpForNet(s, net.name) : undefined;
+        var hasBgp = bup !== undefined;
+        var ospf = net ? _xrayOspfFsmForNet(_dtCfg, _dtTgt, s, net.name) : "";
+        if (!_coexistQ) {
+          if (hasBgp && ospf) el.classList.add("de-coexist", "de-coexist-" + _xrayOspfBucket(ospf));
+          return;
+        }
+        if (!hasBgp && !ospf) return;
+        if (bup) el.classList.add("de-side-bgp"); else if (ospf) el.classList.add("de-side-ospf-" + _xrayOspfBucket(ospf)); else if (hasBgp) el.classList.add("de-side-bgp-idle");
+        if (bup && ospf) el.classList.add("de-coexist", "de-coexist-" + _xrayOspfBucket(ospf));
+        if (_crossSide || isEgress) el.classList.add("de-side-show");
+      }
+      _sideCoexist(_leftDt, s.lan_iface, false);
+      _sideCoexist(_rightDt, s.wan_iface, true);
+    })();
     xraySetDeepDive("#de-re-panel", deepLines);
     xrayUpdateLsdb(s);
-    if ((document.body.classList.contains("trace-active") || window._replayLock) && typeof xrayRenderBgpTableReplay === "function") {
+    if ((document.body.classList.contains("trace-active") || window._replayLock || document.body.classList.contains("is-replaying")) && typeof xrayRenderBgpTableReplay === "function") {
       xrayRenderBgpTableReplay();
+    }
+    if (document.body.classList.contains("de-loading")) {
+      if (window._xrayDeRevealTimer) {
+        clearTimeout(window._xrayDeRevealTimer);
+        window._xrayDeRevealTimer = null;
+      }
+      document.body.classList.remove("de-loading");
+      document.body.classList.add("de-applied");
     }
   };
 }
@@ -4784,10 +5111,10 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
           return "no ip route 2.2.2.2/32 (不正NH)";
         },
         engine: "fault ospf-full",
-        arrow: false,
+        arrow: true,
         ping: false,
         panel: function(s) {
-          return h.title(s._target) + h.ospfState("Full") + h.ospfRoute(s._rr.matched_prefix || "2.2.2.2/32", true) + h.nhConfig("2.2.2.2/32", "(到達不能IP)", false) + h.dim("S>* AD=1 が O AD=110 に勝利") + h.ribNot("ARP failure") + h.action("DROP");
+          return h.title(s._target) + h.ospfState("Full") + h.ospfRoute(s._rr.matched_prefix || "2.2.2.2/32", true) + h.nhConfig("2.2.2.2/32", "(到達不能IP)", false) + h.dim("S>* AD=1 が O AD=110 に勝利") + h.ribInstalled("2.2.2.2/32", "1/0") + h.dim("NH(到達不能)は下流 ARP 失敗 → DROP") + h.action("DROP");
         }
       }, {
         label: "② Static 削除",
@@ -4795,7 +5122,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
           return "OSPF 経路が best に昇格";
         },
         engine: "fault ospf-full",
-        arrow: false,
+        arrow: true,
         ping: false,
         panel: function(s) {
           return h.title(s._target) + h.ospfState("Full") + h.ospfRoute(s._rr.matched_prefix || "2.2.2.2/32", true) + h.route("OSPF", s._rr.matched_prefix || "2.2.2.2/32") + h.ribInstalling() + h.dim("OSPF 経路 (AD=110) → best");
@@ -4841,10 +5168,10 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
           return "Static(AD=1) が OSPF(AD=110) を上書き";
         },
         engine: "fault ospf-full",
-        arrow: false,
+        arrow: true,
         ping: false,
         panel: function(s) {
-          return h.title(s._target) + h.ospfState("Full") + h.nhConfig("2.2.2.2/32", "(到達不能IP)", false) + h.dim("S>* AD=1 が O AD=110 に勝利") + h.ribNot("ARP failure") + h.action("DROP");
+          return h.title(s._target) + h.ospfState("Full") + h.nhConfig("2.2.2.2/32", "(到達不能IP)", false) + h.dim("S>* AD=1 が O AD=110 に勝利") + h.ribInstalled("2.2.2.2/32", "1/0") + h.dim("NH(到達不能)は下流 ARP 失敗 → DROP") + h.action("DROP");
         }
       }, {
         label: "③ 通信断",
@@ -4852,7 +5179,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
           return "ping 2.2.2.2 100% loss";
         },
         engine: "fault ospf-full",
-        arrow: false,
+        arrow: true,
         ping: false,
         panel: function(s) {
           return h.title(s._target) + h.ospfState("Full") + h.nhConfig("2.2.2.2/32", "(到達不能IP)", false) + h.action("DROP") + h.ping("100% loss");
@@ -5243,10 +5570,12 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
           return "8.8.8.0/24 を OSPF external で広報";
         },
         engine: "fault ospf-full",
-        arrow: true,
+        arrow: false,
         ping: false,
+        lsdb: true,
+        lsdbPrefix: "8.8.8.0/24",
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("Type-5 LSA: 8.8.8.0/24 → r2 へ広報") + h.dim("r2: O>E 8.8.8.0/24 学習");
+          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("Type-5 LSA: 8.8.8.0/24 → r2 へ広報") + h.dim("r2: O>* 8.8.8.0/24 学習");
         }
       }, {
         label: "④ r2 ルート学習",
@@ -5256,8 +5585,10 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         engine: "cleared ospf-full",
         arrow: true,
         ping: false,
+        lsdb: true,
+        lsdbPrefix: "8.8.8.0/24",
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("r2: O>E 8.8.8.0/24 via r1") + h.action("FORWARD");
+          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("r2: O>* 8.8.8.0/24 via r1") + h.action("FORWARD");
         }
       }, {
         label: "⑤ Ping",
@@ -5267,8 +5598,10 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         engine: "cleared ospf-full",
         arrow: true,
         ping: true,
+        lsdb: true,
+        lsdbPrefix: "8.8.8.0/24",
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("r2: O>E 8.8.8.0/24 via r1") + h.action("FORWARD") + h.ping("0% loss");
+          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("r2: O>* 8.8.8.0/24 via r1") + h.action("FORWARD") + h.ping("0% loss");
         }
       } ],
       destroyTitle: "Destruction Sequence",
@@ -5280,8 +5613,10 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         engine: "cleared ospf-full",
         arrow: true,
         ping: true,
+        lsdb: true,
+        lsdbPrefix: "8.8.8.0/24",
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("redistribute static route-map BLOCK") + h.dim("route-map: permit → 再配布許可中") + h.dim("r2: O>E 8.8.8.0/24 via r1") + h.ping("0% loss") + h.dim("正常稼働中...");
+          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("redistribute static route-map BLOCK") + h.dim("route-map: permit → 再配布許可中") + h.dim("r2: O>* 8.8.8.0/24 via r1") + h.ping("0% loss") + h.dim("正常稼働中...");
         }
       }, {
         label: "② route-map deny",
@@ -5505,78 +5840,79 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
           return "2つの障害を特定";
         },
         engine: "fault",
-        arrow: false,
+        arrow: true,
         ping: false,
         panel: function(s) {
-          return h.title(s._target) + h.dim("障害①: Static NH → 到達不能 IP") + h.dim("障害②: r2 RID = 3.3.3.3 (r3 と重複)") + h.ribNot("ARP failure + LSA 矛盾") + h.action("DROP");
+          return h.title(s._target) + h.dim("Static NH: Connected 帯内 → RIB install") + h.ribInstalled(s._target + "/32", "1/0") + h.nhReachable("", false) + h.dim("障害②: r1 RID = 2.2.2.2 (r2 と重複) → backup 未確立") + h.action("DROP");
         }
       }, {
-        label: "② Static NH 修正",
+        label: "② メイン修復",
         text: function(s) {
-          return "no ip route + ip route (正しいNH)";
+          return "Static NH 修正 → メイン復旧";
         },
         engine: "fault",
-        arrow: false,
-        ping: false,
+        arrow: true,
+        ping: true,
         panel: function(s) {
-          return h.title(s._target) + h.dim("Static NH → 正しい r3 IP に変更") + h.dim("障害②: r2 RID 重複 まだ残存") + h.dim("Static 経由で到達可能に...");
+          return h.title(s._target) + h.dim("Static NH → 正しい r3 IP に修正") + h.ribInstalled(s._target + "/32", "1/0") + h.nhReachable("", true) + h.action("FORWARD") + h.ping("0% loss") + h.dim("※ backup(OSPF)は RID 重複で未復旧");
         }
       }, {
         label: "③ RID 修正",
         text: function(s) {
-          return "ospf router-id (ユニークIP)";
+          return "RID 一意化 → OSPF 再起動";
         },
         engine: "fault",
-        arrow: false,
-        ping: false,
+        arrow: true,
+        ping: true,
         panel: function(s) {
-          return h.title(s._target) + h.dim("r2 RID → ユニーク値に変更") + h.dim("clear ip ospf process → OSPF 再起動");
+          return h.title(s._target) + h.dim("r1 RID → ユニーク値に変更") + h.dim("clear ip ospf process → OSPF 再起動") + h.ribInstalled(s._target + "/32", "1/0") + h.action("FORWARD") + h.dim("main(Static) 維持 / backup 再確立中...");
         }
       }, {
         label: "④ OSPF 再確立",
         text: function(s) {
-          return "LSA 再交換 → 経路学習";
+          return "LSA 再交換 → backup 学習";
         },
         engine: "fault ospf-full",
-        arrow: false,
-        ping: false,
+        arrow: true,
+        ping: true,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("RID ユニーク → LSA 正常") + h.ospfRoute(s._target, false) + h.dim("SPF 計算中...");
+          return h.ospfTitle(s._target) + h.ospfState("Full") + h.dim("RID ユニーク → LSA 正常") + h.ospfRoute(s._target + "/32", true) + h.dim("main=Static(AD1) 維持 / backup=OSPF 学習");
         },
         sequence: [ {
           delay: 0,
           engineOverride: "fault ospf-hello-both",
           panel: function(s) {
-            return h.ospfTitle(s._target) + h.ospfState("ExStart") + h.ospfLsa(false, true);
+            return h.ospfTitle(s._target) + h.ospfState("ExStart") + h.ospfLsa(false, true) + h.dim("main(Static) 維持");
           }
         }, {
           delay: 5e3,
           engineOverride: "fault ospf-full",
           panel: function(s) {
-            return h.ospfTitle(s._target) + h.ospfState("Full") + h.ospfLsa(true) + h.ospfRoute(s._target, false) + h.dim("SPF 計算中...");
+            return h.ospfTitle(s._target) + h.ospfState("Full") + h.ospfLsa(true) + h.ospfRoute(s._target + "/32", true) + h.dim("backup(OSPF) 学習完了");
           }
         } ]
       }, {
-        label: "⑤ 冗長経路確立",
+        label: "⑤ 冗長確立",
         text: function(s) {
-          return "Static + OSPF 両方有効";
+          return "Static + OSPF 両経路 有効";
         },
         engine: "cleared ospf-full",
         arrow: true,
-        ping: false,
+        ping: true,
         panel: function(s) {
-          return h.title(s._target) + h.dim("Static: 3.3.3.3/32 via r3 (AD=1, best)") + h.dim("OSPF: 3.3.3.3/32 via r2→r3 (AD=110)") + h.action("FORWARD");
+          return h.title(s._target) + h.dim("Static: " + s._target + "/32 via r3 (AD=1, best)") + h.dim("OSPF: " + s._target + "/32 via r2→r3 (AD=110)") + h.action("FORWARD") + h.ping("0% loss");
         }
       }, {
-        label: "⑥ Ping",
+        label: "⑥ 冗長切替",
         text: function(s) {
           return "成功";
         },
         engine: "cleared ospf-full",
         arrow: true,
         ping: true,
+        failover: true,
         panel: function(s) {
-          return h.title(s._target) + h.dim("冗長経路: Static (main) + OSPF (backup)") + h.action("FORWARD") + h.ping("0% loss");
+          return h.title(s._target) + h.dim("Static (main) via r3 → DOWN (link 断)") + h.dim("OSPF (backup) via r2 → ACTIVE") + h.action("FORWARD via r2 (backup)") + h.ping("0% loss (冗長切替 成功)");
         }
       } ],
       destroyTitle: "Destruction Sequence",
@@ -5596,22 +5932,22 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         text: function(s) {
           return "NH を到達不能 IP に変更";
         },
-        engine: "fault",
-        arrow: false,
+        engine: "fault ospf-full",
+        arrow: true,
         ping: false,
         panel: function(s) {
-          return h.title(s._target) + h.dim("Static NH → 到達不能 IP に変更") + h.dim("OSPF バックアップで まだ到達可能");
+          return h.title(s._target) + h.dim("Static NH → 到達不能 IP に変更") + h.dim("OSPF バックアップ(Full)で まだ到達可能");
         }
       }, {
         label: "③ RID 重複",
         text: function(s) {
-          return "r2 RID を 3.3.3.3 に変更";
+          return "r1 RID を 2.2.2.2 に変更";
         },
         engine: "fault",
-        arrow: false,
+        arrow: true,
         ping: false,
         panel: function(s) {
-          return h.title(s._target) + h.dim("r2 RID = 3.3.3.3 → r3 と重複") + h.dim("LSA 矛盾 → OSPF 経路も消失");
+          return h.title(s._target) + h.dim("r1 RID = 2.2.2.2 → r2 と重複") + h.dim("LSA 矛盾 → OSPF 経路も消失");
         }
       }, {
         label: "④ 全経路遮断",
@@ -5619,7 +5955,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
           return "Static も OSPF も使用不能";
         },
         engine: "fault",
-        arrow: false,
+        arrow: true,
         ping: false,
         panel: function(s) {
           return h.title(s._target) + h.dim("Static: NH 到達不能 → ARP 失敗") + h.dim("OSPF: RID 重複 → 経路学習不可") + h.action("DROP") + h.ping("100% loss");
@@ -6169,7 +6505,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         bgpRoutes: [ {
-          status: "*",
+          status: "i",
           prefix: "8.8.8.0/24",
           nexthop: "10.0.2.3",
           metric: "0",
@@ -7152,7 +7488,10 @@ window.xrayBuildFaultState = function(state, tracePattern) {
     fs.neighbor_state = "Full";
     fs.has_full = true;
     fs.has_ospf_route = true;
-    if (fs.route_resolution) fs.route_resolution.resolved = false;
+    if (fs.route_resolution) {
+      fs.route_resolution.resolved = true;
+      fs.route_resolution.matched_prefix = fs.route_resolution.target ? fs.route_resolution.target + "/32" : "2.2.2.2/32";
+    }
     break;
 
    case "ospf_missing":
@@ -7385,6 +7724,7 @@ window.xrayBuildFaultState = function(state, tracePattern) {
     if (fs.route_resolution) {
       fs.route_resolution.resolved = false;
       fs.route_resolution.protocol = "static";
+      fs.route_resolution.matched_prefix = fs.route_resolution.target ? fs.route_resolution.target + "/32" : "3.3.3.3/32";
     }
     break;
 
@@ -7401,9 +7741,47 @@ window.xrayBuildFaultState = function(state, tracePattern) {
 };
 
 function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
+  if (typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {})) {
+    var _duh = document.querySelectorAll(".de-hello-orb");
+    for (var _du = 0; _du < _duh.length; _du++) {
+      if (_duh[_du].style && _duh[_du].style.setProperty) {
+        _duh[_du].style.setProperty("animation", "none", "important");
+        _duh[_du].style.setProperty("display", "none", "important");
+      }
+    }
+    return;
+  }
   var ifaces = s.interfaces || {};
   var hellos = s.iface_hellos || {};
   var peerHellos = s.peer_hellos || {};
+  var _deHM = document.querySelector(".xray-deep-engine");
+  var _kfParts = [];
+  var _travSec = typeof _XRAY_DE !== "undefined" && _XRAY_DE.helloTravelSec > 0 ? _XRAY_DE.helloTravelSec : 2;
+  var _mkKf = function(name, from, to, period) {
+    var tp = Math.max(8, Math.min(80, Math.round(_travSec / (period || 10) * 100)));
+    var fp = Math.min(tp + 12, 90);
+    return "@keyframes " + name + "{0%{left:" + from + ";opacity:0}4%{opacity:0.95}" + tp + "%{left:" + to + ";opacity:0.9}" + fp + "%{left:" + to + ";opacity:0}100%{left:" + to + ";opacity:0}}";
+  };
+  var _selfId = typeof xrayDeepTargetRouter === "function" ? String(xrayDeepTargetRouter() || "").replace("topo-node-", "") : "";
+  var _selfIdR = window._triNodes && window._triNodes.target || _selfId;
+  var _isTraceH = document.body.classList.contains("trace-active");
+  if (!_isTraceH) {
+    var _hpc = window._xrayHelloPeriodCache || (window._xrayHelloPeriodCache = {
+      iface: {},
+      node: {}
+    });
+    for (var _hk in hellos) {
+      if (hellos[_hk] > 0) _hpc.iface[_hk] = hellos[_hk];
+    }
+    Object.keys(s).forEach(function(k) {
+      var m = k.match(/^(.+)_hello$/);
+      if (m && s[k] > 0) _hpc.node[m[1]] = s[k];
+    });
+  }
+  var _hpcU = window._xrayHelloPeriodCache || {
+    iface: {},
+    node: {}
+  };
   function drive(outOrb, inOrb, ifName, peerNode, kfOut, kfIn) {
     var up = ifName && ifaces[ifName] && ifaces[ifName].up;
     var active = ifName && Object.prototype.hasOwnProperty.call(hellos, ifName);
@@ -7418,30 +7796,717 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
       peerSending = active;
     }
     var showIn = up && peerSending;
-    var outH = showOut && hellos[ifName] ? hellos[ifName] : 10;
-    // ★hello per-timer(2026-07-22 RCL port): 受信オーブ周期を per-node hello(s.<node>_hello)源に(peer_hellos は未populate ゆえ
-    //   従来 inH が outH に潰れ r3=5s 等が失われていた)。per-node → peer_hellos → outH の順で解決。
+    var _selfH = _selfIdR && s[_selfIdR + "_hello"] > 0 ? s[_selfIdR + "_hello"] : 0;
     var _peerH = peerNode && s[peerNode + "_hello"] > 0 ? s[peerNode + "_hello"] : 0;
-    var inH = _peerH || (peerNode && peerHellos[peerNode] ? peerHellos[peerNode] : outH);
+    var _traceOutH = _isTraceH ? _hpcU.iface[ifName] > 0 ? _hpcU.iface[ifName] : _selfIdR && _hpcU.node[_selfIdR] > 0 ? _hpcU.node[_selfIdR] : 0 : 0;
+    var _traceInH = _isTraceH ? peerNode && _hpcU.node[peerNode] > 0 ? _hpcU.node[peerNode] : 0 : 0;
+    var outH = _traceOutH > 0 ? _traceOutH : hellos[ifName] > 0 ? hellos[ifName] : _hpcU.iface[ifName] > 0 ? _hpcU.iface[ifName] : _selfH || _selfIdR && _hpcU.node[_selfIdR] || 10;
+    var inH = _traceInH > 0 ? _traceInH : peerNode && peerHellos[peerNode] > 0 ? peerHellos[peerNode] : _peerH || peerNode && _hpcU.node[peerNode] || outH;
+    var _phF = /Left/.test(kfOut) && _XRAY_DE.helloLeftPhaseFrac > 0 ? _XRAY_DE.helloLeftPhaseFrac : 0;
+    var _srF = _XRAY_DE.helloSendRecvPhaseFrac > 0 ? _XRAY_DE.helloSendRecvPhaseFrac : 0;
+    var _inDelay = Math.floor(inH / 2) - inH * _phF + inH * _srF;
+    var _isLeftB = /Left/.test(kfOut);
+    var _far = _isLeftB ? _deHM && _deHM._helloFarL : _deHM && _deHM._helloFarR;
+    if (_far > 0) {
+      var _fromC = _isLeftB ? "calc(50% - 10px)" : "calc(50% + 10px)";
+      var _endStr = _isLeftB ? "calc(50% - " + _far + "px)" : "calc(50% + " + _far + "px)";
+      _kfParts.push(_mkKf(kfOut + "P", _fromC, _endStr, outH));
+      _kfParts.push(_mkKf(kfIn + "P", _endStr, _fromC, inH));
+    }
+    var _oAnim = kfOut + "P " + outH + "s linear " + (-(outH * _phF)).toFixed(2) + "s infinite";
+    var _iAnim = kfIn + "P " + inH + "s linear " + _inDelay.toFixed(2) + "s infinite";
     if (outOrb) {
-      if (showOut) {
-        outOrb.style.setProperty("display", "block", "important");
-        outOrb.style.setProperty("animation", kfOut + " " + outH + "s ease-in-out infinite", "important");
-      } else {
-        outOrb.style.setProperty("display", "none", "important");
-        outOrb.style.setProperty("animation", "none", "important");
+      var _sigO = showOut ? "b|" + _oAnim : "n";
+      if (outOrb._helloSig !== _sigO) {
+        if (showOut) {
+          outOrb.style.setProperty("display", "block", "important");
+          outOrb.style.setProperty("animation", _oAnim, "important");
+        } else {
+          outOrb.style.setProperty("display", "none", "important");
+          outOrb.style.setProperty("animation", "none", "important");
+        }
+        outOrb._helloSig = _sigO;
       }
     }
     if (inOrb) {
-      if (showIn) {
-        inOrb.style.setProperty("display", "block", "important");
-        inOrb.style.setProperty("animation", kfIn + " " + inH + "s ease-in-out " + Math.floor(inH / 2) + "s infinite", "important");
-      } else {
-        inOrb.style.setProperty("display", "none", "important");
-        inOrb.style.setProperty("animation", "none", "important");
+      var _sigI = showIn ? "b|" + _iAnim : "n";
+      if (inOrb._helloSig !== _sigI) {
+        if (showIn) {
+          inOrb.style.setProperty("display", "block", "important");
+          inOrb.style.setProperty("animation", _iAnim, "important");
+        } else {
+          inOrb.style.setProperty("display", "none", "important");
+          inOrb.style.setProperty("animation", "none", "important");
+        }
+        inOrb._helloSig = _sigI;
       }
     }
   }
   drive(document.querySelector(".de-hello-orb.left-out"), document.querySelector(".de-hello-orb.left-in"), leftIf, leftNode, "deHelloLeftOut", "deHelloLeftIn");
   drive(document.querySelector(".de-hello-orb.out"), document.querySelector(".de-hello-orb.in"), rightIf, rightNode, "deHelloOut", "deHelloIn");
+  if (_deHM && _kfParts.length) {
+    var _okfH = document.getElementById("xray-de-hello-kf");
+    if (!_okfH) {
+      _okfH = document.createElement("style");
+      _okfH.id = "xray-de-hello-kf";
+      (document.head || document.body).appendChild(_okfH);
+    }
+    var _cssH = _kfParts.join("");
+    if (_okfH.textContent !== _cssH) _okfH.textContent = _cssH;
+  }
+}
+
+function _xrayDeepDeconflict() {
+  return window._xrayDeepReady === false && document.body.classList.contains("is-xray-deep") && !document.body.classList.contains("is-replaying") && !document.body.classList.contains("trace-active");
+}
+
+function _xrayNetsForTarget(config, targetId) {
+  var nets = config && (config.networks || config.topology && config.topology.networks) || [];
+  return nets.filter(function(net) {
+    return (net.members || []).some(function(m) {
+      return (m.node || m.name) === targetId;
+    });
+  });
+}
+
+function _xrayNetForIface(config, targetId, s, iface) {
+  var nets = _xrayNetsForTarget(config, targetId);
+  if (!nets.length) return null;
+  var ipr = s.interfaces && s.interfaces[iface] && s.interfaces[iface].ip || "";
+  var oct = ipr ? parseInt(String(ipr).split("/")[0].split(".").pop(), 10) : NaN;
+  if (!isNaN(oct)) {
+    for (var i = 0; i < nets.length; i++) {
+      var tm = (nets[i].members || []).filter(function(m) {
+        return (m.node || m.name) === targetId;
+      })[0];
+      if (tm && tm.host_id != null && +tm.host_id === oct) return nets[i];
+    }
+  }
+  return nets.length === 1 ? nets[0] : null;
+}
+
+function _xrayOspfBucket(fsm) {
+  var st = String(fsm || "").split("/")[0];
+  if (st === "Full") return "full";
+  if (st === "ExStart" || st === "Exchange" || st === "Loading") return "exchange";
+  if (st === "2-Way") return "2way";
+  if (st === "Init" || st === "Attempt") return "init";
+  return "none";
+}
+
+function _xrayOspfFsmForIface(s, iface, ifKeys) {
+  var ns = String(s && s.neighbor_state || "");
+  if (!ns || ns === "None" || ns === "none") return "";
+  var hellos = s.iface_hellos || null;
+  if (hellos && Object.keys(hellos).length) return iface in hellos ? ns : "";
+  return ifKeys && ifKeys.length === 1 ? ns : "";
+}
+
+function _xrayBgpUpForNet(s, netName) {
+  if (!netName || !s || !s.bgp_links || !(netName in s.bgp_links)) return undefined;
+  return !!s.bgp_links[netName];
+}
+
+function _xrayOspfFsmForNet(config, targetId, s, netName) {
+  var nets = _xrayNetsForTarget(config, targetId), net = null;
+  for (var i = 0; i < nets.length; i++) {
+    if (nets[i].name === netName) {
+      net = nets[i];
+      break;
+    }
+  }
+  if (!net) return "";
+  var tm = (net.members || []).filter(function(m) {
+    return (m.node || m.name) === targetId;
+  })[0];
+  if (!tm || tm.host_id == null) return "";
+  var ifs = s && s.interfaces || {}, iface = "";
+  for (var k in ifs) {
+    if (k === "lo" || !ifs.hasOwnProperty(k)) continue;
+    var ip = ifs[k] && ifs[k].ip;
+    if (!ip) continue;
+    if (parseInt(String(ip).split("/")[0].split(".").pop(), 10) === +tm.host_id) {
+      iface = k;
+      break;
+    }
+  }
+  if (!iface) return "";
+  return _xrayOspfFsmForIface(s, iface, Object.keys(ifs).filter(function(x) {
+    return x !== "lo";
+  }));
+}
+
+function xrayDeepTargetRouter() {
+  return (window._xrayTargetNode || "topo-node-r1").replace("topo-node-", "");
+}
+
+function xrayEnsureBgpTableBox(config) {
+  var cfg = config || window._scenarioConfig || {};
+  var xc = cfg.xray || {};
+  if (xc.protocol !== "bgp") return;
+  var re = document.getElementById("de-re-panel");
+  if (!re || !re.parentElement) return;
+  var tgt = xrayDeepTargetRouter();
+  if (!document.getElementById("de-bgp-panel")) {
+    var box = document.createElement("div");
+    box.className = "de-panel de-bgp-panel";
+    box.id = "de-bgp-panel";
+    box.innerHTML = '<div class="de-title">BGP Table — show ip bgp (' + tgt + ")" + '<span class="de-bgp-fs-ctl"><button type="button" style="pointer-events:auto!important" onclick="deBgpFontZoom(event,-1)" title="文字を小さく">A&#8722;</button><button type="button" style="pointer-events:auto!important" onclick="deBgpFontZoom(event,1)" title="文字を大きく">A+</button></span></div>' + '<div class="de-bgp-rows"><div class="de-dim">Loading...</div></div>';
+    re.parentElement.appendChild(box);
+  }
+  if (!document.getElementById("de-bgp-decision-panel")) {
+    var dbox = document.createElement("div");
+    dbox.className = "de-panel de-bgp-decision-panel";
+    dbox.id = "de-bgp-decision-panel";
+    dbox.style.display = "none";
+    dbox.innerHTML = '<div class="de-title">Best-Path Decision</div>' + '<div class="de-bgp-decision-rows"></div>';
+    re.parentElement.appendChild(dbox);
+  }
+  _deBgpApplyFontSize();
+}
+
+var _DE_BGP_FS_STEPS = [ .85, 1, 1.15, 1.3, 1.5, 1.75 ];
+
+function xrayRenderBgpTableReplay() {
+  var panel = document.getElementById("de-bgp-panel");
+  if (!panel) return;
+  var rows = panel.querySelector(".de-bgp-rows");
+  if (!rows) return;
+  var dbox = document.getElementById("de-bgp-decision-panel");
+  var drows = dbox ? dbox.querySelector(".de-bgp-decision-rows") : null;
+  function showDecision(html) {
+    if (!dbox) return;
+    if (document.querySelector(".de-bgp-bracket-pop.open")) return;
+    if (drows) drows.innerHTML = html || "";
+    dbox.style.display = html ? "" : "none";
+  }
+  var _cfgX = window._scenarioConfig && window._scenarioConfig.xray || {};
+  var _isTrace = document.body.classList.contains("trace-active");
+  var _perStep = null;
+  if (_isTrace && Array.isArray(window._traceStepStates) && Array.isArray(window.TRACE_STEPS)) {
+    var _si = window._traceStepStates.indexOf(window._lastXrayState);
+    if (_si >= 0 && window.TRACE_STEPS[_si] && window.TRACE_STEPS[_si].bgpRoutes !== undefined) {
+      var _br = window.TRACE_STEPS[_si].bgpRoutes;
+      _perStep = typeof _br === "function" ? _br(window._lastXrayState) : _br;
+      if (!Array.isArray(_perStep)) _perStep = [];
+    }
+  }
+  var _canonRoutes = _isTrace && Array.isArray(_cfgX.bgp_routes) && _cfgX.bgp_routes.length ? _cfgX.bgp_routes : null;
+  var _replayRoutes = !_isTrace && window._scenarioConfig && window._scenarioConfig.trace_state && Array.isArray(window._scenarioConfig.trace_state.bgp_routes) && window._scenarioConfig.trace_state.bgp_routes.length ? window._scenarioConfig.trace_state.bgp_routes : null;
+  if (_isTrace && _perStep === null && !_canonRoutes) {
+    panel.style.display = "none";
+    if (dbox) dbox.style.display = "none";
+    return;
+  }
+  panel.style.display = "";
+  var _replayCtx = document.body.classList.contains("is-replaying") || window._replayLock;
+  var _isCleared = !!(window._lastXrayState && window._lastXrayState.cleared);
+  var _recoveredRoutes = null;
+  if (_replayCtx && _isCleared) {
+    var _recTp = _cfgX.trace_pattern;
+    if (_recTp && typeof window.xrayBuildTraceSteps === "function") {
+      try {
+        var _recDefs = window.xrayBuildTraceSteps(_recTp, "troubleshoot");
+        var _recSteps = _recDefs && Array.isArray(_recDefs.steps) ? _recDefs.steps : [];
+        var _recLast = null;
+        for (var _recI = _recSteps.length - 1; _recI >= 0; _recI--) {
+          if (_recSteps[_recI] && _recSteps[_recI].bgpRoutes !== undefined) {
+            _recLast = _recSteps[_recI].bgpRoutes;
+            break;
+          }
+        }
+        if (Array.isArray(_recLast) && _recLast.length) _recoveredRoutes = _recLast;
+      } catch (_recE) {}
+    }
+    if (!_recoveredRoutes && Array.isArray(_cfgX.bgp_routes) && _cfgX.bgp_routes.length) {
+      _recoveredRoutes = _cfgX.bgp_routes;
+    }
+  }
+  var _faultRoutes = null;
+  if (_replayCtx && !_isCleared) {
+    var _fltTp = _cfgX.trace_pattern;
+    if (_fltTp && typeof window.xrayBuildTraceSteps === "function") {
+      try {
+        var _fltDefs = window.xrayBuildTraceSteps(_fltTp, "troubleshoot");
+        var _fltSteps = _fltDefs && Array.isArray(_fltDefs.steps) ? _fltDefs.steps : [];
+        for (var _fltI = 0; _fltI < _fltSteps.length; _fltI++) {
+          if (_fltSteps[_fltI] && Array.isArray(_fltSteps[_fltI].bgpRoutes) && _fltSteps[_fltI].bgpRoutes.length) {
+            _faultRoutes = _fltSteps[_fltI].bgpRoutes;
+            break;
+          }
+        }
+      } catch (_fltE) {}
+    }
+  }
+  if (_replayCtx && !_isCleared && _perStep === null && !_canonRoutes && !_replayRoutes && !_faultRoutes) {
+    if (!window._xrayCfgRefetching && (window._xrayCfgRefetchN || 0) < 20) {
+      window._xrayCfgRefetching = true;
+      window._xrayCfgRefetchN = (window._xrayCfgRefetchN || 0) + 1;
+      fetch("api/scenario-config", {
+        cache: "no-store"
+      }).then(function(r) {
+        return r.json();
+      }).then(function(cfg) {
+        window._xrayCfgRefetching = false;
+        if (cfg && cfg.trace_state && window._scenarioConfig) {
+          window._scenarioConfig.trace_state = cfg.trace_state;
+          if (Array.isArray(cfg.trace_state.bgp_routes) && cfg.trace_state.bgp_routes.length) window._xrayCfgRefetchN = 0;
+        }
+        xrayRenderBgpTableReplay();
+      }).catch(function() {
+        window._xrayCfgRefetching = false;
+      });
+    }
+    rows.innerHTML = '<div class="de-dim">障害状態の BGP テーブルを取得中…<br>(復旧値は表示しません)</div>';
+    showDecision("");
+    return;
+  }
+  if (_replayCtx && _isCleared && !_recoveredRoutes) {
+    rows.innerHTML = '<div class="de-dim">復旧状態の BGP テーブルを準備中…</div>';
+    showDecision("");
+    return;
+  }
+  if (_perStep === null && !_canonRoutes && !_replayRoutes && typeof window._xrayBgpLiveRoutes === "undefined") {
+    if (!window._xrayBgpReplayFetching) {
+      window._xrayBgpReplayFetching = true;
+      var _tgt = typeof xrayDeepTargetRouter === "function" ? xrayDeepTargetRouter() : "r1";
+      fetch("api/bgp-routes?target=" + encodeURIComponent(_tgt)).then(function(r) {
+        return r.json();
+      }).then(function(data) {
+        window._xrayBgpReplayFetching = false;
+        window._xrayBgpLiveRoutes = data && data.success && data.routes ? data.routes : [];
+        xrayRenderBgpTableReplay();
+      }).catch(function() {
+        window._xrayBgpReplayFetching = false;
+        window._xrayBgpLiveRoutes = [];
+        xrayRenderBgpTableReplay();
+      });
+    }
+    rows.innerHTML = '<div class="de-dim">Loading BGP table...</div>';
+    showDecision("");
+    return;
+  }
+  var s = window._lastXrayState || {};
+  var rr = s.route_resolution || {};
+  if (_perStep === null && !_recoveredRoutes && !_faultRoutes && s.is_established === false) {
+    rows.innerHTML = '<div class="de-dim">No routes<br>(BGP session not established)</div>';
+    showDecision("");
+    return;
+  }
+  var routes = (_perStep !== null ? _perStep : _recoveredRoutes || _canonRoutes || _replayRoutes || _faultRoutes || (_replayCtx ? null : window._xrayBgpLiveRoutes) || []).slice();
+  var _filterTgt = window._scenarioConfig && window._scenarioConfig.capture && window._scenarioConfig.capture.ping_dst || rr.target;
+  if (_perStep === null && !_recoveredRoutes && !_faultRoutes && s.has_bgp_route === false && _filterTgt) {
+    routes = routes.filter(function(r) {
+      return !xrayIpInPrefix(_filterTgt, r.prefix || "");
+    });
+  }
+  if (!routes.length) {
+    rows.innerHTML = '<div class="de-dim">No routes<br>(advertised route not received)</div>';
+    showDecision("");
+    return;
+  }
+  if (_replayRoutes && !_recoveredRoutes && rr.next_hop && document.body.classList.contains("is-cleared")) {
+    var _recNH = rr.next_hop;
+    var _recVia = s.best_path_via;
+    var _recLP = _recVia ? s[_recVia + "_lp"] : undefined;
+    if (routes.some(function(r) {
+      return r.nexthop === _recNH;
+    })) {
+      routes = routes.map(function(r) {
+        var nr = JSON.parse(JSON.stringify(r));
+        var _isBest = nr.nexthop === _recNH;
+        nr.status = _isBest ? "*>" : "* ";
+        nr.best = _isBest;
+        if (_isBest && _recLP !== undefined && _recLP !== null && _recLP !== "") nr.locprf = _recLP;
+        return nr;
+      });
+    }
+  }
+  var view = xrayBuildBgpView(routes);
+  rows.innerHTML = view.table;
+  showDecision(view.decision);
+}
+
+function xrayIpInPrefix(ip, prefix) {
+  if (!ip || !prefix) return false;
+  var parts = String(prefix).split("/");
+  var net = parts[0];
+  var len = parseInt(parts[1], 10);
+  function toInt(a) {
+    var o = String(a).split(".");
+    if (o.length !== 4) return null;
+    return (+o[0] << 24 | +o[1] << 16 | +o[2] << 8 | +o[3]) >>> 0;
+  }
+  var ipN = toInt(ip), netN = toInt(net);
+  if (ipN === null || netN === null) return ip === net;
+  if (isNaN(len)) return ipN === netN;
+  var mask = len === 0 ? 0 : 4294967295 << 32 - len >>> 0;
+  return (ipN & mask) === (netN & mask);
+}
+
+var XRAY_BGP_CRITERIA = [ {
+  key: "weight",
+  col: "weight",
+  label: "Weight",
+  dir: 1,
+  val: function(r) {
+    return xrayBgpNum(r.weight, 0);
+  }
+}, {
+  key: "locprf",
+  col: "locprf",
+  label: "LocPrf",
+  dir: 1,
+  val: function(r) {
+    return xrayBgpNum(r.locprf, 100);
+  }
+}, {
+  key: "aspath",
+  col: "path",
+  label: "AS-Path",
+  dir: -1,
+  val: function(r) {
+    return r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0;
+  }
+}, {
+  key: "origin",
+  col: "path",
+  label: "Origin",
+  dir: -1,
+  val: function(r) {
+    var m = {
+      i: 0,
+      e: 1,
+      "?": 2
+    };
+    return r.origin in m ? m[r.origin] : 3;
+  }
+}, {
+  key: "metric",
+  col: "metric",
+  label: "MED",
+  dir: -1,
+  val: function(r) {
+    return xrayBgpNum(r.metric, 0);
+  }
+} ];
+
+function xrayBgpNum(v, dflt) {
+  var n = parseInt(v, 10);
+  return isNaN(n) ? dflt : n;
+}
+
+function xrayBgpNeighborAS(r) {
+  var t = (r.as_path || "").split(/\s+/).filter(Boolean);
+  return t.length ? t[0] : "";
+}
+
+function xrayBgpDecision(group) {
+  if (!group || !group.length) return null;
+  var best = null;
+  for (var i = 0; i < group.length; i++) {
+    if ((group[i].status || "").indexOf(">") !== -1) {
+      best = group[i];
+      break;
+    }
+  }
+  if (!best) return {
+    kind: "nobest"
+  };
+  var localOrigin = xrayBgpNum(best.weight, 0) === 32768;
+  if (group.length < 2) return {
+    kind: localOrigin ? "local" : "single",
+    best: best,
+    col: null
+  };
+  var chain = [], medSkipped = false;
+  for (var c = 0; c < XRAY_BGP_CRITERIA.length; c++) {
+    var crit = XRAY_BGP_CRITERIA[c];
+    var bv = crit.val(best);
+    var cohort = group;
+    if (crit.key === "metric") {
+      var bAS = xrayBgpNeighborAS(best);
+      cohort = group.filter(function(r) {
+        return xrayBgpNeighborAS(r) === bAS;
+      });
+      if (cohort.length < 2) {
+        var anyDiff = group.some(function(r) {
+          return r !== best && crit.val(r) !== bv;
+        });
+        chain.push({
+          crit: crit,
+          bestVal: bv,
+          cmpVal: null,
+          status: anyDiff ? "skip" : "tie"
+        });
+        if (anyDiff) medSkipped = true;
+        continue;
+      }
+    }
+    var cmp = null;
+    cohort.forEach(function(r) {
+      if (r === best) return;
+      var v = crit.val(r);
+      cmp = cmp === null ? v : crit.dir > 0 ? Math.max(cmp, v) : Math.min(cmp, v);
+    });
+    var allEqual = cohort.every(function(r) {
+      return crit.val(r) === bv;
+    });
+    if (allEqual) {
+      chain.push({
+        crit: crit,
+        bestVal: bv,
+        cmpVal: cmp,
+        status: "tie"
+      });
+      continue;
+    }
+    var bestIsUnique = cohort.every(function(r) {
+      return r === best || (crit.dir > 0 ? bv > crit.val(r) : bv < crit.val(r));
+    });
+    if (!bestIsUnique) {
+      chain.push({
+        crit: crit,
+        bestVal: bv,
+        cmpVal: cmp,
+        status: "amb"
+      });
+      return {
+        kind: "ambiguous",
+        best: best,
+        chain: chain,
+        col: null
+      };
+    }
+    chain.push({
+      crit: crit,
+      bestVal: bv,
+      cmpVal: cmp,
+      status: "win"
+    });
+    return {
+      kind: "decided",
+      best: best,
+      chain: chain,
+      criterion: crit,
+      bestVal: bv,
+      cmpVal: cmp,
+      col: crit.col
+    };
+  }
+  return {
+    kind: medSkipped ? "medskip" : "tie",
+    best: best,
+    chain: chain,
+    col: null
+  };
+}
+
+function xrayBgpChainHtml(chain) {
+  if (!chain || !chain.length) return "";
+  var parts = chain.map(function(st) {
+    var op = st.crit.dir > 0 ? ">" : "<";
+    if (st.status === "skip") {
+      return '<span class="bgp-step-tie">' + st.crit.label + " (skipped: diff AS)</span>";
+    }
+    if (st.status === "tie") {
+      var t = st.crit.key === "origin" ? st.crit.label + " (tie)" : st.crit.label + " " + st.bestVal + "=" + st.cmpVal;
+      return '<span class="bgp-step-tie">' + t + "</span>";
+    }
+    var cmpTxt = st.crit.key === "origin" ? st.crit.label : st.crit.label + " " + st.bestVal + op + st.cmpVal;
+    return '<span class="bgp-step-' + (st.status === "win" ? "win" : "amb") + '">' + cmpTxt + (st.status === "win" ? " ✅" : " ?") + "</span>";
+  });
+  return '<div class="bgp-chain">' + parts.join(" → ") + "</div>";
+}
+
+function xrayBgpBracketEnabled() {
+  var cfg = window._scenarioConfig || {};
+  return !!(cfg.xray && cfg.xray.bgp_decision_bracket);
+}
+
+function xrayBgpTier3Href(prefix, grp) {
+  try {
+    var routes = (grp || []).map(function(r, i) {
+      return {
+        id: String.fromCharCode(65 + i),
+        via: "via " + (r.nexthop || "?"),
+        as: "AS" + (xrayBgpNeighborAS(r) || "?"),
+        attrs: {
+          weight: xrayBgpNum(r.weight, 0),
+          localpref: xrayBgpNum(r.locprf, 100),
+          aspathlen: r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0,
+          origin: {
+            i: 1,
+            e: 1,
+            "?": 1
+          }[r.origin] ? r.origin : "i",
+          med: xrayBgpNum(r.metric, 0),
+          ebgp: false,
+          routerid: r.router_id || "0.0.0." + (i + 1)
+        }
+      };
+    });
+    var json = JSON.stringify({
+      prefix: prefix,
+      routes: routes
+    });
+    var b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, "-").replace(/\//g, "_");
+    var lang = window._xrayLang === "en" ? "en" : "ja";
+    return "/static/decision-bracket.html?d=" + b64 + "&lang=" + lang;
+  } catch (e) {
+    return "/static/decision-bracket.html";
+  }
+}
+
+function xrayBgpBracketPopHtml(dec, tier3Href) {
+  var rows = (dec.chain || []).map(function(st) {
+    var op = st.crit.dir > 0 ? "&gt;" : "&lt;";
+    if (st.status === "win") {
+      var vv = st.crit.key === "origin" ? "" : "<b>" + st.bestVal + " " + op + " " + st.cmpVal + "</b> ";
+      return '<div class="bp-row win"><span class="k">' + st.crit.label + '</span><span class="v">' + vv + "✅</span></div>";
+    }
+    var vtxt = st.crit.key === "origin" || st.status === "skip" ? st.status === "skip" ? "(skipped)" : "=" : st.bestVal + " = " + st.cmpVal;
+    return '<div class="bp-row tie"><span class="k">' + st.crit.label + '</span><span class="v">' + vtxt + "</span></div>";
+  }).join("");
+  var head = dec.criterion.label + " (" + dec.bestVal + " " + (dec.criterion.dir > 0 ? "&gt;" : "&lt;") + " " + dec.cmpVal + ")";
+  return '<div class="de-bgp-bracket-pop" onclick="event.stopPropagation()">' + '<div class="bp-h">' + head + '<button type="button" class="bp-x" onclick="xrayBgpCloseBracketPop(event)" title="close (ESC)">✕</button></div>' + rows + '<a class="bp-more" href="' + tier3Href + '" target="_blank" rel="noopener" onclick="event.preventDefault();event.stopPropagation();window.open(this.href,\'_blank\',\'noopener\');">' + (window._xrayLang === "en" ? "See all decision steps" : "判定の全ステップを見る") + " ⧉</a>" + "</div>";
+}
+
+function xrayBgpCloseBracketPop(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  var all = document.querySelectorAll(".de-bgp-bracket-pop.open");
+  for (var i = 0; i < all.length; i++) all[i].classList.remove("open");
+  document.removeEventListener("click", xrayBgpOutsideBracketPop);
+  document.removeEventListener("keydown", xrayBgpEscBracketPop);
+}
+
+function xrayBgpToggleBracketPop(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  var btn = e && e.currentTarget;
+  var reason = btn && btn.closest ? btn.closest(".bgp-reason") : null;
+  var pop = reason && reason.nextElementSibling && reason.nextElementSibling.classList.contains("de-bgp-bracket-pop") ? reason.nextElementSibling : null;
+  if (!pop) {
+    var panel = document.getElementById("de-bgp-decision-panel");
+    pop = panel ? panel.querySelector(".de-bgp-bracket-pop") : null;
+  }
+  if (!pop) return;
+  var willOpen = !pop.classList.contains("open");
+  var all = document.querySelectorAll(".de-bgp-bracket-pop.open");
+  for (var i = 0; i < all.length; i++) all[i].classList.remove("open");
+  if (willOpen) {
+    pop.classList.add("open");
+    setTimeout(function() {
+      document.addEventListener("click", xrayBgpOutsideBracketPop);
+      document.addEventListener("keydown", xrayBgpEscBracketPop);
+    }, 0);
+  } else {
+    xrayBgpCloseBracketPop();
+  }
+}
+
+function xrayBgpBracketKey(e) {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    xrayBgpToggleBracketPop(e);
+  }
+}
+
+function xrayBgpReasonHtml(p, dec, grp) {
+  if (!dec) return "";
+  if (dec.kind === "nobest") return '<div class="bgp-reason bgp-reason-note">◦ ' + p + " → no valid path</div>";
+  if (dec.kind === "single") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>only path</b> (no alternatives)</div>";
+  if (dec.kind === "local") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>locally originated</b> (always preferred)</div>";
+  var chainHtml = xrayBgpChainHtml(dec.chain);
+  if (dec.kind === "decided") {
+    var op = dec.criterion.dir > 0 ? ">" : "<";
+    var cmp = dec.criterion.key !== "origin" && dec.cmpVal !== null ? " (" + dec.bestVal + " " + op + " " + dec.cmpVal + ")" : "";
+    if (xrayBgpBracketEnabled()) {
+      var _href = xrayBgpTier3Href(p, grp);
+      var _btn = '<span class="bgp-crit-btn" role="button" tabindex="0" onclick="xrayBgpToggleBracketPop(event)" onkeydown="xrayBgpBracketKey(event)">' + dec.criterion.label + "</span>";
+      return '<div class="bgp-reason">★ ' + p + " → best path by " + _btn + cmp + "</div>" + chainHtml + xrayBgpBracketPopHtml(dec, _href);
+    }
+    return '<div class="bgp-reason">★ ' + p + " → best path by <b>" + dec.criterion.label + "</b>" + cmp + "</div>" + chainHtml;
+  }
+  if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>" + chainHtml;
+  if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → all attributes equal — <b>tiebreak by Router ID</b></div>" + chainHtml;
+  return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>no single decider</b> — lower-level tiebreak</div>" + chainHtml;
+}
+
+function xrayBuildBgpView(routes) {
+  var order = [], groups = {};
+  routes.forEach(function(r) {
+    var p = r.prefix || "";
+    if (!groups[p]) {
+      groups[p] = [];
+      order.push(p);
+    }
+    groups[p].push(r);
+  });
+  var html = '<table class="de-bgp-table"><thead><tr>' + "<th>St</th><th>Network</th><th>Next-Hop</th><th>Metric</th><th>LocPrf</th><th>Weight</th><th>Path</th>" + "</tr></thead><tbody>";
+  var reasons = "";
+  order.forEach(function(p) {
+    var grp = groups[p];
+    var dec = xrayBgpDecision(grp);
+    var decCol = dec && dec.kind === "decided" ? dec.col : null;
+    grp.forEach(function(rt) {
+      var st = rt.status || "";
+      var isBest = st.indexOf(">") !== -1;
+      var w = rt.weight === 0 || rt.weight ? rt.weight : "";
+      var pathDisp = (rt.as_path || "") + (rt.origin ? (rt.as_path ? " " : "") + rt.origin : "");
+      var lpDisp = (rt.locprf || "") !== "" ? rt.locprf : '<span class="bgp-default">100</span>';
+      function cell(colName, val) {
+        return "<td" + (isBest && decCol === colName ? ' class="bgp-decider"' : "") + ">" + val + "</td>";
+      }
+      html += "<tr" + (isBest ? ' class="bgp-best"' : "") + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + (rt.prefix || "") + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";
+    });
+    reasons += xrayBgpReasonHtml(p, dec, grp);
+  });
+  html += "</tbody></table>";
+  if (reasons) reasons += '<div class="bgp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED</div>';
+  return {
+    table: html,
+    decision: reasons
+  };
+}
+
+function _xrayRenderLinkStatus(d, qid) {
+  if (!d.success) return;
+  var _cfg = window._scenarioConfig || {};
+  var _sd = _cfg.check_flow && _cfg.check_flow.shutdown_link || null;
+  var links = d.links || {};
+  window._xrayLiveLinks = links;
+  var map = {
+    r1_r3: "link-r1-r3",
+    r1_r2: "link-r1-r2",
+    r2_r3: "link-r2-r3"
+  };
+  for (var key in map) {
+    var el = document.getElementById(map[key]);
+    if (!el) continue;
+    var info = links[key] || {};
+    var up = info.if_status === "up";
+    el.className = "link-indicator " + (up ? "up" : "down");
+    el.textContent = (up ? "🟢" : "🔴") + " " + (up ? "UP" : "DOWN");
+  }
+  var sdBtn = document.getElementById("shutdown-btn");
+  if (sdBtn && _sd && _sd.down_key) {
+    var target = links[_sd.down_key] || {};
+    var targetDown = target.if_status === "down";
+    if (targetDown) {
+      if (_sd.label_restore) sdBtn.textContent = _sd.label_restore;
+      sdBtn.className = "shutdown-btn restore";
+    } else {
+      if (_sd.label) sdBtn.textContent = _sd.label;
+      sdBtn.className = "shutdown-btn";
+    }
+    sdBtn._targetDown = targetDown;
+  }
+  if (window._xrayTriLinkMap && typeof xraySetSvgLine === "function" && !document.body.classList.contains("is-xray-mode") && !document.body.classList.contains("is-replaying")) {
+    for (var _lk in map) {
+      if (!links[_lk]) continue;
+      var _lid = window._xrayTriLinkMap[_lk];
+      if (!_lid) continue;
+      xraySetSvgLine(_lid, links[_lk].if_status === "up" ? "up" : "if-down");
+    }
+  }
 }
