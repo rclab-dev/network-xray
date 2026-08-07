@@ -7967,6 +7967,37 @@ function xrayEnsureBgpTableBox(config) {
 
 var _DE_BGP_FS_STEPS = [ .85, 1, 1.15, 1.3, 1.5, 1.75 ];
 
+function _deBgpApplyFontSize(v) {
+  if (v == null) {
+    v = parseFloat(localStorage.getItem("routecrush_de_bgp_fs"));
+    if (!(v > 0)) v = 1;
+  }
+  [ "de-bgp-panel", "de-bgp-decision-panel" ].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.setProperty("--de-bgp-fs", String(v));
+  });
+}
+
+function deBgpFontZoom(e, dir) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  var cur = parseFloat(localStorage.getItem("routecrush_de_bgp_fs"));
+  if (!(cur > 0)) cur = 1;
+  var i = 0, best = 1e9;
+  for (var k = 0; k < _DE_BGP_FS_STEPS.length; k++) {
+    var d = Math.abs(_DE_BGP_FS_STEPS[k] - cur);
+    if (d < best) {
+      best = d;
+      i = k;
+    }
+  }
+  i = Math.max(0, Math.min(_DE_BGP_FS_STEPS.length - 1, i + dir));
+  var v = _DE_BGP_FS_STEPS[i];
+  try {
+    localStorage.setItem("routecrush_de_bgp_fs", String(v));
+  } catch (_e) {}
+  _deBgpApplyFontSize(v);
+}
+
 function xrayRenderBgpTableReplay() {
   var panel = document.getElementById("de-bgp-panel");
   if (!panel) return;
