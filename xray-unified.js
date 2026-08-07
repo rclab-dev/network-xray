@@ -1,17 +1,16 @@
 /*
- * xray-unified.js — 統一 X-Ray エンジン(可変角) S1 seed
- * [worker1 · skin Phase2 · 2026-07-16] 事業主 de-risk PASS 後の最初の実コード。
+ * xray-unified.js — unified variable-angle X-Ray renderer.
  *
- * ★ADDITIVE 厳守: 既存 xray-core.js `xrayRenderDeepEngine` / NodePanel `xray-node-panel.js` を
- *   1byte も触らない完全独立の新経路。既存描画は退行ゼロ(構造的担保)。
- * ★S1 スコープ = radial base (xrayRadialGeometry) + tunnelMode:'concentric'。
- *   他軸(cylinder 実描画 / full panel / glyph 球の cinema 版)は S2/S3。ここでは軸キーを受けるが
- *   S1 で意味のある差 = tunnelMode(single⇄concentric) + engineShape(circle⇄cylinderヒント) + arrowMode。
+ * Fully independent, additive path: it does not modify xray-core.js `xrayRenderDeepEngine`
+ * or the node panel (`xray-node-panel.js`), so existing rendering is unchanged.
+ * Scope = radial base (xrayRadialGeometry) + tunnelMode:'concentric'. Other axes accept keys
+ * here; the meaningful differences are tunnelMode (single/concentric), engineShape
+ * (circle/cylinder hint), and arrowMode.
  *
- * データモデル(per-LINK 複数プロト層・§3 schema):
+ * Data model (per-LINK protocol layers; see DATA-CONTRACT.md §3):
  *   node = { target, links:[ {iface, peer, protocols:[{proto,up}], selected} ], positions:{name:{x,y}} }
- *   単一proto(旧 <peer>_proto)からの後方互換導出は fromLegacyState() が担う。
- * 軸(taste・RESERVED は worker7 確定待ち):
+ *   Backward-compat derivation from a single scalar proto is handled by fromLegacyState().
+ * Taste axes (see SKIN-CONTRACT.md §4):
  *   { engineShape:'circle'|'cylinder', processGlyph:'none'|'ball', arrowMode:'mono'|'proto',
  *     tunnelMode:'single'|'concentric', panelContent:'none'|'full', protocolOrder:'bgp-top'|'ospf-top' }
  */
@@ -20,7 +19,7 @@
 
   var PRESETS = {
     cinema: { engineShape: 'rect',     processGlyph: 'outside', arrowMode: 'proto', tunnelMode: 'concentric', panelContent: 'full', protocolOrder: 'bgp-top' },
-    // ★light も tunnelMode:'concentric'(2026-07-16 事業主 (b)確定): 同居 truth(同心2層)は簡素モードでも
+    // light also uses tunnelMode:'concentric': co-location truth (concentric 2 layers) is kept even in the calm mode.
     //   常時保持。collapse するのは richness(cylinder/glow/太さ/label/glyph)のみ=「同居は truth であって
     //   richness でない」。'single' は 1プロト/link を1色に畳む別 taste(既定 preset では使わない)。
     light:  { engineShape: 'circle',   processGlyph: 'none', arrowMode: 'mono',  tunnelMode: 'concentric', panelContent: 'none', protocolOrder: 'bgp-top' }
@@ -57,7 +56,7 @@
   // ── per-link protocol 層 ──
   // ★トンネルの層順(outer→inner)= DATA 真実 = protocols[] の配列順(DATA-CONTRACT §4.7)。
   //   ここでは並べ替えない(依存 up→down は collector/データ側が保証)。`protocolOrder`(taste)は
-  //   トンネルに効かせず、プロセス球スタックの視覚反転のみ(worker7 SKIN-CONTRACT v2 2026-07-16 確定)。
+  //   it does not affect tunnels, only the visual flip of the process-ball stack (SKIN-CONTRACT.md v2).
   function linkLayers(link) {
     return (link.protocols || []).filter(function (p) { return p.up; }); // 配列順 = outer→inner
   }
@@ -87,15 +86,15 @@
     }
     var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" class="xu-fig">';
 
-    // ★z-order(2026-07-17 事業主): ① links を先(背面)→ ② ノード本体(前面)→ ③凡例/矢印/ラベル(face 上)。
+    // z-order: (1) links first (behind) -> (2) node body (front) -> (3) legend/arrow/label (above face).
     //   = トンネル/リンクがノード face を覆わない(ノード本体が最後に上書き)。
 
-    // ── ① links(背面): ★シアン物理(中心・最細)+ プロト層(外側)+ DOWN=赤点線(2026-07-17 事業主 spec 是正) ──
+    // ── (1) links (behind): cyan physical (center, thinnest) + protocol layers (outer) + DOWN = red dotted ──
     //   同心層(外→内)= BGP紫(最外・太)→ OSPF緑 → シアン物理(中心・最細・最上)。array順(outer→inner §4.7)に沿う。
     //   物理シアン = `--xto-link`(スキン色)/ 物理 DOWN = `--xto-linkDown`(赤・新スキン色)。
     links.forEach(function (L) {
       var a = L.angle, r0 = bodyEdge(a), ex = pt(a, R), layers = linkLayers(L.link), linkUp = L.link.up !== false, markerCol;
-      // ★パイプ断面: 各層を link に perpendicular で ±offset した平行線にして層間に gap(2026-07-17 事業主 spec)。
+      // pipe cross-section: each layer is a parallel line offset ±perpendicular to the link, with a gap between layers.
       //   中心=cyan物理(1本)→ gap → OSPF(±off の2本)→ gap → BGP(±off の2本・最外)。inner→outer 対称リング。
       var perp = [-Math.sin(a), Math.cos(a)];
       function offLn(off, col, w, glow) { return ln([r0[0] + perp[0] * off, r0[1] + perp[1] * off], [ex[0] + perp[0] * off, ex[1] + perp[1] * off], col, w, glow); }
@@ -111,7 +110,7 @@
           s += offLn(+off, protoCol(p.proto), lw, rich);
           s += offLn(-off, protoCol(p.proto), lw, rich);
         });
-        markerCol = 'var(--xto-link,#00e5ff)';   // ★IF マーカー = 物理リンク色(UP=シアン)(2026-07-17 事業主)
+        markerCol = 'var(--xto-link,#00e5ff)';   // IF marker = physical link color (UP = cyan)
       }
       if (ax.panelContent === 'full') {
         var lp = pt(a, R + 6), anc = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
@@ -130,7 +129,7 @@
       s += '<ellipse cx="' + CX + '" cy="' + cyB.toFixed(1) + '" rx="' + cw.toFixed(1) + '" ry="' + (cw * 0.34).toFixed(1) + '" fill="none" stroke="var(--xto-fg,#e6f2f5)" stroke-width="1" opacity="0.18"/>';
     }
 
-    // ── ③ immersive: リンクを内部円柱(routing engine 核)へ接続(2026-07-17 事業主・潜入=リンクが核に刺さる) ──
+    // ── (3) immersive: connect links into the inner cylinder (routing engine core) — links plug into the core ──
     //   cyan connector(body縁→円柱縁)+ 接続 orb。body の後(前面)ゆえ body に覆われず見える。imm 限定=showcase 不変。
     if (imm && shape === 'rect' && rich) {
       var ccw = HW * 0.4, chh = HH * 0.44;
@@ -150,9 +149,9 @@
     });
 
     // ── ③ processGlyph = ●+色文字プロセス凡例。'none'|'inside'|'outside'(placement を1軸に折込) ──
-    // ★大ボール廃止(2026-07-16 事業主・phallic 回避)。established=フル色 / not-established=pale。
+    // Compact legend dots (no oversized ball). established = full color / not-established = pale.
     //   ★inside=body 左上内側縦スタック / outside=body 上辺の外の横並び(radial 矢印の放射経路と重複回避
-    //   =2026-07-16 事業主 refinement)。protocolOrder = 凡例順序のみ(トンネル層順=DATA §4.7 不干渉)。
+    //   protocolOrder = legend order only (tunnel layer order = DATA-CONTRACT §4.7, untouched).
     if (ax.processGlyph === 'inside' || ax.processGlyph === 'outside') {
       var order = [], rank = { bgp: 2, ospf: 1, static: 0 }, upset = {};
       (node.links || []).forEach(function (lk) { (lk.protocols || []).forEach(function (p) { if (order.indexOf(p.proto) < 0) order.push(p.proto); if (p.up) upset[p.proto] = 1; }); });
@@ -166,7 +165,7 @@
           s += '<text x="' + (lx + 8).toFixed(1) + '" y="' + ly.toFixed(1) + '" fill="' + col + '" font-size="10.5" font-family="monospace"' + (up ? '' : ' opacity="0.7"') + '>' + p.toUpperCase() + '</text>';
         });
       } else { // outside: ★リンクの無い最大角度ギャップ(空セクタ)に凡例を置く = 矢印もビームも非交差(動的・
-        //   トポロジ非依存)。3+ピア放射でもリンクの隙間に自動で逃げる(2026-07-17 事業主・リンク非交差要件)。
+        //   topology-independent). Even with 3+ radial peers the legend auto-escapes into the link gap (no link crossing).
         var angs = links.map(function (L) { return L.angle; }).sort(function (a, b) { return a - b; });
         var gapMid = -Math.PI / 2, gapSize = -1;                    // 既定=上(リンク0本時)
         for (var gi = 0; gi < angs.length; gi++) {
@@ -184,12 +183,12 @@
     }
 
     // ── ④ forwarding 矢印(body 内→選択 out-iface の body 縁。radial=抜ける側) ──
-    // ★forwarding ゲート(2026-07-17 事業主): route 未解決(初期/DROP)時は矢印/ping を出さない
+    // forwarding gate: when the route is unresolved (initial / DROP), no arrow / ping is drawn
     //   (opt.forwarding===false)。既定(未指定)=true=従来通り。hello は adjacency ゆえ別(OSPF up で出す)。
     var fwd = !(axes && axes.forwarding === false);
     var selL = links.filter(function (L) { return L.link.selected; })[0] || links[0];
     if (selL && fwd) {
-      // ★矢印は縁の IF マーカー(8px)手前で止める(重複回避・2026-07-17 事業主)
+      // stop the arrow just short of the edge IF marker (8px) to avoid overlap
       var oa = selL.angle, _e = bodyEdge(oa), ti = [_e[0] - Math.cos(oa) * 9, _e[1] - Math.sin(oa) * 9], hs = 9;
       var from = pt(oa, (shape === 'rect' ? Math.min(HW, HH) : RER) * 0.2);
       var acol = ax.arrowMode === 'proto' ? protoCol((linkLayers(selL.link)[0] || {}).proto) : 'var(--xto-ok,#39ff14)';
@@ -218,7 +217,7 @@
       links.forEach(function (L) {
         if (L.link.up === false) return;
         if (!(L.link.protocols || []).some(function (p) { return p.proto === 'ospf' && p.up; })) return;
-        // ★hello レーン = link(cyan中心)↔OSPFトンネル(緑・±6)の "隙間"(±~3)に置く(2026-07-17 事業主・意味論):
+        // hello lanes sit in the "gap" (±~3) between the link (cyan center) and the OSPF tunnel (green ±6):
         //   トンネル(緑)は hello をやり取りした "結果" であって orb の走るレーンではない → 機構(hello)と
         //   結果(tunnel)を別チャンネルに分離。将来 hello有×tunnel無 / tunnel有×hello無 で因果・失敗を可視化。
         var ha = L.angle, perp = [-Math.sin(ha), Math.cos(ha)], off = rich ? 3 : 2.5, hc = 'var(--xto-idle,#ff8c00)';
