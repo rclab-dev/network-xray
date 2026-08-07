@@ -2,10 +2,9 @@
 <html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Variable-angle DeepDive — spine-leaf hero (xray-core)</title>
-<!-- [leaf-hero 2026-08-07 · worker1] 非対称 per-peer 角度 hero。renderer=xray-unified.js(XrayUnified.renderSvg・
-     per-link atan2 from positions)。座標 SSoT=worker4 clab leaf1(→spine1 -66.5°/→spine2 -32.6°=非対称扇)。
-     radial↔linear トグル=「same data, your taste」(worker7)。de-side-wrap(±45 rigid)は使わない。
-     ★OSS gh-pages push は事業主目視 gate 後。 -->
+<!-- Variable-angle spine-leaf hero. Renderer: xray-unified.js (XrayUnified.renderSvg,
+     per-link atan2 from node positions). A leaf reaches each spine at its real bearing
+     (an asymmetric fan), with a radial <-> linear toggle. -->
 <style>
   :root{ --xto-bg:#0d1620; --xto-fg:#e6f2f5; --xto-phys:#41515c; --xto-accent:#7fb2c2;
          --xto-ospf:#39ff14; --xto-bgp:#a855f7; --xto-static:#ffb347; --xto-ok:#39ff14;
@@ -56,8 +55,8 @@
 
 <script src="xray-unified.js"></script>
 <script>
-// 座標 SSoT (worker4 clab leaf1): 角度は positions の atan2 のみ使用 (scale/translation 非依存)。
-//   leaf1(200,320) → spine1(300,90) = atan2(-230,100) = -66.5° / spine2(560,90) = atan2(-230,360) = -32.6°.
+// Node positions. Only the direction (atan2) is used, so scale/translation don't matter.
+//   leaf1(200,320) -> spine1(300,90) = atan2(-230,100) = -66.5deg / spine2(560,90) = -32.6deg.
 var NODE = {
   target: 'leaf1',
   positions: { leaf1:{x:200,y:320}, spine1:{x:300,y:90}, spine2:{x:560,y:90} },
