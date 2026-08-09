@@ -26,7 +26,7 @@
   }
 
   // The engine disables ALL page buttons/links while is-xray-mode is on (it neutralizes
-  // RouteCrushLab's portal chrome). For a standalone library that would break the host
+  // a host product's portal chrome). For a standalone library that would break the host
   // page's own controls, so we re-enable them (everything except the router→ttyd links).
   // Injected once; the repeated class out-specifies the engine's !important rule.
   function _ensureInteractive() {
@@ -62,7 +62,7 @@
   }
 
   // Seam C — the DeepDive "BGP Table" box (the control-plane RIB shown inside the cylinder,
-  // next to the Routing Engine panel). The engine ships its CSS but in RouteCrushLab the rows
+  // next to the Routing Engine panel). The engine ships its CSS but in the full product the rows
   // come from the server; in a standalone page you supply them here. `src` is an array of
   // { prefix, nexthop, status } rows, or a function(state) -> rows so the table can reflect the
   // current snapshot (e.g. empty until the BGP session is Established). Repaints on applyState.
@@ -71,7 +71,7 @@
     if (!_bgpSrc) return null;
     return (typeof _bgpSrc === 'function' ? _bgpSrc(_lastState) : _bgpSrc) || [];
   }
-  // --- Best-Path Decision (ported from RCL xray_core xrayBuildBgpView) ---
+  // --- Best-Path Decision (best-path evaluation view) ---
   // Generic, hardcode-free: group candidate paths per prefix and explain WHY the best won (Weight →
   // LocPrf → AS-Path → Origin → MED tie-break). Reads the clab collector's bgp_routes shape.
   var _BGP_CRIT = [
@@ -252,8 +252,8 @@
       + '.de-bgp-panel .de-bgp-table th{font-size:calc(11px * var(--xbgp-fs,1))}'
       + '.de-bgp-decision-panel .bgp-reason{font-size:calc(12px * var(--xbgp-fs,1))}'
       + '.de-bgp-decision-panel .bgp-chain,.de-bgp-decision-panel .bgp-legend{font-size:calc(10px * var(--xbgp-fs,1))}'
-      // Decision panel position — port of RCL fb④ (worker4, dev/prod live): keep it clear of the BGP
-      // Table box (both default to left:calc(50%+100px); table top-anchored, decision bottom-anchored).
+      // Decision panel position: keep it clear of the BGP Table box (both default to
+      // left:calc(50%+100px); table top-anchored, decision bottom-anchored).
       // !important so it wins over the engine default AND the older JS measurement below (now inert).
       + '.xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto!important;bottom:64px!important;z-index:40!important;left:calc(50% + 100px);right:auto}'
       + '.xbgp-fs-ctl{float:right;font-weight:400}'
@@ -304,14 +304,14 @@
       + '<button data-fs="dn" title="smaller text">A−</button><button data-fs="up" title="larger text">A+</button></span></div>'
       + '<div class="de-bgp-rows">' + body + '</div>';
     // Don't repaint the decision panel while a bracket pop is open (a poll tick would wipe it) —
-    // same guard as RCL's showDecision (.de-bgp-bracket-pop.open). bgp-paste doesn't poll; noc-live does.
+    // same guard as the engine's decision repaint (.de-bgp-bracket-pop.open). bgp-paste doesn't poll; noc-live does.
     var popOpen = !!document.querySelector('.de-bgp-bracket-pop.open');
     if (decision) { if (!popOpen) dpanel.innerHTML = '<div class="de-title">Best-Path Decision</div><div class="de-bgp-decision-rows">' + decision + '</div>'; dpanel.style.display = ''; }
     else { if (!popOpen) dpanel.style.display = 'none'; }
     _bgpFontInit();
     var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs || 1);
-    // Decision box position is now CSS-driven (RCL fb④ port in _bgpInjectCss): bottom:64px + z-index:40,
-    // clear of the Table box. (Replaces the old measure-and-stack, which the owner saw overlapping.)
+    // Decision box position is now CSS-driven (see _bgpInjectCss): bottom:64px + z-index:40,
+    // clear of the Table box. (Replaces the old measure-and-stack, which could overlap.)
   }
   function _bgpFontInit() {
     if (window.__xbgpFsInit) return; window.__xbgpFsInit = true; if (window.__xbgpFs == null) window.__xbgpFs = 1;
@@ -339,7 +339,7 @@
     catch (e) {}
   }
   // The engine's built-in cylinder close button ships a Japanese label ("✕ 閉じる").
-  // For a language-neutral standalone library, relabel it to English. (RCL is unaffected —
+  // For a language-neutral standalone library, relabel it to English. (the full product is unaffected —
   // it doesn't use this facade.) Idempotent; safe to call whenever the cylinder (re)renders.
   function _relabelClose() {
     var btns = document.querySelectorAll('.xray-focus-close');
@@ -347,9 +347,9 @@
   }
 
   // --- i18n: translate the engine's remaining built-in Japanese UI to English at runtime.
-  // The engine (xray-core.js) is shared with a Japanese product (RouteCrushLab); this facade
+  // The engine (xray-core.js) is shared with a Japanese product; this facade
   // replaces Japanese DOM text/title strings via the window.xrayI18n dictionary (load xray-i18n.js).
-  // No-op if absent. RCL does not use this facade.
+  // No-op if absent. The full product does not use this facade.
   var _i18nKeys = null, _i18nObserver = null;
   var _i18nRe = /[①-⓿★☆✕　-ヿ㐀-鿿＀-￯]/;
   function _i18nReplace(s) {
@@ -387,6 +387,30 @@
     _i18nObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 
+  // Drive the unified radial DeepDive overlay for radial-capable configs. A config is
+  // radial-capable when it carries node positions (config.positions from a .clab.yml graph,
+  // used for real per-link bearings) or is flagged deep_engine:'unified' (canonical even fan).
+  // The full product drives this from a live poll; this static facade kicks it once, after the
+  // zoom settles (is-xray-deep applied), so node-click DeepDive renders the radial engine.
+  function _driveUnified() {
+    try {
+      var cfg = _lastConfig || window._scenarioConfig || {};
+      var capable = (cfg.positions && Object.keys(cfg.positions).length) ||
+        (cfg.xray && cfg.xray.deep_engine === 'unified') || cfg.deep_engine === 'unified';
+      if (!capable) return;
+      setTimeout(function () {
+        try {
+          // The engine helpers look the container up by id; demos mark it with the class only, so give it the id.
+          var de = document.querySelector('.xray-deep-engine');
+          if (de && !de.id) de.id = 'xray-deep-engine';
+          if (typeof window._xrayUnifiedMount === 'function') window._xrayUnifiedMount(cfg);
+          window._xrayUnifiedLastSig = null;
+          if (typeof window._xrayRenderUnifiedLive === 'function') window._xrayRenderUnifiedLive(window._lastXrayState || {});
+        } catch (e) {}
+      }, 560);
+    } catch (e) {}
+  }
+
   function openDeepDive() {
     document.body.classList.add('is-xray-mode');
     if (typeof window.xrayDeepDiveZoomIn === 'function') window.xrayDeepDiveZoomIn();
@@ -394,6 +418,7 @@
     _relabelClose();    // English close label
     _paintBgpTable();   // Seam C: (re)inject the BGP table now the cylinder is open
     _localize(document.body);
+    _driveUnified();    // radial engine for capable configs (positions / deep_engine:'unified')
     _emitDeep(true);
   }
   // Zoom back out to the overview.
@@ -493,7 +518,7 @@
 
     host.innerHTML = window.xrayRenderTopology(config);
     if (!opts.interactive) {
-      // Router boxes carry RouteCrushLab's live-terminal (ttyd) links; inert by default.
+      // Router boxes may carry live-terminal (ttyd) links; inert by default.
       host.querySelectorAll('a.topo-box-link').forEach(function (a) {
         a.removeAttribute('href'); a.removeAttribute('target');
       });
@@ -509,7 +534,7 @@
     _relabelClose();   // English close label on the pre-rendered cylinder
     _localizeLive();
 
-    // RCL UX: click the target router box in the overview to zoom into its DeepDive
+    // UX: click the target router box in the overview to zoom into its DeepDive
     // (in addition to any explicit button). Only when a cylinder host is present.
     if (host.querySelector('a.topo-box-link') && document.querySelector('.xray-deep-engine')) {
       var tnode = document.getElementById('topo-node-' + (target.id || 'r1'));
@@ -552,9 +577,9 @@
   };
 
   // Drop the node "Ping:" overlay line on paste demos: a standalone paste tool can't know the ping
-  // target (RCL knows Q21 = 8.8.8.8, but arbitrary pasted output carries no destination), so ping_ok is
+  // target (the full product knows its lab's destination, but arbitrary pasted output carries none), so ping_ok is
   // always false → a misleading "Ping: FAIL". Wrap the two CORE line generators (loaded before this
-  // facade) to filter that line; the BGP/OSPF status lines stay. RCL never loads this file → unaffected.
+  // facade) to filter that line; the BGP/OSPF status lines stay. The full product never loads this file → unaffected.
   ['xrayBgpLogicLines', 'xrayOspfLogicLines'].forEach(function (fn) {
     var orig = window[fn];
     if (typeof orig === 'function') {

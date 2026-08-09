@@ -68,12 +68,21 @@ topology:
     r1:
       kind: linux
       image: frrouting/frr:latest
+      labels:
+        graph-posX: "300"
+        graph-posY: "110"
     r2:
       kind: linux
       image: frrouting/frr:latest
+      labels:
+        graph-posX: "150"
+        graph-posY: "330"
     r3:
       kind: linux
       image: frrouting/frr:latest
+      labels:
+        graph-posX: "540"
+        graph-posY: "290"
   links:
     - endpoints: ["r1:eth1", "r2:eth1"]
     - endpoints: ["r2:eth2", "r3:eth1"]
@@ -126,8 +135,8 @@ view.openDeepDive();                                    <span class="c">// insid
   };
   document.addEventListener('xraycore:deepdive', function (e) { setDeep(!!(e.detail && e.detail.open)); });
   window.__scene = function (which) {
-    // renderTopology は __render で一度だけ。シーン切替は setTopology+applyState で更新する
-    // (失敗デモパターン=毎回 renderTopology で再描画すると順序依存で blank 化した)。
+    // renderTopology runs once in __render; scene switches update via setTopology+applyState
+    // (a failure pattern: re-rendering with renderTopology every time caused order-dependent blanking).
     if (!view || !scene) return; cur = which;
     view.setTopology(scene.topos[which]);
     view.setTrace({ success: true, reached: which === 'normal', hops: [] });
@@ -159,7 +168,7 @@ view.openDeepDive();                                    <span class="c">// insid
       document.getElementById('info').innerHTML = 'Detected: <b>' + cfg._clab_source.node_count + ' nodes</b> / <b>' +
         cfg._clab_source.link_count + ' links</b> → <b>' + shape + '</b> · target = <b>' + (scene._meta.target) + '</b> · protocol = <b>OSPF</b>';
       document.getElementById('scene').style.display = '';
-      // renderTopology はここで一度だけ (新しい貼り付けごと)。以後の Normal/Link Down は __scene が更新。
+      // renderTopology runs once here (per new paste). Subsequent Normal/Link Down updates go through __scene.
       document.body.classList.remove('is-xray-deep');
       view = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topos.normal, trace: { success: true, reached: true, hops: [] } });
       cur = null; setDeep(false);

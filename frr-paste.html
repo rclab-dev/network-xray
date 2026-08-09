@@ -161,6 +161,7 @@ view.openDeepDive();</pre>
       if (r.config.nodes.length < 2) throw new Error('no OSPF neighbors parsed — is this FRR `show ip route` + `show ip ospf neighbor`?');
       document.getElementById('err').style.display = 'none';
       document.body.classList.remove('is-xray-deep');   // every render returns to the overview
+      r.config.deep_engine = 'unified';   // opt in to the unified variable-angle DeepDive renderer
       view = xrayCore.renderTopology('#topo', r.config, { topology: r.topo, trace: r.trace });
       view.applyState(r.state);
       setDeepLabel(false);

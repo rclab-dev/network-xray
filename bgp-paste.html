@@ -165,6 +165,7 @@ view.openDeepDive();</pre>
         try { view.closeDeepDive(); } catch (e) {}
       }
       document.body.classList.remove('is-xray-deep');
+      r.config.deep_engine = 'unified';   // opt in to the unified variable-angle DeepDive renderer
       view = xrayCore.renderTopology('#topo', r.config, { topology: r.topo, trace: r.trace });
       view.setBgpTable(r.bgpRows);
       view.applyState(r.state);
