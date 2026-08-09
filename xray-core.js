@@ -8120,9 +8120,12 @@ window.xrayBuildFaultState = function(state, tracePattern) {
     fs.ospf_active_on_interface = true;
     fs.peer_sending_hello = true;
     if (fs.route_resolution) {
-      fs.route_resolution.resolved = false;
       fs.route_resolution.protocol = "static";
       fs.route_resolution.matched_prefix = fs.route_resolution.target ? fs.route_resolution.target + "/32" : "3.3.3.3/32";
+      if (!fs.route_resolution.resolved && (fs.route_resolution.out_iface || fs.r3_iface)) {
+        fs.route_resolution.resolved = true;
+        if (!fs.route_resolution.out_iface && fs.r3_iface) fs.route_resolution.out_iface = fs.r3_iface;
+      }
     }
     break;
 
@@ -8784,6 +8787,7 @@ function _xrayOspfBucket(fsm) {
 function _xrayOspfFsmForIface(s, iface, ifKeys) {
   var ns = String(s && s.neighbor_state || "");
   if (!ns || ns === "None" || ns === "none") return "";
+  if (s && s.ospf_configured === false) return "";
   var hellos = s.iface_hellos || null;
   if (hellos && Object.keys(hellos).length) return iface in hellos ? ns : "";
   return ifKeys && ifKeys.length === 1 ? ns : "";
@@ -8860,7 +8864,13 @@ function _xrayUnifiedNodeFromLive(config, s) {
   var ifKeys = Object.keys(ifs).filter(function(k) {
     return k !== "lo";
   });
+  var _realIfKeys = ifKeys.filter(function(k) {
+    var _ip = ifs[k] && ifs[k].ip;
+    return !(_ip && /^172\.20\.20\./.test(String(_ip)));
+  });
+  if (_realIfKeys.length) ifKeys = _realIfKeys;
   var outIf = s.wan_iface || rr.out_iface || "";
+  if (outIf && ifKeys.indexOf(outIf) < 0) outIf = ifKeys[0] || outIf;
   function ifUp(n) {
     return !ifs[n] || ifs[n].up !== false;
   }
@@ -8889,7 +8899,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
     var _psh = s.peer_sending_hellos || {};
     var mlinks = peers.map(function(p) {
       var pid = p.id, iface = s[pid + "_iface"] || "";
-      var est = protoRaw === "bgp" ? !!s[pid + "_established"] : !!(s[pid + "_has_full"] || s[pid + "_neighbor_state"] === "Full");
+      var est = protoRaw === "bgp" ? !!(s[pid + "_established"] || s[pid + "_has_full"] || s[pid + "_neighbor_state"] === "Established" || s[pid + "_neighbor_state"] === "Full") : !!(s[pid + "_has_full"] || s[pid + "_neighbor_state"] === "Full");
       var _egIf = rr && rr.out_iface || outIf;
       var isBest = bpv === pid || !!_egIf && !!iface && _egIf === iface;
       var ph = null, _linkOspf = false;
@@ -8934,7 +8944,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
     if (pl && pl.protocols.length) {
       return {
         iface: ifn,
-        peer: pl.peer || (isOut ? peerId : ""),
+        peer: pl.peer || (isOut ? peerId || s.peer_node || "" : ""),
         protocols: pl.protocols,
         ospfHello: isOspf && (isOut || pl.protocols.some(function(x) {
           return x.proto === "ospf";
@@ -8948,7 +8958,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
     }
     return {
       iface: ifn,
-      peer: pl && pl.peer || (isOut ? peerId : ""),
+      peer: pl && pl.peer || (isOut ? peerId || s.peer_node || "" : ""),
       protocols: hasProto && isOut ? [ {
         proto: proto,
         up: adjUp,
@@ -8983,9 +8993,21 @@ function _xrayUnifiedNodeFromLive(config, s) {
       return rank(a) - rank(b);
     });
   }
+  var _slPeers = links.map(function(l) {
+    return l.peer;
+  }).filter(function(p) {
+    return p && p !== targetId;
+  });
+  var _slCp = config && config.positions;
+  var _slPos = {};
+  if (_slCp && _slCp[targetId] && _slPeers.length && _slPeers.every(function(pid) {
+    return _slCp[pid];
+  })) {
+    _slPos = _xrayUnifiedPositionsFor(config, targetId, _slPeers);
+  }
   return {
     target: targetId,
-    positions: {},
+    positions: _slPos,
     links: links,
     ospfProcRunning: ospfProcRunning,
     bgpProcRunning: bgpProcRunning,
