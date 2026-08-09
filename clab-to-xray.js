@@ -2,35 +2,36 @@
 /*
  * clab-to-xray.js  —  prototype
  *
- * containerlab のトポロジ定義 (.clab.yml / .yaml / .json) を読み、
- * X-Ray が食う `config` JSON (= OSS gallery facade の入口手前) を出力する。
+ * Reads a containerlab topology definition (.clab.yml / .yaml / .json) and
+ * outputs the `config` JSON that X-Ray consumes (just before the OSS gallery facade entry).
  *
- * 【スコープ / scope】
- *   X-Ray コアが描けるのは 3 形だけ (triangle / linear_2node / linear_3node, +layout inverted_v)。
- *   よって本変換器は「2〜3 ノードの小さな FRR ラボ」だけを既存3形にマップする。
- *   任意 N ノードの一般グラフは UNSUPPORTED として明示エラーにする (= 一般グラフ用の別レーンが要る領域)。
+ * [scope]
+ *   The X-Ray core can only draw 3 shapes (triangle / linear_2node / linear_3node, +layout inverted_v).
+ *   So this converter maps only "small 2-3 node FRR labs" onto those existing shapes.
+ *   Arbitrary N-node general graphs are reported as an explicit UNSUPPORTED error
+ *   (they belong to a separate lane built for general graphs).
  *
- * 【出力するもの / しないもの】
- *   出力する  : topology_type / layout / nodes(id,type,role,target,loopback) / networks(members,host_id)
- *               + capture の最小スケルトン + provenance(_clab_source) + 警告(_warnings)
- *   出力しない: xray.protocol/pattern や live state (normal/detour/dead) は facade 領域。
- *               ここでは xray は enabled スタブのみ置き、TODO コメントで facade 層に委ねる。
+ * [what it emits / does not emit]
+ *   emits    : topology_type / layout / nodes(id,type,role,target,loopback) / networks(members,host_id)
+ *              + a minimal capture skeleton + provenance(_clab_source) + warnings(_warnings)
+ *   omits    : xray.protocol/pattern and live state (normal/detour/dead) belong to the facade.
+ *              Here xray carries only an enabled stub, deferring the rest to the facade layer via TODO comments.
  *
- * 依存ゼロ (Node 標準のみ)。YAML は clab の素直なサブセット用の最小パーサで読む
- * (複雑な YAML は .json 入力推奨。--json で JSON として読む)。
+ * Zero dependencies (Node stdlib only). YAML is read with a minimal parser for clab's plain subset
+ * (for complex YAML, prefer .json input; --json reads the file as JSON).
  *
- * 使い方:
+ * Usage:
  *   node clab-to-xray.js <topo.clab.yml> [--inverted-v] [--target <node>] [--json]
  *   node clab-to-xray.js samples/2node.clab.yml
  */
 'use strict';
-// dual-mode: Node CLI + ブラウザ両用。fs は Node でのみ参照 (CLI 専用)。
+// dual-mode: works in both Node CLI and the browser. fs is referenced in Node only (CLI-only).
 const fs = (typeof require === 'function') ? require('fs') : null;
 
 /* ----------------------------------------------------------------------------
- * 1. 最小 YAML ローダ (clab topology サブセット専用)
- *    対応: コメント(#) / インデント map / "- " list / inline flow [a, b] / 引用符
- *    非対応: アンカー, 複数行スカラ, 複雑なネスト flow 等 → その場合は --json を使う
+ * 1. Minimal YAML loader (for the clab topology subset only)
+ *    supported     : comments(#) / indented maps / "- " lists / inline flow [a, b] / quotes
+ *    not supported : anchors, multi-line scalars, complex nested flow, etc. -> use --json in that case
  * -------------------------------------------------------------------------- */
 function parseScalar(s) {
   s = s.trim();
@@ -47,7 +48,7 @@ function parseScalar(s) {
 }
 
 function parseFlow(s) {
-  // [a, b, "c:eth1"] のインライン list を分解 (ネストなし前提)
+  // Split an inline list [a, b, "c:eth1"] (assumes no nesting)
   const inner = s.trim().replace(/^\[/, '').replace(/\]$/, '');
   if (inner.trim() === '') return [];
   const out = [];
@@ -65,7 +66,7 @@ function parseFlow(s) {
 function tokenize(src) {
   const lines = [];
   for (const raw of src.split(/\r?\n/)) {
-    // コメント除去 (引用符内 # は雑に無視 = clab topology では問題になりにくい)
+    // Strip comments (roughly ignores # inside quotes = rarely a problem for clab topologies)
     let line = raw;
     const hash = findCommentHash(line);
     if (hash >= 0) line = line.slice(0, hash);
@@ -92,7 +93,7 @@ function parseYaml(src) {
   let pos = 0;
 
   function parseBlock(minIndent) {
-    // 先読みで map か list か判定
+    // Look ahead to decide map vs list
     if (pos >= lines.length) return null;
     const first = lines[pos];
     if (first.indent < minIndent) return null;
@@ -113,7 +114,7 @@ function parseYaml(src) {
       const rest = m[2];
       pos++;
       if (rest === '') {
-        // 子ブロック
+        // child block
         const child = (pos < lines.length && lines[pos].indent > indent) ? parseBlock(indent + 1) : null;
         obj[key] = child;
       } else if (rest.trim().startsWith('[')) {
@@ -135,8 +136,8 @@ function parseYaml(src) {
       const itemText = ln.text.slice(2);
       const m = itemText.match(/^([^:\[\]]+):\s*(.*)$/);
       if (m) {
-        // "- key: val" = list item が map → 同じ行から map を組む
-        // 仮想的に行を分解: この item の指す map を構築
+        // "- key: val" = a list item that is a map -> build the map starting from this line
+        // virtually split the line: build the map this item points to
         const item = {};
         const key = parseScalar(m[1]);
         const rest = m[2];
@@ -149,7 +150,7 @@ function parseYaml(src) {
         } else {
           item[key] = parseScalar(rest);
         }
-        // 同一 item の続き key (childIndent)
+        // continuation keys of the same item (childIndent)
         while (pos < lines.length && lines[pos].indent === childIndent && !lines[pos].text.startsWith('- ')) {
           const m2 = lines[pos].text.match(/^([^:]+):\s*(.*)$/);
           if (!m2) break;
@@ -178,28 +179,28 @@ function parseYaml(src) {
 }
 
 /* ----------------------------------------------------------------------------
- * 2. clab topology → 無向グラフ抽出
+ * 2. clab topology -> undirected graph extraction
  * -------------------------------------------------------------------------- */
 function extractGraph(clab) {
   const topo = clab.topology || {};
   const nodesRaw = topo.nodes || {};
   const linksRaw = topo.links || [];
 
-  // nodes: clab は map {name: {kind, image, ...}}
+  // nodes: clab is a map {name: {kind, image, ...}}
   const nodes = Object.keys(nodesRaw).map((name) => {
     const def = nodesRaw[name] || {};
     return { name, kind: def.kind || '', image: def.image || '' };
   });
 
-  // links: 各要素 {endpoints: ["r1:eth1", "r2:eth1"]} (新形式 endpoints map にも一応対応)
+  // links: each item is {endpoints: ["r1:eth1", "r2:eth1"]} (the newer endpoints-map form is also handled)
   const edges = [];
   for (const l of linksRaw) {
     let eps = l && l.endpoints;
     if (!eps) continue;
-    // endpoints が ["node:iface", ...] の配列
+    // endpoints as an array of ["node:iface", ...]
     const pair = eps.map((e) => {
       if (typeof e === 'string') return e.split(':')[0];
-      if (e && e.node) return e.node; // 新形式 {node, interface}
+      if (e && e.node) return e.node; // newer form {node, interface}
       return String(e);
     });
     if (pair.length === 2 && pair[0] && pair[1]) {
@@ -210,7 +211,7 @@ function extractGraph(clab) {
 }
 
 /* ----------------------------------------------------------------------------
- * 3. 役割推定 (router / server) — 控えめ・文書化済みヒューリスティック
+ * 3. Role inference (router / server) — conservative, documented heuristic
  * -------------------------------------------------------------------------- */
 const SERVER_KINDS = new Set(['host', 'linux-host']);
 const SERVER_NAME_RE = /^(sv|server|host|client|pc|h\d+)$/i;
@@ -221,7 +222,7 @@ function inferRole(node) {
 }
 
 /* ----------------------------------------------------------------------------
- * 4. 形状分類 + X-Ray config 組み立て
+ * 4. Shape classification + X-Ray config assembly
  * -------------------------------------------------------------------------- */
 function dedupeEdges(edges) {
   const seen = new Set();
@@ -250,10 +251,10 @@ function classify(graph, opts) {
   if (n === 2 && m === 1) return { shape: 'linear_2node', layout: '', edges };
   if (n === 3 && m === 3) return { shape: 'triangle', layout: '', edges };
   if (n === 3 && m === 2) {
-    // path: 中心 (degree 2) を挟む。inverted_v 指定なら layout を付与。
+    // path: the center node (degree 2) sits between the two ends. Apply layout if inverted_v was requested.
     return { shape: 'linear_3node', layout: opts.invertedV ? 'inverted_v' : '', edges };
   }
-  // それ以外は非対応 (out of scope)
+  // anything else is out of scope
   return {
     shape: null,
     reason: `unsupported topology: nodes=${n}, links(dedup)=${m}. ` +
@@ -264,16 +265,16 @@ function classify(graph, opts) {
 
 function netName(a, b) { return 'net-' + a + b; }
 
-// linear (path) のノードを鎖順に並べ替える (X-Ray linear renderer は config 順に左右描画するため)。
-// triangle は循環で順不問なので触らない。
+// Reorder linear (path) nodes into chain order (the X-Ray linear renderer draws left-to-right in config order).
+// A triangle is a cycle so order does not matter — leave it untouched.
 function orderForLinear(names, edges, roleOf) {
   const deg = degreeMap(names, edges);
   const ends = names.filter((n) => deg[n] === 1);
-  if (ends.length !== 2) return names; // 鎖でない → そのまま
+  if (ends.length !== 2) return names; // not a chain -> leave as-is
   const adj = {};
   names.forEach((n) => (adj[n] = []));
   edges.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
-  // 端点を決定的に選ぶ: server 側を左端に優先、無ければアルファベット順
+  // Pick the endpoint deterministically: prefer a server on the left end, else alphabetical order
   const sortedEnds = ends.slice().sort();
   const start = sortedEnds.find((n) => roleOf(n) === 'server') || sortedEnds[0];
   const order = [start];
@@ -297,7 +298,7 @@ function buildConfig(graph, cls, opts) {
   const orderedRaw = names.map((n) => byName[n]);
   const deg = degreeMap(names, cls.edges);
 
-  // target 推定: 明示指定 > 最大次数ノード (= 観察対象になりやすい transit)
+  // target inference: explicit override > highest-degree node (= the transit most likely to be observed)
   let target = opts.target;
   if (!target) {
     target = names.slice().sort((x, y) => (deg[y] - deg[x]))[0];
@@ -314,7 +315,7 @@ function buildConfig(graph, cls, opts) {
     return node;
   });
 
-  // networks: 各 edge を1ネットに。host_id は端点順に 10/20。
+  // networks: one net per edge. host_id is 10/20 by endpoint order.
   const networks = cls.edges.map(([a, b]) => ({
     name: netName(a, b),
     members: [
@@ -325,13 +326,13 @@ function buildConfig(graph, cls, opts) {
 
   const warnings = [];
   if (!nodes.some((x) => x.type === 'server')) {
-    warnings.push('全ノードが router 判定。server ノードがあれば kind:host か名前(sv/host/...) を付けると改善。');
+    warnings.push('All nodes classified as router. If you have a server node, set kind:host or a name (sv/host/...) to improve this.');
   }
-  warnings.push('xray.protocol / pattern / live state(normal/detour/dead) は未生成 = facade 領域。');
-  warnings.push('host_id とサブネットは仮 (.10/.20)。実 clab IP を使うなら inspect JSON enrichment が要る (案C)。');
+  warnings.push('xray.protocol / pattern / live state (normal/detour/dead) are not generated here = facade territory.');
+  warnings.push('host_id and subnets are placeholders (.10/.20). To use real clab IPs, an inspect-JSON enrichment step is needed.');
 
   return {
-    // ---- X-Ray が読む描画 config (facade 入口手前) ----
+    // ---- rendering config that X-Ray reads (just before the facade entry) ----
     success: true,
     id: graph.name,
     scenario_title: graph.name,
@@ -342,20 +343,62 @@ function buildConfig(graph, cls, opts) {
     modes: ['troubleshoot', 'capture'],
     xray: {
       enabled: true,
-      protocol: 'static',          // TODO: 実プロトコルに置換 (ospf/bgp)
-      pattern: cls.shape === 'triangle' ? 'ospf_triangle' : 'static_linear', // 仮
+      protocol: 'static',          // TODO: replace with the real protocol (ospf/bgp)
+      pattern: cls.shape === 'triangle' ? 'ospf_triangle' : 'static_linear', // placeholder
       ping_mode: 'through',
-      holo_fields: [],             // TODO: facade で供給
+      holo_fields: [],             // TODO: supplied by the facade
     },
     capture: { nets: networks.map((x) => x.name), lanes: {}, hide_arp: true },
-    // ---- provenance / 引き継ぎ情報 (X-Ray は無視, human-facing) ----
+    // ---- provenance / hand-off info (ignored by X-Ray, human-facing) ----
     _clab_source: { name: graph.name, node_count: names.length, link_count: cls.edges.length },
     _warnings: warnings,
   };
 }
 
 /* ----------------------------------------------------------------------------
- * 4b. convert: テキスト → {ok, config} | {ok:false, reason,...} (CLI/ブラウザ共通)
+ * 4a-bis. positions: turn containerlab graph-posX/posY labels into X-Ray positions.
+ *   XrayUnified.renderSvg takes positions:{name:{x,y}} and computes per-link angles internally via atan2
+ *   (real-angle radial). Note the raw-regex direct read: parseYaml does not structurally parse
+ *   flow-style inline maps (labels:{graph-posX:"300"}), so we read positions from the raw text with a
+ *   block-scoped regex to support both flow and block styles (label bleed is prevented by limiting the
+ *   window to the node's own block). Nodes without graph-posX/posY are tiered by graph-level (spine top / leaf bottom).
+ * -------------------------------------------------------------------------- */
+function extractPositions(text) {
+  var adj = {}, re = /endpoints:\s*\[\s*"([^:"]+):([^"\]]+)"\s*,\s*"([^:"]+):([^"\]]+)"\s*\]/g, m;
+  while ((m = re.exec(text))) { adj[m[1]] = 1; adj[m[3]] = 1; }
+  var nodes = Object.keys(adj);
+  function block(name) {
+    var s = text.search(new RegExp('(^|\\n)\\s*' + name + ':'));
+    if (s < 0) return '';
+    var rest = text.slice(s + 1);
+    var e = rest.search(/\n\s{2,}[A-Za-z0-9_-]+:\s*[\{&]|\n\s*links:/);
+    return e < 0 ? rest : rest.slice(0, e + 1);
+  }
+  function num(name, key) {
+    var mm = block(name).match(new RegExp(key + ':\\s*"?(-?[0-9]+(?:\\.[0-9]+)?)"?'));
+    return mm ? parseFloat(mm[1]) : null;
+  }
+  var pos = {}, level = {}, anyHint = false;
+  nodes.forEach(function (n) {
+    pos[n] = { x: num(n, 'graph-posX'), y: num(n, 'graph-posY') };
+    level[n] = num(n, 'graph-level');
+    if (Number.isFinite(pos[n].x) || Number.isFinite(pos[n].y) || Number.isFinite(level[n])) anyHint = true;
+  });
+  // Regression guard: a yaml with no graph-posX/posY and no graph-level produces no positions
+  // (= leave it to the renderer's default fan-spread, preserving the look of existing unlabeled paste demos).
+  if (!anyHint) return {};
+  // graph-level fallback (use Number.isFinite: isFinite(null)===isFinite(0)===true would be a false-negative)
+  var need = nodes.filter(function (n) { return !(Number.isFinite(pos[n].x) && Number.isFinite(pos[n].y)); });
+  if (need.length) {
+    var X0 = 200, Y0 = 90, COL_W = 180, ROW_H = 230, byLvl = {};
+    need.forEach(function (n) { var L = Number.isFinite(level[n]) ? level[n] : 1; (byLvl[L] = byLvl[L] || []).push(n); });
+    Object.keys(byLvl).forEach(function (L) { byLvl[L].forEach(function (n, i) { pos[n] = { x: X0 + i * COL_W, y: Y0 + (parseFloat(L) - 1) * ROW_H }; }); });
+  }
+  return pos;
+}
+
+/* ----------------------------------------------------------------------------
+ * 4b. convert: text -> {ok, config} | {ok:false, reason,...} (shared by CLI and browser)
  * -------------------------------------------------------------------------- */
 function convert(text, opts) {
   opts = opts || {};
@@ -367,7 +410,12 @@ function convert(text, opts) {
       nodes: graph.nodes.map(function (n) { return n.name; }),
       links: dedupeEdges(graph.edges).map(function (e) { return e.join('-'); }) };
   }
-  return { ok: true, config: buildConfig(graph, cls, opts) };
+  var config = buildConfig(graph, cls, opts);
+  // graph-posX/posY (or a graph-level tier fallback) -> attach positions:{name:{x,y}} to the config.
+  // XrayUnified.renderSvg reads it (harmless: the legacy engine ignores it; it is the basis for real-angle radial).
+  var positions = (opts.json) ? {} : extractPositions(text);   // JSON paste is outside the yaml regex -> {} (renderer fan-spreads)
+  if (Object.keys(positions).length) config.positions = positions;
+  return { ok: true, config: config };
 }
 
 /* ----------------------------------------------------------------------------
@@ -405,4 +453,4 @@ function main(argv) {
 var _api = { parseYaml: parseYaml, extractGraph: extractGraph, classify: classify, buildConfig: buildConfig, convert: convert };
 if (typeof require === 'function' && typeof module !== 'undefined' && require.main === module) main(process.argv);
 if (typeof module !== 'undefined' && module.exports) module.exports = _api;
-if (typeof window !== 'undefined') window.clabToXray = _api;   // ブラウザ (clab-paste デモが使用)
+if (typeof window !== 'undefined') window.clabToXray = _api;   // browser (used by the clab-paste demo)

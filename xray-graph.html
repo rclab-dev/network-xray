@@ -127,8 +127,16 @@ window.__xrayGraphBoot = function () {
     else { var order=[hub].concat(leaves); order.forEach(function(n,i){ var a=(i/order.length)*Math.PI*2-Math.PI/2; POS[n]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]; }); }
   })();
 
+  // DeepDive radial: give the config real per-node positions so each peer tunnel is drawn at its true
+  // topology angle (atan2). Prefer collector-supplied coords (window.LIVE_POS, derived from the clab
+  // graph-posX/posY labels) when present; otherwise fall back to the overview auto-layout POS so the
+  // DeepDive angles match what the user sees in the overview. deepViews slices these per sub-scene.
+  fullCfg.positions = (window.LIVE_POS && Object.keys(window.LIVE_POS).length)
+    ? window.LIVE_POS
+    : (function(){ var p={}; Object.keys(POS).forEach(function(n){ p[n]={x:POS[n][0],y:POS[n][1]}; }); return p; })();
+
   // ================= render one deepView =================
-  // 3-layer: bridge deepViews → facade openDeepDiveFor. (自前 subYaml/pairsOf は撤去)
+  // 3-layer: bridge deepViews -> facade openDeepDiveFor. (custom subYaml/pairsOf removed)
   function renderView(v, nodeId){
     // Prefer the REAL collected state for this node (xray-states.js) when present; otherwise use the
     // topology-derived synthetic scaffold from the bridge.

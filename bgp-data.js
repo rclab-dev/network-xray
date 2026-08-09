@@ -8,7 +8,7 @@
 //   supplemented by the 3-step indicator (the same approach used to show Init/2-Way in the OSPF example).
 
 window.BGP_CONFIG = {
-  success: true, id: 'bgp', topology_type: 'linear', layout: '',
+  success: true, id: 'bgp', deep_engine: 'unified', topology_type: 'linear', layout: '',
   nodes: [
     { id: 'r1', role: 'AS 65001', type: 'router' },
     { id: 'r2', role: 'AS 65002', type: 'router', target: true }   // observed router = r2

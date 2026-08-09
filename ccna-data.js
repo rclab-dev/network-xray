@@ -3,7 +3,7 @@
 // Note: this is teaching material about "adjacency formation", so ping/traffic is not used (the ping orb is hidden by the demo CSS).
 
 window.CCNA_CONFIG = {
-  success: true, id: 'ccna', topology_type: 'linear', layout: '',
+  success: true, id: 'ccna', deep_engine: 'unified', topology_type: 'linear', layout: '',
   nodes: [
     { id: 'r1', role: 'Router', type: 'router', target: true },
     { id: 'r2', role: 'Router', type: 'router' }

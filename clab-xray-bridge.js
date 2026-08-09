@@ -1,54 +1,54 @@
 // clab-xray-bridge.js — facade integration
 //
-// clab-to-xray.js は描画 scaffold (topology/nodes/networks + placeholder xray) まで。
-// このブリッジが「facade 領域」= xray.protocol/pattern/ping_mode/holo_fields の実値化 + live state
-// (normal / fault) を供給し、xrayCore facade で実際に描けるシーンに仕上げる。
+// clab-to-xray.js only produces the render scaffold (topology/nodes/networks + a placeholder xray).
+// This bridge covers the "facade territory": it fills in real values for xray.protocol/pattern/ping_mode/
+// holo_fields plus live state (normal / fault), producing a scene that the xrayCore facade can actually draw.
 //
-// 設計方針:
-//  - clab トポロジは「FRR ルータが OSPF で隣接を組む小ラボ」が最も一般的 → 既定プロトコル = OSPF。
-//    (変換器は protocol:'static' の仮値を入れるが、ここで上書きする)
-//  - state 形は frr-parse.js (frr-paste デモで実描画実証済) の OSPF state と同型に揃える
-//    = holo body / logic-line ビルダーが要求する field を全部供給 → the empty-render regression を踏まない。
-//  - ブラウザ/Node 両用 (window or module.exports)。live engine も OSS gallery 本体も触らない。
+// Design notes:
+//  - The most common clab topology is a "small lab of FRR routers forming OSPF adjacencies" -> default protocol = OSPF.
+//    (the converter fills protocol:'static' as a placeholder, which we override here)
+//  - The state shape mirrors the OSPF state from frr-parse.js (proven to render in the frr-paste demo)
+//    = supply every field the holo body / logic-line builders require -> avoid the empty-render regression.
+//  - Works in both browser and Node (window or module.exports). Touches neither the live engine nor the OSS gallery core.
 //
-// 使い方 (ブラウザ):
+// Usage (browser):
 //   var scene = clabXray.toScene(converterConfig);          // {config, states:{normal,fault}, topo}
 //   var view  = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topo });
-//   view.applyState(scene.states.normal);                   // または .fault
+//   view.applyState(scene.states.normal);                   // or .fault
 
 (function (root) {
   'use strict';
 
-  // network 順にサブネットを割当 (10.<i>.0.0/24)。member.host_id (10/20) が末尾オクテット。
+  // Assign subnets by network order (10.<i>.0.0/24). member.host_id (10/20) is the last octet.
   function _subnetBase(i) { return '10.' + (i + 1) + '.0'; }
   function _ip(i, hostId) { return _subnetBase(i) + '.' + hostId; }
 
-  // converter config → 描画可能シーン (config 実値化 + normal/fault state + topo snapshot)
+  // converter config -> a drawable scene (real config values + normal/fault state + topo snapshot)
   function toScene(cfg, opts) {
     opts = opts || {};
-    var proto = opts.protocol || 'ospf';        // clab ルータラボの既定
+    var proto = opts.protocol || 'ospf';        // default for a clab router lab
     var nodes = (cfg.nodes || []).map(function (n) { return Object.assign({}, n); });
     var nets = cfg.networks || [];
     var target = nodes.filter(function (n) { return n.target; })[0] || nodes[0] || {};
     var targetId = target.id;
 
-    // node → そのノードが属する {iface, peer, subnetIdx, ip, peerIp} のリストを構築
+    // For each node, build the list of {iface, peer, subnetIdx, ip, peerIp} it belongs to
     var nodeIf = {};   // nodeId -> [{ iface, peer, net, ip, peerIp, hostId }]
     nodes.forEach(function (n) { nodeIf[n.id] = []; });
     nets.forEach(function (nw, i) {
       var ms = nw.members || [];
-      if (ms.length !== 2) return;            // X-Ray の link は 2 者間
+      if (ms.length !== 2) return;            // an X-Ray link is between exactly 2 parties
       var a = ms[0], b = ms[1];
       var aIp = _ip(i, a.host_id), bIp = _ip(i, b.host_id);
       if (nodeIf[a.node]) nodeIf[a.node].push({ peer: b.node, net: nw.name, ip: aIp, peerIp: bIp, hostId: a.host_id, idx: i });
       if (nodeIf[b.node]) nodeIf[b.node].push({ peer: a.node, net: nw.name, ip: bIp, peerIp: aIp, hostId: b.host_id, idx: i });
     });
-    // 各ノードの link に eth0,eth1,... を順に割当
+    // Assign eth0, eth1, ... to each node's links in order
     Object.keys(nodeIf).forEach(function (id) {
       nodeIf[id].forEach(function (l, k) { l.iface = 'eth' + k; });
     });
 
-    // --- config の xray を実値化 ---
+    // --- fill in real values for config.xray ---
     var isTri = cfg.topology_type === 'triangle';
     var pattern = isTri ? 'ospf_triangle' : 'ospf_linear';
     var config = Object.assign({}, cfg);
@@ -61,13 +61,13 @@
         { label: 'Ping', field: 'ping_ok', ok: 'OK', err: 'FAIL' }
       ]
     };
-    // node.type を role から補正 (engine は n.type で server/router を描き分ける)
+    // Derive node.type from role (the engine draws server vs router based on n.type)
     config.nodes = nodes.map(function (n) {
       var t = (/server/i.test(n.role || '') ? 'server' : (/isp|internet|inet/i.test(n.id) ? 'isp' : 'router'));
       return Object.assign({}, n, { type: opts.keepType ? (n.type || t) : t });
     });
 
-    // --- topo snapshot (Seam A): subnets + 各ノード iface UP/DOWN ---
+    // --- topo snapshot (Seam A): subnets + per-node iface UP/DOWN ---
     function buildTopo(downNet) {
       var subnets = {};
       nets.forEach(function (nw, i) { subnets[nw.name] = _subnetBase(i) + '.0/24'; });
@@ -80,8 +80,8 @@
       return topo;
     }
 
-    // --- live state ビルダー (frr-parse.js の OSPF state と同型) ---
-    // downNet=null → normal (全 Full / 経路解決 / ping OK)。downNet 指定 → その link 断で degraded。
+    // --- live state builder (same shape as the OSPF state from frr-parse.js) ---
+    // downNet=null -> normal (all Full / route resolved / ping OK). A given downNet -> degraded by cutting that link.
     function buildState(downNet) {
       var tIfs = nodeIf[targetId] || [];
       var peers = tIfs.map(function (l) {
@@ -89,7 +89,7 @@
                  full: (l.net !== downNet) };
       });
       var fullCount = peers.filter(function (p) { return p.full; }).length;
-      // 経路: target から「直接リンクしていない遠いノード」へ (triangle は対辺、linear は端)。
+      // route: from the target to a "far node it is not directly linked to" (opposite vertex for a triangle, an end for linear).
       var farNode = nodes.filter(function (n) {
         return n.id !== targetId && !peers.some(function (p) { return p.name === n.id; });
       })[0] || (peers[peers.length - 1] && { id: peers[peers.length - 1].name });
@@ -132,7 +132,7 @@
       return s;
     }
 
-    // fault: target の最初の link を落とす (degraded シーン)
+    // fault: bring down the target's first link (degraded scene)
     var firstNet = (nodeIf[targetId] && nodeIf[targetId][0] && nodeIf[targetId][0].net) || null;
 
     return {
@@ -145,16 +145,17 @@
   }
 
   // Multi-peer selector: for any topology node, enumerate the DeepDive "views" it can show.
-  // X-Ray シリンダーは2側 (in/out peer) ゆえ、隣接が 3+ の node は「どの2ピア対を見るか」で複数ビューになる。
-  // 各ビューは node+選択2ピア = 3ノードの sub-config (X-Ray の3形制限内) なので full N-node を渡さず描ける。
-  // ホスト (例: clab graph 外殻) はこの配列をボタン化 → 選択ビューを renderTopology + openDeepDiveFor で描く。
+  // The X-Ray cylinder has two sides (in/out peer), so a node with 3+ neighbors yields multiple views,
+  // one per "which pair of peers to inspect". Each view is a 3-node sub-config (node + the 2 chosen peers),
+  // within X-Ray's 3-shape limit, so it draws without passing the full N-node config.
+  // A host (e.g. the clab graph shell) turns this array into buttons -> renders the chosen view via renderTopology + openDeepDiveFor.
   //   var views = clabXray.deepViews(fullConfig, 'r1');
   //   // views[i] = { label, peers:[a,b], scene:{config,topo,states} }
   //   var v = views[0]; var view = xrayCore.renderTopology('#topo', v.scene.config, {topology:v.scene.topo});
   //   view.openDeepDiveFor('r1', v.scene.states.normal);
   function deepViews(cfg, nodeId) {
     var nets = cfg.networks || [];
-    // node の隣接 (peer, net) を収集
+    // collect the node's neighbors (peer, net)
     var adj = [];
     nets.forEach(function (nw) {
       var ms = nw.members || [];
@@ -165,16 +166,16 @@
     });
     var nodeById = {}; (cfg.nodes || []).forEach(function (n) { nodeById[n.id] = n; });
     function subScene(peerList) {
-      // node を中心に peerList (1-2個) を並べた sub-config を作る → toScene で per-node state 化
+      // build a sub-config with the node at the center and peerList (1-2 nodes) around it -> toScene turns it into per-node state
       var ids = [nodeId].concat(peerList);
-      // 隣接が 1 つだけ = 端点(スタブ)ノード → DeepDive は入力(左)面を持たない単一面。
-      // engine は targetNode.single_link で単一面モードに入る (toScene が node プロパティを保持)。
+      // exactly one neighbor = an endpoint (stub) node -> the DeepDive is single-faced with no input (left) side.
+      // the engine enters single-face mode via targetNode.single_link (toScene preserves node properties).
       var isStub = peerList.length === 1;
       var subNodes = ids.map(function (id) {
         var src = nodeById[id] || { id: id, type: 'router', role: 'Router' };
         return Object.assign({}, src, { target: (id === nodeId), single_link: (id === nodeId && isStub) });
       });
-      // 中心を真ん中に並べる (linear/inverted-v 表示用): peer1, node, peer2
+      // place the center in the middle (for linear/inverted-v display): peer1, node, peer2
       var ordered = peerList.length === 2 ? [peerList[0], nodeId, peerList[1]] : ids;
       subNodes.sort(function (x, y) { return ordered.indexOf(x.id) - ordered.indexOf(y.id); });
       var subNets = adj.filter(function (e) { return peerList.indexOf(e.peer) >= 0; }).map(function (e) { return e.net; });
@@ -183,13 +184,21 @@
         layout: peerList.length === 2 ? 'inverted_v' : '', nodes: subNodes, networks: subNets,
         modes: cfg.modes || ['troubleshoot']
       };
+      // Carry per-node positions (from graph-posX/posY, if the source config has them) for just this
+      // sub-scene's nodes, so the unified renderer draws each peer tunnel at its real topology angle
+      // (radial DeepDive) instead of the fixed left/right layout. No positions -> unchanged behaviour.
+      if (cfg.positions) {
+        var subPos = {};
+        ids.forEach(function (id) { if (cfg.positions[id]) subPos[id] = cfg.positions[id]; });
+        if (Object.keys(subPos).length) subCfg.positions = subPos;
+      }
       return toScene(subCfg);
     }
     if (adj.length <= 2) {
       return [{ label: adj.map(function (e) { return e.peer; }).join(' / ') || nodeId,
         peers: adj.map(function (e) { return e.peer; }), scene: subScene(adj.map(function (e) { return e.peer; })) }];
     }
-    // 隣接 3+ : ユニークなピア対を列挙
+    // 3+ neighbors: enumerate unique peer pairs
     var views = [];
     for (var i = 0; i < adj.length; i++) {
       for (var j = i + 1; j < adj.length; j++) {
