@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BGP Best-Path Decision</title>
 <!--
-  Tier3 standalone full decision-bracket page (pipeline step① / OSS 転用弾).
-  - i18n: ?lang=en (default ja). RCL は ja, OSS/Show HN は en で同一ファイルをリンク。
-  - data-driven: ?d=<base64url(JSON)> で {prefix, routes[], decidedHint} を注入可(engine の Tier2「full bracket」リンクが Q21 実測値を渡す)。無指定は Q21 代表値(LP 決定)。
-  - self-contained(外部依存ゼロ)=独立してリンクできる弾。
+  Standalone full decision-bracket page.
+  - i18n: ?lang=en (default en); link the same file with ?lang=ja for Japanese.
+  - data-driven: ?d=<base64url(JSON)> can inject {prefix, routes[], decidedHint}. Without it, a representative default (Local-Preference decision) is shown.
+  - self-contained (no external dependencies) = can be linked independently.
   - Rule wording (en/ja) uses standard protocol terms.
 -->
 <style>
@@ -82,7 +82,7 @@
 var LANG = (function(){
   var q = new URLSearchParams(location.search).get('lang');
   if (q === 'en' || q === 'ja') return q;
-  return 'ja';   // RCL 既定=ja。OSS/Show HN は ?lang=en でリンク
+  return 'en';   // default = en (OSS); link with ?lang=ja for Japanese
 })();
 // Chrome / UI label strings.
 var I18N = {
@@ -109,9 +109,9 @@ var I18N = {
 };
 var T = I18N[LANG];
 
-// ── criteria（FRR best-path 順・attr 名は英語原語で言語非依存・rule のみ i18n）──
+// ── criteria (in FRR best-path order; attribute names are language-neutral, only rule text is i18n) ──
 // Short labels (Weight/LocPrf/AS-Path/Origin/MED/eBGP/RID) are shared across en/ja.
-//   rule 内の < > は innerHTML 挿入ゆえ HTML エンティティ(&lt;/&gt;)。label は esc() 経由で描画。
+//   The < > inside rule text are inserted via innerHTML, so they use HTML entities (&lt;/&gt;). label is rendered through esc().
 var originRank = { i:0, e:1, '?':2 };
 var CRITERIA = [
   { key:'weight',    label:{ja:'Weight',           en:'Weight'},           rule:{ja:'大きい方が勝ち（ローカル）', en:'Higher wins (router-local, not advertised)'}, dir:'high',   fmt:function(v){return v;} },
@@ -123,7 +123,7 @@ var CRITERIA = [
   { key:'routerid',  label:{ja:'Router ID',        en:'Router ID'},        rule:{ja:'小さい方が勝ち（最終手段）', en:'Lowest wins (final tie-breaker)'}, dir:'low', fmt:function(v){return v;} }
 ];
 
-// ── default data（Q21 代表: A=LP200 / B=LP100・Weight 引分 → LP 決定）──
+// ── default data (representative example: A=LP200 / B=LP100, Weight tie -> decided by Local Preference) ──
 var DEFAULT = {
   prefix:'8.8.8.0/24',
   routes:[
@@ -131,7 +131,7 @@ var DEFAULT = {
     { id:'B', via:'via r3', as:'AS65003', attrs:{ weight:0, localpref:50,  aspathlen:1, origin:'i', med:0, ebgp:false, routerid:'10.0.0.3' } }
   ]
 };
-// ?d=<base64url(JSON)> で engine が Q21 実測値を注入可能。壊れていれば DEFAULT。
+// ?d=<base64url(JSON)> lets a caller inject measured values. Falls back to DEFAULT if malformed.
 function loadData(){
   var d = new URLSearchParams(location.search).get('d');
   if (!d) return DEFAULT;
@@ -146,10 +146,10 @@ function loadData(){
 var data = loadData();
 var prefix = data.prefix || '';
 var routes = data.routes;
-// route 表示名（i18n・data 側 name があれば優先）
+// route display name (i18n; a name provided by the data takes precedence)
 routes.forEach(function(r){ if (!r.name) r.name = (r.id === 'A') ? T.routeA : (r.id === 'B') ? T.routeB : ('Route ' + r.id); });
 
-// ── 勝ち抜き戦シミュレーション（proto と同一ロジック）──
+// ── knockout-tournament simulation (same logic as the prototype) ──
 function betterSet(alive, crit){
   function val(r){ var v = r.attrs[crit.key];
     if (crit.dir === 'origin') return -originRank[v];
