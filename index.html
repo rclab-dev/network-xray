@@ -33,15 +33,17 @@
 <div class="wrap">
 
   <h1><span class="x">xray-core</span> gallery</h1>
-  <div class="tag">An OSS render engine for live router &amp; network state — driven by the tidy <code>xrayCore</code> API.</div>
+  <div class="tag">The <b>Network Understanding Layer</b>. AI makes networks easier to operate — X-Ray makes them easier to <b>understand</b>.</div>
 
   <div class="intro">
-    <b>xray-core</b> turns a router's <b>state</b> (OSPF/BGP adjacency, routes, interfaces) into a live
-    visualization — an overview topology and an <b>"inside the router" DeepDive cylinder</b>. It is
-    <b>vendor-neutral</b> — <b>FRR is the native, first-class input</b> (feed it FRR directly; Cisco IOS or
-    anything else via a small adapter) — and <b>descriptive</b>
-    (it draws the state you report; it is not a simulator). You drive it with a few calls:
-    <code>renderTopology</code> · <code>applyState</code> · <code>startPolling</code> · <code>openDeepDive</code>.
+    <b>xray-core</b> turns live router &amp; network <b>state</b> (OSPF/BGP adjacency, routes, interfaces) into a
+    picture you can <b>reason about</b> — where the packet goes, why the route is (or isn't) there, and how a
+    failure propagates and recovers. It renders an overview topology and an <b>"inside the router" DeepDive
+    cylinder</b>. It runs <b>on top of your execution engine</b> — paste a <b>containerlab</b> topology, replay a
+    recorded lab, or point it at live FRR / SR Linux — the <b>"why"</b> layer above the "what". It is
+    <b>vendor-neutral</b> (<b>FRR is the native, first-class input</b>; Cisco IOS or anything else via a small
+    adapter) and <b>descriptive</b>, not a simulator (it draws the real state you report). You drive it with a
+    few calls: <code>renderTopology</code> · <code>applyState</code> · <code>startPolling</code> · <code>openDeepDive</code>.
   </div>
 
   <h2>Examples</h2>
