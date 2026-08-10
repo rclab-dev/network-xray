@@ -1,18 +1,22 @@
 # xray-core
 
-**See how a router actually forwards — a render engine for live router & network state.**
+**The Network Understanding Layer.** AI makes networks easier to operate — **X-Ray makes them easier to _understand_.**
 
 *English | [日本語](#日本語)*
 
-`xray-core` turns a router's **state** (OSPF/BGP adjacency, routes, interfaces) into a live
-picture: an **overview topology** and an **"inside the router" DeepDive cylinder** (forwarding
-plane, OSPF/BGP processor, hello & LSDB sync, the route it installs). You drive it with a few
-calls through the tidy `xrayCore` facade.
+`xray-core` turns live router & network **state** (OSPF/BGP adjacency, routes, interfaces) into a
+picture you can **reason about** — where the packet goes, why the route is (or isn't) there, and how a
+failure propagates and recovers. It renders an **overview topology** and an **"inside the router"
+DeepDive cylinder** (forwarding plane, OSPF/BGP processor, hello & LSDB sync, the route it installs).
+You drive it with a few calls through the tidy `xrayCore` facade.
 
 > This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com)**,
 > not a fork — extracted as a shared module so there is no drift.
 
-It is **descriptive**, not a simulator: it draws the state your feed reports. And it is
+It runs **on top of your execution engine** — paste a **containerlab** topology, replay a recorded lab,
+or point it at live FRR / SR Linux — the **"why"** layer above the "what".
+
+It is **descriptive**, not a simulator: it draws the real state your feed reports. And it is
 **vendor-neutral** — every field it reads is a standard `show`-command concept. FRRouting and
 **Nokia SR Linux** are both implemented today (a mixed FRR + SR Linux lab renders uniformly); Cisco
 IOS, Arista, … map on via the same small-adapter pattern.
@@ -368,16 +372,21 @@ topology view; it doesn't replace it.
 
 *[English](#xray-core) | 日本語*
 
-**ルータが実際にどう転送しているかを見る — ルータ／ネットワークの状態を描く render エンジン。**
+**ネットワークを"理解"するためのレイヤー。** AI はネットワークの運用を楽にする — **X-Ray は"理解"を楽にする。**
 
-`xray-core` は、ルータの**状態**(OSPF/BGP の隣接・経路・インターフェース)を生きた絵にします:
-**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、OSPF/BGP プロセッサ、
-hello と LSDB 同期、実際にインストールされる経路)。操作は `xrayCore` ファサード越しの数行だけ。
+`xray-core` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
+**筋道立てて考えられる絵**にします — パケットがどこへ向かうか、なぜ経路が在る(または無い)のか、
+障害がどう波及し復旧するか。**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、
+OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストールされる経路)を描きます。操作は
+`xrayCore` ファサード越しの数行だけ。
 
 > これは **[RouteCrushLab](https://routecrushlab.com) を動かしているのと同じ描画コア**で、
 > フォークではありません — 共有モジュールとして切り出し、本体とドリフトしない構成です。
 
-**シミュレータではなく記述的(descriptive)**:与えた状態を描くだけで、経路計算もプロトコル実行も
+**実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの
+FRR・SR Linux に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
+
+**シミュレータではなく記述的(descriptive)**:与えられた実際の状態を描くだけで、経路計算もプロトコル実行も
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
 FRRouting・Cisco IOS・Arista … いずれも小さなアダプタで対応できます。
 
