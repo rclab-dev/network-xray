@@ -8707,8 +8707,7 @@ function _xrayDeepCapable(config) {
 }
 
 function _xrayUnifiedActive(config) {
-  if (config && config.positions && Object.keys(config.positions).length) return true;
-  return _xrayDeepCapable(config);
+  return (!!(config && config.positions && Object.keys(config.positions).length) || _xrayDeepCapable(config)) && xrayDeepMode() === "simple";
 }
 
 function _xrayCanonicalPositions(targetId, peerIds) {
@@ -9044,6 +9043,7 @@ function _xrayRenderUnifiedLive(s) {
   var deEng = document.getElementById("xray-deep-engine");
   if (!_xrayUnifiedActive(cfg)) {
     if (deEng) deEng.classList.remove("xray-unified-mode");
+    if (deEng && typeof _xrayUnifiedUnhideLegacy === "function") _xrayUnifiedUnhideLegacy(deEng);
     var _h0 = document.getElementById("xray-deep-unified");
     if (_h0 && _h0.firstChild) _h0.innerHTML = "";
     return;
@@ -9194,7 +9194,7 @@ function _xrayUnifiedUnhideLegacy(deEng) {
 
 function _xrayUnifiedMount(config) {
   var _cfg = window._scenarioConfig || config || {};
-  var _capable = _xrayDeepCapable(_cfg);
+  var _capable = _xrayDeepCapable(_cfg) || !!(_cfg.positions && Object.keys(_cfg.positions).length);
   var _active = _capable && xrayDeepMode() === "simple";
   var deEng = document.getElementById("xray-deep-engine");
   if (document.body) document.body.classList.toggle("xray-unified-active", _active);
