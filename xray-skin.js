@@ -115,7 +115,7 @@
   // page's own :root rule, so this makes the color axis effective even before the engine's literal
   // migration lands (and it powers the skin.html editor preview, which reads --xto-* directly).
   // Emits both forms the engine uses: hex (--xto-ospf) and an rgb triplet (--xto-ospf-rgb) for
-  // rgba() shadows — matching worker1's engine token set (<style id="xray-skin-vars">).
+  // rgba() shadows — matching the engine token set (<style id="xray-skin-vars">).
   function applyCssVars(s) {
     var doc = global.document; if (!doc || !doc.documentElement) return;
     var r = doc.documentElement.style;

@@ -14,8 +14,8 @@
 
 - **Status**: Phase 1 frozen (2026-07-14). Keys are frozen; some are *reserved* (declared now,
   interpreted in Phase 2 — see §4). / Phase 1 凍結。キーは凍結済、一部は*予約*(今宣言・Phase 2 で解釈)。
-- **Authority**: schema keys = worker7 (this doc). Engine interpretation = worker1 (`xray-core.js`).
-  Wording = worker4. / スキーマキー=worker7(本書)/ engine 解釈=worker1 / 文言=worker4。
+- **Authority**: schema keys and bundled presets are defined by this document; engine interpretation
+  lives in `xray-core.js`; wording follows the gallery copy. / スキーマキー=本書 / engine 解釈=`xray-core.js` / 文言=ギャラリー表記に準拠。
 - **Related**: `DATA-CONTRACT.md`(意味・不変)/ `事業化/xray_表現層スキン化_設計メモ.md`(設計権威)。
 
 ---
@@ -87,7 +87,7 @@
   the physical link. Hence bottom → top = physical → IGP → BGP (external / EGP = outermost = top).
   / BGP は peer と next-hop への到達性に依存(IGP 経由、直結 eBGP は connected 経路)、OSPF 隣接は
   物理リンクに依存 → 下から 物理 → IGP → BGP(外部/EGP = 最外 = 上)。この境界同居ケースで積層が成立する。
-- **Note — a new stack, not a flip / 反転ではなく新規スタック** (engine-verified, worker1) —
+- **Note — a new stack, not a flip / 反転ではなく新規スタック** (engine-verified) —
   the pre-skin engine rendered each DeepDive for a **single** protocol (scalar `protocol` = `ospf`
   \| `bgp`; the two process balls were never shown together — there is no prior two-ball order in
   the engine). The signature skin's `bgp-top` introduces **co-located dual-ball stacking as new
@@ -99,17 +99,17 @@
   両プロトコル同居ルータでの**同居デュアルボール縦積みを新既定挙動として新規導入**(proto 準拠・設計
   メモ Part 1-1)、`ospf-top` は逆順。旧来順が無いため `protocolOrder` は既存レイアウトの反転ではなく
   新規表現の順序制御。単一プロトコルのノードは1ボール=no-op。
-- **Phase scope / フェーズ範囲** (owner decision 2026-07-14) — **Phase 1 ships the color axis only.**
+- **Phase scope / フェーズ範囲** (project decision) — **Phase 1 ships the color axis only.**
   The `protocolOrder` **key is frozen now** (so skins carry it and the engine hook point is stable),
   but its **UI toggle and engine activation are Phase 2**, together with co-located dual-ball rendering.
-  Rationale (worker1 feasibility): the color axis is data-independent and screenshot-gateable
+  Rationale (feasibility): the color axis is data-independent and screenshot-gateable
   immediately, whereas order needs the engine to know a DeepDive target runs *both* OSPF and BGP
   (today `protocol` is a single scalar; the proto faked co-location with a hand-built config) —
   a per-Q config / state extension that belongs in Phase 2. In Phase 1 the value is fixed at the
   default `bgp-top`.
-  / **Phase 1 は色軸のみを出す**(事業主決定 2026-07-14)。`protocolOrder` **キーは今凍結**(スキンが
+  / **Phase 1 は色軸のみを出す**(プロジェクト決定)。`protocolOrder` **キーは今凍結**(スキンが
   保持し engine フック点も安定)だが、**UI トグルと engine 有効化は Phase 2**(同居デュアルボール描画と
-  セット)。理由(worker1 feasibility): 色軸は data 非依存で即 screenshot gate 可、順序は engine が
+  セット)。理由(feasibility): 色軸は data 非依存で即 screenshot gate 可、順序は engine が
   DeepDive target の OSPF+BGP 両稼働を知る必要(現行 `protocol` は単一スカラ・proto は手組み config で
   同居を fake)= per-Q config/state 拡張ゆえ Phase 2。Phase 1 では値は既定 `bgp-top` 固定。
 
@@ -204,7 +204,7 @@ build script does not generate `xrayCore`. RouteCrushLab itself has no `xrayCore
 
 ---
 
-## 7. Bundled presets / 同梱プリセット (data only — worker7 owns)
+## 7. Bundled presets / 同梱プリセット (data only)
 
 Default + 2, each a plain skin object (no engine code). / 既定+2、各々プレーンなスキン
 オブジェクト(engine コードなし):

@@ -15,7 +15,7 @@
     // Column-count-independent tokenize + Up/Down detection, PLUS terminal line-wrap join: a real FRR
     // neighbor row can wrap across 2 physical lines (V/AS on line 1, Up/Down/State on line 2). If a
     // start row (IP + V + AS) has no Up/Down token yet, fold in the following line(s) until it does,
-    // stopping at the next neighbor. Robust to column shifts / prompt / never / Active. (worker1 tested)
+    // stopping at the next neighbor. Robust to column shifts / prompt / never / Active. (tested)
     var raw = (text || '').split(/\r?\n/);
     var out = { localAs: null, routerId: null, neighbors: [] };
     var mAs = (text || '').match(/local AS(?: number)?\s+(\d+)/i); if (mAs) out.localAs = mAs[1];
@@ -49,7 +49,7 @@
   function parseBgpTable(text) {
     // Header-driven column slicing (robust to right-aligned numeric cols / blank cells / flags) +
     // multipath continuation rows (`*` / blank Network → previous prefix) + attribute extraction
-    // (Metric / LocPrf[blank=default 100] / Weight). (worker1 tested)
+    // (Metric / LocPrf[blank=default 100] / Weight). (tested)
     var lines = (text || '').split(/\r?\n/);
     var out = { localAs: null, routerId: null, routes: [] };
     var mAs = (text || '').match(/local AS\s+(\d+)/i); if (mAs) out.localAs = mAs[1];
@@ -133,7 +133,7 @@
     // the Overview draws r1 at the apex with both peer sessions as spokes (inverted-V), and the
     // DeepDive shows both tunnels (#de-tunnel-left / -right). others[] order decides left/right, so
     // peers are placed iface-ascending (eth0 = left, eth1 = right). Single-peer / 3+ peers keep the
-    // linear layout ([peers…, self]) unchanged — no regression. (worker1 inverted_v spec)
+    // linear layout ([peers…, self]) unchanged — no regression. (inverted_v spec)
     var isDual = peers.length === 2;
     var peerL = isDual ? peers[0] : null, peerR = isDual ? peers[1] : null;   // iface-ascending: eth0=left, eth1=right
     var selfNode = { id: selfName, role: 'AS ' + localAs, type: 'router', target: true };
