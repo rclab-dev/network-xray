@@ -35,7 +35,37 @@ if (!topoPath || !outDir) {
   console.error('usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>]');
   process.exit(2);
 }
-var topo = fs.readFileSync(topoPath, 'utf8');
+// Friendly guards: the first arg is a topology FILE (.clab.yml), not a directory. Passing the lab
+// directory (a natural mistake) used to crash with a cryptic EISDIR — help instead of failing raw.
+if (!fs.existsSync(topoPath)) {
+  console.error('!! topology file not found: ' + topoPath);
+  console.error('   expected a containerlab topology file, e.g.  node clab-xray-collect.js lab.clab.yml <out-dir>');
+  process.exit(2);
+}
+if (fs.statSync(topoPath).isDirectory()) {
+  var _ymls = fs.readdirSync(topoPath).filter(function (f) { return /\.clab\.ya?ml$/.test(f) || /\.ya?ml$/.test(f); });
+  if (_ymls.length === 1) {
+    var _picked = path.join(topoPath, _ymls[0]);
+    console.error("note: '" + topoPath + "' is a directory; auto-using the topology file it contains: " + _picked);
+    topoPath = _picked;
+  } else {
+    console.error("!! '" + topoPath + "' is a directory. Pass a containerlab topology file (.clab.yml), not the lab directory.");
+    if (_ymls.length > 1) console.error('   found several — pick one: ' + _ymls.map(function (f) { return path.join(topoPath, f); }).join(', '));
+    else console.error('   no *.clab.yml found in that directory.');
+    process.exit(2);
+  }
+}
+if (!/\.ya?ml$/.test(topoPath)) console.error('note: ' + topoPath + " doesn't look like a .clab.yml file — continuing anyway.");
+var topo;
+try { topo = fs.readFileSync(topoPath, 'utf8'); }
+catch (e) { console.error('!! could not read topology file ' + topoPath + ': ' + (e && e.message ? e.message : e)); process.exit(2); }
+if (!fs.existsSync(outDir)) {
+  try { fs.mkdirSync(outDir, { recursive: true }); console.error('note: created output directory ' + outDir); }
+  catch (e) { console.error('!! output directory does not exist and could not be created: ' + outDir + ' (' + (e && e.message ? e.message : e) + ')'); process.exit(2); }
+} else if (!fs.statSync(outDir).isDirectory()) {
+  console.error('!! output path is not a directory: ' + outDir);
+  process.exit(2);
+}
 var lab = (topo.match(/^name:\s*"?([^"\s]+)"?/m) || [])[1];
 if (!lab) { console.error('!! could not find `name:` in ' + topoPath); process.exit(1); }
 
