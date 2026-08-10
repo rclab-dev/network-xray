@@ -1516,6 +1516,14 @@ function _xrayArmDeepLoading() {
   }, 12e3);
 }
 
+function _xrayReangleAfterDeepOpen() {
+  try {
+    if (window._lastXrayState && typeof window.applyXrayState === "function" && !document.body.classList.contains("trace-active")) {
+      window.applyXrayState(window._lastXrayState);
+    }
+  } catch (_e) {}
+}
+
 function xrayDeepDiveZoomIn() {
   var nodeId = window._xrayTargetNode || "topo-node-r1";
   var node = document.getElementById(nodeId);
@@ -1536,9 +1544,11 @@ function xrayDeepDiveZoomIn() {
       diagram.style.transition = "";
       diagram.style.transformOrigin = "";
       document.body.classList.add("is-xray-deep");
+      _xrayReangleAfterDeepOpen();
     }, 500);
   } else {
     document.body.classList.add("is-xray-deep");
+    _xrayReangleAfterDeepOpen();
   }
   if (typeof xrayStartBgpTablePoll === "function") xrayStartBgpTablePoll(window._scenarioConfig || {});
   var _liveDeep = document.body.classList.contains("is-xray-mode") && !window._replayLock && !document.body.classList.contains("trace-active") && !document.body.classList.contains("is-replaying");
