@@ -152,7 +152,15 @@ view.openDeepDive();                                    <span class="c">// insid
       document.getElementById('err').style.display = 'none';
       var opts = { invertedV: document.getElementById('iv').checked, json: document.getElementById('js').checked,
         target: (document.getElementById('tg').value || '').trim() || null };
-      var r = window.clabToXray.convert(document.getElementById('src').value, opts);
+      var _srcTxt = document.getElementById('src').value;
+      var r;
+      try { r = window.clabToXray.convert(_srcTxt, opts); }
+      catch (convErr) {
+        // "input is JSON" was ticked but the paste is actually YAML (a common mis-click on the hero page):
+        // JSON.parse throws — fall back to the YAML parser instead of hard-failing.
+        if (opts.json) { opts.json = false; r = window.clabToXray.convert(_srcTxt, opts); }
+        else { throw convErr; }
+      }
       if (!r.ok) {
         showErr('<b>This topology isn\'t mapped (yet).</b><br>' +
           'X-Ray draws three shapes: 2-node link, 3-node path, 3-node triangle. ' +
