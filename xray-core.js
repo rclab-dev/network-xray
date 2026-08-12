@@ -3038,6 +3038,16 @@ function _xrayRenderTriangleTopology(config) {
     arrowSvg.appendChild(lblOspf);
     window._triArrowsVisible = true;
     function _applyTraceArrows(d) {
+      // OSS gallery: the Overview route/forward arrows imply a fixed traceroute destination, which a
+      // generic paste has no concept of — keep them hidden unless a page explicitly opts in. The DeepDive
+      // cylinder next-hop arrow is unaffected (different element).
+      if (window._xrayOverviewRouteArrows !== true) {
+        [ "route-arrow-direct", "route-label-direct", "route-arrow-r1r2", "route-arrow-r2r3", "route-label-ospf" ].forEach(function(id) {
+          var e = document.getElementById(id);
+          if (e) e.setAttribute("opacity", "0");
+        });
+        return;
+      }
       if (!d || !d.success) return;
       var ad = document.getElementById("route-arrow-direct");
       var ld = document.getElementById("route-label-direct");
@@ -3072,7 +3082,7 @@ function _xrayRenderTriangleTopology(config) {
         window._tracePolling = false;
       });
     }
-    if (!window._tracePollTimer) {
+    if (!window._tracePollTimer && window._xrayOverviewRouteArrows === true) {
       window._tracePollTimer = setInterval(function() {
         if (_xrayDeepDeconflict()) return;
         if (!window._tracePolling) _pollTraceroute();
