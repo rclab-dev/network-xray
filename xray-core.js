@@ -3389,7 +3389,7 @@ function _xrayDeAngleInjectCss() {
   if (document.getElementById("xray-de-angle-style")) return;
   var st = document.createElement("style");
   st.id = "xray-de-angle-style";
-  st.textContent = ".de-side-wrap{position:absolute;inset:0;transform-origin:50% 50%;pointer-events:none}" + "body.de-angle-active .xray-deep-engine{overflow:visible}" + "body.de-angle-active .topology{overflow:hidden!important}" + "body.de-angle-active #de-tunnel-left,body.de-angle-active #de-tunnel-right{transition:opacity 0.8s cubic-bezier(0.23,1,0.32,1),height 0.8s cubic-bezier(0.23,1,0.32,1)!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-full > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-exchange > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-2way > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-init > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.42) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.28) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp-idle > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.12) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 100%)!important}" + ".de-angle-on #de-cyl-fwd-arrow,.de-angle-on .de-ping-orb,.de-angle-on .de-packet{display:none!important}" + ".de-angle-on .de-r1-name{display:inline-block;vertical-align:baseline;margin-right:12px}" + ".de-angle-on .de-r1-sub{display:inline-block;vertical-align:baseline}" + "[data-topo-triangle].is-xray-deep.hello-out .de-angle-on .de-hello-orb.out{display:block!important}" + "[data-topo-triangle].is-xray-deep.hello-in .de-angle-on .de-hello-orb.in{display:block!important}" + ".de-ping-ball{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;" + "background:radial-gradient(circle,#fff,rgba(0,229,255,0.95));box-shadow:0 0 14px rgba(0,229,255,0.9);" + "z-index:9;pointer-events:none;offset-anchor:center;offset-rotate:0deg;" + "animation:demove 1.8s ease-in-out infinite alternate;display:none}" + "@keyframes demove{from{offset-distance:0%}to{offset-distance:100%}}";
+  st.textContent = ".de-side-wrap{position:absolute;inset:0;transform-origin:50% 50%;pointer-events:none}" + ".xray-deep-engine.de-angle-single-tilt .de-tunnel-label,.xray-deep-engine.de-angle-single-tilt .de-label,.xray-deep-engine.de-angle-single-tilt .de-conn-ball,.xray-deep-engine.de-angle-single-tilt .de-ping-ball,.xray-deep-engine.de-angle-single-tilt .de-if-marker,.xray-deep-engine.de-angle-single-tilt .de-ping-orb,.xray-deep-engine.de-angle-single-tilt .de-packet{display:none!important}" + "body.de-angle-active .xray-deep-engine{overflow:visible}" + "body.de-angle-active .topology{overflow:hidden!important}" + "body.de-angle-active #de-tunnel-left,body.de-angle-active #de-tunnel-right{transition:opacity 0.8s cubic-bezier(0.23,1,0.32,1),height 0.8s cubic-bezier(0.23,1,0.32,1)!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-full > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-exchange > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-2way > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-init > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.42) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.28) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp-idle > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.12) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 100%)!important}" + ".de-angle-on #de-cyl-fwd-arrow,.de-angle-on .de-ping-orb,.de-angle-on .de-packet{display:none!important}" + ".de-angle-on .de-r1-name{display:inline-block;vertical-align:baseline;margin-right:12px}" + ".de-angle-on .de-r1-sub{display:inline-block;vertical-align:baseline}" + "[data-topo-triangle].is-xray-deep.hello-out .de-angle-on .de-hello-orb.out{display:block!important}" + "[data-topo-triangle].is-xray-deep.hello-in .de-angle-on .de-hello-orb.in{display:block!important}" + ".de-ping-ball{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;" + "background:radial-gradient(circle,#fff,rgba(0,229,255,0.95));box-shadow:0 0 14px rgba(0,229,255,0.9);" + "z-index:9;pointer-events:none;offset-anchor:center;offset-rotate:0deg;" + "animation:demove 1.8s ease-in-out infinite alternate;display:none}" + "@keyframes demove{from{offset-distance:0%}to{offset-distance:100%}}";
   (document.head || document.body).appendChild(st);
 }
 
@@ -3521,6 +3521,49 @@ function _xrayDeAngleView(s) {
       de._deOcc = occ;
     }
     var ang = _xrayDeSideAngles(cfg);
+    var _slTilt = false;
+    if (!ang.dual) {
+      // Single-link node: tilt the link toward the peer's real direction (from positions) instead of flat.
+      try {
+        var _tgtN = s && (s.target_node || s.id), _prN = s && s.peer_node, _P = cfg.positions;
+        if (_P && _tgtN && _prN && _P[_tgtN] && _P[_prN]) {
+          var _degSL = Math.atan2(_P[_prN].y - _P[_tgtN].y, _P[_prN].x - _P[_tgtN].x) * 180 / Math.PI;
+          ang = { l: _degSL, r: _degSL, dual: false };
+          _slTilt = true;
+        }
+      } catch (_eSL) {}
+    } else {
+      // Dual-link apex (triangle): use the real per-peer angles from positions instead of a fixed V,
+      // so editing graph-posX/posY actually moves the links (matches the Simple/radial view). No positions -> ±45.
+      try {
+        var _tri = window._triNodes, _P2 = cfg.positions;
+        if (_tri && _P2 && _P2[_tri.target] && _P2[_tri.left] && _P2[_tri.right]) {
+          var _tP = _P2[_tri.target];
+          // Screen bearing (y-down) target->peer. The two side-wraps sit 180 deg apart, so the beam's
+          // visual direction is (rotation+180) on the left and (rotation) on the right. Aim each beam AT
+          // its peer: rotate left by (bearing-180), right by (bearing). The old fixed V was the symmetric case.
+          var _aL = Math.atan2(_P2[_tri.left].y - _tP.y, _P2[_tri.left].x - _tP.x) * 180 / Math.PI;
+          var _aR = Math.atan2(_P2[_tri.right].y - _tP.y, _P2[_tri.right].x - _tP.x) * 180 / Math.PI;
+          ang = { l: _aL - 180, r: _aR, dual: true };
+        }
+      } catch (_eD) {}
+    }
+    // when the single link is tilted, hide the flat horizontal tunnel-wall / iface labels that don't
+    // follow the rotation (the rotated beam already shows the link toward its peer). Toggled each render.
+    de.classList.toggle("de-angle-single-tilt", _slTilt);
+    // Single-link tilt: rotate the (otherwise horizontal) out-side tunnel band so it follows the beam
+    // toward the peer, instead of hiding it. The FORWARD arrow already uses the angled connPt, so it
+    // needs no extra rotation. Pivot at the band's left edge (~cylinder centre). Cleared when not tilted.
+    var _mainDt = de.querySelector(".de-tunnel:not(.left-side)");
+    if (_mainDt) {
+      if (_slTilt) {
+        _mainDt.style.transformOrigin = "-60px 50%";
+        _mainDt.style.transform = "translateY(-50%) rotate(" + ang.r + "deg)";
+      } else {
+        _mainDt.style.removeProperty("transform-origin");
+        _mainDt.style.removeProperty("transform");
+      }
+    }
     document.body.classList.toggle("de-angle-active", !!ang.dual);
     var _topo = de.closest(".topology");
     if (_topo) {
@@ -3582,7 +3625,9 @@ function _xrayDeAngleView(s) {
     de._deCbL.style.top = L[1] + "px";
     de._deCbR.style.left = R[0] + "px";
     de._deCbR.style.top = R[1] + "px";
-    var outIsLeft = window._xrayFwdDirection === "left";
+    // For a tilted single link the one peer (and its .de-beam.out) always lives on the R side, so the
+    // FORWARD arrow must point there too — override any stale fwd-direction that would send it the other way.
+    var outIsLeft = _slTilt ? false : window._xrayFwdDirection === "left";
     var outDeg = outIsLeft ? ang.l : ang.r, outConn = outIsLeft ? L : R, outSide = outIsLeft ? -1 : 1, outFar = visFar(outDeg, outSide);
     var inDeg = outIsLeft ? ang.r : ang.l, inConn = outIsLeft ? R : L, inSide = outIsLeft ? 1 : -1, inFar = visFar(inDeg, inSide);
     var _nLink = s && s.interfaces ? Object.keys(s.interfaces).filter(function(k) {

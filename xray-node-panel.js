@@ -206,12 +206,16 @@
     });
     // white RoutingEngine circle on top (links terminate at its edge)
     s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2.5"/>';
-    // green forwarding arrow INSIDE the white circle, pointing toward the selected out-iface
+    // forwarding arrow INSIDE the white circle, pointing toward the selected out-iface.
+    // Colour it by the forwarding protocol so it stays coherent with the BGP/OSPF tunnel (was fixed green).
     var oif = selOutIface(state, sel);
+    var _selRow = (state.routing_table || []).filter(function (r) { return r.prefix === sel; })[0];
+    var _fwdBgp = (_selRow && _selRow.protocol === 'bgp') || (state.route_resolution && state.route_resolution.protocol === 'bgp');
+    var _fwdCol = _fwdBgp ? 'var(--xnp-bgp)' : 'var(--xnp-ok)';
     if (oif && ang[oif] != null) {
       var a2 = ang[oif], ti = [CX + Math.cos(a2) * (RER - 9), CY + Math.sin(a2) * (RER - 9)], hs = 9;
-      s += '<line x1="' + CX + '" y1="' + CY + '" x2="' + num(ti[0]) + '" y2="' + num(ti[1]) + '" stroke="var(--xnp-ok)" stroke-width="4"/>' +
-        '<polygon fill="var(--xnp-ok)" points="' + num(ti[0]) + ',' + num(ti[1]) + ' ' + num(ti[0] - Math.cos(a2 - 0.5) * hs) + ',' + num(ti[1] - Math.sin(a2 - 0.5) * hs) + ' ' + num(ti[0] - Math.cos(a2 + 0.5) * hs) + ',' + num(ti[1] - Math.sin(a2 + 0.5) * hs) + '"/>';
+      s += '<line x1="' + CX + '" y1="' + CY + '" x2="' + num(ti[0]) + '" y2="' + num(ti[1]) + '" stroke="' + _fwdCol + '" stroke-width="4"/>' +
+        '<polygon fill="' + _fwdCol + '" points="' + num(ti[0]) + ',' + num(ti[1]) + ' ' + num(ti[0] - Math.cos(a2 - 0.5) * hs) + ',' + num(ti[1] - Math.sin(a2 - 0.5) * hs) + ' ' + num(ti[0] - Math.cos(a2 + 0.5) * hs) + ',' + num(ti[1] - Math.sin(a2 + 0.5) * hs) + '"/>';
     } else {
       s += '<circle cx="' + CX + '" cy="' + CY + '" r="5" fill="#a678e0"/>' +
         (oif === 'lo' ? '<text x="' + CX + '" y="' + (CY - HH - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>' : '');
