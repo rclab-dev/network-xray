@@ -3447,6 +3447,10 @@ function _xrayDeAngleView(s) {
     var de = document.querySelector(".xray-deep-engine");
     if (!de) return;
     var cfg = window._scenarioConfig || {};
+    // FORWARD arrow / flow colour follows the scenario protocol (data-driven): BGP purple, else OSPF green.
+    // Keeps the arrow coherent with the BGP orb/tunnel (was fixed green, reading as OSPF in BGP scenarios).
+    var _isBgpFwd = cfg.xray && cfg.xray.protocol === "bgp" || !!(s && (s.bgp_configured || s.is_established === true || s.bgp_state || s.bgp_routes && s.bgp_routes.length));
+    if (typeof _XRAY_DE !== "undefined") _XRAY_DE.fwdArrowCol = _isBgpFwd ? "#a855f7" : "#39ff14";
     var off = typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(cfg) || !document.body.classList.contains("is-xray-deep");
     if (off) {
       _xrayDeAngleTeardown(de);
@@ -3780,6 +3784,7 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   var protocol = xray.protocol || "static";
   var isOspf = protocol === "ospf";
   var isBgp = protocol === "bgp";
+  if (typeof _XRAY_DE !== "undefined") _XRAY_DE.fwdArrowCol = isBgp ? "#a855f7" : "#39ff14";
   var otherNodes = nodes.filter(function(n) {
     return n.id !== nodeId;
   });
@@ -4784,7 +4789,7 @@ function xrayBuildApplyState(config) {
     if (_triNodes) {
       var _lId = _triNodes.left, _rId = _triNodes.right;
       var _leftLink, _rightLink;
-      if (pattern === "ospf_triangle") {
+      if (pattern === "ospf_triangle" || protocol === "ospf") {
         var _lFull = s[_lId + "_has_full"] !== undefined ? !!s[_lId + "_has_full"] : !!s.has_full;
         var _rFull = s[_rId + "_has_full"] !== undefined ? !!s[_rId + "_has_full"] : false;
         var _lNbr = s[_lId + "_neighbor_state"] || "None";
@@ -4849,7 +4854,7 @@ function xrayBuildApplyState(config) {
       var _riDown = !!(_rightLink.ifName && _dlIfaces[_rightLink.ifName] && !_dlIfaces[_rightLink.ifName].up);
       document.body.classList.toggle("is-input-down", _liDown);
       document.body.classList.toggle("is-output-down", _riDown);
-      if (pattern === "ospf_triangle") {
+      if (pattern === "ospf_triangle" || protocol === "ospf") {
         var _ifaces = s.interfaces || {};
         var _lIfDown = s[_lId + "_iface"] && _ifaces[s[_lId + "_iface"]] && !_ifaces[s[_lId + "_iface"]].up;
         _xrayApplyDualLinkHello(s, _leftLink.ifName, _rightLink.ifName, _lId, _rId);
@@ -8871,7 +8876,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
   var ifs = s.interfaces || {};
   var rr = s.route_resolution || {};
   var ifKeys = Object.keys(ifs).filter(function(k) {
-    return k !== "lo";
+    return k !== "lo" && !/^system\d/.test(k);
   });
   var _realIfKeys = ifKeys.filter(function(k) {
     var _ip = ifs[k] && ifs[k].ip;
