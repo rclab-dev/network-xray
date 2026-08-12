@@ -6,7 +6,7 @@
 <title>SR Linux paste &rarr; render — xray-core gallery</title>
 <style>
   html,body{margin:0;background:#0a1016;color:#cfe8ee;font:13px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:640px;margin:0 auto;padding:22px 18px 60px}
+  .wrap{max-width:1040px;margin:0 auto;padding:22px 18px 60px}
   h1{font-size:20px;margin:0 0 4px;color:#4dd0e1}
   h1 small{font-size:12px;color:#7f97a6;font-weight:400}
   p.sub{color:#90a4ae;font-size:13px;margin:0 0 14px;line-height:1.6}
@@ -15,10 +15,12 @@
   select,button{background:#12202b;color:#cfe8ee;border:1px solid #2b3a44;border-radius:5px;padding:6px 10px;font:12px monospace}
   button.render{background:#00acc1;border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;padding:8px 18px}
   button.render:hover{background:#00838f}
-  textarea{width:100%;box-sizing:border-box;height:150px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;
+  button#deepBtn{background:#12202b;color:#7fd;border:1px solid #2b5;cursor:pointer}
+  textarea{width:100%;box-sizing:border-box;height:130px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;
     border-radius:6px;padding:8px 10px;font-family:"Courier New",monospace;font-size:11.5px;line-height:1.4;resize:vertical}
-  #err{color:#ef9a9a;font-size:12px;min-height:16px;margin:6px 0}
-  #xray-panel{margin-top:8px}
+  #err{color:#ef9a9a;font-size:12px;min-height:16px;margin:6px 0;display:none}
+  #topo-wrap{position:relative;width:100%;height:520px;margin-top:10px;background:#0a141c;border:1px solid #1c2b36;border-radius:8px;overflow:hidden}
+  #topo-wrap .topo-diagram{position:relative;width:100%;height:100%}
   .note{margin-top:18px;color:#5f7d8a;font-size:11.5px;line-height:1.7;border-top:1px solid #1c2b36;padding-top:14px}
   code{color:#8fd4e0;background:#0d1a22;padding:1px 5px;border-radius:3px;font-size:11.5px}
   .badge{font-size:10.5px;color:#0a1016;background:#4dd0e1;border-radius:10px;padding:1px 8px;font-weight:700;vertical-align:middle;margin-left:6px}
@@ -26,35 +28,39 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>SR Linux &rarr; X-Ray <span class="badge">Nokia srlinux</span><br><small>paste one node's collector state and render its control-plane panel</small></h1>
+  <h1>SR Linux &rarr; X-Ray <span class="badge">Nokia srlinux</span><br><small>paste one node's collector state and open its DeepDive</small></h1>
   <p class="sub">Run <code>clab-srl-collect.js</code> against a live Nokia SR Linux node (it reads real
-    <code>sr_cli "info from state &hellip; | as json"</code>) and paste the JSON here. The same
-    <b>single-node panel</b> the FRR collector drives renders it &mdash; routing table, BGP table and
-    Best-Path decision &mdash; because the engine is vendor-neutral; only the state <i>source</i> differs.</p>
+    <code>sr_cli "info from state &hellip; | as json"</code>) and paste the JSON here. The same vendor-neutral
+    engine that draws FRR renders it &mdash; topology overview plus the per-node <b>DeepDive</b> cross-section
+    (routing engine, adjacency, LSDB, route decision) &mdash; because only the state <i>source</i> differs.</p>
 
   <div class="row">
     <label for="sample">Sample</label>
     <select id="sample"></select>
-    <label style="margin-left:10px"><input type="checkbox" id="figure" checked /> Figure (click a route &rarr; arrow)</label>
+    <button id="deepBtn" style="display:none">Open the router (r1) &#9656;</button>
     <button class="render" id="go" style="margin-left:auto">Render</button>
   </div>
   <textarea id="in" spellcheck="false"></textarea>
   <div id="err"></div>
 
-  <!-- the panel renders here (this is all a host node-properties tab needs) -->
-  <div id="xray-panel"></div>
+  <!-- topology overview + DeepDive cylinder render here -->
+  <div class="topology is-xray-mode" id="topo-wrap">
+    <div class="topo-diagram" id="topo"></div>
+    <div class="xray-deep-engine"></div>
+  </div>
 
   <div class="note">
     Capture your own from a running lab:<br>
     <code>node clab-srl-collect.js --lab &lt;lab&gt; --node &lt;node&gt; --adj ethernet-1/1.0:&lt;peer&gt; --proto ospf|bgp</code><br>
     <code>--adj</code> maps each local subinterface to the containerlab peer node it faces (so
     <code>&lt;peer&gt;_iface</code> / <code>&lt;peer&gt;_has_full</code> resolve on any IP plan). The samples above are
-    real captures from an <b>srlinux v24</b> containerlab lab. One line wires the panel into any GUI:
-    <code>XrayNodePanel.render(el, state)</code>.
+    real captures from an <b>srlinux v24</b> containerlab lab. DeepDive opens in <b>Standard</b> (cross-section);
+    toggle to <b>Simple</b> for the radial view.
   </div>
 </div>
 
-<script src="xray-node-panel.js"></script>
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script><script src="xray-i18n.js"></script><script src="xray-skin.js"></script>
 <script>
 // Real captures from a live Nokia SR Linux (srlinux v24) containerlab lab, produced by
 // clab-srl-collect.js (see DATA-CONTRACT.md for the state shape). These are not hand-written.
@@ -74,6 +80,7 @@ var SAMPLES = {
     success: true, id: 'r1', scenario: 'r1', has_full: true, full_count: 1, neighbor_state: 'Full',
     wan_iface: 'ethernet-1/1.0', lan_iface: 'ethernet-1/1.0', ping_ok: true, cleared: true, target_on_path: false,
     ospf_configured: true, ospf_active_on_interface: true, peer_sending_hello: true, has_ospf_route: true,
+    r1_area: '0', r2_area: '0', target_area: '0', peer_area: '0', area_match: true,
     lsdb_prefixes: [ { text: '2.2.2.2/32', own: false, via: '10.0.0.2' } ]
   },
   'r1 — eBGP (Established with AS65002, best 2.2.2.2/32)': {
@@ -98,25 +105,76 @@ var SAMPLES = {
   }
 };
 
-var POS = { r1: { x: 130, y: 150 }, r2: { x: 330, y: 150 } };
-var selEl = document.getElementById('sample'), inEl = document.getElementById('in'),
-    panel = document.getElementById('xray-panel'), errEl = document.getElementById('err'),
-    figure = document.getElementById('figure');
+var POS = { r1: { x: 0.30, y: 0.5 }, r2: { x: 0.70, y: 0.5 } };
+var selEl = document.getElementById('sample'), inEl = document.getElementById('in'), errEl = document.getElementById('err');
+var view = null;
 
 Object.keys(SAMPLES).forEach(function (k) { var o = document.createElement('option'); o.value = k; o.textContent = k; selEl.appendChild(o); });
 
-function loadSample() { inEl.value = JSON.stringify(SAMPLES[selEl.value], null, 2); render(); }
+// Build a minimal vendor-neutral config from one node's collector state.
+// Peers come from the <peer>_iface fields (the containerlab adjacency the collector recorded);
+// the DeepDive reads the adjacency straight from state, so nodes + positions are enough.
+function buildConfig(state) {
+  var target = state.target_node || state.id || 'r1';
+  var peers = Object.keys(state).filter(function (k) {
+    return /_iface$/.test(k) && k !== 'wan_iface' && k !== 'lan_iface';
+  }).map(function (k) { return k.replace(/_iface$/, ''); });
+  var nodes = [{ id: target, target: true }].concat(peers.map(function (p) { return { id: p }; }));
+  var networks = peers.map(function (p) {
+    var ifn = state[p + '_iface'];
+    var ip = (state.interfaces && state.interfaces[ifn] && state.interfaces[ifn].ip) || '';
+    var octet = ip ? parseInt(String(ip).split('/')[0].split('.').pop(), 10) : 1;
+    return {
+      name: 'net-' + target + p,
+      cidr: ip ? (ip.split('.').slice(0, 3).join('.') + '.0/30') : '',
+      members: [{ node: target, host_id: octet, iface: ifn }, { node: p, host_id: octet === 1 ? 2 : 1 }]
+    };
+  });
+  var proto = state.protocol || 'ospf';
+  return {
+    success: true, deep_engine: 'unified', topology_type: 'custom',
+    // pattern must match the sample's protocol: the engine's logic-line / arrow-colour picker keys on
+    // xray.pattern (ospf_* → OSPF, else protocol → BGP). Leaving it at the default 'ospf_linear' made the
+    // BGP sample show "OSPF: NOT RUNNING" + a green (OSPF) arrow — so drive it from the state's protocol.
+    xray: { protocol: proto, pattern: (proto === 'bgp' ? 'bgp' : 'ospf_linear') },
+    nodes: nodes, networks: networks, positions: POS
+  };
+}
+
+function setDeepLabel(open) {
+  var b = document.getElementById('deepBtn');
+  if (!b) return;
+  b.style.display = view ? '' : 'none';
+  b.innerHTML = open ? '◂ Back to overview' : 'Open the router (r1) ▸';
+}
+window.toggleDeep = function () {
+  if (!view) return;
+  if (document.body.classList.contains('is-xray-deep')) { view.closeDeepDive(); setDeepLabel(false); }
+  else { view.openDeepDive(); setDeepLabel(true); }
+};
+document.addEventListener('xraycore:deepdive', function (e) { setDeepLabel(!!(e.detail && e.detail.open)); });
+document.getElementById('deepBtn').addEventListener('click', window.toggleDeep);
+
 function render() {
-  errEl.textContent = '';
+  errEl.style.display = 'none'; errEl.textContent = '';
   var state;
   try { state = JSON.parse(inEl.value); }
-  catch (e) { errEl.textContent = 'Invalid JSON: ' + e.message; panel.innerHTML = ''; return; }
-  try { panel._xnpSel = null; XrayNodePanel.render(panel, state, { figure: figure.checked, positions: POS }); }
-  catch (e) { errEl.textContent = 'Render error: ' + e.message; }
+  catch (e) { errEl.style.display = 'block'; errEl.textContent = 'Invalid JSON: ' + e.message; return; }
+  try {
+    document.body.classList.remove('is-xray-deep');
+    var cfg = buildConfig(state);
+    view = xrayCore.renderTopology('#topo', cfg, {});
+    // Wire the in-cylinder BGP Table + Best-Path Decision from the pasted state's bgp_routes (the srl
+    // collector emits these), so a BGP paste gets the same panels as the other BGP demos.
+    if (typeof view.setBgpTable === 'function') view.setBgpTable(function (st) { return (st && st.bgp_routes) || []; });
+    view.applyState(state);
+    view.openDeepDive();          // show the DeepDive cross-section straight away (Standard by default)
+    setDeepLabel(true);
+  } catch (e) { errEl.style.display = 'block'; errEl.textContent = 'Render error: ' + (e && e.message ? e.message : e); if (window.console) console.error(e); }
 }
+function loadSample() { inEl.value = JSON.stringify(SAMPLES[selEl.value], null, 2); render(); }
 selEl.addEventListener('change', loadSample);
 document.getElementById('go').addEventListener('click', render);
-figure.addEventListener('change', render);
 loadSample();
 </script>
 </body>
