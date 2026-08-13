@@ -31,6 +31,7 @@
   .ov-node .k{display:block;font-size:9px;color:#78909c;font-weight:400}
   .ov-node:hover{box-shadow:0 0 12px rgba(77,208,225,.6)}
   .ov-node.sel{border-color:#ef5350;color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.5)}
+  .ov-node{cursor:grab}.ov-node.dragging{cursor:grabbing;box-shadow:0 0 14px rgba(77,208,225,.9);z-index:5}
   #peers{text-align:center;margin:8px 0;min-height:28px}
   #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
   #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
@@ -83,8 +84,10 @@ topology:
 
   <div class="controls">
     <button onclick="window.__render()">Render</button>
+    <button id="copyBtn" style="background:#37474f" onclick="window.__copyClab()">Copy .clab.yml</button>
     <span class="opt"><input type="checkbox" id="js"> input is JSON</span>
     <span class="opt">target <input type="text" id="tg" placeholder="auto"></span>
+    <span class="opt" style="color:#607d8b">drag a node to reposition it &rarr; the graph-posX/posY above updates</span>
   </div>
   <div class="info" id="info"></div>
 
@@ -113,6 +116,13 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
 
   var W = 560, H = 360, PAD = 60;
   var NAMES = [], KIND = {}, ADJ = {}, EDGES = [], POS = {}, fullCfg = null;
+  // screen<->graph transform, fixed at each Render so dragging is stable (graph-pos mode only; null = auto layout)
+  var _xform = null;
+  function screenToGraph(sx, sy) {
+    if (!_xform) return null;
+    return { x: Math.round(_xform.minX + (sx - PAD) / (W - 2 * PAD) * _xform.spanX),
+             y: Math.round(_xform.minY + (sy - PAD) / (H - 2 * PAD) * _xform.spanY) };
+  }
 
   // Place nodes from graph-posX/posY (config.positions) when present — scaled to fit the overview box —
   // otherwise fall back to an automatic hub-and-spoke / ring layout (so a lab with no coords still renders).
@@ -123,6 +133,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
       var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
       var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
       var spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1;
+      _xform = { minX: minX, minY: minY, spanX: spanX, spanY: spanY };
       var P = {};
       NAMES.forEach(function (n) {
         P[n] = [ PAD + (pos[n].x - minX) / spanX * (W - 2 * PAD),
@@ -130,6 +141,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
       });
       return { pos: P, source: 'graph-pos' };
     }
+    _xform = null;
     // auto-layout (any N): hub-and-spoke when one node connects to all leaves, else a ring.
     var cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 60, P = {};
     var deg = function (n) { return (ADJ[n] || []).length; };
@@ -198,23 +210,85 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
   }
   window.__xrayShowNode = showNode;
 
-  // ---- draw the coordinate overview (links + node cards) ----
-  function drawOverview() {
-    var ov = document.getElementById('ov');
-    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '">', drawn = {};
+  // ---- draw the coordinate overview (links + draggable node cards) ----
+  function linksSvg() {
+    var s = '', drawn = {};
     NAMES.forEach(function (n) { (ADJ[n] || []).forEach(function (m) {
       var k = [n, m].sort().join('|'); if (drawn[k] || !POS[m] || !POS[n]) return; drawn[k] = 1;
-      svg += '<line x1="' + POS[n][0] + '" y1="' + POS[n][1] + '" x2="' + POS[m][0] + '" y2="' + POS[m][1] + '" stroke="#455a64" stroke-width="2"/>';
+      s += '<line x1="' + POS[n][0] + '" y1="' + POS[n][1] + '" x2="' + POS[m][0] + '" y2="' + POS[m][1] + '" stroke="#455a64" stroke-width="2"/>';
     }); });
-    svg += '</svg>'; ov.innerHTML = svg;
+    return s;
+  }
+  function redrawLinks() { var sv = document.querySelector('.ov svg'); if (sv) sv.innerHTML = linksSvg(); }
+  function drawOverview() {
+    var ov = document.getElementById('ov');
+    ov.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '">' + linksSvg() + '</svg>';
     NAMES.forEach(function (n) {
       var b = document.createElement('div'); b.className = 'ov-node'; b.setAttribute('data-n', n);
       b.innerHTML = n + (KIND[n] ? '<span class="k">' + KIND[n] + '</span>' : '');
       b.style.left = POS[n][0] + 'px'; b.style.top = POS[n][1] + 'px';
-      b.onclick = function () { showNode(n); };
+      b.addEventListener('mousedown', function (ev) {
+        ev.preventDefault();
+        var downX = ev.clientX, downY = ev.clientY, startL = POS[n][0], startT = POS[n][1], moved = false, canDrag = !!_xform;
+        function mm(e) {
+          var dx = e.clientX - downX, dy = e.clientY - downY;
+          if (!moved && Math.abs(dx) + Math.abs(dy) > 4) { moved = true; if (canDrag) b.classList.add('dragging'); }
+          if (moved && canDrag) {
+            var nl = Math.max(PAD, Math.min(W - PAD, startL + dx)), nt = Math.max(PAD, Math.min(H - PAD, startT + dy));
+            POS[n][0] = nl; POS[n][1] = nt; b.style.left = nl + 'px'; b.style.top = nt + 'px'; redrawLinks();
+          }
+        }
+        function mu() {
+          document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu);
+          b.classList.remove('dragging');
+          if (moved && canDrag) { var g = screenToGraph(POS[n][0], POS[n][1]); if (g) writeGraphPos(n, g.x, g.y); }
+          else if (!moved) { showNode(n); }
+        }
+        document.addEventListener('mousemove', mm); document.addEventListener('mouseup', mu);
+      });
       ov.appendChild(b);
     });
   }
+
+  // ---- write the dragged node's new coords back into the paste textarea (graph-posX/posY) ----
+  function writeGraphPos(nodeId, gx, gy) {
+    var ta = document.getElementById('src'), text = ta.value;
+    function repl(key, val) {
+      var idx = text.search(new RegExp('(^|\\n)\\s*' + nodeId + ':'));
+      if (idx < 0) return false;
+      var head = text.slice(0, idx), rest = text.slice(idx);
+      var endRel = rest.slice(1).search(/\n\s{2,}[A-Za-z0-9_-]+:\s*[\{&]|\n\s*links:/);
+      var blockEnd = endRel < 0 ? rest.length : endRel + 1;
+      var block = rest.slice(0, blockEnd), after = rest.slice(blockEnd);
+      var kre = new RegExp('(' + key + ':\\s*)"?-?[0-9.]+"?');
+      if (!kre.test(block)) return false;
+      block = block.replace(kre, '$1"' + val + '"');
+      text = head + block + after; return true;
+    }
+    var okX, okY;
+    if (document.getElementById('js').checked) {
+      var jx = new RegExp('("' + nodeId + '"[\\s\\S]*?"graph-posX"\\s*:\\s*)"?-?[0-9.]+"?');
+      var jy = new RegExp('("' + nodeId + '"[\\s\\S]*?"graph-posY"\\s*:\\s*)"?-?[0-9.]+"?');
+      okX = jx.test(text); if (okX) text = text.replace(jx, '$1"' + gx + '"');
+      okY = jy.test(text); if (okY) text = text.replace(jy, '$1"' + gy + '"');
+    } else {
+      okX = repl('graph-posX', gx); okY = repl('graph-posY', gy);
+    }
+    if (okX && okY) { ta.value = text; setInfoMoved(nodeId, gx, gy); }
+  }
+  function setInfoMoved(nodeId, gx, gy) {
+    var el = document.getElementById('info');
+    el.innerHTML = 'Moved <b>' + nodeId + '</b> &rarr; graph-pos <b>' + gx + ', ' + gy + '</b> — the textarea is updated; press Render to re-fit or Copy .clab.yml.';
+  }
+
+  window.__copyClab = function () {
+    var ta = document.getElementById('src');
+    function done() { var b = document.getElementById('copyBtn'); var t = b.textContent; b.textContent = 'Copied \u2713'; setTimeout(function () { b.textContent = t; }, 1200); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(ta.value).then(done, function () { ta.select(); document.execCommand('copy'); done(); }); }
+      else { ta.select(); document.execCommand('copy'); done(); }
+    } catch (e) { ta.select(); }
+  };
 
   window.__render = function () {
     try {
@@ -250,6 +324,16 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
         var k = [a, b].sort().join('|'); if (EDGES.indexOf(k) < 0) EDGES.push(k);
       });
       if (!NAMES.length) { showErr('No nodes found in this topology.'); return; }
+      // JSON paste: clab-to-xray reads graph-pos from the YAML text only, so for a JSON export pull the
+      // graph-posX/posY out of the parsed labels here — so JSON labs also lay out by coords and are draggable.
+      if (opts.json && (!fullCfg.positions || !Object.keys(fullCfg.positions).length)) {
+        try {
+          var _jd = JSON.parse(_srcTxt), _jn = _jd.topology && _jd.topology.nodes, _pp = {};
+          if (_jn) { Object.keys(_jn).forEach(function (k) { var lb = (_jn[k] && _jn[k].labels) || {};
+            if (lb['graph-posX'] != null && lb['graph-posY'] != null) _pp[k] = { x: parseFloat(lb['graph-posX']), y: parseFloat(lb['graph-posY']) }; }); }
+          if (Object.keys(_pp).length) fullCfg.positions = _pp;
+        } catch (_e) {}
+      }
       var pc = computePositions(fullCfg); POS = pc.pos;
       document.getElementById('info').innerHTML = 'Detected: <b>' + (fullCfg._clab_source ? fullCfg._clab_source.node_count : NAMES.length) + ' nodes</b> / <b>' +
         (fullCfg._clab_source ? fullCfg._clab_source.link_count : EDGES.length) + ' links</b> · layout = <b>' + (pc.source === 'graph-pos' ? 'graph-posX/posY' : 'auto') + '</b> · click a node to open its DeepDive';
