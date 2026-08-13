@@ -3,15 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>containerlab paste &rarr; render — xray-core gallery</title>
+<title>containerlab paste &rarr; graph — xray-core gallery</title>
 <script src="xray-core.js"></script>
 <script src="xray-api.js"></script><script src="xray-i18n.js"></script><script src="xray-skin.js"></script>
 <script src="clab-to-xray.js"></script>
 <script src="clab-xray-bridge.js"></script>
 <style>
-  :root{--rc-accent:#4dd0e1;--rc-btn:#00acc1;--rc-btn-hover:#00838f;--rc-topo-bg:#1e2a38;--rc-topo-box-bg:#141b24;
-    --rc-topo-box-border:#455a64;--rc-topo-iface-bg:#0f1318;--rc-topo-iface-color:#b0bec5;--rc-topo-ip:#80deea;
-    --rc-topo-link-line:linear-gradient(90deg,#37474f,#607d8b,#37474f);}
+  :root{--rc-accent:#4dd0e1;--rc-btn:#00acc1;--rc-btn-hover:#00838f;}
   html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
   .wrap{max-width:1040px;margin:0 auto;padding:24px 18px 60px}
   h1{font-size:21px;margin:0 0 4px}h1 .x{color:var(--rc-accent)}h1 small{font-size:13px;color:#78909c;font-weight:400}
@@ -21,44 +19,39 @@
     border-radius:6px;padding:8px 10px;font-family:"Courier New",monospace;font-size:12px;line-height:1.45;resize:vertical}
   .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 6px}
   button{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;background:var(--rc-btn)}
-  button:hover{background:var(--rc-btn-hover)}button.cur{background:#26c6da;box-shadow:0 0 0 2px rgba(38,198,218,.4)}
-  button.fault{background:#5d4037}button.fault:hover{background:#4e342e}button.deep{background:#37474f}button.deep:hover{background:#455a64}
+  button:hover{background:var(--rc-btn-hover)}
   .opt{font-size:12px;color:#90a4ae;display:inline-flex;align-items:center;gap:4px}
   .opt input[type=text]{width:70px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;border-radius:4px;padding:3px 6px;font-family:monospace}
   .info{font-size:12.5px;color:#80cbc4;margin:6px 0;min-height:1.3em}.info b{color:#4dd0e1}
-  .caption{margin:6px 0;padding:9px 13px;background:#10202c;border-left:3px solid var(--rc-accent);border-radius:0 6px 6px 0;font-size:13px;color:#cfe8ee;min-height:1.3em}
-  .topology{position:relative;margin-top:6px;padding:18px;background:var(--rc-topo-bg);border-radius:10px}
-  .topo-diagram{display:flex;align-items:center;justify-content:center;padding:24px 10px;overflow-x:auto}
-  .topo-node{display:flex;flex-direction:column;align-items:center;min-width:120px}
-  .topo-box{background:var(--rc-topo-box-bg);border:2px solid var(--rc-topo-box-border);border-radius:8px;padding:12px 16px;text-align:center;min-width:100px}
-  .topo-box.router{border-color:var(--rc-accent)}.topo-box.server{border-color:#7e57c2}.topo-box.isp{border-color:#66bb6a}
-  .topo-box.target{border-color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.4)}
-  .topo-box h4{margin:0 0 5px;font-size:16px}.topo-box.router h4{color:var(--rc-accent)}.topo-box.target h4{color:#ef5350}
-  .topo-box .role{font-size:11px;color:#90a4ae;margin-bottom:8px}a.topo-box-link{text-decoration:none;color:inherit}
-  .topo-iface{font-family:monospace;font-size:11px;color:var(--rc-topo-iface-color);margin:3px 0;padding:3px 6px;background:var(--rc-topo-iface-bg);border-radius:3px}
-  .topo-iface .label{color:#78909c}.topo-iface .ip{color:var(--rc-topo-ip)}
-  .topo-link{display:flex;flex-direction:column;align-items:center;padding:0 5px}
-  .topo-link-line{width:60px;height:3px;background:var(--rc-topo-link-line)}
-  .topo-link-label{font-size:10px;color:#78909c}.topo-link-subnet{font-family:monospace;font-size:10px;color:#90a4ae}
-  .topo-target-label{color:#ef5350;font-size:11px;margin-top:8px;font-weight:bold}.terminal-hint{display:none}
+  /* coordinate graph overview */
+  .ov{position:relative;width:560px;max-width:100%;height:360px;margin:10px auto;background:#16202b;border-radius:10px;border:1px solid #24323e}
+  .ov svg{position:absolute;inset:0;pointer-events:none}
+  .ov-node{position:absolute;transform:translate(-50%,-50%);background:#141b24;border:2px solid #4dd0e1;border-radius:8px;
+    padding:7px 12px;cursor:pointer;font-weight:700;color:#4dd0e1;font-size:13px;white-space:nowrap;text-align:center}
+  .ov-node .k{display:block;font-size:9px;color:#78909c;font-weight:400}
+  .ov-node:hover{box-shadow:0 0 12px rgba(77,208,225,.6)}
+  .ov-node.sel{border-color:#ef5350;color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.5)}
+  #peers{text-align:center;margin:8px 0;min-height:28px}
+  #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
+  #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
+  #peers button.cur{background:#26c6da;color:#06222a;border-color:#26c6da;font-weight:700}
+  .topology{position:relative;margin:8px 0;min-height:420px;background:#1e2a38;border-radius:10px}
+  #topo{display:none}.xray-deep-engine{min-height:420px}
   #demo-wrap .xray-holo-panel{top:12px!important;right:14px!important;left:auto!important}
-  #demo-wrap .de-ping-orb,#demo-wrap .de-ping-req,#demo-wrap .de-ping-rep,#demo-wrap .de-packet,#demo-wrap .xray-packet-orb{display:none!important}
   .err{display:none;margin-top:12px;padding:12px 14px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px;white-space:pre-wrap}
   pre{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:"Courier New",monospace;font-size:12px;line-height:1.6;color:#cfe8ee;margin-top:20px}
   pre .c{color:#5f7d8c}.foot{margin-top:16px;font-size:12px;color:#607d8b;line-height:1.6}code{background:#141b24;padding:1px 5px;border-radius:3px;color:#80deea;font-size:12px}
 </style>
 </head>
-<body>
+<body class="is-xray-mode">
 <div class="wrap" id="demo-wrap">
   <p style="margin:0 0 10px"><a href="index.html" style="color:#80deea;text-decoration:none;font-size:13px">← Gallery</a></p>
-  <h1><span class="x">containerlab</span> paste &rarr; render <small>(xray-core gallery)</small></h1>
+  <h1><span class="x">containerlab</span> paste &rarr; graph <small>(xray-core gallery)</small></h1>
   <p class="sub">
-    Paste a <b>containerlab</b> topology (<code>.clab.yml</code>) and press <b>Render</b>. Your lab's nodes &amp; links are
-    mapped to an X-Ray diagram — then watch the OSPF state, cut a link, and <b>open a router</b> to see inside.
+    Paste a <b>containerlab</b> topology (<code>.clab.yml</code>) and press <b>Render</b>. Nodes are laid out from their
+    <code>graph-posX</code>/<code>graph-posY</code> labels (edit them and the graph moves); a lab without those labels falls
+    back to an automatic layout. <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision.
     <br><b>🔒 Runs entirely in your browser</b> — your topology never leaves the page.
-    <br><span style="color:#78909c">Scope: small FRR labs — <b>2&ndash;3 nodes</b> (2-node link, 3-node path, or 3-node triangle).
-    Bigger graphs aren't mapped yet (X-Ray draws those three shapes). Default protocol = OSPF
-    (<code>?</code> override via the bridge).</span>
   </p>
 
   <label class="fld">containerlab topology (clab.yml)</label>
@@ -90,97 +83,180 @@ topology:
 
   <div class="controls">
     <button onclick="window.__render()">Render</button>
-    <span class="opt"><input type="checkbox" id="iv"> inverted-V (3-node path)</span>
     <span class="opt"><input type="checkbox" id="js"> input is JSON</span>
     <span class="opt">target <input type="text" id="tg" placeholder="auto"></span>
   </div>
   <div class="info" id="info"></div>
 
-  <div class="controls" id="scene" style="display:none">
-    <button id="bn" onclick="window.__scene('normal')">Normal</button>
-    <button id="bf" class="fault" onclick="window.__scene('fault')">Link Down</button>
-    <button class="deep" id="bd" onclick="window.__deep()">Open the router &#9656;</button>
-  </div>
-  <div class="caption" id="cap"></div>
-
-  <div class="topology is-xray-mode"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
+  <div class="ov" id="ov"></div>
+  <div id="peers"></div>
+  <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
   <div class="err" id="err"></div>
 
-<pre><span class="c">// clab-to-xray.js parses your topology → X-Ray config; clab-xray-bridge.js adds OSPF live state:</span>
-var r     = clabToXray.convert(clabYamlText);           <span class="c">// { ok, config } (or { ok:false, reason })</span>
-var scene = clabXray.toScene(r.config);                 <span class="c">// real protocol + normal/fault state</span>
-var view  = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topos.normal });
-view.applyState(scene.states.normal);
-view.openDeepDive();                                    <span class="c">// inside the router</span></pre>
+<pre><span class="c">// clab-to-xray.js parses your topology (incl. graph-posX/posY) → X-Ray config:</span>
+var r    = clabToXray.convert(clabYamlText);   <span class="c">// { ok, config }  — config.positions from graph-pos</span>
+<span class="c">// nodes are placed at config.positions (or an auto layout); click a node → its DeepDive:</span>
+var views = clabXray.deepViews(config, nodeId);      <span class="c">// per peer-pair sub-scenes (positions carried)</span>
+xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside the router (angles follow the coords)</span></pre>
 
   <div class="foot">
-    Mapping: 2 nodes/1 link → linear · 3 nodes/2 links → path (<code>inverted-V</code> optional) · 3 nodes/3 links → triangle.
+    Layout: nodes use <code>graph-posX</code>/<code>graph-posY</code> when present, else an automatic hub/ring layout.
     IP/subnets are synthesized (<code>10.x.0.0/24</code>); real clab IPs would come from <code>containerlab inspect</code> enrichment.
-    Descriptive renderer, not a simulator.
+    Descriptive renderer, not a simulator. For a live <code>containerlab graph --template</code>, see <code>xray-graph.html</code>.
   </div>
 </div>
 
 <script>
 (function () {
-  var view = null, scene = null, cur = 'normal';
-  function showErr(msg) {
-    var el = document.getElementById('err'); el.style.display = 'block'; el.innerHTML = msg;
-    document.getElementById('scene').style.display = 'none';
+  function showErr(msg) { var el = document.getElementById('err'); el.style.display = 'block'; el.innerHTML = msg; }
+  function clearErr() { var el = document.getElementById('err'); el.style.display = 'none'; el.textContent = ''; }
+
+  var W = 560, H = 360, PAD = 60;
+  var NAMES = [], KIND = {}, ADJ = {}, EDGES = [], POS = {}, fullCfg = null;
+
+  // Place nodes from graph-posX/posY (config.positions) when present — scaled to fit the overview box —
+  // otherwise fall back to an automatic hub-and-spoke / ring layout (so a lab with no coords still renders).
+  function computePositions(cfg) {
+    var pos = cfg.positions;
+    if (pos && Object.keys(pos).length >= NAMES.length && NAMES.every(function (n) { return pos[n]; })) {
+      var xs = NAMES.map(function (n) { return pos[n].x; }), ys = NAMES.map(function (n) { return pos[n].y; });
+      var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+      var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+      var spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1;
+      var P = {};
+      NAMES.forEach(function (n) {
+        P[n] = [ PAD + (pos[n].x - minX) / spanX * (W - 2 * PAD),
+                 PAD + (pos[n].y - minY) / spanY * (H - 2 * PAD) ];
+      });
+      return { pos: P, source: 'graph-pos' };
+    }
+    // auto-layout (any N): hub-and-spoke when one node connects to all leaves, else a ring.
+    var cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 - 60, P = {};
+    var deg = function (n) { return (ADJ[n] || []).length; };
+    if (NAMES.length === 1) { P[NAMES[0]] = [cx, cy]; }
+    else if (NAMES.length === 2) { P[NAMES[0]] = [W * 0.30, cy]; P[NAMES[1]] = [W * 0.70, cy]; }
+    else {
+      var hub = NAMES.slice().sort(function (a, b) { return deg(b) - deg(a); })[0];
+      var leaves = NAMES.filter(function (n) { return n !== hub; });
+      if (deg(hub) >= leaves.length) {
+        P[hub] = [cx, 70];
+        leaves.forEach(function (n, i) { var x = leaves.length === 1 ? cx : (W * 0.18 + (W * 0.64) * (i / (leaves.length - 1))); P[n] = [x, H - 70]; });
+      } else {
+        [hub].concat(leaves).forEach(function (n, i, arr) { var a = (i / arr.length) * Math.PI * 2 - Math.PI / 2; P[n] = [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
+      }
+    }
+    return { pos: P, source: 'auto' };
   }
-  function setDeep(open) { var b = document.getElementById('bd'); if (b) b.innerHTML = open ? '◂ Back to overview' : 'Open the router ▸'; }
-  window.__deep = function () {
-    if (!view) return;
-    if (document.body.classList.contains('is-xray-deep')) { view.closeDeepDive(); setDeep(false); }
-    else { view.openDeepDive(); setDeep(true); }
-  };
-  document.addEventListener('xraycore:deepdive', function (e) { setDeep(!!(e.detail && e.detail.open)); });
-  window.__scene = function (which) {
-    // renderTopology runs once in __render; scene switches update via setTopology+applyState
-    // (a failure pattern: re-rendering with renderTopology every time caused order-dependent blanking).
-    if (!view || !scene) return; cur = which;
-    view.setTopology(scene.topos[which]);
-    view.setTrace({ success: true, reached: which === 'normal', hops: [] });
-    view.applyState(scene.states[which]);
-    document.getElementById('cap').textContent = which === 'normal'
-      ? 'Normal — all links up, OSPF adjacencies Full, route resolved, ping OK.'
-      : 'Link Down — the inspected router\'s first link is cut: adjacency lost on that link.';
-    document.getElementById('bn').classList.toggle('cur', which === 'normal');
-    document.getElementById('bf').classList.toggle('cur', which === 'fault');
-  };
+
+  // ---- render one node's DeepDive (bridge deepViews → facade openDeepDiveFor) ----
+  function renderView(v, nodeId) {
+    var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
+    if (_st && _st.protocol === 'bgp') {
+      _cfg.xray.protocol = 'bgp';
+      var _others0 = (_cfg.nodes || []).filter(function (n) { return n.id !== nodeId; });
+      _cfg.xray.pattern = _others0.length >= 2 ? 'bgp_multi' : 'bgp';
+    }
+    // Overview-geometry alignment: order the node's peers so left-in-overview = left face (deterministic
+    // single_link / transit left-right from the node's x-coordinates), matching what the user sees above.
+    try {
+      var _tn = (_cfg.nodes || []).filter(function (n) { return n.id === nodeId; })[0];
+      if (_tn && _tn.single_link) { var _pe = (ADJ[nodeId] || [])[0];
+        if (_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; }
+      var _peers = (_cfg.nodes || []).filter(function (n) { return n.id !== nodeId; });
+      if (_peers.length === 2 && _tn && POS[_peers[0].id] && POS[_peers[1].id]
+        && POS[_peers[0].id][0] > POS[_peers[1].id][0]) {
+        _cfg.nodes = [_peers[1], _tn, _peers[0]];
+      }
+    } catch (e) {}
+    document.body.classList.remove('is-xray-deep');
+    window.xrayCore.renderTopology('#topo', _cfg, { topology: v.scene.topo, trace: { success: true, reached: true, hops: [] } });
+    window.xrayCore.openDeepDiveFor(nodeId, _st);
+    if (window.xrayCore && typeof window.xrayCore.setBgpTable === 'function') {
+      if (_st && _st.protocol === 'bgp') { window.xrayCore.setBgpTable(function (st) { return (st && st.bgp_routes) || []; }); }
+      else { window.xrayCore.setBgpTable(null); }
+    }
+    var de = document.querySelector('.xray-deep-engine'); if (de) de.style.display = 'block';
+  }
+
+  // ---- node click → peer-pair selector + DeepDive ----
+  function showNode(nodeId) {
+    window.__xrayCurNode = nodeId;
+    document.querySelectorAll('.ov-node').forEach(function (e) { e.classList.toggle('sel', e.getAttribute('data-n') === nodeId); });
+    var box = document.getElementById('peers'); box.innerHTML = '';
+    var views = window.clabXray.deepViews(fullCfg, nodeId);
+    if (!views.length) { showErr(nodeId + ' has no links to inspect.'); return; }
+    if (views.length > 1) {
+      box.innerHTML = '<span class="lbl">' + nodeId + ' has ' + (ADJ[nodeId] || []).length + ' neighbors — inspect peer-pair:</span>';
+      views.forEach(function (v, idx) {
+        var b = document.createElement('button'); b.textContent = (v.peers || []).join(' ↔ ');
+        b.onclick = function () { box.querySelectorAll('button').forEach(function (e) { e.classList.remove('cur'); }); b.classList.add('cur'); renderView(v, nodeId); };
+        if (idx === 0) b.classList.add('cur'); box.appendChild(b);
+      });
+    }
+    renderView(views[0], nodeId);
+  }
+  window.__xrayShowNode = showNode;
+
+  // ---- draw the coordinate overview (links + node cards) ----
+  function drawOverview() {
+    var ov = document.getElementById('ov');
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '">', drawn = {};
+    NAMES.forEach(function (n) { (ADJ[n] || []).forEach(function (m) {
+      var k = [n, m].sort().join('|'); if (drawn[k] || !POS[m] || !POS[n]) return; drawn[k] = 1;
+      svg += '<line x1="' + POS[n][0] + '" y1="' + POS[n][1] + '" x2="' + POS[m][0] + '" y2="' + POS[m][1] + '" stroke="#455a64" stroke-width="2"/>';
+    }); });
+    svg += '</svg>'; ov.innerHTML = svg;
+    NAMES.forEach(function (n) {
+      var b = document.createElement('div'); b.className = 'ov-node'; b.setAttribute('data-n', n);
+      b.innerHTML = n + (KIND[n] ? '<span class="k">' + KIND[n] + '</span>' : '');
+      b.style.left = POS[n][0] + 'px'; b.style.top = POS[n][1] + 'px';
+      b.onclick = function () { showNode(n); };
+      ov.appendChild(b);
+    });
+  }
+
   window.__render = function () {
     try {
-      document.getElementById('err').style.display = 'none';
-      var opts = { invertedV: document.getElementById('iv').checked, json: document.getElementById('js').checked,
-        target: (document.getElementById('tg').value || '').trim() || null };
+      clearErr();
+      document.getElementById('ov').innerHTML = '';
+      document.getElementById('peers').innerHTML = '';
+      var opts = { json: document.getElementById('js').checked, target: (document.getElementById('tg').value || '').trim() || null };
       var _srcTxt = document.getElementById('src').value;
       var r;
       try { r = window.clabToXray.convert(_srcTxt, opts); }
       catch (convErr) {
-        // "input is JSON" was ticked but the paste is actually YAML (a common mis-click on the hero page):
-        // JSON.parse throws — fall back to the YAML parser instead of hard-failing.
         if (opts.json) { opts.json = false; r = window.clabToXray.convert(_srcTxt, opts); }
         else { throw convErr; }
       }
       if (!r.ok) {
-        showErr('<b>This topology isn\'t mapped (yet).</b><br>' +
-          'X-Ray draws three shapes: 2-node link, 3-node path, 3-node triangle. ' +
-          'Your lab has <b>' + r.nodes.length + ' nodes</b> / <b>' + r.links.length + ' links</b> ' +
-          '(' + r.nodes.join(', ') + ').<br>General graphs need a different renderer (see the repo roadmap). ' +
-          'Your topology stayed in the browser.');
+        showErr('<b>Could not map this topology.</b><br>' + ((r.nodes ? ('Detected <b>' + r.nodes.length + ' nodes</b> / <b>' + (r.links ? r.links.length : '?') + ' links</b>. ') : '')) +
+          'Paste a containerlab <code>.clab.yml</code> (or tick "input is JSON" for a <code>--json</code> export). Your topology stayed in the browser.');
         document.getElementById('info').textContent = '';
         return;
       }
-      var cfg = r.config;
-      scene = window.clabXray.toScene(cfg);
-      var shape = cfg.topology_type + (cfg.layout ? ' (' + cfg.layout + ')' : '');
-      document.getElementById('info').innerHTML = 'Detected: <b>' + cfg._clab_source.node_count + ' nodes</b> / <b>' +
-        cfg._clab_source.link_count + ' links</b> → <b>' + shape + '</b> · target = <b>' + (scene._meta.target) + '</b> · protocol = <b>OSPF</b>';
-      document.getElementById('scene').style.display = '';
-      // renderTopology runs once here (per new paste). Subsequent Normal/Link Down updates go through __scene.
+      fullCfg = r.config;
+      // derive NAMES / KIND / ADJ / EDGES from the converted config
+      NAMES = (fullCfg.nodes || []).map(function (n) { return n.id; });
+      KIND = {}; (fullCfg.nodes || []).forEach(function (n) { KIND[n.id] = (n.type === 'server' ? 'server' : ''); });
+      ADJ = {}; NAMES.forEach(function (n) { ADJ[n] = []; }); EDGES = [];
+      (fullCfg.networks || []).forEach(function (net) {
+        var mem = (net.members || []).map(function (mm) { return mm.node; }).filter(Boolean);
+        if (mem.length < 2) return;
+        var a = mem[0], b = mem[1]; if (a === b) return;
+        if (!ADJ[a]) ADJ[a] = []; if (!ADJ[b]) ADJ[b] = [];
+        if (ADJ[a].indexOf(b) < 0) ADJ[a].push(b);
+        if (ADJ[b].indexOf(a) < 0) ADJ[b].push(a);
+        var k = [a, b].sort().join('|'); if (EDGES.indexOf(k) < 0) EDGES.push(k);
+      });
+      if (!NAMES.length) { showErr('No nodes found in this topology.'); return; }
+      var pc = computePositions(fullCfg); POS = pc.pos;
+      document.getElementById('info').innerHTML = 'Detected: <b>' + (fullCfg._clab_source ? fullCfg._clab_source.node_count : NAMES.length) + ' nodes</b> / <b>' +
+        (fullCfg._clab_source ? fullCfg._clab_source.link_count : EDGES.length) + ' links</b> · layout = <b>' + (pc.source === 'graph-pos' ? 'graph-posX/posY' : 'auto') + '</b> · click a node to open its DeepDive';
       document.body.classList.remove('is-xray-deep');
-      view = xrayCore.renderTopology('#topo', scene.config, { topology: scene.topos.normal, trace: { success: true, reached: true, hops: [] } });
-      cur = null; setDeep(false);
-      window.__scene('normal');
+      drawOverview();
+      var start = NAMES.slice().sort(function (a, b) { return (ADJ[b] || []).length - (ADJ[a] || []).length; })[0];
+      showNode(start);
     } catch (e) {
       showErr('<b>Could not parse this topology.</b><br>The YAML parser handles the common clab subset; ' +
         'for complex YAML, export JSON (<code>--json</code>) and tick "input is JSON".' +
