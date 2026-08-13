@@ -83,7 +83,7 @@ topology:
     - endpoints: ["r3:eth2", "r1:eth2"]</textarea>
 
   <div class="controls">
-    <button id="renderBtn" onclick="window.__render()">Render</button>
+    <button id="renderBtn" title="Render the pasted topology" onclick="window.__render()">Render</button>
     <button id="copyBtn" style="background:#37474f" onclick="window.__copyClab()">Copy .clab.yml</button>
     <span class="opt"><input type="checkbox" id="js"> input is JSON</span>
     <span class="opt">target <input type="text" id="tg" placeholder="auto"></span>
@@ -118,6 +118,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
   function setDirty(on) {
     var b = document.getElementById('renderBtn'); if (!b) return;
     b.textContent = on ? 'Re-Render' : 'Render';
+    b.title = on ? 'Re-render to apply your changes' : 'Render the pasted topology';
     b.style.background = on ? '#c62828' : '';
     b.style.boxShadow = on ? '0 0 0 2px rgba(198,40,40,.45)' : '';
   }
