@@ -3671,7 +3671,10 @@ function _xrayDeAngleView(s) {
     var mIn = [ (inConn[0] + C[0]) / 2, (inConn[1] + C[1]) / 2 ];
     var bx = C[0] + (outConn[0] - C[0]) * .82, by = C[1] + (outConn[1] - C[1]) * .82, B = [ bx, by ], mOut = [ (C[0] + bx) / 2, (C[1] + by) / 2 ];
     var _rr = s && s.route_resolution;
-    var arrowOn = document.body.classList.contains("ping-ok") || !!(_rr && (_rr.out_iface || _rr.resolved));
+    // Gate the FORWARD flow arrow on the CURRENT state (xrayIsCleared(s) / this frame's route), not the
+    // body "ping-ok" class: applyXrayState toggles that class AFTER calling us, so on a steady→down frame
+    // step the class was still stale-true and the arrow lingered on a down adjacency. State-based = frame-accurate.
+    var arrowOn = xrayIsCleared(s) || !!(_rr && (_rr.out_iface || _rr.resolved));
     var pingReaches = document.body.classList.contains("ping-ok") || xrayIsCleared(s);
     var fa = de._deFlow.querySelector(".de-fwd-a"), fb = de._deFlow.querySelector(".de-fwd-b");
     fa.setAttribute("d", q(inConn, mIn, C));
