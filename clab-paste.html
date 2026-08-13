@@ -83,7 +83,7 @@ topology:
     - endpoints: ["r3:eth2", "r1:eth2"]</textarea>
 
   <div class="controls">
-    <button onclick="window.__render()">Render</button>
+    <button id="renderBtn" onclick="window.__render()">Render</button>
     <button id="copyBtn" style="background:#37474f" onclick="window.__copyClab()">Copy .clab.yml</button>
     <span class="opt"><input type="checkbox" id="js"> input is JSON</span>
     <span class="opt">target <input type="text" id="tg" placeholder="auto"></span>
@@ -113,6 +113,14 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
 (function () {
   function showErr(msg) { var el = document.getElementById('err'); el.style.display = 'block'; el.innerHTML = msg; }
   function clearErr() { var el = document.getElementById('err'); el.style.display = 'none'; el.textContent = ''; }
+  // dirty = the textarea changed since the last Render (a drag write, or a manual edit); flag the button
+  // so it reads "Re-Render" in red until the user re-renders the new layout.
+  function setDirty(on) {
+    var b = document.getElementById('renderBtn'); if (!b) return;
+    b.textContent = on ? 'Re-Render' : 'Render';
+    b.style.background = on ? '#c62828' : '';
+    b.style.boxShadow = on ? '0 0 0 2px rgba(198,40,40,.45)' : '';
+  }
 
   var W = 560, H = 360, PAD = 60;
   var NAMES = [], KIND = {}, ADJ = {}, EDGES = [], POS = {}, fullCfg = null;
@@ -274,7 +282,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
     } else {
       okX = repl('graph-posX', gx); okY = repl('graph-posY', gy);
     }
-    if (okX && okY) { ta.value = text; setInfoMoved(nodeId, gx, gy); }
+    if (okX && okY) { ta.value = text; setInfoMoved(nodeId, gx, gy); setDirty(true); }
   }
   function setInfoMoved(nodeId, gx, gy) {
     var el = document.getElementById('info');
@@ -341,6 +349,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
       drawOverview();
       var start = NAMES.slice().sort(function (a, b) { return (ADJ[b] || []).length - (ADJ[a] || []).length; })[0];
       showNode(start);
+      setDirty(false);
     } catch (e) {
       showErr('<b>Could not parse this topology.</b><br>The YAML parser handles the common clab subset; ' +
         'for complex YAML, export JSON (<code>--json</code>) and tick "input is JSON".' +
@@ -348,6 +357,8 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
       if (window.console) console.error(e);
     }
   };
+  // a manual edit of the paste box also marks the layout dirty (Render → Re-Render, red).
+  var _srcEl = document.getElementById('src'); if (_srcEl) _srcEl.addEventListener('input', function () { setDirty(true); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.__render); else window.__render();
 })();
 </script>
