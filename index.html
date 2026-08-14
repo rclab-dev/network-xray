@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>xray-core — gallery</title>
+<title>network-xray — gallery</title>
 <style>
   html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
   .wrap{max-width:880px;margin:0 auto;padding:36px 20px 64px}
@@ -32,11 +32,11 @@
 <body>
 <div class="wrap">
 
-  <h1><span class="x">xray-core</span> gallery</h1>
+  <h1><span class="x">network-xray</span> gallery</h1>
   <div class="tag">The <b>Network Understanding Layer</b>. AI makes networks easier to operate — X-Ray makes them easier to <b>understand</b>.</div>
 
   <div class="intro">
-    <b>xray-core</b> turns live router &amp; network <b>state</b> (OSPF/BGP adjacency, routes, interfaces) into a
+    <b>network-xray</b> turns live router &amp; network <b>state</b> (OSPF/BGP adjacency, routes, interfaces) into a
     picture you can <b>reason about</b> — where the packet goes, why the route is (or isn't) there, and how a
     failure propagates and recovers. It renders an overview topology and an <b>"inside the router" DeepDive
     cylinder</b>. It runs <b>on top of your execution engine</b> — paste a <b>containerlab</b> topology, replay a
@@ -159,7 +159,7 @@
 
   <h2>Bring your own data</h2>
   <div class="intro" style="margin-top:10px">
-    Every field xray-core reads is a standard protocol concept, so any router OS works through a small
+    Every field network-xray reads is a standard protocol concept, so any router OS works through a small
     adapter that maps its <code>show</code> output into the documented shapes. See
     <a href="DATA-CONTRACT.md" style="color:#80deea"><code>DATA-CONTRACT.md</code></a>
     (config / state fields, FRR ↔ Cisco IOS mapping, the two optional seams).
@@ -173,7 +173,7 @@ view.openDeepDive();                                     <span class="c">// insi
   <footer>
     Descriptive renderer, not a simulator — it draws the state your feed reports. The live ping/packet
     animation is hidden in these demos (it is traffic-specific); the engine fully supports it (see
-    DATA-CONTRACT §Seam B). xray-core is the same engine <a href="https://routecrushlab.com/?ref=showhn&amp;lang=en" style="color:#80deea">RouteCrushLab</a> runs in production (shared core,
+    DATA-CONTRACT §Seam B). network-xray is the same engine <a href="https://routecrushlab.com/?ref=showhn&amp;lang=en" style="color:#80deea">RouteCrushLab</a> runs in production (shared core,
     no fork).
   </footer>
 

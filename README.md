@@ -1,10 +1,10 @@
-# xray-core
+# network-xray
 
 **The Network Understanding Layer.** AI makes networks easier to operate — **X-Ray makes them easier to _understand_.**
 
 *English | [日本語](#日本語)*
 
-`xray-core` turns live router & network **state** (OSPF/BGP adjacency, routes, interfaces) into a
+`network-xray` turns live router & network **state** (OSPF/BGP adjacency, routes, interfaces) into a
 picture you can **reason about** — where the packet goes, why the route is (or isn't) there, and how a
 failure propagates and recovers. It renders an **overview topology** and an **"inside the router"
 DeepDive cylinder** (forwarding plane, OSPF/BGP processor, hello & LSDB sync, the route it installs).
@@ -37,7 +37,7 @@ router at the forwarding decision (the deepdive).
 different Local Preference (100 vs 50). Open r1: the BGP table shows both candidates and a **Best-Path
 Decision** panel explains the winner (LocPref 100 > 50) — then the winning link drops so only one path
 remains, then it's restored. Straight from the
-[Best-Path Decision demo](https://rclab-dev.github.io/xray-core/demo/index-bgp-lp.html) — real frames, no backend:
+[Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — real frames, no backend:
 
 ![BGP Best-Path Decision — 8.8.8.0/24 is heard from two upstreams; LocPref 100>50 picks the winner, then the winning link drops so only one path remains, then it recovers — recorded from a real FRR/containerlab lab](docs/bgp-best-path.gif)
 
@@ -51,14 +51,14 @@ remains, then it's restored. Straight from the
 ![Inside the router — the DeepDive cylinder](docs/deepdive.png)
 
 **▶ Try it live — no install:** paste a router's `show` output → it draws the topology, then click a
-router to look inside. **<https://rclab-dev.github.io/xray-core/>** (or jump straight to
-[paste-your-output](https://rclab-dev.github.io/xray-core/frr-paste.html)).
+router to look inside. **<https://rclab-dev.github.io/network-xray/>** (or jump straight to
+[paste-your-output](https://rclab-dev.github.io/network-xray/frr-paste.html)).
 
 **▶ Or watch a real lab converge & recover** — frames captured from a running FRR/containerlab lab,
 replayed in the browser with no backend (steady → link down / router isolated → re-forms → converged):
-**[Best-Path Decision](https://rclab-dev.github.io/xray-core/demo/index-bgp-lp.html)** (eBGP: competing LocPref → why one path wins) ·
-**[OSPF replay](https://rclab-dev.github.io/xray-core/demo/)** ·
-**[BGP replay](https://rclab-dev.github.io/xray-core/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table).
+**[Best-Path Decision](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html)** (eBGP: competing LocPref → why one path wins) ·
+**[OSPF replay](https://rclab-dev.github.io/network-xray/demo/)** ·
+**[BGP replay](https://rclab-dev.github.io/network-xray/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table).
 
 ## Try it live
 
@@ -376,11 +376,11 @@ topology view; it doesn't replace it.
 
 # 日本語
 
-*[English](#xray-core) | 日本語*
+*[English](#network-xray) | 日本語*
 
 **ネットワークを"理解"するためのレイヤー。** AI はネットワークの運用を楽にする — **X-Ray は"理解"を楽にする。**
 
-`xray-core` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
+`network-xray` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
 **筋道立てて考えられる絵**にします — パケットがどこへ向かうか、なぜ経路が在る(または無い)のか、
 障害がどう波及し復旧するか。**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、
 OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストールされる経路)を描きます。操作は
@@ -409,8 +409,8 @@ FRRouting・Cisco IOS・Arista … いずれも小さなアダプタで対応で
 
 上の静止画は **DeepDive 円柱**(OSPF 隣接が Full:hello・LSDB 同期・学習した経路)。
 **▶ ライブで試す(インストール不要)**:ルータの `show` 出力を貼る → トポロジが描かれ、ルータをクリックすると
-中が見える — **<https://rclab-dev.github.io/xray-core/>**(貼って試すなら
-[frr-paste.html](https://rclab-dev.github.io/xray-core/frr-paste.html))。
+中が見える — **<https://rclab-dev.github.io/network-xray/>**(貼って試すなら
+[frr-paste.html](https://rclab-dev.github.io/network-xray/frr-paste.html))。
 
 ## 動かす
 
