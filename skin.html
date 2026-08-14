@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>xray-core — Skin editor</title>
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script>
+<script src="xray-i18n.js"></script>
 <script src="xray-skin.js"></script>
 <style>
   :root {
@@ -22,8 +25,8 @@
   .lede b{color:var(--rc-accent)} .lede code{background:#141b24;padding:1px 6px;border-radius:3px;color:#80deea;font-size:12px}
   .cols{display:flex;gap:22px;flex-wrap:wrap}
   .panel{background:#141b24;border:1px solid #263238;border-radius:10px;padding:16px 18px}
-  .editor{flex:1 1 360px;min-width:320px}
-  .preview{flex:1 1 380px;min-width:320px}
+  .editor{flex:1 1 340px;min-width:300px}
+  .preview{flex:1 1 420px;min-width:340px}
   h2{font-size:13px;color:#80deea;margin:0 0 12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
   .row{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:13px}
   .row label.k{flex:0 0 84px;color:#b0bec5;font-family:"Courier New",monospace}
@@ -38,8 +41,6 @@
   button:hover{border-color:var(--rc-accent)}
   button.cur{background:#26c6da;color:#06232a;border-color:#26c6da}
   button.prim{background:var(--rc-accent);color:#06232a;border-color:var(--rc-accent)}
-  .order{display:flex;gap:16px;margin:6px 0 2px}
-  .order label{display:flex;align-items:center;gap:6px;font-size:13px;color:#cfe8ee;cursor:pointer}
   .sep{height:1px;background:#263238;margin:16px 0}
   .io{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
   textarea{width:100%;box-sizing:border-box;height:150px;background:#0c1016;border:1px solid #2b3a44;border-radius:8px;
@@ -47,47 +48,35 @@
   .msg{font-size:12px;margin-top:6px;min-height:1.2em}
   .msg.ok{color:#81c784}.msg.err{color:#ef9a9a}
 
-  /* ── live preview (representative render driven by --xto-*) ── */
+  /* ── live preview: the REAL engine DeepDive rendered at native size, shown as a scaled thumbnail;
+        click to open it 1:1 in a lightbox. The DeepDive is measured at native size (transform:none)
+        THEN the whole box is transform:scale()d for display — geometry never sees the scaled rect. ── */
   .pv-note{font-size:11.5px;color:#607d8b;line-height:1.6;margin:0 0 12px}
   .pv-controls{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
   .pv-controls button{font-size:12px;padding:6px 11px}
-  .stage{position:relative;background:#1e2a38;border-radius:10px;padding:22px 16px;min-height:210px;
-    display:flex;align-items:center;gap:0}
-  /* cylinder = the router body; cyan (link) frame */
-  .cyl{position:relative;width:150px;height:150px;border:3px solid var(--xto-link);border-radius:14px;
-    background:radial-gradient(circle at 50% 40%,rgba(0,229,255,0.06),transparent 70%);flex:0 0 auto;margin-left:8px}
-  .cyl .cap{position:absolute;top:-9px;left:12px;background:#1e2a38;padding:0 6px;font:11px monospace;color:#80deea}
-  /* two process balls, stacked; order class flips which is on top */
-  .balls{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
-  .balls.ospf-top{flex-direction:column-reverse}
-  .ball{text-align:center}
-  .ball .core{width:50px;height:50px;box-sizing:border-box;border-radius:50%;border:5px solid var(--xto-down);
-    display:flex;align-items:center;justify-content:center;margin:0 auto;transition:all .2s}
-  .ball .core i{width:18px;height:18px;border-radius:50%;background:var(--xto-down);transition:background .2s}
-  .ball .lbl{font:700 10px monospace;letter-spacing:.5px;color:#90a4ae;margin-top:3px}
-  /* BGP ball states */
-  .ball.bgp.up   .core{border-color:var(--xto-idle);box-shadow:0 0 9px var(--xto-idle)}
-  .ball.bgp.up   .core i{background:var(--xto-idle)} .ball.bgp.up .lbl{color:var(--xto-idle)}
-  .ball.bgp.est  .core{border-color:var(--xto-bgp);box-shadow:0 0 20px var(--xto-bgp);width:58px;height:58px}
-  .ball.bgp.est  .core i{background:var(--xto-bgp)} .ball.bgp.est .lbl{color:var(--xto-bgp)}
-  .ball.bgp.down .core{border-color:var(--xto-down)} .ball.bgp.down .core i{background:var(--xto-down)}
-  /* OSPF ball states */
-  .ball.ospf.full .core{border-color:var(--xto-ospf);box-shadow:0 0 12px var(--xto-ospf)}
-  .ball.ospf.full .core i{background:var(--xto-ospf)} .ball.ospf.full .lbl{color:var(--xto-ospf)}
-  .ball.ospf.forming .core{border-color:var(--xto-idle)} .ball.ospf.forming .core i{background:var(--xto-idle)}
-  /* concentric output tunnel + forwarding arrow to the right */
-  .out{position:relative;flex:1 1 auto;height:150px;display:flex;flex-direction:column;justify-content:center;padding-left:4px}
-  .tunnel{display:flex;flex-direction:column;gap:0}
-  .tunnel .l{height:3px;border-radius:2px;opacity:.26;transition:opacity .2s,box-shadow .2s}
-  .tunnel .l-bgp{background:var(--xto-bgp)} .tunnel .l-bgp.on{opacity:1;box-shadow:0 0 6px var(--xto-bgp)}
-  .tunnel .l-ospf{background:var(--xto-ospf)} .tunnel .l-ospf.on{opacity:1;box-shadow:0 0 6px var(--xto-ospf)}
-  .tunnel .l-fwd{background:var(--xto-link);opacity:1;margin:7px 0;box-shadow:0 0 6px var(--xto-link);position:relative}
-  .tunnel .l-fwd .orb{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--xto-idle);
-    box-shadow:0 0 8px var(--xto-idle);top:-2px;animation:orbRun 2.2s linear infinite}
-  @keyframes orbRun{0%{left:2%}100%{left:96%}}
-  .arrow{margin-top:9px;font:700 11px monospace}
-  .arrow .glyph{font-size:15px} .arrow .none{color:#607d8b}
-  .out .cap{font:9px monospace;color:#80deea;margin-top:8px}
+  .pv-frame{position:relative;width:100%;height:300px;background:#1e2a38;border-radius:10px;overflow:hidden;
+    cursor:zoom-in;border:1px solid #26343f}
+  .pv-frame:hover{border-color:var(--rc-accent)}
+  /* stage = native-size canvas the engine lays out into; scaled for the thumbnail, 1:1 in the lightbox */
+  .pv-stage{position:absolute;top:0;left:0;transform-origin:top left;opacity:0;transition:opacity .2s}
+  .pv-stage.ready{opacity:1}
+  /* the engine's in-cylinder "✕ Close" is redundant in the editor (the preview has its own close/enlarge);
+     hide it so only the preview's affordances show */
+  .pv-stage .xray-focus-close{display:none!important}
+  .pv-stage .topology{position:relative;width:100%;height:100%;background:#1e2a38;overflow:visible}
+  .pv-stage .topo-diagram{position:relative;width:100%;height:100%}
+  .pv-hint{position:absolute;right:9px;bottom:8px;z-index:5;font:11px/1 monospace;color:#06232a;
+    background:var(--rc-accent);border-radius:5px;padding:4px 8px;pointer-events:none;opacity:.92}
+  /* lightbox */
+  .pv-modal{position:fixed;inset:0;z-index:9999;background:rgba(6,12,18,.82);display:flex;
+    align-items:center;justify-content:center;padding:22px}
+  .pv-modal[hidden]{display:none}
+  .pv-modal-inner{position:relative;background:#16222e;border:1px solid #2b3a44;border-radius:12px;
+    padding:14px;max-width:96vw;max-height:92vh;overflow:auto}
+  .pv-modal-host{position:relative;overflow:hidden}
+  .pv-close{position:absolute;top:10px;right:12px;z-index:2;background:#1c2736;border:1px solid #37474f;
+    color:#cfe8ee;border-radius:6px;padding:6px 12px;cursor:pointer;font:600 12.5px monospace}
+  .pv-close:hover{border-color:var(--rc-accent)}
   .legend{font-size:11.5px;color:#90a4ae;margin-top:14px;line-height:1.9}
   .sw{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin:0 3px 2px 10px}
   footer{margin-top:26px;padding-top:16px;border-top:1px solid #263238;color:#607d8b;font-size:11.5px;line-height:1.7}
@@ -96,9 +85,9 @@
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="index.html">← Gallery</a>
+  <a class="back" href="index.html">&larr; Gallery</a>
   <h1><span class="x">xray-core</span> — Skin editor</h1>
-  <div class="tag">Pick colors &amp; process order · export / import · bring &amp; share your own.</div>
+  <div class="tag">Pick colors &amp; process order &middot; export / import &middot; bring &amp; share your own.</div>
 
   <div class="lede">
     A <b>skin</b> is the look of X-Ray — colors and the process stacking order. The <b>meaning</b>
@@ -126,47 +115,45 @@
       <div class="sep"></div>
       <h2>Share</h2>
       <div class="io">
-        <button class="prim" id="btn-export">⬇ Export JSON</button>
-        <button id="btn-copy">⧉ Copy</button>
-        <button id="btn-import">⬆ Apply pasted JSON</button>
-        <button id="btn-reset">↺ Reset to default</button>
+        <button class="prim" id="btn-export">&#8681; Export JSON</button>
+        <button id="btn-copy">&#10697; Copy</button>
+        <button id="btn-import">&#8679; Apply pasted JSON</button>
+        <button id="btn-reset">&#8635; Reset to default</button>
       </div>
       <textarea id="json" spellcheck="false" placeholder="skin JSON — Export writes here; paste one and press Apply"></textarea>
       <div class="msg" id="msg">&nbsp;</div>
     </div>
 
-    <!-- ─────────────── preview ─────────────── -->
+    <!-- ─────────────── preview (REAL DeepDive) ─────────────── -->
     <div class="panel preview">
       <h2>Live preview</h2>
-      <p class="pv-note">Representative render of a <b>border router</b> (OSPF + iBGP co-located) DeepDive,
-        driven live by the colors + order above. The authoritative engine render is validated on dev
-        before release.</p>
+      <p class="pv-note">The <b>real engine DeepDive</b> (same <code>xray-core.js</code> the demos run),
+        shown as a scaled thumbnail and recolored live by the colors above via the <code>--xto-*</code>
+        tokens — <b>click the preview to open it 1:1</b>. Switch a scene to see the BGP process, an OSPF
+        adjacency, and a down session take your palette.</p>
       <div class="pv-controls">
-        <button data-s="bgpWins" class="cur">Dest A → BGP wins</button>
-        <button data-s="ospfWins">Dest B → OSPF wins</button>
-        <button data-s="bgpDown">BGP session down</button>
+        <button data-s="bgp" class="cur">BGP best-path (r1)</button>
+        <button data-s="ospf">OSPF adjacency (r2)</button>
+        <button data-s="bgpdown">BGP session down</button>
       </div>
-      <div class="stage">
-        <div class="cyl">
-          <span class="cap">r1</span>
-          <div class="balls" id="balls">
-            <div class="ball bgp" id="ball-bgp"><div class="core"><i></i></div><div class="lbl">BGP</div></div>
-            <div class="ball ospf" id="ball-ospf"><div class="core"><i></i></div><div class="lbl">OSPF</div></div>
+      <div class="pv-frame" id="pv-frame" title="click to enlarge">
+        <div class="pv-stage is-xray-mode" id="pv-stage">
+          <div class="topology is-xray-mode">
+            <div class="topo-diagram" id="pv-diagram"></div>
+            <div class="xray-deep-engine"></div>
           </div>
         </div>
-        <div class="out">
-          <div class="tunnel">
-            <div class="l l-bgp" id="t-bgp1"></div>
-            <div class="l l-ospf" id="t-ospf1"></div>
-            <div class="l l-fwd"><span class="orb"></span></div>
-            <div class="l l-ospf" id="t-ospf2"></div>
-            <div class="l l-bgp" id="t-bgp2"></div>
-          </div>
-          <div class="arrow" id="arrow"></div>
-          <div class="cap">Output: eth0</div>
-        </div>
+        <span class="pv-hint">click to enlarge &#8599;</span>
       </div>
       <div class="legend" id="legend"></div>
+
+      <!-- lightbox: the SAME pv-stage node is moved in here at 1:1 (engine uses a single .xray-deep-engine) -->
+      <div class="pv-modal" id="pv-modal" hidden>
+        <div class="pv-modal-inner">
+          <button class="pv-close" id="pv-close">&#10005; close</button>
+          <div class="pv-modal-host" id="pv-modal-host"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -178,11 +165,15 @@
 </div>
 
 <script>
+var PV_STATES = {"ospf": {"success": true, "scenario": "demo", "r3_neighbor_state": "Full", "r3_has_full": true, "r3_iface": "eth1", "r1_iface": "eth0", "full_count": 2, "has_ospf_route": true, "route_cost": 0, "is_direct_path": true, "r2_hellos": {"eth0": 5, "eth1": 5}, "ping_ok": true, "cleared": false, "interfaces": {"eth0": {"up": true, "ip": "10.202.0.20/24"}, "eth1": {"up": true, "ip": "10.203.0.10/24"}}, "route_resolution": {"target": "3.3.3.3", "resolved": true, "protocol": "ospf", "out_iface": "eth1", "next_hop": "10.203.0.20", "matched_prefix": "3.3.3.3/32"}, "wan_iface": "eth0", "lan_iface": "eth0", "ospf_active_on_interface": true, "ospf_configured": true, "neighbor_state": "Full", "has_full": true, "target_hello": 5, "r1_hello": 5, "target_dead": 20, "r1_dead": 20, "target_area": "0.0.0.0", "r1_area": "0.0.0.0", "target_node": "r2", "is_passive": false, "peer_id": "r3", "peer_node": "r3", "peer_sending_hello": true, "peer_hello": 5, "r2_hello": 5, "peer_dead": 20, "r2_dead": 20, "peer_area": "0.0.0.0", "r2_area": "0.0.0.0", "timer_match": true, "area_match": true, "ping_src_next_hop": "10.204.0.10", "target_on_path": false, "iface_hellos": {"eth0": 5, "eth1": 5}, "peer_hellos": {"r1": 5, "r3": 5}, "r1_neighbor_state": "Full", "r1_has_full": true}, "bgp": {"success": true, "id": "xray-bgp-lp", "scenario": "xray-bgp-lp", "target_node": "r1", "peer_node": "r2", "interfaces": {"eth1": {"up": true, "ip": "10.1.12.1/24"}, "eth2": {"up": true, "ip": "10.1.13.1/24"}, "lo": {"up": true, "ip": "1.1.1.1/32"}}, "wan_iface": "eth1", "lan_iface": "eth1", "neighbor_state": "Full", "has_full": true, "full_count": 2, "ospf_configured": false, "ospf_active_on_interface": false, "peer_sending_hello": true, "iface_hellos": {}, "peer_hellos": {}, "target_on_path": false, "cleared": true, "is_established": true, "has_bgp_route": true, "protocol": "bgp", "ping_ok": true, "has_ospf_route": false, "bgp_configured": true, "bgp_routes": [{"prefix": "1.1.1.1", "next_hop": "0.0.0.0", "as_path": "", "best": true, "status": "*>", "weight": 32768, "metric": 0, "origin": "IGP", "reason": "First path received"}, {"prefix": "2.2.2.2", "next_hop": "10.1.12.2", "as_path": "65002", "best": true, "status": "*>", "local_pref": 100, "weight": 0, "metric": 0, "origin": "IGP", "reason": "First path received"}, {"prefix": "3.3.3.3", "next_hop": "10.1.13.3", "as_path": "65003", "best": true, "status": "*>", "local_pref": 50, "weight": 0, "metric": 0, "origin": "IGP", "reason": "First path received"}, {"prefix": "8.8.8.0", "next_hop": "10.1.13.3", "as_path": "65003", "best": false, "status": "* ", "local_pref": 50, "weight": 0, "metric": 0, "origin": "IGP"}, {"prefix": "8.8.8.0", "next_hop": "10.1.12.2", "as_path": "65002", "best": true, "status": "*>", "local_pref": 100, "weight": 0, "metric": 0, "origin": "IGP", "reason": "Local Pref"}], "pfx_rcvd": 4, "route_resolution": {"target": "2.2.2.2", "resolved": true, "protocol": "bgp", "out_iface": "eth1", "next_hop": "10.1.12.2", "matched_prefix": "2.2.2.2/32"}, "routing_table": [{"prefix": "1.1.1.1/32", "out_iface": "lo", "next_hop": "", "protocol": "connected", "selected": true}, {"prefix": "2.2.2.2/32", "out_iface": "eth1", "next_hop": "10.1.12.2", "protocol": "bgp", "selected": true}, {"prefix": "3.3.3.3/32", "out_iface": "eth2", "next_hop": "10.1.13.3", "protocol": "bgp", "selected": true}, {"prefix": "8.8.8.0/24", "out_iface": "eth1", "next_hop": "10.1.12.2", "protocol": "bgp", "selected": true}, {"prefix": "10.1.12.0/24", "out_iface": "eth1", "next_hop": "", "protocol": "connected", "selected": true}, {"prefix": "10.1.13.0/24", "out_iface": "eth2", "next_hop": "", "protocol": "connected", "selected": true}], "r2_has_full": true, "r2_iface": "eth1", "r2_neighbor_state": "Full", "r3_has_full": true, "r3_iface": "eth2", "r3_neighbor_state": "Full"}, "bgpdown": {"success": true, "id": "xray-bgp-lp", "scenario": "xray-bgp-lp", "target_node": "r2", "peer_node": "r1", "interfaces": {"eth1": {"up": false, "ip": "10.1.12.2/24"}, "lo": {"up": true, "ip": "2.2.2.2/32"}}, "wan_iface": "eth1", "lan_iface": "eth1", "neighbor_state": "Active", "has_full": false, "full_count": 0, "ospf_configured": false, "ospf_active_on_interface": false, "peer_sending_hello": false, "iface_hellos": {}, "peer_hellos": {}, "target_on_path": false, "cleared": false, "is_established": false, "has_bgp_route": false, "protocol": "bgp", "ping_ok": false, "has_ospf_route": false, "bgp_configured": true, "bgp_state": "Active", "bgp_routes": [{"prefix": "2.2.2.2", "next_hop": "0.0.0.0", "as_path": "", "best": true, "status": "*>", "weight": 32768, "metric": 0, "origin": "IGP", "reason": "First path received"}, {"prefix": "8.8.8.0", "next_hop": "0.0.0.0", "as_path": "", "best": true, "status": "*>", "weight": 32768, "metric": 0, "origin": "IGP", "reason": "First path received"}], "pfx_rcvd": 2, "route_resolution": {"target": "", "resolved": false, "protocol": "", "out_iface": "", "next_hop": "", "matched_prefix": ""}, "routing_table": [{"prefix": "2.2.2.2/32", "out_iface": "lo", "next_hop": "", "protocol": "connected", "selected": true}, {"prefix": "8.8.8.0/24", "out_iface": "", "next_hop": "", "protocol": "static", "selected": true}], "r1_has_full": false, "r1_iface": "eth1", "r1_neighbor_state": "Active"}};
+</script>
+<script>
 (function () {
   var S = window.XraySkin;
   var LABELS = { ospf:'OSPF', bgp:'BGP', static:'static', link:'link', idle:'forming', down:'stopped' };
   var skin = S.load();
-  var previewState = 'bgpWins';
+  var previewScene = 'bgp';
+  var view = null;
 
   // ── build color rows ──
   var colorsBox = document.getElementById('colors');
@@ -201,7 +192,7 @@
   S.PRESETS.forEach(function (p) {
     var b = document.createElement('button');
     b.textContent = p.id; b.setAttribute('data-preset', p.id);
-    b.addEventListener('click', function () { skin = S.normalize(p); syncControls(); applyLive(); persist(); flash('Preset “' + p.id + '” applied.', true); });
+    b.addEventListener('click', function () { skin = S.normalize(p); syncControls(); applyLive(); persist(); flash('Preset "' + p.id + '" applied.', true); });
     presetsBox.appendChild(b);
   });
 
@@ -212,52 +203,128 @@
       var h = colorsBox.querySelector('input[data-hk="' + k + '"]');
       if (c) c.value = v; if (h) { h.value = v; h.classList.remove('bad'); }
     });
-    document.querySelectorAll('input[name="order"]').forEach(function (r) { r.checked = (r.value === skin.protocolOrder); });
-    // highlight the matching preset (or none = custom)
     var pid = S.matchPresetId(skin);
     document.querySelectorAll('#presets button').forEach(function (b) {
       b.classList.toggle('cur', b.getAttribute('data-preset') === pid);
     });
   }
 
-  // ── live preview: drive --xto-* + reflect the chosen state onto the mock ──
+  // ── build a minimal vendor-neutral config from one node's state (peers come from <peer>_iface) ──
+  function buildConfig(state) {
+    var target = state.target_node || state.id || 'r1';
+    var peers = Object.keys(state).filter(function (k) {
+      return /_iface$/.test(k) && k !== 'wan_iface' && k !== 'lan_iface';
+    }).map(function (k) { return k.replace(/_iface$/, ''); });
+    // de-dupe + drop self
+    peers = peers.filter(function (p, i) { return p !== target && peers.indexOf(p) === i; });
+    var nodes = [{ id: target, target: true }].concat(peers.map(function (p) { return { id: p }; }));
+    // positions: target left-centre, peers fanned to the right (only affects DeepDive tilt)
+    var positions = {}; positions[target] = { x: 0.28, y: 0.5 };
+    peers.forEach(function (p, i) {
+      positions[p] = { x: 0.72, y: peers.length > 1 ? (0.30 + 0.40 * i) : 0.5 };
+    });
+    var networks = peers.map(function (p) {
+      var ifn = state[p + '_iface'];
+      var ip = (state.interfaces && state.interfaces[ifn] && state.interfaces[ifn].ip) || '';
+      var octet = ip ? parseInt(String(ip).split('/')[0].split('.').pop(), 10) : 1;
+      return {
+        name: 'net-' + target + p,
+        cidr: ip ? (ip.split('.').slice(0, 3).join('.') + '.0/30') : '',
+        members: [{ node: target, host_id: octet, iface: ifn }, { node: p, host_id: octet === 1 ? 2 : 1 }]
+      };
+    });
+    var proto = state.protocol || 'ospf';
+    return {
+      success: true, deep_engine: 'unified', topology_type: 'custom',
+      xray: { protocol: proto, pattern: (proto === 'bgp' ? 'bgp' : 'ospf_linear') },
+      nodes: nodes, networks: networks, positions: positions
+    };
+  }
+
+  // ── native canvas the engine lays out into; the box is transform:scale()d for display, so the
+  //    engine's getBoundingClientRect() geometry is ALWAYS measured at native size (no scaled-rect trap) ──
+  var NATIVE_W = 900, NATIVE_H = 540;
+  var stage = document.getElementById('pv-stage');
+  var frame = document.getElementById('pv-frame');
+  var modal = document.getElementById('pv-modal');
+  var modalHost = document.getElementById('pv-modal-host');
+  var enlarged = false;
+
+  // Scale the whole stage to fit its current host. clientWidth/Height are read off the UN-transformed
+  // host (frame / viewport), never off the scaled stage — that is the key to avoiding the scale trap.
+  function applyScale() {
+    stage.style.width = NATIVE_W + 'px';
+    stage.style.height = NATIVE_H + 'px';
+    var k;
+    if (enlarged) {
+      k = Math.min((window.innerWidth * 0.90) / NATIVE_W, (window.innerHeight * 0.82) / NATIVE_H, 1.4);
+      modalHost.style.width = Math.round(NATIVE_W * k) + 'px';
+      modalHost.style.height = Math.round(NATIVE_H * k) + 'px';
+    } else {
+      k = Math.min(frame.clientWidth / NATIVE_W, frame.clientHeight / NATIVE_H);
+      // centre the thumbnail horizontally within the frame
+      var offX = Math.max(0, (frame.clientWidth - NATIVE_W * k) / 2);
+      stage.style.transformOrigin = 'top left';
+      stage.style.transform = 'translateX(' + offX + 'px) scale(' + k + ')';
+      stage.classList.add('ready');
+      return;
+    }
+    stage.style.transformOrigin = 'top left';
+    stage.style.transform = 'scale(' + k + ')';
+    stage.classList.add('ready');
+  }
+
+  // ── render the real DeepDive for the chosen scene, at native size, then scale for display ──
+  function renderScene() {
+    var state = PV_STATES[previewScene];
+    if (!state) return;
+    stage.classList.remove('ready');          // hide until measured + scaled (avoids a native-size flash)
+    stage.style.transform = 'none';           // native for the engine's geometry measurement
+    // Size the stage to native BEFORE rendering so the engine's getBoundingClientRect() sees the full
+    // 900x540 canvas. Without this the stage has no explicit size during render, the deep-engine
+    // measures ~0 width, and the forward arrow lands far left of the cylinder (owner FB "現状8").
+    stage.style.width = NATIVE_W + 'px';
+    stage.style.height = NATIVE_H + 'px';
+    try {
+      document.body.classList.remove('is-xray-deep');
+      var cfg = buildConfig(state);
+      view = window.xrayCore.renderTopology('#pv-diagram', cfg, {});
+      if (view && typeof view.setBgpTable === 'function') view.setBgpTable(function (st) { return (st && st.bgp_routes) || []; });
+      view.applyState(state);                 // _xrayDeAngleView geometry runs here, at native size
+      view.openDeepDive();
+    } catch (e) { if (window.console) console.error('preview render:', e); }
+    document.querySelectorAll('.pv-controls button').forEach(function (b) {
+      b.classList.toggle('cur', b.getAttribute('data-s') === previewScene);
+    });
+    // let the DeepDive open-animation settle, then scale the finished box down to the thumbnail (or 1:1)
+    setTimeout(applyScale, 650);
+  }
+
+  function openModal() {
+    enlarged = true;
+    modalHost.appendChild(stage);             // move the SAME node (single .xray-deep-engine on the page)
+    modal.hidden = false;
+    applyScale();
+  }
+  function closeModal() {
+    enlarged = false;
+    frame.insertBefore(stage, frame.firstChild);
+    modal.hidden = true;
+    applyScale();
+  }
+
+  // ── live: push colors to --xto-* (+ engine hook); the var()-driven render recolors in place, no re-render ──
   function applyLive() {
-    S.applyCssVars(skin);                         // colors → CSS vars (instant)
-    // order: flip the stack
-    document.getElementById('balls').classList.toggle('ospf-top', skin.protocolOrder === 'ospf-top');
-    renderPreviewState();
+    S.apply(skin);
     renderLegend();
   }
 
-  // three representative states (same as the de-risk proto)
-  var STATES = {
-    bgpWins:  { bgpEst:true,  ospfFull:true, adopted:'bgp'  },
-    ospfWins: { bgpEst:true,  ospfFull:true, adopted:'ospf' },
-    bgpDown:  { bgpEst:false, ospfFull:true, adopted:'ospf' }
-  };
-  function renderPreviewState() {
-    var st = STATES[previewState];
-    var bgp = document.getElementById('ball-bgp'), ospf = document.getElementById('ball-ospf');
-    bgp.className = 'ball bgp ' + (st.bgpEst ? 'est' : 'down');
-    ospf.className = 'ball ospf ' + (st.ospfFull ? 'full' : 'forming');
-    document.getElementById('t-bgp1').classList.toggle('on', st.bgpEst);
-    document.getElementById('t-bgp2').classList.toggle('on', st.bgpEst);
-    document.getElementById('t-ospf1').classList.toggle('on', st.ospfFull);
-    document.getElementById('t-ospf2').classList.toggle('on', st.ospfFull);
-    var col = st.adopted === 'bgp' ? 'var(--xto-bgp)' : st.adopted === 'ospf' ? 'var(--xto-ospf)' : 'var(--xto-static)';
-    var arrow = document.getElementById('arrow');
-    arrow.innerHTML = '<span class="glyph" style="color:' + col + '">→</span> ' +
-      '<span style="color:' + col + '">forwarding via ' + st.adopted.toUpperCase() + '</span>';
-    document.querySelectorAll('.pv-controls button').forEach(function (b) {
-      b.classList.toggle('cur', b.getAttribute('data-s') === previewState);
-    });
-  }
   function renderLegend() {
     document.getElementById('legend').innerHTML =
-      'health: <span class="sw" style="background:var(--xto-down)"></span>stopped' +
+      'process: <span class="sw" style="background:var(--xto-down)"></span>stopped' +
       '<span class="sw" style="background:var(--xto-idle)"></span>forming' +
       '<span class="sw" style="background:var(--xto-ospf)"></span>OSPF Full' +
-      '<span class="sw" style="background:var(--xto-bgp)"></span>BGP est &nbsp;·&nbsp; arrow/tunnel: ' +
+      '<span class="sw" style="background:var(--xto-bgp)"></span>BGP est &nbsp;&middot;&nbsp; arrow/tunnel: ' +
       '<span class="sw" style="background:var(--xto-ospf)"></span>OSPF' +
       '<span class="sw" style="background:var(--xto-bgp)"></span>BGP' +
       '<span class="sw" style="background:var(--xto-link)"></span>link';
@@ -272,13 +339,12 @@
   colorsBox.addEventListener('input', function (e) {
     var t = e.target, k = t.getAttribute('data-k') || t.getAttribute('data-hk'); if (!k) return;
     var v = t.value;
-    if (t.getAttribute('data-hk')) {                 // hex text box
+    if (t.getAttribute('data-hk')) {
       if (!S.isHex(v)) { t.classList.add('bad'); return; }
       t.classList.remove('bad');
     }
     v = v.toLowerCase();
     skin.colors[k] = v; skin.id = 'custom';
-    // mirror to the paired control
     var pair = colorsBox.querySelector((t.getAttribute('data-k') ? 'input[data-hk="' : 'input[data-k="') + k + '"]');
     if (pair) pair.value = v;
     document.querySelectorAll('#presets button').forEach(function (b) {
@@ -286,14 +352,16 @@
     });
     applyLive(); persist();
   });
-  document.querySelectorAll('input[name="order"]').forEach(function (r) {
-    r.addEventListener('change', function () {
-      if (r.checked) { skin.protocolOrder = r.value; skin.id = 'custom'; syncControls(); applyLive(); persist(); }
-    });
-  });
   document.querySelectorAll('.pv-controls button').forEach(function (b) {
-    b.addEventListener('click', function () { previewState = b.getAttribute('data-s'); renderPreviewState(); });
+    b.addEventListener('click', function () { previewScene = b.getAttribute('data-s'); renderScene(); });
   });
+
+  // ── thumbnail → lightbox (click to enlarge; ✕ / backdrop / Esc to close) ──
+  frame.addEventListener('click', function () { openModal(); });
+  document.getElementById('pv-close').addEventListener('click', function (e) { e.stopPropagation(); closeModal(); });
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && enlarged) closeModal(); });
+  window.addEventListener('resize', function () { applyScale(); });
 
   // ── share buttons ──
   document.getElementById('btn-export').addEventListener('click', function () {
@@ -316,7 +384,7 @@
     var text = document.getElementById('json').value.trim();
     if (!text) { flash('Paste a skin JSON into the box first.', false); return; }
     try {
-      skin = S.fromJson(text);            // normalizes: unknown keys ignored, missing filled, hex checked
+      skin = S.fromJson(text);
       syncControls(); applyLive(); persist();
       flash('Applied. (Unknown keys ignored, missing filled from default.)', true);
     } catch (e) { flash('Invalid JSON: ' + e.message, false); }
@@ -328,7 +396,14 @@
   });
 
   // ── boot ──
-  syncControls(); applyLive();
+  function boot() {
+    syncControls();
+    S.apply(skin);           // colors first, so the first render is already skinned
+    renderScene();           // real DeepDive
+    renderLegend();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
 </script>
 </body>

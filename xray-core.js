@@ -3688,6 +3688,15 @@ function _xrayDeAngleView(s) {
     fa.style.display = arrowOn && isTransit ? "" : "none";
     fb.setAttribute("d", q(C, mOut, B));
     fb.style.display = arrowOn ? "" : "none";
+    // drive the forward-arrow stroke/marker from the skin token (protocol-keyed) so the Skin editor's
+    //   real DeepDive preview recolors it live. fallback in var() = the exact current hex, so any page
+    //   without a skin (no --xto-* set) is byte-for-byte unchanged (non-regression).
+    var _fc = (typeof _XRAY_DE !== "undefined" && _XRAY_DE.fwdArrowCol) || "#39ff14";
+    var _fcVar = _fc === "#a855f7" ? "var(--xto-bgp,#a855f7)" : (_fc === "#39ff14" ? "var(--xto-ospf,#39ff14)" : _fc);
+    fa.style.stroke = _fcVar;
+    fb.style.stroke = _fcVar;
+    var _mkh = de._deFlow.querySelector("#de-fwd-head polygon");
+    if (_mkh) _mkh.style.fill = _fcVar;
     var g = de.querySelector("#de-cyl-fwd-arrow");
     if (g) g.style.display = "none";
     var pb = de._dePing;
