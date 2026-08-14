@@ -1450,6 +1450,8 @@ function xrayDeepDiveClose() {
   setTimeout(function() {
     document.body.classList.remove("is-xray-deep");
     document.body.classList.remove("de-loading", "de-applied");
+    var _deClose = document.querySelector(".xray-deep-engine");   // tear down the DeepDive tilt on close so
+    if (_deClose && typeof _xrayDeAngleTeardown === "function") _xrayDeAngleTeardown(_deClose); //   de-angle-active does not leak onto the overview body
     if (window._xrayDeRevealTimer) {
       clearTimeout(window._xrayDeRevealTimer);
       window._xrayDeRevealTimer = null;
@@ -1486,6 +1488,11 @@ function xrayDeepDiveClose() {
         diagram.style.transition = "";
         diagram.style.transformOrigin = "";
         if (typeof window._triRedrawSVG === "function") window._triRedrawSVG();
+        // the tri-redraw recreates the overview tunnels stroke-less; re-apply the last snapshot so
+        //   their OSPF-green / BGP-purple stroke is restored (applyXrayState → xraySetSvgTunnel).
+        if (window._lastXrayState && typeof window.applyXrayState === "function" && !document.body.classList.contains("trace-active")) {
+          try { window.applyXrayState(window._lastXrayState); } catch (e) {}
+        }
       }, 700);
     }
     if (engine) {
@@ -3684,7 +3691,12 @@ function _xrayDeAngleView(s) {
     var g = de.querySelector("#de-cyl-fwd-arrow");
     if (g) g.style.display = "none";
     var pb = de._dePing;
-    if (!pingReaches) {
+    // the ping ball is REAL traffic — show it only when this node actually carries THIS ping.
+    //   A bypassed off-path node (a ping from another src that doesn't route through here) keeps its
+    //   FORWARD arrow (routing capability, a separate axis) but must NOT show the ball. Transit /
+    //   endpoint / source nodes are not bypassed, so they still animate. Generic pastes have no
+    //   capture.ping_src, so _xrayTargetBypassed is never set and the ball shows as before.
+    if (!pingReaches || window._xrayTargetBypassed) {
       pb.style.display = "none";
     } else {
       pb.style.display = "block";
@@ -4757,12 +4769,9 @@ function xrayBuildApplyState(config) {
   window.applyXrayState = function applyXrayState(s) {
     window._lastXrayState = s;
     window._xrayProtocol = protocol;
-    try {
-      _xrayRenderUnifiedLive(s);
-    } catch (_e) {}
-    try {
-      _xrayDeAngleView(s);
-    } catch (_e) {}
+    // resolve transit / bypass and publish the flags BEFORE driving the DeepDive view, so the
+    //   ping-ball gate + transit arrow in _xrayDeAngleView read THIS frame's values (they were set
+    //   AFTER the view before, leaving the ball/arrow one frame stale across a scene change).
     document.body.classList.toggle("xray-advertiser-view", !!s.is_advertiser);
     var _tr = _xrayResolveTransit(s);
     var _isTransit = _tr.isTransit;
@@ -4781,6 +4790,12 @@ function xrayBuildApplyState(config) {
       document.body.classList.remove("xray-input-session-up");
     }
     window._xrayPingMode = _effectivePingMode;
+    try {
+      _xrayRenderUnifiedLive(s);
+    } catch (_e) {}
+    try {
+      _xrayDeAngleView(s);
+    } catch (_e) {}
     document.documentElement.setAttribute("data-xray-proto", protocol);
     document.body.classList.add("xray-state-ready");
     var h = xrayEvaluateState(s);
