@@ -1,5 +1,6 @@
-# internal / non-published
-_*
-*.mp4
-.DS_Store
-Thumbs.db
+# internal work-in-progress / prototypes — never ship via a glob add
+_*.html
+deepdive-modes.html
+skin-preview.js
+unified-derisk.html
+unified-showcase.html
