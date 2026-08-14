@@ -134,9 +134,15 @@
       // the inline chain summary follows the pop.
       return '<div class="bgp-reason">★ ' + p + ' → best path by ' + btn + cmp + '</div>' + _bgpBracketPop(dec, href) + ch;
     }
-    if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>' + ch;
-    if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all attributes equal — <b>tiebreak by Router ID</b></div>' + ch;
-    return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>no single decider</b> — lower-level tiebreak</div>' + ch;
+    // (iii) A visible-attribute tie is NOT decided by Router ID by default — FRR's real tie-breaker is
+    //   Older Path (RFC 5004); Router ID applies only with `bgp bestpath compare-routerid`. The oldest
+    //   path can't be derived from a `show ip bgp` snapshot (no receive timestamp), so we name the
+    //   FRR rule rather than assert a specific winner. (A backend that supplies selectionReason would
+    //   state the exact reason.)
+    var _rfc5004 = ' (<a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; Router ID only with compare-routerid)';
+    if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — FRR breaks the tie by <b>Older Path</b>' + _rfc5004 + '</div>' + ch;
+    if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all visible attributes equal — FRR breaks the tie by <b>Older Path</b>' + _rfc5004 + '</div>' + ch;
+    return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>no single decider</b> — lower-level tiebreak (Older Path / Router ID)</div>' + ch;
   }
   // --- Interactive decider: Tier2 popover (all decision steps) + Tier3 full-bracket link. ---
   // gallery is IIFE-private, so no inline onclick — the decision panel gets ONE delegated handler
@@ -215,14 +221,32 @@
     var crit = e.target && e.target.closest && e.target.closest('[data-bgp-crit]');
     if (crit) { e.preventDefault(); _bgpPanelClick({ target: crit, stopPropagation: function () {}, preventDefault: function () {} }); }
   }
+  // (iii) The full FRR default best-path order, shown under the decision. It surfaces the deeper
+  //   criteria the top-5 heuristic never reaches — notably Older Path (RFC 5004) as the real
+  //   tie-breaker before Router ID (which only applies with `bgp bestpath compare-routerid`). The
+  //   deciding step (derived here; FRR's selectionReason when a backend supplies one) is highlighted.
+  var _BGP_FRR_ORDER = ['Weight', 'LocPrf', 'AS-Path', 'Origin', 'MED', 'eBGP&gt;iBGP', 'IGP metric', 'Older Path', 'Router ID*', 'Neighbor IP'];
+  function _bgpOrderLegend(primaryLabel) {
+    var parts = _BGP_FRR_ORDER.map(function (lbl) {
+      return (primaryLabel && lbl === primaryLabel) ? '<span style="color:#ffd54f;font-weight:700">' + lbl + '</span>' : lbl;
+    });
+    var note = (_bgpLang() === 'ja')
+      ? '* Router ID は compare-routerid 設定時のみ（既定は Older Path が先）'
+      : '* Router ID only with `bgp bestpath compare-routerid` (default prefers Older Path)';
+    var rfc = ' <a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc4271#section-9.1.2.2" target="_blank" rel="noopener">[RFC 4271 §9.1.2.2]</a>';
+    return '<div class="bgp-legend" style="overflow-wrap:anywhere">Best-path order (FRR default): ' + parts.join(' &rarr; ') + rfc
+      + '<br><span style="opacity:.7">' + note + '</span></div>';
+  }
   function _bgpBuildView(routes) {
     var order = [], groups = {};
     routes.forEach(function (r) { var p = r.prefix || ''; if (!groups[p]) { groups[p] = []; order.push(p); } groups[p].push(r); });
     var html = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>Metric</th><th>LocPrf</th><th>Weight</th><th>Path</th></tr></thead><tbody>';
     var reasons = '';
+    var _primaryLabel = '';   // (iii) first deciding criterion, to highlight in the FRR-order legend
     order.forEach(function (p) {
       var grp = groups[p], dec = _bgpDecision(grp), decCol = (dec && dec.kind === 'decided') ? dec.col : null;
       if (dec) dec._grp = grp;   // Tier3 href needs the candidate routes (min-diff: carry on dec)
+      if (dec && dec.kind === 'decided' && dec.criterion && !_primaryLabel) _primaryLabel = dec.criterion.label;
       grp.forEach(function (rt) {
         var isBest = _bIsBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
         var nh = rt.next_hop || rt.nexthop || '';
@@ -239,7 +263,7 @@
       reasons += _bgpReason(p, dec);
     });
     html += '</tbody></table>';
-    if (reasons) reasons += '<div class="bgp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED</div>';
+    if (reasons) reasons += _bgpOrderLegend(_primaryLabel);
     return { table: html, decision: reasons };
   }
   function _bgpInjectCss() {
@@ -252,10 +276,18 @@
       + '.de-bgp-panel .de-bgp-table th{font-size:calc(11px * var(--xbgp-fs,1))}'
       + '.de-bgp-decision-panel .bgp-reason{font-size:calc(12px * var(--xbgp-fs,1))}'
       + '.de-bgp-decision-panel .bgp-chain,.de-bgp-decision-panel .bgp-legend{font-size:calc(10px * var(--xbgp-fs,1))}'
+      // (iii) RFC links in the decision/legend: cyan + clickable. The engine's is-xray-mode pointer-events
+      //   guard would otherwise disable them; a higher-specificity override re-enables just these links.
+      + '.de-bgp-decision-panel .bgp-rfc-link,.de-bgp-decision-panel .bgp-legend a{color:#22d3ee!important;text-decoration:underline;pointer-events:auto!important;cursor:pointer!important}'
       // Decision panel position: keep it clear of the BGP Table box (both default to
       // left:calc(50%+100px); table top-anchored, decision bottom-anchored).
       // !important so it wins over the engine default AND the older JS measurement below (now inert).
       + '.xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto!important;bottom:64px!important;z-index:40!important;left:calc(50% + 100px);right:auto}'
+      // When the BGP Table is tall (>=5 routes, e.g. the best-path hero) the bottom-anchored decision
+      // panel would ride up into the table's last row. Drop it lower so the two panels stay clear.
+      // Scoped to >=5 rows via :has() so the common 2-4 route demos are untouched. !important to win
+      // over the bottom:64px rule above (both !important -> higher specificity of :has wins).
+      + '.xray-deep-engine:has(.de-bgp-rows tr:nth-child(5)) .de-bgp-decision-panel,.dd-engine:has(.de-bgp-rows tr:nth-child(5)) .de-bgp-decision-panel{bottom:24px!important}'
       + '.xbgp-fs-ctl{float:right;font-weight:400}'
       + '.xbgp-fs-ctl button{background:#16202b;color:#9fb6c2;border:1px solid #2b3a44;border-radius:3px;font-size:11px;line-height:1;padding:1px 6px;margin-left:3px;cursor:pointer}'
       + '.xbgp-fs-ctl button:hover{color:#cfe8ee;border-color:#4dd0e1}'

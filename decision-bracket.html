@@ -59,6 +59,7 @@
   .winner .why{margin-left:auto;font-size:12.5px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:7px 11px} .winner .why b{color:var(--gold)}
   .legend{margin-top:14px;display:flex;gap:15px;flex-wrap:wrap;font-size:11px;color:var(--ink-dim)}
   .legend span{display:inline-flex;align-items:center;gap:6px} .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  a.rfc{color:#22d3ee;text-decoration:underline}
   @media(max-width:560px){.bracket th.crit{width:130px}.bracket th,.bracket td{padding:8px 6px;font-size:12px}.winner .why{margin-left:0}}
 </style>
 </head>
@@ -120,7 +121,10 @@ var CRITERIA = [
   { key:'origin',    label:{ja:'Origin コード',    en:'Origin Code'},      rule:{ja:'i &lt; e &lt; ?（i が最強）', en:'i &lt; e &lt; ? (IGP is best)'}, dir:'origin', fmt:function(v){return ({i:'IGP (i)',e:'EGP (e)','?':'Incomplete (?)'})[v]||v;} },
   { key:'med',       label:{ja:'MED',              en:'MED'},              rule:{ja:'小さい方が勝ち',          en:'Lower wins'},             dir:'low',    fmt:function(v){return v;} },
   { key:'ebgp',      label:{ja:'eBGP > iBGP',      en:'eBGP > iBGP'},      rule:{ja:'eBGP が勝ち',            en:'eBGP over iBGP'},         dir:'ebgp',   fmt:function(v){return v?'eBGP':'iBGP';} },
-  { key:'routerid',  label:{ja:'Router ID',        en:'Router ID'},        rule:{ja:'小さい方が勝ち（最終手段）', en:'Lowest wins (final tie-breaker)'}, dir:'low', fmt:function(v){return v;} }
+  // (iii) Older Path (RFC 5004) is FRR's DEFAULT final tie-breaker — the first-received external path
+  //   wins. It comes BEFORE Router ID, which only applies with `bgp bestpath compare-routerid`.
+  { key:'olderpath', label:{ja:'Older Path',       en:'Older Path'},       rule:{ja:'先に受信した経路が勝ち（<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>・既定のタイブレーカ）', en:'First-received wins (<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; default tie-breaker)'}, dir:'low', fmt:function(v){return (v==null||v==='')?'—':v;} },
+  { key:'routerid',  label:{ja:'Router ID',        en:'Router ID'},        rule:{ja:'小さい方が勝ち（compare-routerid 設定時のみ）', en:'Lowest wins (only with compare-routerid)'}, dir:'low', fmt:function(v){return v;} }
 ];
 
 // ── default data (representative example: A=LP200 / B=LP100, Weight tie -> decided by Local Preference) ──
@@ -151,7 +155,14 @@ routes.forEach(function(r){ if (!r.name) r.name = (r.id === 'A') ? T.routeA : (r
 
 // ── knockout-tournament simulation (same logic as the prototype) ──
 function betterSet(alive, crit){
-  function val(r){ var v = r.attrs[crit.key];
+  // (iii) The deep tie-breakers. Older Path (RFC 5004) is FRR's DEFAULT final tie-breaker; Router ID
+  //   applies only with `bgp bestpath compare-routerid`. A `show ip bgp` snapshot carries no receive
+  //   time, so unless the caller supplies attrs.age we cannot rank Older Path, and Router ID stays
+  //   disabled by default — the tournament then ends unresolved (rendered as decided by Older Path)
+  //   rather than falsely attributing the win to Router ID.
+  if (crit.key === 'routerid' && !data.compareRouterId) return alive.slice();
+  if (crit.key === 'olderpath' && !alive.some(function(r){ return r.attrs.age != null; })) return alive.slice();
+  function val(r){ var v = (crit.key === 'olderpath') ? r.attrs.age : r.attrs[crit.key];
     if (crit.dir === 'origin') return -originRank[v];
     if (crit.dir === 'ebgp')   return v ? 1 : 0;
     if (crit.dir === 'low')    return -v;
@@ -219,9 +230,21 @@ document.getElementById('body').innerHTML = CRITERIA.map(function(c,i){
   return '<tr class="'+cls+'"><th class="crit">'+esc(c.label[LANG])+pill+'<span class="rule">'+c.rule[LANG]+'</span></th>'+cells+'</tr>';
 }).join('');
 
-document.getElementById('winner').innerHTML =
-  '<span class="trophy">🏆</span><div><div class="wt">'+T.winnerLabel+'</div><div class="wn">'+esc(wR.name)+'（'+esc(wR.via)+' · '+esc(wR.as)+'）</div></div>'+
-  '<div class="why">'+T.why.replace('{crit}', esc(decCrit.label[LANG])).replace('{a}', esc(wR.attrs[decCrit.key])).replace('{op}', opFor(decCrit)).replace('{b}', esc(lR.attrs[decCrit.key]))+'</div>';
+if (decidedAt < 0) {
+  // (iii) No visible attribute separated the paths: FRR's default final tie-breaker is Older Path
+  //   (RFC 5004) — the first-received external path wins. Receive time isn't in a show-ip-bgp snapshot,
+  //   so we name the rule rather than assert A or B (and Router ID is NOT the default decider).
+  var _tieMsg = (LANG === 'ja')
+    ? '可視属性はすべて同値 — FRR は <b>Older Path</b>（<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>・先に受信した経路が勝ち）でタイを解消します。受信時刻は show ip bgp に出ないため、どちらが古いかは表からは決まりません（Router ID は compare-routerid 設定時のみ）。'
+    : 'All visible attributes tie — FRR breaks it by <b>Older Path</b> (<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>): the first-received external path wins. Receive time isn\'t in a show ip bgp snapshot, so the table alone can\'t say which is older (Router ID applies only with compare-routerid).';
+  document.getElementById('winner').innerHTML =
+    '<span class="trophy">⚖️</span><div><div class="wt">'+T.winnerLabel+'</div>'+
+    '<div class="why" style="margin-top:4px">'+_tieMsg+'</div></div>';
+} else {
+  document.getElementById('winner').innerHTML =
+    '<span class="trophy">🏆</span><div><div class="wt">'+T.winnerLabel+'</div><div class="wn">'+esc(wR.name)+'（'+esc(wR.via)+' · '+esc(wR.as)+'）</div></div>'+
+    '<div class="why">'+T.why.replace('{crit}', esc(decCrit.label[LANG])).replace('{a}', esc(wR.attrs[decCrit.key])).replace('{op}', opFor(decCrit)).replace('{b}', esc(lR.attrs[decCrit.key]))+'</div>';
+}
 
 document.getElementById('legend').innerHTML =
   '<span><span class="sw" style="background:var(--alive)"></span>'+T.legAlive+'</span>'+
