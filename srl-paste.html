@@ -15,7 +15,6 @@
   select,button{background:#12202b;color:#cfe8ee;border:1px solid #2b3a44;border-radius:5px;padding:6px 10px;font:12px monospace}
   button.render{background:#00acc1;border:none;color:#fff;font-weight:700;font-size:13px;cursor:pointer;padding:8px 18px}
   button.render:hover{background:#00838f}
-  button#deepBtn{background:#12202b;color:#7fd;border:1px solid #2b5;cursor:pointer}
   textarea{width:100%;box-sizing:border-box;height:130px;background:#0c1016;color:#cfe8ee;border:1px solid #2b3a44;
     border-radius:6px;padding:8px 10px;font-family:"Courier New",monospace;font-size:11.5px;line-height:1.4;resize:vertical}
   #err{color:#ef9a9a;font-size:12px;min-height:16px;margin:6px 0;display:none}
@@ -37,7 +36,6 @@
   <div class="row">
     <label for="sample">Sample</label>
     <select id="sample"></select>
-    <button id="deepBtn" style="display:none">Open the router (r1) &#9656;</button>
     <button class="render" id="go" style="margin-left:auto">Render</button>
   </div>
   <textarea id="in" spellcheck="false"></textarea>
@@ -141,20 +139,9 @@ function buildConfig(state) {
   };
 }
 
-function setDeepLabel(open) {
-  var b = document.getElementById('deepBtn');
-  if (!b) return;
-  b.style.display = view ? '' : 'none';
-  b.innerHTML = open ? '◂ Back to overview' : 'Open the router (r1) ▸';
-}
-window.toggleDeep = function () {
-  if (!view) return;
-  if (document.body.classList.contains('is-xray-deep')) { view.closeDeepDive(); setDeepLabel(false); }
-  else { view.openDeepDive(); setDeepLabel(true); }
-};
-document.addEventListener('xraycore:deepdive', function (e) { setDeepLabel(!!(e.detail && e.detail.open)); });
-document.getElementById('deepBtn').addEventListener('click', window.toggleDeep);
-
+// srl-paste shows how ONE node's collector state maps into the DeepDive cross-section. The peer is a
+// reference-only placeholder, so there is no node-centred Overview — the page opens the DeepDive
+// directly (Standard by default; the Standard/Simple toggle lives inside the DeepDive).
 function render() {
   errEl.style.display = 'none'; errEl.textContent = '';
   var state;
@@ -168,8 +155,7 @@ function render() {
     // collector emits these), so a BGP paste gets the same panels as the other BGP demos.
     if (typeof view.setBgpTable === 'function') view.setBgpTable(function (st) { return (st && st.bgp_routes) || []; });
     view.applyState(state);
-    view.openDeepDive();          // show the DeepDive cross-section straight away (Standard by default)
-    setDeepLabel(true);
+    view.openDeepDive();          // show the DeepDive cross-section straight away (Standard by default; no overview)
   } catch (e) { errEl.style.display = 'block'; errEl.textContent = 'Render error: ' + (e && e.message ? e.message : e); if (window.console) console.error(e); }
 }
 function loadSample() { inEl.value = JSON.stringify(SAMPLES[selEl.value], null, 2); render(); }
