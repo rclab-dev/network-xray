@@ -33,10 +33,16 @@ router at the forwarding decision (the deepdive).
 
 ## See it
 
-**A real lab, recorded** — OSPF goes Full (green tunnels, full LSDB), a link drops and a router is
-isolated (OSPF not running, route lost, packet dropped), then it recovers and re-converges. Captured
-straight from the [live replay demo](https://rclab-dev.github.io/xray-core/demo/) — what you see is what
-a `containerlab graph` draws:
+**Why one BGP route wins — recorded, then it fails over.** Two upstreams advertise `8.8.8.0/24` with
+different Local Preference (100 vs 50). Open r1: the BGP table shows both candidates and a **Best-Path
+Decision** panel explains the winner (LocPref 100 > 50) — then the winning link drops so only one path
+remains, then it's restored. Straight from the
+[Best-Path Decision demo](https://rclab-dev.github.io/xray-core/demo/index-bgp-lp.html) — real frames, no backend:
+
+![BGP Best-Path Decision — 8.8.8.0/24 is heard from two upstreams; LocPref 100>50 picks the winner, then the winning link drops so only one path remains, then it recovers — recorded from a real FRR/containerlab lab](docs/bgp-best-path.gif)
+
+**Also an OSPF lab** — OSPF goes Full (green tunnels, full LSDB), a link drops and a router is isolated
+(route lost, packet dropped), then it recovers and re-converges:
 
 ![OSPF adjacency goes Full, a link drops and the route is lost, then it recovers — recorded from a real FRR/containerlab lab](docs/ospf-fail-recover.gif)
 
@@ -50,9 +56,9 @@ router to look inside. **<https://rclab-dev.github.io/xray-core/>** (or jump str
 
 **▶ Or watch a real lab converge & recover** — frames captured from a running FRR/containerlab lab,
 replayed in the browser with no backend (steady → link down / router isolated → re-forms → converged):
+**[Best-Path Decision](https://rclab-dev.github.io/xray-core/demo/index-bgp-lp.html)** (eBGP: competing LocPref → why one path wins) ·
 **[OSPF replay](https://rclab-dev.github.io/xray-core/demo/)** ·
-**[BGP replay](https://rclab-dev.github.io/xray-core/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table) ·
-**[Best-Path Decision](https://rclab-dev.github.io/xray-core/demo/index-bgp-lp.html)** (eBGP: competing LocPref → why one path wins).
+**[BGP replay](https://rclab-dev.github.io/xray-core/demo/index-bgp.html)** (eBGP sessions, AS-paths, BGP table).
 
 ## Try it live
 
