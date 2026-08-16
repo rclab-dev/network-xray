@@ -18,6 +18,8 @@
   var _bgpSrc = null;     // Seam C source (rows array or function(state) -> rows)
   var _lastState = null;  // last applied snapshot (so the BGP table can reflect it)
   var _lastConfig = null; // last rendered config (so openDeepDiveFor can re-target the cylinder)
+  var _bgpSelPrefix = null; // per-prefix Best-Path Decision: which prefix's decision is expanded (accordion)
+  var _bgpSelTgt = null;    // DeepDive target the selection belongs to (reset selection when target changes)
 
   function _need(name) {
     if (typeof window[name] !== 'function') {
@@ -214,6 +216,14 @@
       var open = pop.classList.contains('open');
       _closeBgpPop();
       if (!open) { pop.classList.add('open'); document.addEventListener('click', _bgpOutside); document.addEventListener('keydown', _bgpEsc); }
+      return;
+    }
+    // Per-prefix accordion (Layout A): click a BGP-table route row → expand THAT prefix's decision
+    // below its group (the accordion row itself has no data-bgp-prefix, so it never re-triggers).
+    var prow = t.closest('tr[data-bgp-prefix]');
+    if (prow) {
+      var pp = prow.getAttribute('data-bgp-prefix');
+      if (pp && pp !== _bgpSelPrefix) { _bgpSelPrefix = pp; _paintBgpTable(); }
     }
   }
   function _bgpPanelKey(e) {
@@ -237,34 +247,56 @@
     return '<div class="bgp-legend" style="overflow-wrap:anywhere">Best-path order (FRR default): ' + parts.join(' &rarr; ') + rfc
       + '<br><span style="opacity:.7">' + note + '</span></div>';
   }
+  // Default prefix for the per-prefix accordion. Priority: a sticky user/prior selection → the
+  // meta `key_prefix` flag (a lesson/scenario with a known answer prefix) → auto-pick the most
+  // interesting prefix (>1 candidate resolved by a real decider / deeper tiebreak) → the first row.
+  function _bgpResolveSel(order, groups) {
+    if (_bgpSelPrefix && groups[_bgpSelPrefix]) return _bgpSelPrefix;
+    var kp = (_lastConfig && _lastConfig.xray && _lastConfig.xray.key_prefix) || (_lastConfig && _lastConfig.key_prefix);
+    if (kp && groups[kp]) { _bgpSelPrefix = kp; return kp; }
+    for (var i = 0; i < order.length; i++) {
+      var g = groups[order[i]];
+      if (g.length > 1) { var d = _bgpDecision(g); if (d && d.kind !== 'nobest' && d.kind !== 'single' && d.kind !== 'local') { _bgpSelPrefix = order[i]; return order[i]; } }
+    }
+    _bgpSelPrefix = order[0] || null;
+    return _bgpSelPrefix;
+  }
+  // Build the BGP Table with clickable per-prefix rows, and inline the SELECTED prefix's Best-Path
+  // Decision as an amber box below its group (Layout A / accordion). The full FRR-order legend + RFC
+  // is returned separately so the caller can show it ONCE at the panel bottom (prefix-independent).
   function _bgpBuildView(routes) {
     var order = [], groups = {};
     routes.forEach(function (r) { var p = r.prefix || ''; if (!groups[p]) { groups[p] = []; order.push(p); } groups[p].push(r); });
-    var html = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>Metric</th><th>LocPrf</th><th>Weight</th><th>Path</th></tr></thead><tbody>';
-    var reasons = '';
-    var _primaryLabel = '';   // (iii) first deciding criterion, to highlight in the FRR-order legend
+    var sel = _bgpResolveSel(order, groups);
+    var html = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>Metric</th><th>LocPrf</th><th>Weight</th><th>Path</th><th class="de-bgp-cx"></th></tr></thead><tbody>';
+    var _primaryLabel = '';   // (iii) deciding criterion of the SELECTED prefix, highlighted in the legend
     order.forEach(function (p) {
       var grp = groups[p], dec = _bgpDecision(grp), decCol = (dec && dec.kind === 'decided') ? dec.col : null;
       if (dec) dec._grp = grp;   // Tier3 href needs the candidate routes (min-diff: carry on dec)
-      if (dec && dec.kind === 'decided' && dec.criterion && !_primaryLabel) _primaryLabel = dec.criterion.label;
-      grp.forEach(function (rt) {
+      var isSel = (p === sel);
+      if (isSel && dec && dec.kind === 'decided' && dec.criterion) _primaryLabel = dec.criterion.label;
+      grp.forEach(function (rt, gi) {
         var isBest = _bIsBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
         var nh = rt.next_hop || rt.nexthop || '';
         var pathDisp = (rt.as_path || '') + (rt.origin ? ((rt.as_path ? ' ' : '') + rt.origin) : '');
         var lpDisp = (rt.local_pref != null && rt.local_pref !== '') ? rt.local_pref : '<span class="bgp-default">100</span>';
-        function cell(name, val) { return '<td' + (isBest && decCol === name ? ' class="bgp-decider"' : '') + '>' + val + '</td>'; }
-        html += '<tr' + (isBest ? ' class="bgp-best"' : '') + '>' +
+        // Only the selected prefix shows the amber decider-cell highlight (it ties to the shown decision).
+        function cell(name, val) { return '<td' + (isSel && isBest && decCol === name ? ' class="bgp-decider"' : '') + '>' + val + '</td>'; }
+        var cls = (isBest ? 'bgp-best' : '') + (isSel ? ' bgp-sel' : '');
+        var chev = (gi === 0) ? (isSel ? '▾' : '▸') : '';   // affordance on the group's first row
+        html += '<tr class="' + cls.replace(/^\s+/, '') + '" data-bgp-prefix="' + p + '">' +
           '<td><span class="bgp-st">' + (rt.status || (rt.best ? '*>' : '* ')) + '</span></td>' +
           '<td>' + (rt.prefix || '') + '</td>' +
           '<td>' + nh + '</td>' +
           cell('metric', rt.metric || '') + cell('locprf', lpDisp) + cell('weight', w) + cell('path', pathDisp) +
+          '<td class="de-bgp-cx">' + chev + '</td>' +
           '</tr>';
       });
-      reasons += _bgpReason(p, dec);
+      // accordion: decision box AFTER the group's last row (never between best/alt of the same prefix)
+      if (isSel) html += '<tr class="de-bgp-accd"><td colspan="8"><div class="de-bgp-accd-box">' + _bgpReason(p, dec) + '</div></td></tr>';
     });
     html += '</tbody></table>';
-    if (reasons) reasons += _bgpOrderLegend(_primaryLabel);
-    return { table: html, decision: reasons };
+    return { table: html, legend: _bgpOrderLegend(_primaryLabel) };
   }
   function _bgpInjectCss() {
     if (document.getElementById('xray-bgp-decision-css')) return;
@@ -318,39 +350,65 @@
       // explicit rules document intent for the pop controls (the real cascade winner is that rule).
       + '.is-xray-mode .de-bgp-decision-panel a.bp-more{pointer-events:auto!important}'
       + '.is-xray-mode .de-bgp-decision-panel button.bp-x{pointer-events:auto!important}';
+    // --- Layout A (per-prefix accordion): the decision now renders INSIDE the BGP Table panel. These
+    //   rules (a) make route rows clickable + highlight the selected prefix, (b) draw the amber BOX
+    //   around the expanded decision, (c) re-scope the decision text/crit-btn/legend styling (which was
+    //   .de-bgp-decision-panel-only) to .de-bgp-panel. The old decision panel is now hidden/unused.
+    s.textContent += '.de-bgp-panel .de-bgp-table tbody tr[data-bgp-prefix]{cursor:pointer}'
+      + '.de-bgp-panel .de-bgp-table tbody tr[data-bgp-prefix]:hover td{background:rgba(var(--xto-link-rgb,0,229,255),0.08)}'
+      + '.de-bgp-panel .de-bgp-table tr.bgp-sel td{background:rgba(255,213,79,0.08)}'
+      + '.de-bgp-panel .de-bgp-table tr.bgp-sel td:first-child{box-shadow:inset 3px 0 0 #ffd54f}'
+      + '.de-bgp-panel .de-bgp-table td.de-bgp-cx{color:rgba(var(--xto-link-rgb,0,229,255),0.4);text-align:right;padding-right:0;width:1em}'
+      + '.de-bgp-panel .de-bgp-table tr.bgp-sel td.de-bgp-cx{color:#ffd54f}'
+      + '.de-bgp-panel .de-bgp-table tr.de-bgp-accd td{padding:0!important;border:0!important;background:transparent!important;white-space:normal}'
+      + '.de-bgp-panel .de-bgp-accd-box{border:1px solid #ffd54f;border-radius:6px;background:rgba(255,213,79,0.06);padding:7px 11px;margin:4px 0 7px;box-shadow:0 0 10px rgba(255,213,79,0.12)}'
+      + '.de-bgp-panel .bgp-reason{font-size:calc(12px * var(--xbgp-fs,1));margin:1px 0;color:#dcefff}'
+      + '.de-bgp-panel .bgp-reason.bgp-reason-note{color:#cfe6f2}'
+      + '.de-bgp-panel .bgp-reason b{color:#fff}'
+      + '.de-bgp-panel .bgp-chain{font-size:calc(10px * var(--xbgp-fs,1))}'
+      + '.de-bgp-panel .bgp-crit-btn{color:#ffd54f;cursor:pointer;border-bottom:1.5px dashed #ffd54f;padding:0 1px;font-weight:800}'
+      + '.de-bgp-panel .bgp-crit-btn::after{content:" \\25BE";font-size:0.85em}'
+      + '.de-bgp-panel .bgp-crit-btn:hover,.de-bgp-panel .bgp-crit-btn:focus-visible{background:rgba(255,213,79,0.16);border-radius:4px;outline:none}'
+      + '.de-bgp-panel .bgp-rfc-link,.de-bgp-panel .bgp-legend a{color:#22d3ee!important;text-decoration:underline;pointer-events:auto!important;cursor:pointer!important}'
+      + '.de-bgp-panel .de-bgp-legend-host{margin-top:8px;padding-top:7px;border-top:1px dashed rgba(var(--xto-link-rgb,0,229,255),0.25)}'
+      + '.de-bgp-panel .bgp-legend{font-size:calc(9px * var(--xbgp-fs,1));line-height:1.35;overflow-wrap:anywhere}'
+      + '.de-bgp-panel .bgp-legend span{font-size:calc(8.5px * var(--xbgp-fs,1))}'
+      + '.is-xray-mode .de-bgp-panel a.bp-more{pointer-events:auto!important}'
+      + '.is-xray-mode .de-bgp-panel button.bp-x{pointer-events:auto!important}';
     document.head.appendChild(s);
   }
   function _paintBgpTable() {
-    var dz0 = document.getElementById('de-bgp-decision-panel');
-    if (!_bgpSrc) { if (dz0) dz0.style.display = 'none'; return; }
+    // Layout A: the per-prefix decision now lives INSIDE the BGP Table panel (accordion), so the old
+    // standalone decision panel is no longer used — hide it if a prior render left one around.
+    var dOld = document.getElementById('de-bgp-decision-panel');
+    if (dOld) dOld.style.display = 'none';
+    var panel0 = document.getElementById('de-bgp-panel');
+    if (!_bgpSrc) { if (panel0) panel0.style.display = 'none'; return; }
     var re = document.getElementById('de-re-panel');
     if (!re || !re.parentElement) return;   // cylinder not rendered yet
     _bgpInjectCss();
     var tgt = (window._xrayTargetNode || 'topo-node-r1').replace('topo-node-', '');
-    var panel = document.getElementById('de-bgp-panel');
+    if (_bgpSelTgt !== tgt) { _bgpSelPrefix = null; _bgpSelTgt = tgt; }   // fresh selection per target
+    var panel = panel0;
     if (!panel) { panel = document.createElement('div'); panel.className = 'de-panel de-bgp-panel'; panel.id = 'de-bgp-panel'; re.parentElement.appendChild(panel); }
-    var dpanel = document.getElementById('de-bgp-decision-panel');
-    if (!dpanel) { dpanel = document.createElement('div'); dpanel.className = 'de-panel de-bgp-decision-panel'; dpanel.id = 'de-bgp-decision-panel'; re.parentElement.appendChild(dpanel); }
-    // Delegated decider handler — wired once on the stable panel (survives innerHTML repaints).
-    if (!dpanel._bgpWired) { dpanel._bgpWired = true; dpanel.addEventListener('click', _bgpPanelClick); dpanel.addEventListener('keydown', _bgpPanelKey); }
-    var rows = _bgpRows(), body, decision = '';
+    panel.style.display = '';
+    // Delegated handler — decider popovers AND per-prefix row selection — wired once on the stable
+    // table panel (both live here now, and it survives innerHTML repaints).
+    if (!panel._bgpWired) { panel._bgpWired = true; panel.addEventListener('click', _bgpPanelClick); panel.addEventListener('keydown', _bgpPanelKey); }
+    // Don't wipe an open decider popover on a poll tick (it now lives in this panel).
+    if (document.querySelector('.de-bgp-bracket-pop.open')) { _bgpFontInit(); return; }
+    var rows = _bgpRows(), body, legend = '';
     if (!rows || !rows.length) {
       body = '<div class="de-dim">no routes<br>(BGP session not established)</div>';
     } else {
-      var view = _bgpBuildView(rows); body = view.table; decision = view.decision;   // table + WHY-best
+      var view = _bgpBuildView(rows); body = view.table; legend = view.legend;   // table + inline decision
     }
     panel.innerHTML = '<div class="de-title">BGP Table (' + tgt + ')<span class="xbgp-fs-ctl">'
       + '<button data-fs="dn" title="smaller text">A−</button><button data-fs="up" title="larger text">A+</button></span></div>'
-      + '<div class="de-bgp-rows">' + body + '</div>';
-    // Don't repaint the decision panel while a bracket pop is open (a poll tick would wipe it) —
-    // same guard as the engine's decision repaint (.de-bgp-bracket-pop.open). bgp-paste doesn't poll; noc-live does.
-    var popOpen = !!document.querySelector('.de-bgp-bracket-pop.open');
-    if (decision) { if (!popOpen) dpanel.innerHTML = '<div class="de-title">Best-Path Decision</div><div class="de-bgp-decision-rows">' + decision + '</div>'; dpanel.style.display = ''; }
-    else { if (!popOpen) dpanel.style.display = 'none'; }
+      + '<div class="de-bgp-rows">' + body + '</div>'
+      + (legend ? '<div class="de-bgp-legend-host">' + legend + '</div>' : '');
     _bgpFontInit();
     var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs || 1);
-    // Decision box position is now CSS-driven (see _bgpInjectCss): bottom:64px + z-index:40,
-    // clear of the Table box. (Replaces the old measure-and-stack, which could overlap.)
   }
   function _bgpFontInit() {
     if (window.__xbgpFsInit) return; window.__xbgpFsInit = true; if (window.__xbgpFs == null) window.__xbgpFs = 1;
