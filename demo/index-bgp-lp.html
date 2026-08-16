@@ -142,6 +142,10 @@ window.__xrayGraphBoot = function () {
     // topology-derived synthetic scaffold from the bridge.
     var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
     var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {}; _cfg.deep_engine = 'unified';
+    // Per-prefix Best-Path Decision: designate the key prefix so its decision is the one expanded by
+    // default (this hero is about 8.8.8.0/24 heard twice — LocPref 100 vs 50). Absent this flag the
+    // facade auto-picks the most interesting prefix (>1 candidate with a real tiebreak) anyway.
+    _cfg.xray.key_prefix = '8.8.8.0';
     // Protocol: the collector marks BGP states (s.protocol==='bgp'). Switch the scene to BGP so the
     // panel, tunnels and direction render as BGP instead of the bridge's OSPF default.
     if (_st && _st.protocol === 'bgp') {
