@@ -4802,6 +4802,12 @@ function xrayBuildApplyState(config) {
     try {
       _xrayRenderUnifiedLive(s);
     } catch (_e) {}
+    // Compute the forward direction BEFORE _xrayDeAngleView renders the flow arrow, so the arrow uses
+    // THIS frame's direction (route_resolution.out_iface / wan_iface) rather than the previous frame's.
+    // Without this the arrow lags one frame: on a failover step it kept pointing at the now-down link.
+    // Kept idempotent — the call below still runs to transform the in-cylinder arrow once the deep
+    // engine has (re)built it, and to keep single-link / non-triangle paths unchanged.
+    if (_triNodes) { try { _xrayApplyDualLinkDirection(s, _triNodes); } catch (_e) {} }
     try {
       _xrayDeAngleView(s);
     } catch (_e) {}
