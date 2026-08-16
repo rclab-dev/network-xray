@@ -279,6 +279,13 @@
       // (iii) RFC links in the decision/legend: cyan + clickable. The engine's is-xray-mode pointer-events
       //   guard would otherwise disable them; a higher-specificity override re-enables just these links.
       + '.de-bgp-decision-panel .bgp-rfc-link,.de-bgp-decision-panel .bgp-legend a{color:#22d3ee!important;text-decoration:underline;pointer-events:auto!important;cursor:pointer!important}'
+      // (iii)/#3 compact the decision panel so the tall full-FRR-order legend does not push its top up
+      //   over the BGP Table's key 8.8.8.0 (LocPref 100 vs 50) row. Older Path/RFC stay INLINE (no
+      //   hide-toggle) — just tighter type + spacing to reclaim vertical height (owner-chosen (A)).
+      + '.de-bgp-decision-panel .bgp-legend{font-size:calc(9px * var(--xbgp-fs,1));line-height:1.3;margin-top:4px}'
+      + '.de-bgp-decision-panel .bgp-legend span{font-size:calc(8.5px * var(--xbgp-fs,1))}'
+      + '.de-bgp-decision-panel .bgp-reason{margin:2px 0}'
+      + '.de-bgp-decision-panel .bgp-chain{margin-top:2px;line-height:1.4}'
       // Decision panel position: keep it clear of the BGP Table box (both default to
       // left:calc(50%+100px); table top-anchored, decision bottom-anchored).
       // !important so it wins over the engine default AND the older JS measurement below (now inert).
