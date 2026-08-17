@@ -273,14 +273,12 @@ function xrayEvaluateState(s) {
   if (protocol === "ospf") {
     state.ospfStatus = state.helloOut ? "ACTIVE" : s.ospf_configured ? "CONFIGURED" : "NOT RUNNING";
   }
-  if (protocol === "bgp" && (s.ospf_active_on_interface || s.neighbor_state && s.neighbor_state !== "None")) {
-    state.helloIn = !!s.peer_sending_hello;
-    state.helloOut = !!s.ospf_active_on_interface;
-    var _oif = s.iface_hellos && Object.keys(s.iface_hellos).filter(function(k) {
-      return k !== "lo";
-    })[0] || s.lan_iface;
-    state.helloSide = _oif && _oif === s.lan_iface && s.lan_iface !== s.wan_iface ? "left" : "right";
-  }
+  // BGP uses TCP keepalives, not Hello packets — the OSPF Hello orb is an OSPF-adjacency visual and
+  // must NOT appear on a BGP DeepDive. The clab/BGP collector reuses OSPF-style fields
+  // (neighbor_state:"Full" / peer_sending_hello / iface_hellos) for the BGP session, so a prior block
+  // here lit the Hello orb for any established BGP peer. Leave helloIn/helloOut false for BGP; the BGP
+  // session is already represented by the tunnel + Best-Path. (OSPF Hello is set in the ospf branch
+  // above and is unaffected.) reference_rcl_ospf_state_carries_bgp_state_idle_truthy_trap
   return state;
 }
 
@@ -4715,6 +4713,29 @@ function _xrayApplyDualLinkDirection(s, peers) {
     if (_fwdArrowText) _fwdArrowText.setAttribute("transform", _fwdTf);
   }
 }
+
+// Live-follow hook: point the visible FORWARD arrow (.de-fwd-b / svg.de-flow) out `iface` and redraw
+// it IN PLACE via _xrayDeAngleView — no openDeepDiveFor rebuild, so panel size/scroll are preserved.
+// Intended for no-target / embed contexts (clab live) where route_resolution.out_iface is not the
+// contested Best-Path prefix: the caller (userscript) computes the Best-Path winner's out-iface after
+// applyState and calls this to snap the arrow to the new winner (eth1<->eth2). Convention: iface is
+// mapped to left/right by the current dual-apex peer ifaces (window._triNodes / _xrayDirDbg). RCL and
+// curated scenarios never call it, so their route_resolution-driven arrow is unchanged (non-regression).
+// Returns "left" / "right" on success, or null if iface is not one of the two peer links.
+function xraySetForwardIface(iface) {
+  var s = window._lastXrayState;
+  if (!iface || iface === "lo" || !s) return null;
+  var tn = window._triNodes, dbg = window._xrayDirDbg || {};
+  var lIf = tn && s[tn.left + "_iface"] || dbg.lIf;
+  var rIf = tn && s[tn.right + "_iface"] || dbg.rIf;
+  var dir = iface === lIf ? "left" : iface === rIf ? "right" : null;
+  if (!dir) return null;
+  window._xrayFwdDirection = dir;
+  if (dir === "left") document.body.classList.add("ping-left"); else document.body.classList.remove("ping-left");
+  if (typeof _xrayDeAngleView === "function") _xrayDeAngleView(s);
+  return dir;
+}
+if (typeof window !== "undefined") window.xraySetForwardIface = xraySetForwardIface;
 
 function xrayBuildApplyState(config) {
   var xray = config.xray || {};
