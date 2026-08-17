@@ -302,8 +302,9 @@ Two ways to feed it:
 
 1. **Paste (fastest)** — open `frr-paste.html` and paste a router's `show ip route` +
    `show ip ospf neighbor`. **It runs entirely in your browser — your config is never uploaded.**
-   Scope today: **FRR, OSPF, small topologies**. BGP, large meshes, and other vendors aren't
-   auto-parsed yet.
+   Scope of this paste page: **FRR, OSPF, small topologies**. For BGP, use
+   **`bgp-paste.html`** (paste `show bgp summary` + `show ip bgp`); large meshes and other
+   vendors aren't auto-parsed yet.
 2. **Feed `state` directly (any vendor)** — build the documented `config`/`state` objects and call
    `view.applyState(state)`. This is how you support **Cisco IOS / Arista / Juniper**: write a small
    adapter from your OS's `show` output to the shapes in
