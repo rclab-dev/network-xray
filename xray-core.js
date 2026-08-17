@@ -186,7 +186,21 @@ function xrayEvaluateState(s) {
   var rr = s.route_resolution || {};
   var wanIf = s.wan_iface || rr.out_iface || ifKeys[0] || "";
   var lanIf = s.lan_iface || ifKeys[ifKeys.length - 1] || wanIf;
-  var _nonLoCount = ifKeys.filter(function(k) {
+  // Count only REAL topology-link interfaces (those a wan/lan/peer *_iface field points at),
+  // excluding lo AND non-link ifaces such as the containerlab mgmt eth0. A raw non-lo count treats
+  // the clab mgmt iface as a second link, so singleLinkEdge stays false on a genuine single-link
+  // leaf and the Input IF label/marker fall back to the frame's left edge (float + name clip).
+  // Canonical: single-link-edge is judged by the real link-iface count, not the raw non-lo count
+  // (memory reference_rcl_single_link_edge_nonlo_iface_count_not_wan_eq_lan). Falls back to the
+  // legacy non-lo count when a state carries no *_iface hints, so demo states stay byte-identical.
+  var _linkIf = {};
+  Object.keys(s).forEach(function(k) {
+    if (/_iface$/.test(k) && typeof s[k] === "string" && s[k] && s[k] !== "lo") _linkIf[s[k]] = 1;
+  });
+  var _linkKeys = Object.keys(_linkIf).filter(function(k) {
+    return ifaces[k];
+  });
+  var _nonLoCount = _linkKeys.length ? _linkKeys.length : ifKeys.filter(function(k) {
     return k !== "lo";
   }).length;
   var state = {
