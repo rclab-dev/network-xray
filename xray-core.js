@@ -3896,7 +3896,7 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += "</svg>";
   html += '<div class="de-if-marker left"></div><div class="de-if-marker right"></div>';
   html += '<div class="de-r1-label"><div class="de-r1-name">' + nodeId + "</div>";
-  html += '<div class="de-r1-sub">Gateway Router &#8212; Internal View</div></div>';
+  html += '<div class="de-r1-sub">Router &#8212; Internal View</div></div>';
   html += '<div class="de-loading-ind"><span class="de-load-spin"></span><span class="de-load-txt">解析中&#8230;</span></div>';
   if (isTriangle) {
     html += '<div class="de-beam in"></div>';
@@ -4932,14 +4932,23 @@ function xrayBuildApplyState(config) {
           target: (s.route_resolution || {}).target || "3.3.3.3"
         });
       } else {
+        // BGP session up per peer: accept <peer>_has_full / <peer>_neighbor_state (Full|Established)
+        // in addition to <peer>_established. The containerlab collector emits has_full/neighbor_state
+        // but NOT <peer>_established, so a read of _established alone left every established tunnel
+        // dashed (系A analog of the 2026-08-10 系B fix). Mirrors the unified resolver (~L9018).
+        // Per-peer ONLY (no node-level is_established fallback): on a 2-peer node the node-level flag
+        // would falsely mark a down peer's tunnel solid. reference_rcl_ospf_state_carries_bgp_state_idle_truthy_trap
+        var _bgpPeerUp = function(id) {
+          return !!(s[id + "_established"] || s[id + "_has_full"] || s[id + "_neighbor_state"] === "Established" || s[id + "_neighbor_state"] === "Full");
+        };
         _leftLink = {
-          up: !!s[_lId + "_established"],
+          up: _bgpPeerUp(_lId),
           fallback: false,
           ifName: s[_lId + "_iface"],
           proto: "bgp"
         };
         _rightLink = {
-          up: !!s[_rId + "_established"],
+          up: _bgpPeerUp(_rId),
           fallback: false,
           ifName: s[_rId + "_iface"],
           proto: "bgp"
