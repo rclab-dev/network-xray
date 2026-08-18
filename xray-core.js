@@ -1994,6 +1994,7 @@ function _xrayPaintRoutingPanel(s) {
     document.body.classList.remove("xray-rt-noarrow");
     document.body.classList.remove("xray-rt-live");
     window._xrayRtSel = null;
+    window._xrayUnifiedSel = undefined;
     return;
   }
   // routing_table live context (containerlab/collector): persistent class so the moving ping/packet
@@ -2063,6 +2064,19 @@ function _xrayPaintRoutingPanel(s) {
     } else {
       window._xrayRtSel = null;
       document.body.classList.add("xray-rt-noarrow");
+    }
+    // Simple (unified radial) parity: the dual-apex xraySetForwardIface gate above only fires for
+    // 2-peer hubs, but any radial layout can point its arrow straight from the clicked row's
+    // out-iface. Drive _xrayUnifiedSel + re-render so the radial FORWARD arrow follows the row.
+    // A real (non-lo) iface points the arrow; lo/mgmt clears it (arrow hidden, Standard parity).
+    if (document.body.classList.contains("xray-unified-active")) {
+      var _uReal = !!(oif && oif !== "lo" && !/^lo/i.test(oif));
+      window._xrayRtSel = _uReal ? { prefix: pfx, iface: oif } : null;
+      window._xrayUnifiedSel = { iface: _uReal ? oif : null };
+      document.body.classList.toggle("xray-rt-noarrow", !_uReal);
+      if (typeof _xrayRenderUnifiedLive === "function") {
+        try { _xrayRenderUnifiedLive(window._lastXrayState); } catch (e) {}
+      }
     }
     var selPfx2 = window._xrayRtSel && window._xrayRtSel.prefix;
     var rows2 = el.querySelectorAll("tr[data-prefix]");
@@ -9008,7 +9022,7 @@ function _xrayDeepDeconflict() {
       return L !== selL && L.link.up !== false;
     })[0];
     var _canTr = (axes && axes.pingMode || "from-r1") === "through" && !!_inLtr && !(axes && axes.realAngle);
-    if (selL && fwd) {
+    if (selL && fwd && node._uArrow !== false) {
       var oa = selL.angle, hs = imm ? 14 : 9, ti, from;
       if (imm) {
         from = [ CX, CY ];
@@ -9503,6 +9517,20 @@ function _xrayRenderUnifiedLive(s) {
   var rawSt = s || window._lastXrayState || {};
   var st = rawSt && rawSt.xray_state && typeof rawSt.xray_state === "object" ? rawSt.xray_state : rawSt;
   var node = _xrayUnifiedNodeFromLive(cfg, st);
+  // Simple (radial) RT-row-click parity: when the user clicked a prefix row, snap the FORWARD arrow
+  // out that route's iface (mirrors Standard's cylinder arrow). _xrayUnifiedSel.iface = real iface
+  // to point at, null = lo/mgmt row (hide the arrow like Standard). A stale iface that no longer
+  // maps to a drawn link falls back to the default (route_resolution) selection — no arrow loss.
+  // The override mutates node.selected/_uArrow, which are part of the sig below, so re-render fires.
+  var _uSel = window._xrayUnifiedSel;
+  if (_uSel && node.links && node.links.length) {
+    if (_uSel.iface) {
+      var _uHit = node.links.some(function(L) { return L.iface === _uSel.iface; });
+      if (_uHit) node.links.forEach(function(L) { L.selected = L.iface === _uSel.iface; });
+    } else {
+      node._uArrow = false;
+    }
+  }
   var _vw = Math.round(host && host.clientWidth || deEng && deEng.clientWidth || 0);
   var _vh = Math.round(host && host.clientHeight || deEng && deEng.clientHeight || 0);
   var _deH = typeof _XRAY_DE !== "undefined" && _XRAY_DE.deEngineH ? parseInt(String(_XRAY_DE.deEngineH), 10) || 0 : 0;
@@ -9644,7 +9672,7 @@ function _xrayUnifiedMount(config) {
   if (!document.getElementById("xray-unified-style")) {
     var st = document.createElement("style");
     st.id = "xray-unified-style";
-    st.textContent = ".xray-deep-engine.xray-unified-mode .de-box-svg," + ".xray-deep-engine.xray-unified-mode .de-cyl-svg," + ".xray-deep-engine.xray-unified-mode .de-beam," + ".xray-deep-engine.xray-unified-mode .de-tunnel," + ".xray-deep-engine.xray-unified-mode .de-energy," + ".xray-deep-engine.xray-unified-mode .de-label," + ".xray-deep-engine.xray-unified-mode .de-packet," + ".xray-deep-engine.xray-unified-mode .de-ping-orb," + ".xray-deep-engine.xray-unified-mode .de-hello-orb," + ".xray-deep-engine.xray-unified-mode .de-lsa-container," + ".xray-deep-engine.xray-unified-mode .de-r1-label{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.out{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-if-marker,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-left,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-right,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.out,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.left-side,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.right-side{display:none!important}" + "#xray-deep-unified{position:absolute;inset:0;z-index:60;pointer-events:none}" + "#xray-deep-unified svg{position:absolute;inset:0;width:100%;height:100%}" + ".xray-deep-engine.xray-unified-mode{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified svg{overflow:visible}" + "body.xray-unified-active .xray-hello-container,body.xray-unified-active .xray-fib-entry{display:none!important}" + ".xray-deep-engine.xray-unified-mode #de-re-panel,.xray-deep-engine.xray-unified-mode #de-lsdb,.xray-deep-engine.xray-unified-mode #de-routing-panel," + ".xray-deep-engine.xray-unified-mode .de-bgp-panel,.xray-deep-engine.xray-unified-mode .de-bgp-decision-panel{z-index:61}" + ".xray-deep-engine.xray-unified-mode .xray-focus-close{z-index:71}" + ".xray-deep-mode-toggle{position:absolute;top:6px;left:6px;z-index:70;pointer-events:auto;font:11px monospace;background:rgba(0,20,30,0.85);color:#7fd;border:1px solid #2b5;border-radius:4px;padding:3px 8px;cursor:pointer}" + "body.xray-oss-deep .xray-deep-engine.xray-unified-mode #xray-deep-unified svg circle:has(animateMotion){display:none!important}";
+    st.textContent = ".xray-deep-engine.xray-unified-mode .de-box-svg," + ".xray-deep-engine.xray-unified-mode .de-cyl-svg," + ".xray-deep-engine.xray-unified-mode .de-beam," + ".xray-deep-engine.xray-unified-mode .de-tunnel," + ".xray-deep-engine.xray-unified-mode .de-energy," + ".xray-deep-engine.xray-unified-mode .de-label," + ".xray-deep-engine.xray-unified-mode .de-packet," + ".xray-deep-engine.xray-unified-mode .de-ping-orb," + ".xray-deep-engine.xray-unified-mode .de-hello-orb," + ".xray-deep-engine.xray-unified-mode .de-lsa-container," + ".xray-deep-engine.xray-unified-mode .de-r1-label{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.out{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-if-marker,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-left,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-right,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.out,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.left-side,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.right-side{display:none!important}" + "#xray-deep-unified{position:absolute;inset:0;z-index:60;pointer-events:none}" + "#xray-deep-unified svg{position:absolute;inset:0;width:100%;height:100%}" + ".xray-deep-engine.xray-unified-mode{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified svg{overflow:visible}" + "body.xray-unified-active .xray-hello-container,body.xray-unified-active .xray-fib-entry{display:none!important}" + ".xray-deep-engine.xray-unified-mode #de-re-panel,.xray-deep-engine.xray-unified-mode #de-lsdb,.xray-deep-engine.xray-unified-mode #de-routing-panel," + ".xray-deep-engine.xray-unified-mode .de-bgp-panel,.xray-deep-engine.xray-unified-mode .de-bgp-decision-panel{z-index:61}" + ".xray-deep-engine.xray-unified-mode #de-lsdb{left:auto;right:2.5%;transform:none}" + ".xray-deep-engine.xray-unified-mode .xray-focus-close{z-index:71}" + ".xray-deep-mode-toggle{position:absolute;top:6px;left:6px;z-index:70;pointer-events:auto;font:11px monospace;background:rgba(0,20,30,0.85);color:#7fd;border:1px solid #2b5;border-radius:4px;padding:3px 8px;cursor:pointer}" + "body.xray-oss-deep .xray-deep-engine.xray-unified-mode #xray-deep-unified svg circle:has(animateMotion){display:none!important}";
     document.head.appendChild(st);
   }
   if (deEng && !document.getElementById("xray-deep-mode-toggle")) {
