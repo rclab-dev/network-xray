@@ -21,10 +21,11 @@
 <!-- deps are loaded by the base-path detector at the end of <body> (works for both GitHub Pages
      root-serving and `containerlab graph --static-dir`, which serves assets under /static/). -->
 <style>
-  /* containerlab drop-in chrome accent = containerlab cyan. The engine's xrayApplyTheme() sets
+  /* Drop-in chrome accent = X-Ray teal (the signature default). The engine's xrayApplyTheme() sets
      --rc-accent inline from its theme (green) on each apply; an author !important rule beats that inline
-     value so the DeepDive accent chrome reads containerlab-cyan. Scoped to this drop-in only. */
-  :root{--rc-accent:#00c9ff !important}
+     value so the DeepDive accent chrome reads the X-Ray brand teal. Scoped to this drop-in only.
+     (containerlab-cyan is available by choosing the containerlab preset in the Skin picker.) */
+  :root{--rc-accent:#4dd0e1 !important}
   html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
   .wrap{max-width:1100px;margin:0 auto;padding:16px}
   h1{font-size:19px;margin:0 0 2px}h1 .x{color:#4dd0e1}h1 small{color:#78909c;font-weight:400;font-size:13px}
@@ -303,20 +304,20 @@ window.__xrayGraphBoot = function () {
       document.head.appendChild(s);
     }, POLL_MS);
   }
-  // This drop-in defaults to the "containerlab" skin (link + chrome accent = containerlab cyan; OSPF
-  // green / BGP purple unchanged). Honors a stored user choice if present; otherwise applies containerlab
-  // WITHOUT persisting it (a default view, not a user selection). Also points the DeepDive Skin popover's
-  // "Open full editor" at skin.html on the resolved base, and sets the page chrome accent variable.
-  // Gallery demos (network-xray/, demo/) keep the signature default — only this drop-in changes it.
+  // This drop-in defaults to the "signature" skin (X-Ray's built-in look: link #00e5ff / chrome accent
+  // #4dd0e1; OSPF green / BGP purple unchanged). Honors a stored user choice if present; otherwise
+  // applies signature WITHOUT persisting it (a default view, not a user selection). Also points the
+  // DeepDive Skin popover's "Open full editor" at skin.html on the resolved base. containerlab remains
+  // selectable in the Skin picker. (Owner 2026-08-18: default reverted from containerlab to signature.)
   function initSkin(base){
-    // (chrome accent --rc-accent is forced to containerlab cyan via the :root !important rule above,
+    // (chrome accent --rc-accent is forced to X-Ray teal via the :root !important rule above,
     //  which survives the engine theme re-applying it inline.)
     if (!window.XraySkin) return;
     window._xraySkinEditorUrl = base + 'skin.html';
     try {
       var stored = window.localStorage && window.localStorage.getItem(window.XraySkin.STORAGE_KEY);
-      if (!stored) window.XraySkin.apply(window.XraySkin.presetById('containerlab'));
-    } catch(e){ try { window.XraySkin.apply(window.XraySkin.presetById('containerlab')); } catch(_){} }
+      if (!stored) window.XraySkin.apply(window.XraySkin.presetById('signature'));
+    } catch(e){ try { window.XraySkin.apply(window.XraySkin.presetById('signature')); } catch(_){} }
   }
   // try the clab-graph base (/static/) first, then fall back to the page-relative base (Pages);
   // once the deps resolve on a base, load the optional live states from that same base, boot, poll.
