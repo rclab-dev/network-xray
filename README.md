@@ -33,13 +33,14 @@ router at the forwarding decision (the deepdive).
 
 ## See it
 
-**Why one BGP route wins — recorded, then it fails over.** Two upstreams advertise `8.8.8.0/24` with
-different Local Preference (100 vs 50). Open r1: the BGP table shows both candidates and a **Best-Path
-Decision** panel explains the winner (LocPref 100 > 50) — then the winning link drops so only one path
-remains, then it's restored. Straight from the
-[Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — real frames, no backend:
+**Why one BGP route wins — and it re-decides live.** Two upstreams advertise `8.8.8.0/24` with
+different Local Preference. Open r1: the BGP table shows both candidates and a **Best-Path
+Decision** panel that explains *why* the winner won (LocPref) — then change the LocPref on the running
+lab and the best path flips **in place, no reload** (via r3 at 150 ⇄ via r2 at 200). X-Ray reads the
+real FRR state and re-decides — it's *descriptive*, not a simulator. Or open the recorded, no-install
+version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
-![BGP Best-Path Decision — 8.8.8.0/24 is heard from two upstreams; LocPref 100>50 picks the winner, then the winning link drops so only one path remains, then it recovers — recorded from a real FRR/containerlab lab](docs/bgp-best-path.gif)
+![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 150 ⇄ via r2 at 200) — X-Ray reads the real FRR state and re-decides. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
 **Also an OSPF lab** — OSPF goes Full (green tunnels, full LSDB), a link drops and a router is isolated
 (route lost, packet dropped), then it recovers and re-converges:

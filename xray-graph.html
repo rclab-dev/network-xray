@@ -178,6 +178,9 @@ window.__xrayGraphBoot = function () {
       } else { window.xrayCore.setBgpTable(null); }
     }
     var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
+    // aim the best-path arrow at the contested winner. The arrow reveal is async and re-seeds fwdDir
+    // after openDeepDiveFor, so re-apply once it settles (contested-prefix labs only; see _xrayArrowFollow).
+    if (window._xrayArrowFollow) { window._xrayArrowFollow(_st); [400,900,1500].forEach(function(d){ setTimeout(function(){ if(window.__xrayCurNode===nodeId) window._xrayArrowFollow(_st); }, d); }); }
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }
 
@@ -255,6 +258,23 @@ window.__xrayGraphBoot = function () {
   // poll xray-states.js from the resolved base. Change-detection skips a redraw when nothing moved
   // (no idle flicker); when it changes we applyState() the open node in place (smooth) and only fall
   // back to a full showNode() if applyState isn't available. A one-shot / static graph never polls.
+  // Point the best-path forward arrow at the CURRENT winner. applyState() re-seeds the arrow direction
+  // from route_resolution, so on a contested-prefix lab (one prefix learned from >1 peer, decided by
+  // LocPref/etc) the arrow would lag the table. Re-aim it at the contested prefix's best next-hop via the
+  // engine hook (in-place, no rebuild). Only fires when a contested prefix exists — curated single-path /
+  // scenario-target labs keep the engine's route_resolution arrow untouched.
+  window._xrayArrowFollow = function (st) {
+    if (!st || typeof window.xraySetForwardIface !== 'function') return;
+    var byP = {}; (st.bgp_routes || []).forEach(function (r) { (byP[r.prefix] = byP[r.prefix] || []).push(r); });
+    var nh = null;
+    Object.keys(byP).forEach(function (p) {
+      if (nh == null && byP[p].length > 1) { var b = byP[p].filter(function (r) { return r.best; })[0]; if (b && b.next_hop && b.next_hop !== '0.0.0.0') nh = b.next_hop; }
+    });
+    if (!nh) return;                                       // no contested winner -> leave engine default
+    var ifs = st.interfaces || {}, wif = null, base3 = nh.split('.').slice(0, 3).join('.');
+    Object.keys(ifs).forEach(function (k) { if (k !== 'lo') { var ip = (ifs[k].ip || '').split('/')[0]; if (ip && ip.split('.').slice(0, 3).join('.') === base3) wif = k; } });
+    if (wif) { try { window.xraySetForwardIface(wif); } catch (e) {} }
+  };
   function startLivePoll(base){
     if (!window.LIVE_WATCH) return;
     var POLL_MS = 3000;
@@ -269,7 +289,7 @@ window.__xrayGraphBoot = function () {
             window.__xrayLastStates = cur;
             var n = window.__xrayCurNode, st = n && window.LIVE_STATES && window.LIVE_STATES[n];
             if (st && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
-              try { window.xrayCore.applyState(st); } catch (e) { if (window.__xrayShowNode) window.__xrayShowNode(n); }
+              try { window.xrayCore.applyState(st); window._xrayArrowFollow(st); } catch (e) { if (window.__xrayShowNode) window.__xrayShowNode(n); }
             } else if (n && window.__xrayShowNode) { window.__xrayShowNode(n); }
           }
         } catch (e) {}
