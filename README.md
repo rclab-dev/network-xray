@@ -129,6 +129,22 @@ Clone this repo and point `--static-dir` at it. The overview comes from clab's o
 `{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so node/link count is unbounded — X-Ray adds
 the per-node DeepDive on top.
 
+### Interactive overview — `xray-graph-nextui.html` (opt-in)
+
+The default `xray-graph.html` keeps a **static, zero-dependency** SVG overview (plain DOM + SVG, MIT).
+Prefer an **interactive** graph — drag nodes, pan/zoom, and watch the open DeepDive's link angles
+follow the drag live? Swap the template:
+
+```
+containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --static-dir <this gallery dir>
+```
+
+![NeXt UI interactive graph — drag a node and the open DeepDive's tunnels re-angle live; click any node to look inside the router.](docs/nextui-deepdive.gif)
+
+Same DeepDive engine (skin, routing table, Best-Path Decision) — only the overview differs. The
+variant bundles the NeXt UI Toolkit (**EPL-1.0**, kept in `js/` `css/` `fonts/` and attributed in
+`LICENSE`); the default `xray-graph.html` stays pure MIT.
+
 Want it as a panel inside your own GUI instead of a standalone graph? → see
 [Embed the DeepDive in your own tool](#embed-the-deepdive-in-your-own-tool).
 
@@ -468,6 +484,22 @@ containerlab graph \
 このリポジトリを clone して `--static-dir` をそこへ向けるだけ。overview は clab 自身の
 `{{ .Name }}` / `{{ .Data }}`(nodes + links)注入から作るのでノード/リンク数は無制限 — X-Ray は
 その上に per-node DeepDive を足します。
+
+### インタラクティブ overview — `xray-graph-nextui.html`(opt-in)
+
+既定の `xray-graph.html` は**静的・依存ゼロ**の SVG overview(素の DOM + SVG・MIT)です。
+**インタラクティブ**なグラフ(ノードをドラッグ・パン/ズームし、開いた DeepDive のリンク角度が
+ドラッグに**ライブ追随**する)が欲しければ、テンプレートを差し替えます:
+
+```
+containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --static-dir <この gallery ディレクトリ>
+```
+
+![NeXt UI インタラクティブグラフ — ノードをドラッグすると開いた DeepDive のトンネルがライブで角度追随・ノードクリックでルータの中を見る。](docs/nextui-deepdive.gif)
+
+DeepDive エンジン(skin・routing table・Best-Path Decision)は共通で、違いは overview だけ。変種は
+NeXt UI Toolkit(**EPL-1.0**・`js/` `css/` `fonts/` に同梱し `LICENSE` に帰属明記)を bundle します。
+既定の `xray-graph.html` は純 MIT のままです。
 
 **live state(任意):** `clab-collect.js` は、稼働中ラボの1ノードの実 FRR 状態を読み
 (`docker exec clab-<lab>-<node> vtysh -c "show … json"`)、DeepDive にそのまま渡せる `state` を出す
