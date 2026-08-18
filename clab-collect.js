@@ -339,7 +339,17 @@ function buildState(opts) {
 
   // Full routing table (prefix -> out-iface) for the single-node panel (xray-node-panel.js).
   // Position-independent: just the RIB rows this node holds, for a text table beside any topology GUI.
-  s.routing_table = routes.map(function (r) {
+  s.routing_table = routes.filter(function (r) {
+    // When mgmt exclusion is on, drop mgmt RIB rows too (the mgmt connected/local prefix and any
+    // route whose next-hop is the mgmt gateway, e.g. the default 0.0.0.0/0) — identified by SUBNET,
+    // matching the interface-level exclusion above, so eth0-as-data labs are unaffected.
+    if (!mgmtSubnet) return true;
+    var _nh0 = (r.nexthops && r.nexthops[0]) || {};
+    var _pfxIp = (r.prefix || '').split('/')[0];
+    if (_pfxIp && _sameSubnet(mgmtSubnet, _pfxIp)) return false;
+    if (_nh0.ip && _sameSubnet(mgmtSubnet, _nh0.ip)) return false;
+    return true;
+  }).map(function (r) {
     var nh = (r.nexthops && r.nexthops[0]) || {};
     return { prefix: r.prefix, out_iface: nh.iface || '', next_hop: nh.ip || '',
              protocol: r.protocol, selected: !!r.selected };
