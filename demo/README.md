@@ -2,7 +2,7 @@
 
 A static, **recorded replay** of a real [FRR](https://frrouting.org) /
 [containerlab](https://containerlab.dev) lab, driven by the open-source
-[`xray-core`](https://github.com/rclab-dev/xray-core) engine. It runs on any static host
+[`network-xray`](https://github.com/rclab-dev/network-xray) engine. It runs on any static host
 (GitHub Pages, `file://`) — **no containerlab, no FRR, no server**.
 
 ## What you're seeing
@@ -28,11 +28,11 @@ This demo is the offline twin of the drop-in `containerlab graph` template. On y
 
 ```sh
 # 1) collect live FRR state into xray-states.js, refreshing on a timer
-node clab-xray-collect.js lab.clab.yml ./xray-core --watch --interval 3 &
+node clab-xray-collect.js lab.clab.yml ./network-xray --watch --interval 3 &
 
 # 2) serve your topology with the X-Ray template
 containerlab graph --topo lab.clab.yml \
-  --template ./xray-core/xray-graph.html --static-dir ./xray-core
+  --template ./network-xray/xray-graph.html --static-dir ./network-xray
 ```
 
 Open it, click a node, then shut a link in another terminal — the open node's DeepDive follows
@@ -50,4 +50,4 @@ unchanged.
 
 The rendering engine (`xray-core.js` / `xray-api.js` / `clab-xray-bridge.js`) is **not duplicated here** —
 this page loads it from the gallery one level up (`../`), so the demo always runs the published engine. License: MIT (see the
-[`xray-core`](https://github.com/rclab-dev/xray-core) repo).
+[`network-xray`](https://github.com/rclab-dev/network-xray) repo).

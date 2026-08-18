@@ -10,8 +10,8 @@
  * Then serve the graph as usual — xray-graph.html optionally loads xray-states.js from the
  * same --static-dir and shows the REAL routing state instead of the synthetic scaffold:
  *
- *   node clab-xray-collect.js lab.clab.yml ./xray-core            # writes ./xray-core/xray-states.js
- *   containerlab graph --topo lab.clab.yml --template ./xray-core/xray-graph.html --static-dir ./xray-core
+ *   node clab-xray-collect.js lab.clab.yml ./network-xray            # writes ./network-xray/xray-states.js
+ *   containerlab graph --topo lab.clab.yml --template ./network-xray/xray-graph.html --static-dir ./network-xray
  *
  * If xray-states.js is absent, xray-graph.html falls back to the topology-derived synthetic
  * scaffold (unchanged behaviour) — so this step is purely additive/opt-in.
