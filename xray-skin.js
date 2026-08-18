@@ -21,6 +21,10 @@
 
   var STORAGE_KEY = 'xray.skin';
   var COLOR_KEYS = ['ospf', 'bgp', 'static', 'link', 'idle', 'down'];
+  // The last skin actually applied this session. May differ from localStorage when a page applies a
+  // default view without persisting it (e.g. the containerlab drop-in). UIs that highlight "the current
+  // skin" should read current() so the highlight tracks what's on screen, not just what's stored.
+  var _applied = null;
 
   // ── the signature (default) skin = the engine's built-in look ──
   var SIGNATURE = {
@@ -33,6 +37,13 @@
   // Bundled presets (default + 2). Data only — adding one is a data change, no engine code.
   var PRESETS = [
     SIGNATURE,
+    {
+      // containerlab — the drop-in default. containerlab's signature cyan (#00c9ff) on link + chrome
+      // accent; OSPF green / BGP purple stay at the signature values so recorded GIFs stay identical.
+      id: 'containerlab',
+      colors: { ospf: '#39ff14', bgp: '#a855f7', static: '#888888', link: '#00c9ff', idle: '#ff8c00', down: '#555555' },
+      protocolOrder: 'bgp-top', engineShape: 'cylinder', processGlyph: 'double-circle', rules: {}
+    },
     {
       // Flat / Docs — calm palette for slides/blog embeds. (Phase 1 = colors only; box shape is Phase 2.)
       id: 'flat-docs',
@@ -155,12 +166,16 @@
   // when the OSS wrapper is loaded) is a 1:1 shim over it — call whichever is available.
   function apply(skin) {
     var s = normalize(skin);
+    _applied = s;
     if (typeof global.xraySetSkin === 'function') { try { global.xraySetSkin(s); } catch (e) {} }
     else if (global.xrayCore && typeof global.xrayCore.setSkin === 'function') { try { global.xrayCore.setSkin(s); } catch (e) {} }
     applyCssVars(s);   // --xto-* (X-Ray engine + gallery demos)
     applyXnpVars(s);   // --xnp-* (SR-Linux node panel / topo-explorer) — universal bridge
     return s;
   }
+
+  // The skin currently applied on screen (falls back to the stored/normalized skin if nothing applied yet).
+  function current() { return _applied ? clone(_applied) : load(); }
 
   // Reader entry point: read stored skin and apply it. Called automatically on DOM ready.
   function init() { return apply(load()); }
@@ -183,6 +198,7 @@
     matchPresetId: matchPresetId,
     load: load,
     save: save,
+    current: current,
     apply: apply,
     applyCssVars: applyCssVars,
     applyXnpVars: applyXnpVars,
