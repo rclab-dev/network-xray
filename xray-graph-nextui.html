@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  xray-graph-nextui.html — the INTERACTIVE (NeXt UI) X-Ray graph variant.
+
+  Concept: use containerlab's stock NeXt UI graph as the OVERVIEW frame; click a node to open
+  our X-Ray DeepDive below it. "The containerlab graph you know — open a node and see inside."
+  Overview = commodity (prettiest = NeXt UI); the moat is the per-node DeepDive.
+  Bonus: drag a node in the overview and the DeepDive's link angles follow live ("your layout").
+
+  This is an OPT-IN variant. The default template — xray-graph.html — stays pure MIT / zero-dep
+  (its own lightweight .ov overview). Pick this one explicitly:
+      containerlab graph --topo lab.clab.yml \
+        --template xray-graph-nextui.html --static-dir <this gallery dir> -s 0.0.0.0:8080
+  The static-dir (this gallery root) already ships both sets of assets:
+    X-Ray engine : xray-core.js, xray-api.js, clab-xray-bridge.js   (loaded as static/<f>)
+    NeXt UI      : js/next.js, css/next.css, css/tailwind.css, fonts/* (loaded as static/js|css/<f>)
+
+  LICENSE: the X-Ray engine + this template are MIT. The NeXt UI assets (js/next.js, css/next.*,
+  fonts/*) are the OpenDaylight NeXt UI Toolkit, (c) Eclipse Foundation, Eclipse Public License
+  v1.0 — used unmodified and isolated to this variant. See LICENSE (Third-party section).
+-->
+<title>X-Ray graph (NeXt UI) — {{ .Name }}</title>
+<link rel="stylesheet" href="static/css/tailwind.css">
+<link rel="stylesheet" href="static/css/next.css">
+<style>
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  /* DeepDive chrome accent = X-Ray cyan. The engine's xrayApplyTheme() sets --rc-accent inline
+     (green) on each apply; an author !important rule beats that inline value so the accent reads
+     X-Ray cyan. (The default xray-graph.html uses containerlab cyan here; this variant uses the
+     X-Ray signature cyan #4dd0e1.) */
+  :root{--rc-accent:#4dd0e1 !important}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  h1{font-size:19px;margin:0 0 2px}h1 .x{color:#4dd0e1}h1 small{color:#78909c;font-weight:400;font-size:13px}
+  .sub{color:#90a4ae;font-size:13px;margin:0 0 10px;line-height:1.5}
+
+  /* ---- overview frame = NeXt UI (light, like the stock containerlab graph) ---- */
+  .ov-frame{position:relative;background:#ffffff;border-radius:10px;border:1px solid #24323e;overflow:hidden;margin:6px 0}
+  .ov-bar{display:flex;align-items:center;gap:0;padding:8px 10px;border-bottom:1px solid #e5e7eb;background:#f8fafc}
+  .ov-bar .cap{font-size:12px;color:#64748b;margin-right:auto}
+  .ov-bar .cap b{color:#0386d2}
+  .ov-bar button{border:1px solid #0386d2;font-size:12px;color:#0386d2;background:#fff;padding:5px 12px;cursor:pointer}
+  .ov-bar button:first-of-type{border-radius:6px 0 0 6px}
+  .ov-bar button:last-of-type{border-radius:0 6px 6px 0;border-left:none}
+  .ov-bar button.cur{color:#fff;background:#0386d2}
+  #clab-topology{width:100%;height:360px}
+
+  .hint{text-align:center;color:#607d8b;font-size:12px;margin:6px 0 2px}
+  .hint b{color:#4dd0e1}
+
+  /* ---- DeepDive pane (dark, our X-Ray) ---- */
+  #peers{text-align:center;margin:8px 0;min-height:28px}
+  #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
+  #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
+  #peers button.cur{background:#26c6da;color:#06222a;border-color:#26c6da;font-weight:700}
+  .topology{position:relative;margin:8px 0;min-height:420px;background:#1e2a38;border-radius:10px}
+  #topo{display:none}.xray-deep-engine{min-height:420px}
+  .err{display:none;margin:10px 0;padding:10px 12px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px}
+  /* While dragging in the overview, re-angle every frame: kill the DeepDive's per-property
+     transitions so the cyan beam and the green tunnel snap to the new angle/length together
+     (the tunnel body animates height ~0.8s otherwise, lagging the beam). Restored on drop so a
+     normal node-click keeps its smooth animation. */
+  .xray-deep-engine.xray-dragging,
+  .xray-deep-engine.xray-dragging *{transition:none !important}
+</style>
+</head>
+<body class="is-xray-mode">
+<div class="wrap">
+  <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small>(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
+  <p class="sub">Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
+    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive.</p>
+
+  <div class="ov-frame">
+    <div class="ov-bar">
+      <span class="cap">ContainerLab Topology <b id="ovname">{{ .Name }}</b></span>
+      <button type="button" id="h-btn">Horizontal</button>
+      <button type="button" id="v-btn">Vertical</button>
+    </div>
+    <div id="clab-topology"></div>
+  </div>
+  <p class="hint">▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
+
+  <div id="peers"></div>
+  <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
+  <div class="err" id="err"></div>
+</div>
+
+<!-- containerlab injects the topology JSON here (Go html/template). -->
+<script id="clab-data" type="application/json">{{ .Data }}</script>
+
+<!-- NeXt UI toolkit (Cisco) — provides the `nx` global used by the overview frame. -->
+<script src="static/js/next.js"></script>
+
+<script>
+window.__xrayGraphBoot = function () {
+  function showErr(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;}
+  if (typeof window.clabXray === 'undefined' || typeof window.clabXray.deepViews !== 'function')
+    return showErr('clabXray.deepViews missing — static-dir needs clab-xray-bridge.js (b8b3afb+).');
+  if (typeof window.xrayCore === 'undefined' || typeof window.xrayCore.openDeepDiveFor !== 'function')
+    return showErr('xrayCore.openDeepDiveFor missing — static-dir needs xray-api.js (80e3f88+).');
+
+  // ---- parse containerlab's injected data ----
+  var _raw = (document.getElementById('clab-data').textContent || '').trim();
+  if (!_raw || _raw.indexOf('{' + '{') >= 0) {
+    var _e = document.getElementById('err'); _e.style.display = 'block';
+    _e.innerHTML = 'This page is a <b>containerlab graph template</b> — render it with '
+      + '<code>containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --static-dir &lt;dir&gt;</code>.';
+    return;
+  }
+  var DATA;
+  try { DATA = JSON.parse(_raw); }
+  catch (e) { return showErr('Could not parse containerlab topology data: ' + e.message); }
+  var rawNodes = DATA.nodes || [], rawLinks = DATA.links || [];
+
+  var NAMES = rawNodes.map(function (n) { return n.name; }).filter(Boolean);
+  var KIND = {}; rawNodes.forEach(function (n) { KIND[n.name] = n.kind || ''; });
+  function roleOf(n){ var k=(KIND[n]||'').toLowerCase();
+    return (k==='host'||k==='linux-host'||/^(sv|server|host|client|pc|h\d+)$/i.test(n)) ? 'server' : 'router'; }
+
+  // adjacency from links
+  var ADJ = {}; NAMES.forEach(function (n) { ADJ[n] = []; });
+  var EDGES = [];
+  rawLinks.forEach(function (l) {
+    var a = l.source, b = l.target; if (!a || !b || a === b) return;
+    if (!ADJ[a]) ADJ[a] = []; if (!ADJ[b]) ADJ[b] = [];
+    if (ADJ[a].indexOf(b) < 0) { ADJ[a].push(b); }
+    if (ADJ[b].indexOf(a) < 0) { ADJ[b].push(a); }
+    var k=[a,b].sort().join('|'); if (EDGES.indexOf(k)<0) EDGES.push(k);
+  });
+  Object.keys(ADJ).forEach(function (n) { if (NAMES.indexOf(n) < 0) NAMES.push(n); });
+
+  // ---- build the FULL X-Ray config that deepViews consumes ----
+  var fullCfg = {
+    id: (document.getElementById('labname').textContent || 'clab'),
+    topology_type: 'multi', layout: '',
+    nodes: NAMES.map(function (n) { var r=roleOf(n); return { id:n, type:r, role: r==='server'?'Server':'Router' }; }),
+    networks: EDGES.map(function (k) { var p=k.split('|');
+      return { name: 'net-'+p[0]+p[1], members:[{node:p[0],host_id:10},{node:p[1],host_id:20}] }; }),
+    modes: ['troubleshoot']
+  };
+
+  // ---- overview auto-layout POS (used only to align DeepDive left/right + tunnel angles) ----
+  // The visible overview is NeXt UI; but the DeepDive still wants per-node positions so each peer
+  // tunnel is drawn at its true topology angle. We keep the same hub/circular fallback as the
+  // canonical xray-graph.html so DeepDive geometry is stable regardless of NeXt's force layout.
+  var W=560,H=360,cx=W/2,cy=H/2,R=Math.min(W,H)/2-60, POS={};
+  (function(){ var deg=function(n){return (ADJ[n]||[]).length;};
+    if(NAMES.length===1){POS[NAMES[0]]=[cx,cy];return;}
+    if(NAMES.length===2){ POS[NAMES[0]]=[W*0.30,cy]; POS[NAMES[1]]=[W*0.70,cy]; return; }
+    var hub=NAMES.slice().sort(function(a,b){return deg(b)-deg(a);})[0];
+    var leaves=NAMES.filter(function(n){return n!==hub;});
+    if(NAMES.length>=3 && deg(hub)>=leaves.length){ POS[hub]=[cx,70];
+      leaves.forEach(function(n,i){ var x=leaves.length===1?cx:(W*0.18+(W*0.64)*(i/(leaves.length-1))); POS[n]=[x,H-70]; }); }
+    else { var order=[hub].concat(leaves); order.forEach(function(n,i){ var a=(i/order.length)*Math.PI*2-Math.PI/2; POS[n]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]; }); }
+  })();
+
+  fullCfg.positions = (window.LIVE_POS && Object.keys(window.LIVE_POS).length)
+    ? window.LIVE_POS
+    : (function(){ var p={}; Object.keys(POS).forEach(function(n){ p[n]={x:POS[n][0],y:POS[n][1]}; }); return p; })();
+
+  // ================= render one deepView (verbatim from xray-graph.html) =================
+  function renderView(v, nodeId){
+    var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
+    if (_st && _st.protocol === 'bgp') {
+      _cfg.xray.protocol = 'bgp';
+      var _others0 = (_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      _cfg.xray.pattern = _others0.length >= 2 ? 'bgp_multi' : 'bgp';
+    }
+    try{
+      var _tn=(_cfg.nodes||[]).filter(function(n){return n.id===nodeId;})[0];
+      if(_tn && _tn.single_link){ var _pe=(ADJ[nodeId]||[])[0];
+        if(_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; }
+      var _peers=(_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      if(_peers.length===2 && _tn && POS[_peers[0].id] && POS[_peers[1].id]
+         && POS[_peers[0].id][0] > POS[_peers[1].id][0]){
+        _cfg.nodes = [_peers[1], _tn, _peers[0]];
+      }
+    }catch(e){}
+    document.body.classList.remove('is-xray-deep');
+    window.xrayCore.renderTopology('#topo', _cfg, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
+    window.xrayCore.openDeepDiveFor(nodeId, _st);
+    if (window.xrayCore && typeof window.xrayCore.setBgpTable === 'function') {
+      if (_st && _st.protocol === 'bgp') {
+        window.xrayCore.setBgpTable(function(st){ return (st && st.bgp_routes) || []; });
+      } else { window.xrayCore.setBgpTable(null); }
+    }
+    var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
+    return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
+  }
+
+  // ================= node click → deepViews + peer-pair selector =================
+  function showNode(nodeId){
+    if (NAMES.indexOf(nodeId) < 0) return;
+    window.__xrayCurNode = nodeId;
+    var box=document.getElementById('peers'); box.innerHTML='';
+    var views = window.clabXray.deepViews(fullCfg, nodeId);
+    if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
+    if (views.length > 1) {
+      box.innerHTML='<span class="lbl">'+nodeId+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      views.forEach(function(v,idx){
+        var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
+        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
+        if(idx===0) b.classList.add('cur'); box.appendChild(b);
+      });
+    }
+    renderView(views[0], nodeId);
+  }
+  window.__xrayShowNode = showNode;
+  window.__xrayNames = NAMES; window.__xrayADJ = ADJ;
+
+  // ---- live layout follow: overview node positions -> DeepDive link angles ----
+  // The NeXt UI overview is drag-able. When a node moves, its geometric angle to each peer
+  // (atan2) changes. We swap those positions into the config and re-render the open DeepDive so
+  // its variable-angle links follow the layout you built. "same data, YOUR layout" — made live.
+  // (positions -> atan2 is the existing engine pipeline; no engine change needed here.)
+  window.__xrayApplyLayout = function(posMap){
+    if(!posMap) return; var changed=false;
+    Object.keys(posMap).forEach(function(n){
+      var q=posMap[n]; if(q && typeof q.x==='number' && typeof q.y==='number'){ POS[n]=[q.x,q.y]; changed=true; }
+    });
+    if(!changed) return;
+    // keep fullCfg.positions fresh for the next showNode() (node-change path)
+    fullCfg.positions = (function(){ var p={}; Object.keys(POS).forEach(function(n){ p[n]={x:POS[n][0],y:POS[n][1]}; }); return p; })();
+    var cur = window.__xrayCurNode; if(!(cur && NAMES.indexOf(cur)>=0)) return;
+
+    // LIGHT PATH (worker1 2026-08-17): mutate the SAME config object renderTopology holds
+    // (window._scenarioConfig) in place, then applyXrayState() re-angles via _xrayDeAngleView's
+    // live atan2 read — no DOM rebuild, safe at drag frequency. Falls back to a full showNode()
+    // re-render only if the engine globals aren't present.
+    try{
+      var sc = window._scenarioConfig;
+      if(sc && sc.positions && typeof window.applyXrayState==='function' && window._lastXrayState){
+        Object.keys(posMap).forEach(function(n){ sc.positions[n] = { x:posMap[n].x, y:posMap[n].y }; });
+        window.applyXrayState(window._lastXrayState);
+        return;
+      }
+    }catch(e){}
+    showNode(cur);   // fallback: full re-render (heavier; used if light path unavailable)
+  };
+
+  if(!NAMES.length){ return showErr('No nodes found in topology data.'); }
+  // auto-open the highest-degree node so the DeepDive shows something immediately
+  var start = NAMES.slice().sort(function(a,b){ return (ADJ[b]||[]).length-(ADJ[a]||[]).length; })[0];
+  showNode(start);
+
+  // ---- wire up the NeXt UI overview (once nx + data are ready) ----
+  if (window.__initNeXtOverview) window.__initNeXtOverview(DATA);
+};
+</script>
+
+<script>
+// ===== NeXt UI overview init (adapted from containerlab's stock static/js/script.js) =====
+// Kept inline (not the stock script.js) so we can expose `topo` and hook clickNode -> DeepDive.
+window.__initNeXtOverview = function (data) {
+  if (typeof nx === 'undefined') { return; }        // next.js failed to load; DeepDive still works headless-less
+  if (window.__nxDone) return; window.__nxDone = true;
+
+  // containerlab sets group='N/A' / image='N/A' when absent (needed for tooltip field alignment)
+  (data.nodes||[]).forEach(function (n) { if (!('group' in n)) n.group='N/A'; if (!('image' in n)) n.image='N/A'; });
+
+  var activeLayout = '';
+  nx.define('CustomNodeTooltip', nx.ui.Component, {
+    properties: { node:{}, topology:{} },
+    view: { tag:'div', props:{'class':'bg-white text-sm whitespace-nowrap p-1'},
+      content:[ {tag:'div', content:'{#node.model.name}', props:{'class':'font-bold text-black text-center uppercase'}},
+                {tag:'div', content:'click to X-Ray inside ↓', props:{'class':'text-center text-[#0386d2] text-xs pt-1'}} ] }
+  });
+
+  var topo = new nx.graphic.Topology({
+    showIcon: true, adaptive: true,
+    nodeConfig: { label:'model.name',
+      iconType: function (model){ return (model._data.group==='N/A') ? 'router' : model._data.group; } },
+    linkConfig: { linkType:'curve', width:2,
+      sourcelabel:'model.source_endpoint', targetlabel:'model.target_endpoint', color:'#93C5FD' },
+    identityKey:'name', dataProcessor:'force',
+    layoutConfig:{ sortOrder:['10','9','superspine','8','dc-gw','7','6','spine','5','4','leaf','border-leaf','3','server','2','1'] },
+    enableSmartLabel:true, enableSmartNode:true, enableGradualScaling:true, autoLayout:true,
+    supportMultipleLink:true,
+    tooltipManagerConfig:{ nodeTooltipContentClass:'CustomNodeTooltip' }
+  });
+  window.__nxTopo = topo;
+
+  function nameOf(node){
+    try{ var m=node.model(); if(m){ if(typeof m.name==='function') return m.name();
+      var d=(typeof m.getData==='function')?m.getData():m._data; if(d&&d.name) return d.name; } }catch(e){}
+    return null;
+  }
+  function onNodeClick(sender, node){
+    var name = nameOf(node); if(!name) return;
+    if (window.__xrayShowNode) window.__xrayShowNode(name);
+    // scroll the DeepDive into view for a clear "open inside" motion
+    var t=document.querySelector('.topology'); if(t&&t.scrollIntoView) t.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  topo.on('ready', function(){ topo.data(data); });
+  // register click after generation (both hooks are harmless if one is a no-op in this NeXt build)
+  topo.on('clickNode', onNodeClick);
+  topo.on('topologyGenerated', function(){ try{ topo.on('clickNode', onNodeClick); }catch(e){} });
+
+  // ---- drag a node -> DeepDive link angles follow (variant-only feature) ----
+  // Read every overview node's on-screen centre (getBoundingClientRect); relative geometry is all
+  // atan2 needs, so screen space is fine and stays independent of NeXt's internal coordinate model.
+  function readNeXtPositions(){
+    var pos={};
+    document.querySelectorAll('#clab-topology g.node').forEach(function(g){
+      var t=g.querySelector('text'); if(!t) return; var name=t.textContent.trim(); if(!name) return;
+      var r=g.getBoundingClientRect(); if(r.width<=0) return; pos[name]={x:r.x+r.width/2, y:r.y+r.height/2};
+    });
+    return pos;
+  }
+  function pushLayout(){ if(window.__xrayApplyLayout) window.__xrayApplyLayout(readNeXtPositions()); }
+  // Suppress the DeepDive's per-property transitions during a drag so the cyan beam and the green
+  // tunnel re-angle in the SAME frame. The tunnel body has a stylesheet `transition: height .8s`
+  // (injected by the engine) that a stylesheet !important can't reliably outrank — so we set an
+  // inline `transition:none !important` (inline beats any stylesheet) on the angle-bearing elements
+  // each frame, and clear it on drop to restore the smooth click animation.
+  var _dragClrT=null, FREEZE_SEL='.de-tunnel,.de-tunnel-wall,.de-tunnel-fill,.de-beam,.de-side-wrap,.de-energy';
+  function freezeDeepDive(on){
+    var eng=document.querySelector('.xray-deep-engine'); if(!eng) return;
+    if(on) eng.classList.add('xray-dragging'); else eng.classList.remove('xray-dragging');
+    eng.querySelectorAll(FREEZE_SEL).forEach(function(el){
+      if(on) el.style.setProperty('transition','none','important'); else el.style.removeProperty('transition');
+    });
+  }
+  function setDragging(on){
+    if(on){ if(_dragClrT){ clearTimeout(_dragClrT); _dragClrT=null; } freezeDeepDive(true); }
+    else { if(_dragClrT) clearTimeout(_dragClrT);
+      _dragClrT=setTimeout(function(){ freezeDeepDive(false); _dragClrT=null; }, 80); }
+  }
+  // Live during drag, throttled to ~16fps so the re-angle keeps up without melting the drag.
+  var _lastLive=0;
+  function onDragLive(){ var now=(window.performance&&performance.now)?performance.now():0;
+    if(now && now-_lastLive<60) return; _lastLive=now; pushLayout(); freezeDeepDive(true); }
+  function onDragDone(){ pushLayout(); freezeDeepDive(true); setDragging(false); }
+  ['dragNodeStart','dragStageStart','dragGroupStart'].forEach(function(ev){ try{ topo.on(ev, function(){ setDragging(true); }); }catch(e){} });
+  ['dragNode','dragStage','dragGroup'].forEach(function(ev){ try{ topo.on(ev, onDragLive); }catch(e){} });
+  ['dragNodeEnd','dragStageEnd','dragGroupEnd'].forEach(function(ev){ try{ topo.on(ev, onDragDone); }catch(e){} });
+  window.__xrayPushLayout = pushLayout;   // exposed for tests / manual re-sync
+
+  // layout toggle buttons (group-based hierarchy; falls back gracefully when all groups are N/A)
+  function setCur(id){ ['h-btn','v-btn'].forEach(function(x){ var b=document.getElementById(x); if(b) b.classList.toggle('cur', x===id); }); }
+  window.__nxLayout = function(dir){
+    if(activeLayout===dir) return; activeLayout=dir; setCur(dir==='horizontal'?'h-btn':'v-btn');
+    try{ var lay=topo.getLayout('hierarchicalLayout'); lay.direction(dir);
+      lay.levelBy(function(node,model){ return model.get('group'); }); topo.activateLayout('hierarchicalLayout'); }catch(e){}
+  };
+  var hb=document.getElementById('h-btn'), vb=document.getElementById('v-btn');
+  if(hb) hb.onclick=function(){ window.__nxLayout('horizontal'); };
+  if(vb) vb.onclick=function(){ window.__nxLayout('vertical'); };
+  window.onresize = function(){ try{ topo.adaptToContainer(); }catch(e){} };
+
+  var app = new nx.ui.Application();
+  app.container(document.getElementById('clab-topology'));
+  topo.attach(app);
+};
+</script>
+
+<!-- Base-path detector + xray dependency loader (verbatim behaviour from xray-graph.html). -->
+<script>
+(function(){
+  // Same asset set as the default xray-graph.html — including xray-skin.js. Loading XraySkin is what
+  // lets the engine fire its OSS gates (body.xray-oss-deep → hide the modal Close + show the Skin
+  // picker; body.xray-rt-live → hide ping/hello orbs when a routing_table is present). Without it the
+  // DeepDive would fall out of parity with the static template.
+  var FILES = ['xray-core.js','xray-api.js','clab-xray-bridge.js','xray-skin.js'];
+  function loadSeq(base, done){
+    var i = 0;
+    (function next(){
+      if (i >= FILES.length) { done(); return; }
+      var s = document.createElement('script');
+      s.src = base + FILES[i++];
+      s.onload = next; s.onerror = next;
+      document.head.appendChild(s);
+    })();
+  }
+  function ready(){
+    return window.clabXray && typeof window.clabXray.deepViews === 'function'
+        && window.xrayCore && typeof window.xrayCore.openDeepDiveFor === 'function';
+  }
+  function withStates(base, done){
+    var s = document.createElement('script');
+    s.src = base + 'xray-states.js';
+    s.onload = done; s.onerror = done;
+    document.head.appendChild(s);
+  }
+  function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
+  // Default this drop-in to the "signature" skin (same default as xray-graph.html): honors a stored
+  // user choice, otherwise applies signature without persisting. The "containerlab" preset stays
+  // available in the picker. Applying a skin makes window.XraySkin active so the engine's
+  // xray-oss-deep gate fires (Close hidden, Skin picker shown). No --rc-accent override here — the
+  // signature skin drives the X-Ray accent.
+  function initSkin(base){
+    if (!window.XraySkin) return;
+    window._xraySkinEditorUrl = base + 'skin.html';
+    try {
+      var stored = window.localStorage && window.localStorage.getItem(window.XraySkin.STORAGE_KEY);
+      if (!stored) window.XraySkin.apply(window.XraySkin.presetById('signature'));
+    } catch(e){ try { window.XraySkin.apply(window.XraySkin.presetById('signature')); } catch(_){} }
+  }
+  loadSeq('static/', function(){
+    if (ready()) { initSkin('static/'); withStates('static/', function(){ boot(); }); }
+    else loadSeq('', function(){ initSkin(''); withStates('', function(){ boot(); }); });
+  });
+})();
+</script>
+</body>
+</html>
