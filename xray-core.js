@@ -2391,17 +2391,36 @@ function xrayStaticDeepLines(s, opts) {
     text: "[Routing Engine]",
     cls: "de-title"
   });
-  lines.push({
+  var _bgpCtx = !!s.bgp_configured;
+  var _lookupLine = {
     text: "> Lookup: " + target
-  });
+  };
+  var _ifaceLines = [];
   Object.keys(ifaces).forEach(function(name) {
     var info = ifaces[name];
     var color = info.up ? "#39ff14" : "#ff4444";
-    lines.push({
+    _ifaceLines.push({
       text: "> " + name + ': <span style="color:' + color + '">' + (info.up ? "UP" : "DOWN") + "</span>" + (info.ip ? ' <span class="de-dim">' + info.ip + "</span>" : ""),
       style: info.up ? "" : "color:#ff6b35;font-weight:700"
     });
   });
+  if (_bgpCtx) {
+    var _bEst = s.is_established !== undefined ? !!s.is_established : s.bgp_state === "Established";
+    lines.push({
+      text: "> BGP: " + (_bEst ? '<span class="de-hl">' + (s.bgp_state || "Established") + "</span>" : '<span style="color:#ff4444">' + (s.bgp_state || "Idle") + "</span>"),
+      style: _bEst ? "" : "color:#ff6b35;font-weight:700"
+    });
+    if (s.pfx_rcvd !== undefined) {
+      lines.push({
+        text: '> Prefixes received: <span class="' + (s.pfx_rcvd > 0 ? "de-hl" : "warn") + '">' + s.pfx_rcvd + "</span>"
+      });
+    }
+    _ifaceLines.forEach(function(l) { lines.push(l); });
+    lines.push(_lookupLine);
+  } else {
+    lines.push(_lookupLine);
+    _ifaceLines.forEach(function(l) { lines.push(l); });
+  }
   if (rr.resolved) {
     lines.push({
       text: '> Route: <span class="de-hl">' + (rr.protocol || "static") + " " + (rr.matched_prefix || rr.target || target) + "</span>"
