@@ -2463,9 +2463,26 @@ function _xrayOspfRtSummaryLines(s) {
   var nbrFull = !!(s.has_full || s.full_count > 0 || s.neighbor_state === "Full");
   var nbrLabel = nbrFull ? "Full" : s.neighbor_state || "None";
   var nbrColor = nbrFull ? "#39ff14" : nbrLabel !== "None" ? "#ff8c00" : "#ff4444";
-  lines.push({
-    text: '> Neighbor: <span style="color:' + nbrColor + '">' + nbrLabel + "</span>"
-  });
+  // OSS dual-apex (triangle) nodes have two adjacencies: when the two peer states DIFFER (e.g. one
+  // Down/recovering while the other is Full) show them per-peer, so a single "Neighbor: Full" (taken
+  // from the Full side) does not mask the down side (owner: r1 recovering but RE read Full). Steady
+  // (peers equal) and single-peer nodes (ccna) keep the one-line summary. Gated on window.xrayCore so
+  // RCL keeps its exact single line (byte-identical).
+  var _osTri = (typeof window !== "undefined" && window.xrayCore) ? window._triNodes : null;
+  var _osPerPeer = _osTri && _osTri.left && _osTri.right &&
+    (s[_osTri.left + "_neighbor_state"] !== undefined || s[_osTri.right + "_neighbor_state"] !== undefined) &&
+    s[_osTri.left + "_neighbor_state"] !== s[_osTri.right + "_neighbor_state"];
+  if (_osPerPeer) {
+    [_osTri.left, _osTri.right].forEach(function(_pk) {
+      var _ps = s[_pk + "_neighbor_state"] || "None";
+      var _pc = _ps === "Full" ? "#39ff14" : (_ps === "Down" || _ps === "None") ? "#ff4444" : "#ff8c00";
+      lines.push({ text: "> Neighbor " + _pk + ': <span style="color:' + _pc + '">' + _ps + "</span>" });
+    });
+  } else {
+    lines.push({
+      text: '> Neighbor: <span style="color:' + nbrColor + '">' + nbrLabel + "</span>"
+    });
+  }
   // LSDB SYNCHRONIZED when the neighbor is Full AND (the state carries LSDB prefixes, OR this is a
   // topology-preview: clab-paste = OSS facade + no live routing_table, whose synthetic state has no
   // lsdb_prefixes but a Full adjacency implies a synced LSDB). Live/demo states carry routing_table so
