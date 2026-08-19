@@ -22,6 +22,7 @@
   button{padding:9px 18px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;color:#fff;background:var(--rc-btn)}
   button:hover{background:var(--rc-btn-hover)}
   button.stop{background:#5d4037}button.stop:hover{background:#4e342e}
+  button.deep{background:#37474f}button.deep:hover{background:#455a64}
   .status{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}
   .status .led{width:11px;height:11px;border-radius:50%;background:#39ff14;box-shadow:0 0 8px rgba(57,255,20,0.6)}
   .status.warn .led{background:#ff8c00;box-shadow:0 0 8px rgba(255,140,0,0.6)}
@@ -69,6 +70,7 @@
 
   <div class="controls">
     <button id="toggle" onclick="toggleMon()">⏸ Stop monitoring</button>
+    <button class="deep" id="deepBtn" onclick="toggleDeep()">Open the router (r2) &#9656;</button>
     <span class="sub" style="margin:0">poll interval: 2.5s</span>
   </div>
 
@@ -147,6 +149,20 @@ view.startPolling(() =&gt; fetch(<span style="color:#a5d6a7">'/api/state'</span>
     if (timer_on) { view.stopPolling(); timer_on = false; if (b) b.innerHTML = '▶ Start monitoring'; if (b) b.className = ''; }
     else { view.startPolling(fetcher, 2500); timer_on = true; if (b) b.innerHTML = '⏸ Stop monitoring'; if (b) b.className = 'stop'; }
   };
+
+  // Overview -> DeepDive toggle (same pattern as the other Overview showcases). The live feed keeps
+  // polling while the cylinder is open, so the DeepDive follows the drift (normal/detour/dead) in place.
+  function setDeepLabel(open) {
+    var b = document.getElementById('deepBtn');
+    if (b) b.innerHTML = open ? '◂ Back to overview' : 'Open the router (r2) ▸';
+  }
+  window.toggleDeep = function () {
+    if (!view) return;
+    if (document.body.classList.contains('is-xray-deep')) { view.closeDeepDive(); setDeepLabel(false); }
+    else { view.openDeepDive(); setDeepLabel(true); }
+  };
+  // sync the toggle label however the DeepDive opens/closes (button, router-click, ✕ Close)
+  document.addEventListener('xraycore:deepdive', function (e) { setDeepLabel(!!(e.detail && e.detail.open)); });
 
   function boot() {
     view = xrayCore.renderTopology('#topo', window.DEMO_CONFIG, {
