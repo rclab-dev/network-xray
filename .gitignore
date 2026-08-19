@@ -3,6 +3,9 @@ _*
 *.mp4
 .DS_Store
 Thumbs.db
+# local tooling (audit/puppeteer) — never ship
+node_modules/
+package-lock.json
 # internal work-in-progress / prototypes — never ship via a glob add
 deepdive-modes.html
 skin-preview.js
