@@ -375,7 +375,12 @@ function xrayApplyHierarchy(state) {
             } else {
               el.style.left = 70 + Math.random() * 25 + "%";
               var _rkf = ((window._scenarioConfig || {}).xray || {}).trace_pattern === "dual_static_rid" ? "deLsaGatherRight" : "deLsaGather";
-              if (g) el.style.animation = _rkf + " " + dur + "s ease-in 0s infinite";
+              // OSS linear DeepDive (e.g. ccna-ospf) shows the LSDB panel off-center (bottom-right); the
+              // CSS default deLsaGather converges on center (50%) — the stale pre-233dc54 target — so the
+              // gathering LSAs land on the empty center, not the LSDB. Redirect OSS LSAs to the panel.
+              // Gated on window.xrayCore (OSS facade) so RCL keeps the default deLsaGather (byte-identical).
+              if (!g && typeof window !== "undefined" && window.xrayCore) el.style.animation = "deLsaGatherRight " + dur + "s ease-in 0s infinite";
+              else if (g) el.style.animation = _rkf + " " + dur + "s ease-in 0s infinite";
             }
             el.style.top = 30 + Math.random() * 30 + "%";
             el.style.setProperty("--dur", dur + "s");
@@ -1658,6 +1663,34 @@ function xraySetSvgLine(id, state) {
   el.style.animation = "";
 }
 
+// OSS-only: derive whether the base-to-base (bottom) triangle link is down from the STATIC topology
+// data, not just window._xrayLiveLinks. The apex→base links (tl/tr) read the target's own iface state
+// (s.interfaces), but the bottom link is between the two non-target nodes, so a snapshot-driven page
+// (e.g. failover.html setTopology(detour.topo) with net-r3r1 DOWN) has no live-links entry and the
+// bottom line never went red. Gated on window.xrayCore (the OSS facade) so RCL — which polls and fills
+// _xrayLiveLinks — is byte-identical (RCL never enters here). Returns true if either endpoint iface on
+// the shared subnet is not UP.
+function _xrayTriBottomLinkDownStatic(aId, bId) {
+  if (typeof window === "undefined" || !window.xrayCore) return false;
+  var topo = window._xrayTopologyData;
+  if (!topo || !topo.nodes) return false;
+  var aIfs = topo.nodes[aId] || [], bIfs = topo.nodes[bId] || [];
+  var net24 = function(ip) { return ip ? ip.replace(/\/\d+$/, "").split(".").slice(0, 3).join(".") : ""; };
+  for (var i = 0; i < aIfs.length; i++) {
+    if (aIfs[i].name === "lo") continue;
+    var aNet = net24(aIfs[i].ip);
+    if (!aNet) continue;
+    for (var j = 0; j < bIfs.length; j++) {
+      if (bIfs[j].name === "lo") continue;
+      if (net24(bIfs[j].ip) !== aNet) continue;
+      var aUp = _xrayEffectiveIfaceState(aId, aIfs[i].name, aIfs[i].state) === "UP";
+      var bUp = _xrayEffectiveIfaceState(bId, bIfs[j].name, bIfs[j].state) === "UP";
+      if (!aUp || !bUp) return true;
+    }
+  }
+  return false;
+}
+
 function _xrayDrawTunnelPipe(svg, a, b, id) {
   if (!svg) return;
   var dx = b.x - a.x, dy = b.y - a.y;
@@ -1868,14 +1901,25 @@ function xraySetLogicBlock(elementId, lines) {
 // before hiding ×, or the user gets trapped. Registered once (idempotent); the listeners no-op
 // unless a DeepDive is open (body.is-xray-deep) AND we are in OSS mode (body.xray-oss-deep), so RCL
 // (which never adds xray-oss-deep) is completely unaffected and keeps its ×Close.
+// Paste/preview pages (bgp-paste/clab-paste/frr-paste/srl-paste/skin) intentionally drop the ×Close
+// (owner: Close-less is fine there); Overview→DeepDive showcase/hero pages (ccna-ospf/bgp-session/
+// failover/noc-live/demo/index-bgp*) MUST keep it so the user can return to the overview. Detected
+// engine-side so pages need no signal: paste/preview flows carry a paste <textarea>; showcase/hero
+// pages have none. A page may force the outcome with window.xrayOssHideClose = true|false (overrides).
+function _xrayOssIsPreviewPage() {
+  if (typeof window !== "undefined" && typeof window.xrayOssHideClose === "boolean") return window.xrayOssHideClose;
+  return !!(typeof document !== "undefined" && document.querySelector && document.querySelector("textarea"));
+}
+
 function _xrayWireOssDeepClose() {
   if (typeof document === "undefined" || window._xrayOssCloseWired) return;
   window._xrayOssCloseWired = true;
-  // CSS: hide the built-in ×Close only in OSS mode. RCL never gets body.xray-oss-deep → × stays.
+  // CSS: hide the built-in ×Close only on OSS paste/preview pages (body.xray-oss-hideclose). RCL never
+  // gets body.xray-oss-deep and Overview→DeepDive OSS pages never get body.xray-oss-hideclose → × stays.
   if (!document.getElementById("xray-oss-close-css")) {
     var st = document.createElement("style");
     st.id = "xray-oss-close-css";
-    st.textContent = "body.xray-oss-deep .xray-focus-close{display:none!important}";
+    st.textContent = "body.xray-oss-hideclose .xray-focus-close{display:none!important}";
     (document.head || document.documentElement).appendChild(st);
   }
   function _canClose() {
@@ -1904,7 +1948,10 @@ function _xrayPaintSkinPanel() {
   if (typeof window === "undefined" || !window.xrayCore) {
     el.innerHTML = ""; el._xraySkinWired = false;
     // Not OSS (RCL / bare engine): keep the built-in ×Close and never touch RCL's close path.
-    if (typeof document !== "undefined" && document.body) document.body.classList.remove("xray-oss-deep");
+    if (typeof document !== "undefined" && document.body) {
+      document.body.classList.remove("xray-oss-deep");
+      document.body.classList.remove("xray-oss-hideclose");
+    }
     return;
   }
   // OSS facade present (drop-in / gallery / BGP+OSPF replay demos — including ones that DON'T load
@@ -1912,7 +1959,11 @@ function _xrayPaintSkinPanel() {
   // gated on window.xrayCore ALONE (not the skin layer) so the moving-ball hide, ×Close-hide and
   // Esc-close apply to EVERY OSS DeepDive (owner: ping balls must never show). RCL never reaches here
   // (no facade), so RCL keeps its ×Close, its balls, and gets no extra listeners.
-  if (document.body) document.body.classList.add("xray-oss-deep");
+  if (document.body) {
+    document.body.classList.add("xray-oss-deep");
+    // Keep ×Close on Overview→DeepDive pages, suppress on paste/preview (see _xrayOssIsPreviewPage).
+    document.body.classList.toggle("xray-oss-hideclose", _xrayOssIsPreviewPage());
+  }
   _xrayWireOssDeepClose();
   // The Skin picker UI itself needs the skin layer — render it only when window.XraySkin is present.
   if (!window.XraySkin) { el.innerHTML = ""; el._xraySkinWired = false; return; }
@@ -1984,7 +2035,11 @@ function _xrayPaintRoutingPanel(s) {
   // forwarding route/arrow are synthetic, so suppress the FORWARD arrow (Standard via CSS below,
   // Simple via node._uArrow in _xrayRenderUnifiedLive). Live containerlab (routing_table present) and
   // RCL (no facade) keep the real arrow = zero regression.
-  var _topoPrev = (typeof window !== "undefined" && !!window.xrayCore) && !(s && s.routing_table && s.routing_table.length);
+  // Only actual paste/preview pages (bgp-paste/clab-paste/frr-paste/srl-paste/skin — detected via
+  // _xrayOssIsPreviewPage) suppress the synthetic FORWARD arrow. FSM showcases (bgp-session/failover/
+  // ccna-ospf) are OSS + no live routing_table too, but their route_resolution is a deliberate teaching
+  // state, so they keep the arrow (owner: bgp-session left link / failover forwarding must be drawn).
+  var _topoPrev = (typeof window !== "undefined" && !!window.xrayCore) && !(s && s.routing_table && s.routing_table.length) && _xrayOssIsPreviewPage();
   if (typeof document !== "undefined" && document.body) document.body.classList.toggle("xray-topo-preview", _topoPrev);
   var el = document.getElementById("de-routing-panel");
   if (!el) {
@@ -3839,7 +3894,11 @@ function _xrayDeAngleView(s) {
       var flow = document.createElementNS(SVGNS, "svg");
       flow.setAttribute("class", "de-flow");
       flow.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;overflow:visible";
-      flow.innerHTML = '<defs><marker id="de-fwd-head" markerWidth="7" markerHeight="6" refX="5" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="' + _XRAY_DE.fwdArrowCol + '"/></marker></defs>' + '<path class="de-fwd-a" fill="none" stroke="' + _XRAY_DE.fwdArrowCol + '" stroke-width="3" stroke-linecap="round" opacity="0.85"/>' + '<path class="de-fwd-b" fill="none" stroke="' + _XRAY_DE.fwdArrowCol + '" stroke-width="3" stroke-linecap="round" opacity="0.9" marker-end="url(#de-fwd-head)"/>';
+      // OSS only: a destination-prefix label that rides above the FORWARD arrow (owner: "矢印の上に
+      // 宛先IP"). Value = route_resolution dest, positioned/shown in the arrow render below. Emitted only
+      // when the OSS facade is present so RCL's de-flow DOM is byte-identical (no extra node).
+      var _destLabelHtml = (typeof window !== "undefined" && window.xrayCore) ? '<text class="de-fwd-dest" text-anchor="middle" style="display:none;font:600 15px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#4dd0e1;paint-order:stroke;stroke:rgba(0,12,18,0.85);stroke-width:3px;stroke-linejoin:round;letter-spacing:0.5px"></text>' : "";
+      flow.innerHTML = '<defs><marker id="de-fwd-head" markerWidth="7" markerHeight="6" refX="5" refY="3" orient="auto"><polygon points="0 0,7 3,0 6" fill="' + _XRAY_DE.fwdArrowCol + '"/></marker></defs>' + '<path class="de-fwd-a" fill="none" stroke="' + _XRAY_DE.fwdArrowCol + '" stroke-width="3" stroke-linecap="round" opacity="0.85"/>' + '<path class="de-fwd-b" fill="none" stroke="' + _XRAY_DE.fwdArrowCol + '" stroke-width="3" stroke-linecap="round" opacity="0.9" marker-end="url(#de-fwd-head)"/>' + _destLabelHtml;
       de.appendChild(flow);
       de._deFlow = flow;
       var pb = document.createElement("div");
@@ -4003,6 +4062,19 @@ function _xrayDeAngleView(s) {
     fa.style.display = arrowOn && isTransit ? "" : "none";
     fb.setAttribute("d", q(C, mOut, B));
     fb.style.display = arrowOn ? "" : "none";
+    // OSS dest-prefix label riding above the FORWARD arrow (owner: "矢印の上に宛先IP"). Value = the
+    // route_resolution destination (host routes shown bare e.g. 3.3.3.3; networks keep the prefix e.g.
+    // 203.0.113.0/24). Positioned just above the early span of the arrow, centred toward the cylinder.
+    // The <text> node exists only when the OSS facade is present (omitted for RCL) → RCL byte-identical.
+    var _destEl = de._deFlow.querySelector(".de-fwd-dest");
+    if (_destEl) {
+      var _destVal = (_rr && (_rr.matched_prefix || _rr.target)) || "";
+      if (_destVal) _destVal = _destVal.replace(/\/32$/, "");
+      _destEl.setAttribute("x", ((C[0] + mOut[0]) / 2).toFixed(1));
+      _destEl.setAttribute("y", ((C[1] + mOut[1]) / 2 - 10).toFixed(1));
+      _destEl.textContent = _destVal;
+      _destEl.style.display = arrowOn && _destVal ? "" : "none";
+    }
     // drive the forward-arrow stroke/marker from the skin token (protocol-keyed) so the Skin editor's
     //   real DeepDive preview recolors it live. fallback in var() = the exact current hex, so any page
     //   without a skin (no --xto-* set) is byte-for-byte unchanged (non-regression).
@@ -4963,6 +5035,13 @@ function _xrayApplyDualLinkTunnels(leftLink, rightLink) {
   function _apply(el, link) {
     if (!el) return;
     el.classList.remove("tunnel-2way", "de-side-bgp", "de-side-bgp-idle", "de-side-ospf-full", "de-side-ospf-exchange", "de-side-ospf-2way", "de-side-ospf-init");
+    // OSS: a physically down interface has no session/adjacency path, so hide its tunnel entirely (owner:
+    // "link down → no tunnel") instead of the dashed idle style. The down link stays marked via the beam's
+    // is-input/output-down red-dash + ✖ if-marker. RCL keeps the dashed-idle rendering (byte-identical).
+    if (link.ifaceDown && typeof window !== "undefined" && window.xrayCore) {
+      el.classList.toggle("tunnel-active", false);
+      return;
+    }
     if (link.proto === "bgp") {
       el.classList.toggle("tunnel-active", true);
       el.classList.toggle("de-side-bgp", !!link.up);
@@ -5295,11 +5374,12 @@ function xrayBuildApplyState(config) {
       _xrayApplyDualLinkLabels(s, _triNodes);
       _xrayApplyDualLinkBeams(s, _leftLink, _rightLink);
       _xrayApplyDualLinkEnergies(s, _leftLink, _rightLink);
-      _xrayApplyDualLinkTunnels(_leftLink, _rightLink);
-      _xrayApplyDualLinkDirection(s, _triNodes);
       var _dlIfaces = s.interfaces || {};
       var _liDown = !!(_leftLink.ifName && _dlIfaces[_leftLink.ifName] && !_dlIfaces[_leftLink.ifName].up);
       var _riDown = !!(_rightLink.ifName && _dlIfaces[_rightLink.ifName] && !_dlIfaces[_rightLink.ifName].up);
+      _leftLink.ifaceDown = _liDown; _rightLink.ifaceDown = _riDown;   // pass iface-down into the tunnel gate
+      _xrayApplyDualLinkTunnels(_leftLink, _rightLink);
+      _xrayApplyDualLinkDirection(s, _triNodes);
       document.body.classList.toggle("is-input-down", _liDown);
       document.body.classList.toggle("is-output-down", _riDown);
       if (pattern === "ospf_triangle" || protocol === "ospf") {
@@ -5326,6 +5406,7 @@ function xrayBuildApplyState(config) {
           xraySetSvgLine("tri-line-tl", _lIfDown ? "if-down" : "up");
           xraySetSvgLine("tri-line-tr", _rIfDown ? "if-down" : "up");
           var _btDown = window._xrayLiveLinks && window._xrayLiveLinks[_btKeyU] && window._xrayLiveLinks[_btKeyU].if_status === "down";
+          if (!_btDown) _btDown = _xrayTriBottomLinkDownStatic(_lId, _rId);
           xraySetSvgLine("tri-line-bt", _btDown ? "if-down" : "up");
           xraySetSvgTunnel("tri-tunnel-tl", _lFull2 ? "Full" : _lNbr2, "ospf");
           xraySetSvgTunnel("tri-tunnel-tr", _rFull2 ? "Full" : _rNbr2, "ospf");
@@ -9530,7 +9611,7 @@ function _xrayRenderUnifiedLive(s) {
   // Topology-preview (clab-paste: OSS facade present, no live routing_table) → the forwarding is
   // synthetic, so hide the Simple radial FORWARD arrow (parity with the Standard arrow suppressed via
   // body.xray-topo-preview). Live (routing_table) and RCL (no facade) keep the arrow = zero regression.
-  if ((typeof window !== "undefined" && !!window.xrayCore) && !(st && st.routing_table && st.routing_table.length)) node._uArrow = false;
+  if ((typeof window !== "undefined" && !!window.xrayCore) && !(st && st.routing_table && st.routing_table.length) && _xrayOssIsPreviewPage()) node._uArrow = false;
   // Simple (radial) RT-row-click parity: when the user clicked a prefix row, snap the FORWARD arrow
   // out that route's iface (mirrors Standard's cylinder arrow). _xrayUnifiedSel.iface = real iface
   // to point at, null = lo/mgmt row (hide the arrow like Standard). A stale iface that no longer
