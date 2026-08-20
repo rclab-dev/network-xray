@@ -256,7 +256,7 @@ function xrayEvaluateState(s) {
   } else if (protocol === "bgp") {
     state.bgpEstablished = !!s.is_established;
     state.bgpPhase = state.bgpEstablished ? "established" : "idle";
-    state.bgpStatus = state.bgpEstablished ? "ESTABLISHED" : s.bgp_state ? s.bgp_state : "NOT CONFIGURED";
+    state.bgpStatus = state.bgpEstablished ? "Established" : s.bgp_state ? s.bgp_state : "NOT CONFIGURED";
     state.bgpConfigured = s.bgp_configured !== false;
   }
   state.routeInstalled = !!rr.resolved;
@@ -2928,7 +2928,7 @@ function xrayBgpDeepLines(s, opts) {
     }
   } else if (h.bgpEstablished) {
     lines.push({
-      text: '> BGP: <span class="de-hl">' + (h.bgpStatus || "ESTABLISHED") + "</span>"
+      text: '> BGP: <span class="de-hl">' + "Established" + "</span>"
     });
   } else {
     lines.push({
