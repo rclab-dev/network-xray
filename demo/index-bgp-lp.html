@@ -42,6 +42,7 @@
 </style>
 </head>
 <body class="is-xray-mode">
+<style>#nx-mnote{display:none}@media(max-width:760px){body{overflow-x:auto}#nx-mnote{display:block;position:fixed;left:8px;right:8px;bottom:8px;z-index:10000;background:#10202c;border:1px solid #26c6da;border-radius:6px;color:#cfe8ee;font:11.5px/1.35 -apple-system,Segoe UI,Roboto,sans-serif;padding:6px 10px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.5)}}</style><div id="nx-mnote">📱 Wide DeepDive — scroll sideways, or open on a desktop for the full side-by-side view.</div>
 <div class="wrap">
   <h1><span class="x">X-Ray</span> — BGP Best-Path Decision <small>why one BGP route wins · <span id="labname">Local Preference</span></small></h1>
   <p class="sub">Two ISPs both advertise <b>8.8.8.0/24</b>. The <b>fast</b> ISP (r2) was mis-set to <b>LocPref 50</b>, so the <b>slow</b> ISP (r3, default 100) always wins. Raise r2 to <b>LocPref 200</b> and best-path flips — then a link drops and only one path remains. <b>Open r1</b> to see the BGP table and the per-prefix <b>Best-Path Decision</b>. Try it hands-on: <b>Q21</b> on RouteCrushLab.</p>

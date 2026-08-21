@@ -147,6 +147,14 @@ function render() {
   var state;
   try { state = JSON.parse(inEl.value); }
   catch (e) { errEl.style.display = 'block'; errEl.textContent = 'Invalid JSON: ' + e.message; return; }
+  // Shape check: the collector emits a node-state object with interfaces / routing_table / protocol.
+  // Valid JSON of the wrong shape would otherwise render an empty cylinder with no feedback.
+  if (!state || typeof state !== 'object' || Array.isArray(state) ||
+      (!state.interfaces && !state.routing_table && !state.protocol && !state.bgp_routes)) {
+    errEl.style.display = 'block';
+    errEl.innerHTML = 'Expected an <b>SR Linux node-state object</b> (fields like <code>interfaces</code> / <code>routing_table</code> / <code>protocol</code>, per DATA-CONTRACT). This JSON parsed, but doesn\'t match that shape — pick a sample from the dropdown to see the expected form.';
+    return;
+  }
   try {
     document.body.classList.remove('is-xray-deep');
     var cfg = buildConfig(state);
