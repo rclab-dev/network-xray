@@ -58,6 +58,7 @@
     Paste a <b>containerlab</b> topology (<code>.clab.yml</code>) and press <b>Render</b>. Nodes are laid out from their
     <code>graph-posX</code>/<code>graph-posY</code> labels (edit them and the graph moves); a lab without those labels falls
     back to an automatic layout. <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies and the LSDB.
+    <br><b>Scope:</b> this browser preview maps <b>small labs (2–3 nodes: link / path / triangle)</b>; the recorded demos and the containerlab NeXt UI graph handle larger topologies.
     <br><b>🔒 Runs entirely in your browser</b> — your topology never leaves the page.
   </p>
 
@@ -320,8 +321,16 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
         else { throw convErr; }
       }
       if (!r.ok) {
-        showErr('<b>Could not map this topology.</b><br>' + ((r.nodes ? ('Detected <b>' + r.nodes.length + ' nodes</b> / <b>' + (r.links ? r.links.length : '?') + ' links</b>. ') : '')) +
-          'Paste a containerlab <code>.clab.yml</code> (or tick "input is JSON" for a <code>--json</code> export). Your topology stayed in the browser.');
+        var _n = r.nodes ? r.nodes.length : 0, _l = r.links ? r.links.length : 0;
+        if (_n >= 2) {
+          // Parsed a real topology, but it's outside this browser preview's layout scope (small shapes).
+          showErr('<b>This preview maps small labs</b> (2–3 nodes: link / path / triangle).<br>' +
+            'Detected <b>' + _n + ' nodes</b> / <b>' + _l + ' links</b> — beyond the current preview scope. ' +
+            'The recorded demos and the containerlab NeXt UI graph handle larger topologies. Your topology stayed in the browser.');
+        } else {
+          showErr('<b>Could not read a containerlab topology from this paste.</b><br>' +
+            'Paste a containerlab <code>.clab.yml</code> (or tick "input is JSON" for a <code>--json</code> export). Your topology stayed in the browser.');
+        }
         document.getElementById('info').textContent = '';
         return;
       }
