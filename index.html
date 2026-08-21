@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>network-xray — gallery</title>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBmMTMxOCIvPgogIDxlbGxpcHNlIGN4PSIxNiIgY3k9IjguNSIgcng9IjcuNSIgcnk9IjIuOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxsaW5lIHgxPSI4LjUiIHkxPSI4LjUiIHgyPSI4LjUiIHkyPSIyMy41IiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGxpbmUgeDE9IjIzLjUiIHkxPSI4LjUiIHgyPSIyMy41IiB5Mj0iMjMuNSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxwYXRoIGQ9Ik04LjUgMjMuNSBhNy41IDIuOCAwIDAgMCAxNSAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMy40IiBmaWxsPSIjMzlmZjE0Ii8+Cjwvc3ZnPgo=">
 <style>
   html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,"Segoe UI",Roboto,sans-serif}
   .wrap{max-width:880px;margin:0 auto;padding:36px 20px 64px}
@@ -27,6 +28,16 @@
     font-family:"Courier New",monospace;font-size:12.5px;line-height:1.7;color:#cfe8ee;overflow-x:auto}
   .api .c{color:#5f7d8c}.api .k{color:#80cbc4}
   footer{margin-top:34px;padding-top:18px;border-top:1px solid #263238;color:#607d8b;font-size:12px;line-height:1.7}
+  .hero{display:block;margin:6px 0 8px;background:#0c1016;border:1px solid #2b3a44;border-radius:11px;
+    overflow:hidden;text-decoration:none;color:inherit;transition:border-color .15s}
+  .hero:hover{border-color:#4dd0e1}
+  .hero img{display:block;width:100%;height:auto;border-bottom:1px solid #1c2736}
+  .hero-cap{padding:14px 20px 15px;font-size:14px;line-height:1.65}
+  .hero-cap b{color:#4dd0e1}
+  .hero-cta{display:inline-block;margin-top:7px;font-size:12.5px;color:#0f1318;background:#4dd0e1;
+    border-radius:6px;padding:5px 12px;font-weight:700}
+  .hero-links{font-size:12.5px;color:#90a4ae;margin:0 0 26px;line-height:1.7}
+  .hero-links a{color:#80deea}
 </style>
 </head>
 <body>
@@ -46,7 +57,16 @@
     few calls: <code>renderTopology</code> · <code>applyState</code> · <code>startPolling</code> · <code>openDeepDive</code>.
   </div>
 
-  <div class="tag" style="margin:-10px 0 20px">▶ Every demo runs the <b>same engine</b> as <a href="https://routecrushlab.com/?ref=showhn&amp;lang=en" style="color:#80deea">RouteCrushLab</a> — hands-on FRR troubleshooting labs in your browser (no install, no signup).</div>
+  <a class="hero" href="demo/index-bgp-lp.html">
+    <img src="docs/bgp-best-path-live.gif" alt="Why one BGP route wins, traced live: 8.8.8.0/24 is heard from two upstreams; change the Local Preference and the best path flips in place with no reload (via r3 at 150 to via r2 at 200) — X-Ray reads the real FRR state and re-decides. Recorded from a real FRR/containerlab lab.">
+    <div class="hero-cap">
+      <b>Why this route?</b> — <code>8.8.8.0/24</code> is heard from two upstreams; change the Local Preference and the winning path flips <b>in place, no reload</b>. X-Ray reads the real FRR state and re-decides — it's descriptive, not a simulator.
+      <span class="hero-cta">▶ Open the recorded Best-Path demo — no install →</span>
+    </div>
+  </a>
+  <div class="hero-links">Or see the <b>whole flow in one screen</b>: <a href="topo-explorer.html">topo-explorer</a> — overview + live prefix trace + BGP table + Best-Path Decision, side by side (drag nodes, break a link, watch it re-route).</div>
+
+  <div class="tag" style="margin:-6px 0 20px">▶ Every demo runs the <b>same engine</b> as <a href="https://routecrushlab.com/?ref=showhn&amp;lang=en" style="color:#80deea">RouteCrushLab</a> — hands-on FRR troubleshooting labs in your browser (no install, no signup).</div>
   <h2>Examples</h2>
   <div class="cards">
 
