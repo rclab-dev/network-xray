@@ -74,8 +74,8 @@ var adj = {};
 var re = /endpoints:\s*\[\s*"([^:"]+):([^"\]]+)"\s*,\s*"([^:"]+):([^"\]]+)"\s*\]/g, m;
 while ((m = re.exec(topo))) {
   var a = m[1], ai2 = m[2], b = m[3], bi = m[4];
-  (adj[a] = adj[a] || []).push({ iface: ai2, peer: b });
-  (adj[b] = adj[b] || []).push({ iface: bi, peer: a });
+  (adj[a] = adj[a] || []).push({ iface: ai2, peer: b, peerIface: bi });
+  (adj[b] = adj[b] || []).push({ iface: bi, peer: a, peerIface: ai2 });
 }
 var nodes = Object.keys(adj);
 if (!nodes.length) { console.error('!! no links parsed from ' + topoPath); process.exit(1); }
@@ -121,6 +121,21 @@ function collectAll() {
       ok++;
     } catch (e) { console.error('  ' + n + ' COLLECT FAILED: ' + (e.message || e)); }
   });
+  // Cross-node hello-IN (OSPF): a peer is "sending Hello" iff ITS facing iface participates in OSPF
+  // (present in that peer's iface_hellos) -- independent of neighbor state. Resolves "Hello flowing but
+  // adjacency stuck below Full" (router-id dup / timer / MTU). The engine drive() still gates on the
+  // LOCAL iface being up, so a cut link stays dark.
+  if (proto !== 'bgp') {
+    nodes.forEach(function (cn) {
+      var st = states[cn]; if (!st) return;
+      var psm = st.peer_sending_hellos || (st.peer_sending_hellos = {});
+      (adj[cn] || []).forEach(function (link) {
+        var peerSt = states[link.peer];
+        psm[link.peer] = !!(peerSt && peerSt.iface_hellos && peerSt.iface_hellos[link.peerIface]);
+      });
+      st.peer_sending_hello = Object.keys(psm).some(function (k) { return psm[k]; });
+    });
+  }
   return { states: states, ok: ok };
 }
 // --watch sets window.LIVE_WATCH so the template opts in to live polling; a one-shot run omits it

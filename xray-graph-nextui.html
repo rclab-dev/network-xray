@@ -65,28 +65,91 @@
      normal node-click keeps its smooth animation. */
   .xray-deep-engine.xray-dragging,
   .xray-deep-engine.xray-dragging *{transition:none !important}
+  /* topbar: language toggle */
+  .topbar{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin:0 0 6px}
+  .lang-btn{background:transparent;color:#8fa3b3;border:1px solid #37474f;border-radius:6px;
+    padding:3px 10px;font-size:12px;cursor:pointer}
+  .lang-btn:hover{color:#cfe8ef;border-color:#26c6da}
+  .rcl-footer{margin:18px 0 4px;padding-top:12px;border-top:1px solid #24323e;
+    font-size:12px;color:#6f8291;text-align:center;line-height:1.7}
+  .rcl-footer a{color:#26c6da;text-decoration:none}
+  .rcl-footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body class="is-xray-mode">
 <div class="wrap">
-  <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small>(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
-  <p class="sub">Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
-    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive.</p>
+  <div class="topbar">
+    <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
+  </div>
+  <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small data-i18n="subtitle">(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
+  <p class="sub" data-i18n="intro">Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
+    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
 
   <div class="ov-frame">
     <div class="ov-bar">
-      <span class="cap">ContainerLab Topology <b id="ovname">{{ .Name }}</b></span>
-      <button type="button" id="h-btn">Horizontal</button>
-      <button type="button" id="v-btn">Vertical</button>
+      <span class="cap"><span data-i18n="topo_label">ContainerLab Topology</span> <b id="ovname">{{ .Name }}</b></span>
+      <button type="button" id="h-btn" data-i18n="horizontal">Horizontal</button>
+      <button type="button" id="v-btn" data-i18n="vertical">Vertical</button>
     </div>
     <div id="clab-topology"></div>
   </div>
-  <p class="hint">▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
+  <p class="hint" data-i18n="hint">▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
 
   <div id="peers"></div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
   <div class="err" id="err"></div>
+
+  <footer class="rcl-footer" data-i18n="footer">
+    This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).
+  </footer>
 </div>
+
+<!-- language toggle (EN default for OSS reach · JA) + RouteCrushLab attribution -->
+<script>
+(function(){
+  var I18N = {
+    en: {
+      subtitle: '(containerlab NeXt UI × X-Ray DeepDive)',
+      intro: 'Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.',
+      topo_label: 'ContainerLab Topology',
+      horizontal: 'Horizontal',
+      vertical: 'Vertical',
+      hint: '▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
+      footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
+    },
+    ja: {
+      subtitle: '(containerlab NeXt UI × X-Ray ディープダイブ)',
+      intro: 'オーバービューは素の <b>containerlab graph</b>（NeXt UI・サイズ自由）。<b>ノードをクリック</b>すると、その下に<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。オーバービューはありふれた図、X-Ray がノード単位の DeepDive を足します。ノード名はトポロジ定義（clab.yml の <code>nodes:</code>）由来で、機器のホスト名ではありません。',
+      topo_label: 'コンテナラボ トポロジ',
+      horizontal: '横',
+      vertical: '縦',
+      hint: '▲ オーバービュー（NeXt UI） &nbsp;·&nbsp; <b>ノードをクリック</b> &nbsp;·&nbsp; ▼ X-Ray ディープダイブ',
+      footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
+    }
+  };
+  function pickLang(){
+    try { var s = localStorage.getItem('nx-lang'); if (s && I18N[s]) return s; } catch(e){}
+    return 'en';   // English default for OSS reach
+  }
+  function apply(lang){
+    var d = I18N[lang] || I18N.en;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var k = el.getAttribute('data-i18n'); if (d[k] != null) el.innerHTML = d[k];
+    });
+    document.documentElement.setAttribute('lang', lang);
+    var btn = document.getElementById('lang-toggle');
+    if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
+    try { localStorage.setItem('nx-lang', lang); } catch(e){}
+  }
+  function init(){
+    apply(pickLang());
+    var btn = document.getElementById('lang-toggle');
+    if (btn) btn.addEventListener('click', function(){ apply(pickLang() === 'en' ? 'ja' : 'en'); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
 
 <!-- containerlab injects the topology JSON here (Go html/template). -->
 <script id="clab-data" type="application/json">{{ .Data }}</script>
@@ -382,7 +445,9 @@ window.__initNeXtOverview = function (data) {
   }
   function withStates(base, done){
     var s = document.createElement('script');
-    s.src = base + 'xray-states.js';
+    // cache-bust the INITIAL state fetch: clab graph serves xray-states.js with no Cache-Control, so a
+    // browser can serve a STALE cached copy across deploys -> stale DeepDive flags. ?t= forces fresh.
+    s.src = base + 'xray-states.js?t=' + Date.now();
     s.onload = done; s.onerror = done;
     document.head.appendChild(s);
   }
