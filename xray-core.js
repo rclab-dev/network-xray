@@ -1279,7 +1279,9 @@ function _xrayBuildOvReach(name, interval, startR, endR, yOff) {
 }
 
 function _xrayApplyHelloTiming(state) {
-  if ((typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {})) || (document.body && document.body.classList.contains("xray-oss-deep"))) {
+  var _unifiedH = (typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {}));
+  if (_unifiedH) {
+    // unified(簡易): hello は unified engine 自身の SVG path(tri-p-hello)で表現ゆえ legacy hello 要素を全隠し+return。
     var _uh = document.querySelectorAll(".xray-hello-pkt, .de-hello-orb, .xray-hello-container");
     for (var _u = 0; _u < _uh.length; _u++) {
       if (_uh[_u].style && _uh[_u].style.setProperty) {
@@ -1288,6 +1290,24 @@ function _xrayApplyHelloTiming(state) {
       }
     }
     return;
+  }
+  // ★fb[OSS hello・worker6 2026-09-07 事業主]: OSS-deep(標準描画・非 unified)でも hello orb を出す。
+  //   旧: `|| xray-oss-deep` で de-hello-orb も blanket-hide+return → per-orb(2-node)/呼び側 _xrayApplyDualLinkHello(3-node
+  //   triangle)の hello 描画に到達せず、owner 実 DOM=de-hello-orb style display:none!important のまま点かなかった。
+  //   OSS-deep は de-hello-orb が hello 表現(緑円柱=標準描画)ゆえ de-hello-orb は隠さず、legacy overview hello(xray-hello-pkt
+  //   /container)のみ隠して以降の per-orb/dual-link 描画へ通す。過去 unified 由来の stale inline も除去(class/anim を効かせる)。
+  if (document.body && document.body.classList.contains("xray-oss-deep")) {
+    var _legH = document.querySelectorAll(".xray-hello-pkt, .xray-hello-container");
+    for (var _lg = 0; _lg < _legH.length; _lg++) {
+      if (_legH[_lg].style && _legH[_lg].style.setProperty) {
+        _legH[_lg].style.setProperty("animation", "none", "important");
+        _legH[_lg].style.setProperty("display", "none", "important");
+      }
+    }
+    var _orbH = document.querySelectorAll(".de-hello-orb");
+    for (var _ob = 0; _ob < _orbH.length; _ob++) {
+      if (_orbH[_ob].style) { _orbH[_ob].style.removeProperty("display"); }
+    }
   }
   var r1Hello = state._r1Hello || 10;
   var r2Hello = state._r2Hello || 10;
@@ -2488,11 +2508,20 @@ function _xrayOspfRtSummaryLines(s) {
   // (peers equal) and single-peer nodes (ccna) keep the one-line summary. Gated on window.xrayCore so
   // RCL keeps its exact single line (byte-identical).
   var _osTri = (typeof window !== "undefined" && window.xrayCore) ? window._triNodes : null;
-  var _osPerPeer = _osTri && _osTri.left && _osTri.right &&
-    (s[_osTri.left + "_neighbor_state"] !== undefined || s[_osTri.right + "_neighbor_state"] !== undefined) &&
-    s[_osTri.left + "_neighbor_state"] !== s[_osTri.right + "_neighbor_state"];
+  // fb[OSS Q9 幻neighbor hide・worker6 2026-09-07 事業主]: OSPF 非参加リンクの peer を Neighbor 行に出さない。
+  //   判別=iface_hellos(OSPF 参加 IF のみ列挙。Q9: {"eth1":5}=eth1 のみ・eth2 不在)。peer の iface(s[pk+"_iface"])が
+  //   iface_hellos に無ければ非参加(r1↔r3 は相互 OSPF 未設定=owner 設計「Down は偽アラーム」)→ neighbor 対象外。
+  //   iface_hellos 未提供(旧OSS/RCL)は全 peer 通過=非回帰。r3(eth2 不在)→除外、r2(eth1 有)→Full 維持。
+  var _osPeers = (_osTri && _osTri.left && _osTri.right) ? [_osTri.left, _osTri.right].filter(function(_pk) {
+    if (!s.iface_hellos) return true;
+    var _pif = s[_pk + "_iface"];
+    return !_pif || Object.prototype.hasOwnProperty.call(s.iface_hellos, _pif);
+  }) : [];
+  var _osPerPeer = _osPeers.length >= 2 &&
+    (s[_osPeers[0] + "_neighbor_state"] !== undefined || s[_osPeers[1] + "_neighbor_state"] !== undefined) &&
+    s[_osPeers[0] + "_neighbor_state"] !== s[_osPeers[1] + "_neighbor_state"];
   if (_osPerPeer) {
-    [_osTri.left, _osTri.right].forEach(function(_pk) {
+    _osPeers.forEach(function(_pk) {
       var _ps = s[_pk + "_neighbor_state"] || "None";
       var _pc = _ps === "Full" ? "#39ff14" : (_ps === "Down" || _ps === "None") ? "#ff4444" : "#ff8c00";
       lines.push({ text: "> Neighbor " + _pk + ': <span style="color:' + _pc + '">' + _ps + "</span>" });
@@ -3054,7 +3083,45 @@ function _xrayGetTargetIds() {
   return [ fb ];
 }
 
+// fb[funnel-back badge・worker6 2026-09-07 事業主]: OSS 専用「Powered by RCL」リンクバッジを X-Ray の永続キャンバス
+//   ルート(.topology = Overview[.topo-diagram]+DeepDive[.xray-deep-engine] 両 view を抱える host コンテナ・既に
+//   position:relative)へ append。engine DOM に宿るので宿主が engine を embed すると attribution が travel(funnel-back)。
+//   ★OSS gate: window.xrayCore(OSS facade)が真の時のみ render → RCL context は render 0(owner 確定(a)・二重防御=
+//   誤 cross-port でも RCL 非表示)。冪等(既存 .rcl-fb-badge があれば skip)。snippet=worker1 canonical(rcl-fb-badge-snippet.html)。
+var _RCL_FB_BADGE_HREF = "https://routecrushlab.com/?ref=network-xray&utm_source=network-xray&utm_medium=oss_embed&utm_campaign=funnel_back&utm_content=xray";
+var _RCL_FB_BADGE_LOGO = "data:image/png;base64,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";
+function _xrayEnsureFbBadge() {
+  if (typeof window === "undefined" || typeof document === "undefined" || !window.xrayCore) return;   // ★OSS-only gate: RCL context は render 0
+  if (!document.getElementById("rcl-fb-badge-css")) {
+    var st = document.createElement("style");
+    st.id = "rcl-fb-badge-css";
+        // fb[placement・worker6 2026-09-07 事業主 headful]: owner 指定 port2(DeepDive パネル右下 in-panel)= position:absolute で
+    //   .topology 最下端=DeepDive パネル右下に配置(Overview には出ず in-panel のみ=owner 理想)。fixed(viewport 浮遊)は owner NG で revert。z60。
+    // fb[placement 微調整・worker6 2026-09-07 事業主 headful]: バッジを緑 engine フレーム(.xray-deep-engine)の外・外側
+    //   シアンパネル(.topology=緑の親・border cyan)の右下帯へ。①body.is-xray-deep .xray-deep-engine に margin-bottom で
+    //   緑 engine 下にシアン帯を予約=バッジ(.topology bottom:12px)が常に緑枠の外(下)に落ちる(q3 等 背高 engine でも robust)。
+    //   ②バッジは DeepDive(is-xray-deep)限定表示=Overview 非表示(owner 理想 in-panel port2)。緑枠内重なりを解消。
+    st.textContent = ".rcl-fb-badge{position:absolute;right:14px;bottom:12px;z-index:60;display:none;align-items:center;gap:7px;font:600 12px/1 ui-monospace,Menlo,Consolas,monospace;text-decoration:none;color:#00e5ff;opacity:.62;transition:opacity .18s ease,color .18s ease;pointer-events:auto}body.is-xray-deep .rcl-fb-badge{display:inline-flex}body.is-xray-deep .xray-deep-engine{margin-bottom:36px}.rcl-fb-badge img{width:18px;height:18px;border-radius:4px;display:block;filter:saturate(.5) brightness(.9);transition:filter .18s ease}.rcl-fb-badge b{font-weight:700}.rcl-fb-badge:hover{opacity:1;color:#e6faff}.rcl-fb-badge:hover img{filter:none}";
+    (document.head || document.documentElement).appendChild(st);
+  }
+  var roots = document.querySelectorAll(".topology");
+  for (var i = 0; i < roots.length; i++) {
+    var root = roots[i];
+    if (root.querySelector(".rcl-fb-badge")) continue;   // 冪等
+    try { if (window.getComputedStyle(root).position === "static") root.style.position = "relative"; } catch (e) {}
+    var a = document.createElement("a");
+    a.className = "rcl-fb-badge";
+    a.href = _RCL_FB_BADGE_HREF;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.innerHTML = '<img src="' + _RCL_FB_BADGE_LOGO + '" alt="RCL" width="18" height="18"><span>Powered by <b>RCL</b></span>';
+    root.appendChild(a);
+  }
+}
+if (typeof window !== "undefined") window._xrayEnsureFbBadge = _xrayEnsureFbBadge;
+
 function xrayRenderTopology(config) {
+  try { _xrayEnsureFbBadge(); } catch (_bE) {}   // fb funnel-back badge: 永続ルート(.topology)へ冪等 append(OSS gate 内蔵)
   var nodes = config.nodes || [];
   var type = config.topology_type || "linear_2node";
   var xray = config.xray || {};
@@ -4094,7 +4161,11 @@ function _xrayDeAngleView(s) {
     // Gate the FORWARD flow arrow on the CURRENT state (xrayIsCleared(s) / this frame's route), not the
     // body "ping-ok" class: applyXrayState toggles that class AFTER calling us, so on a steady→down frame
     // step the class was still stale-true and the arrow lingered on a down adjacency. State-based = frame-accurate.
-    var arrowOn = xrayIsCleared(s) || !!(_rr && (_rr.out_iface || _rr.resolved));
+    // fb[OSS RT arrow・worker1 triage 2026-09-07]: RT 行 click(_xrayRtSel)も arrowOn に含める。init(route_resolution=DROP)で
+    // connected route を click しても矢印を出す(click handler が xray-rt-noarrow を外すのに inline gate が再抑制する coordination bug の解消)。
+    // lo/mgmt 選択時は _xrayRtSel が非apex を null 化済ゆえ従来通り非表示(iface 名 lo* を除外)。
+    var arrowOn = xrayIsCleared(s) || !!(_rr && (_rr.out_iface || _rr.resolved))
+      || !!(window._xrayRtSel && window._xrayRtSel.iface && !/^lo/i.test(window._xrayRtSel.iface));
     var pingReaches = document.body.classList.contains("ping-ok") || xrayIsCleared(s);
     var fa = de._deFlow.querySelector(".de-fwd-a"), fb = de._deFlow.querySelector(".de-fwd-b");
     fa.setAttribute("d", q(inConn, mIn, C));
@@ -5127,7 +5198,12 @@ function _xrayApplyDualLinkDirection(s, peers) {
     var k = Object.keys(s.interfaces || {});
     return k[k.length - 1];
   }();
-  var out = rr.out_iface;
+  // fb[OSS Q9 arrow flip・worker6 2026-09-07 事業主]: user が RT パネル行 click で選択した route(_xrayRtSel.iface)を
+  //   ~4秒 state poll を跨いで保持する。従来 out=rr.out_iface 固定ゆえ poll が click 選択(例 3.3.3.3/32→eth2/r3)を
+  //   既定 primary(rr.out_iface=eth1/r2)へ revert し矢印 flip(owner Q9 repro)。click 中は選択 iface を direction
+  //   source に採用=xraySetForwardIface と同源。click 無し(_xrayRtSel=null/lo/mgmt)は従来どおり rr.out_iface=非回帰。
+  var _rtSelIf = (window._xrayRtSel && window._xrayRtSel.iface && !/^lo/i.test(window._xrayRtSel.iface)) ? window._xrayRtSel.iface : null;
+  var out = _rtSelIf || rr.out_iface;
   var goesLeft = out ? out === _lIf ? true : out === _rIf ? false : out === _lan : false;
   window._xrayDirDbg = {
     out: out,
@@ -5163,6 +5239,14 @@ function xraySetForwardIface(iface) {
   var lIf = tn && s[tn.left + "_iface"] || dbg.lIf;
   var rIf = tn && s[tn.right + "_iface"] || dbg.rIf;
   var dir = iface === lIf ? "left" : iface === rIf ? "right" : null;
+  // fb[OSS RT arrow linear・worker6 2026-09-07 事業主]: 2ノード linear(ospf_linear・_triNodes 無)は単一 peer リンクゆえ
+  //   tn/dbg で左右照合できず null → 矢印が出なかった(q3/q5/q8/q10 等 2ノード OSPF)。iface が単一 peer link iface
+  //   (wan_iface / peer_node の iface / r2_iface)に一致すれば "right"(単一 forward)にマップ → _xrayRtSel セット → 矢印。
+  //   3ノード(tn 有)は上で解決済ゆえ本分岐非到達=非回帰(daf20845 の Q1/Q2 維持)。lo は冒頭 return・mgmt(eth0)は peer iface に一致せず除外。
+  if (!dir && !tn) {
+    var _peerIf = s.wan_iface || (s.peer_node && s[s.peer_node + "_iface"]) || s.r2_iface || dbg.rIf;
+    if (_peerIf && iface === _peerIf && !/^lo/i.test(iface)) dir = "right";
+  }
   if (!dir) return null;
   window._xrayFwdDirection = dir;
   if (dir === "left") document.body.classList.add("ping-left"); else document.body.classList.remove("ping-left");

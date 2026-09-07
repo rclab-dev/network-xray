@@ -197,7 +197,7 @@ function buildState(opts) {
       return !(d.ip && _sameSubnet(mgmtSubnet, d.ip));
     });
   }
-  var interfaces = {}, ifaceHellos = {}, peerHellos = {};
+  var interfaces = {}, ifaceHellos = {}, peerHellos = {}, peerSendingHellos = {};
   ifaceNames.forEach(function (ifn) {
     var d = ifs[ifn] || ifFallback[ifn] || {};
     interfaces[ifn] = { up: d.up !== false, ip: (d.ip || '') + '/' + (d.prefix || 24) };
@@ -238,12 +238,14 @@ function buildState(opts) {
 
   var fullCount = peers.filter(function (p) { return p.full; }).length;
 
-  // hellos (ospf) per real interface
+  // hellos (ospf): IF-scoped hello-OUT + per-peer hello-IN so the engine per-beam drive() lights Hello
+  // only on links actually running OSPF. hello-IN=Init+ (peer heard); off=Down/None/Attempt.
   if (proto !== 'bgp') {
     peers.forEach(function (p) {
-      var h = (ifs[p.iface] && ifs[p.iface].hello) || 10;
-      if (p.iface) ifaceHellos[p.iface] = h;
-      peerHellos[p.name] = h;
+      if (p.iface && ifs[p.iface]) ifaceHellos[p.iface] = ifs[p.iface].hello || 10;
+      var _peerUp = /^(full|loading|exchange|exstart|2-?way|init)/i.test(p.state || '') || !!p.full;
+      peerSendingHellos[p.name] = _peerUp;
+      if (_peerUp) peerHellos[p.name] = (ifs[p.iface] && ifs[p.iface].hello) || 10;
     });
   }
 
@@ -274,6 +276,11 @@ function buildState(opts) {
     _hello = { r1_hello: tHello, r2_hello: tHello, target_hello: tHello, peer_hello: tHello, timer_match: true };
   }
 
+  // State-independent OSPF participation marker: an iface is OSPF-active whenever `show ip ospf
+  // interface` lists it enabled+up, regardless of neighbor state (real OSPF emits Hellos continuously).
+  var _ospfActiveLocal = Object.keys(ifs).some(function (k) {
+    return !/^lo/i.test(k) && ifs[k] && ifs[k].ospf !== false && ifs[k].up !== false;
+  });
   var s = {
     success: true, id: opts.id || selfName, scenario: opts.id || selfName,
     target_node: selfName, peer_node: primaryPeer.name || '',
@@ -283,9 +290,9 @@ function buildState(opts) {
     neighbor_state: fullCount > 0 ? 'Full' : (peers[0] ? peers[0].state : 'None'),
     has_full: fullCount > 0, full_count: fullCount,
     ospf_configured: proto === 'ospf',
-    ospf_active_on_interface: proto === 'ospf' && fullCount > 0,
-    peer_sending_hello: fullCount > 0,
-    iface_hellos: ifaceHellos, peer_hellos: peerHellos,
+    ospf_active_on_interface: proto === 'ospf' && _ospfActiveLocal,  /* STATE-INDEPENDENT: local iface participates (show ip ospf interface enabled+up) */
+    peer_sending_hello: proto === 'ospf' && nei.list.length > 0,  /* peer HEARD = any OSPF neighbor state (Init+); per-peer refined by wrapper peer_sending_hellos */
+    iface_hellos: ifaceHellos, peer_hellos: peerHellos, peer_sending_hellos: peerSendingHellos,
     target_on_path: false,
     cleared: routeOk && fullCount > 0
   };
