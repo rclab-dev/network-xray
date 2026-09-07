@@ -3101,7 +3101,10 @@ function _xrayEnsureFbBadge() {
     //   シアンパネル(.topology=緑の親・border cyan)の右下帯へ。①body.is-xray-deep .xray-deep-engine に margin-bottom で
     //   緑 engine 下にシアン帯を予約=バッジ(.topology bottom:12px)が常に緑枠の外(下)に落ちる(q3 等 背高 engine でも robust)。
     //   ②バッジは DeepDive(is-xray-deep)限定表示=Overview 非表示(owner 理想 in-panel port2)。緑枠内重なりを解消。
-    st.textContent = ".rcl-fb-badge{position:absolute;right:14px;bottom:12px;z-index:60;display:none;align-items:center;gap:7px;font:600 12px/1 ui-monospace,Menlo,Consolas,monospace;text-decoration:none;color:#00e5ff;opacity:.62;transition:opacity .18s ease,color .18s ease;pointer-events:auto}body.is-xray-deep .rcl-fb-badge{display:inline-flex}body.is-xray-deep .xray-deep-engine{margin-bottom:36px}.rcl-fb-badge img{width:18px;height:18px;border-radius:4px;display:block;filter:saturate(.5) brightness(.9);transition:filter .18s ease}.rcl-fb-badge b{font-weight:700}.rcl-fb-badge:hover{opacity:1;color:#e6faff}.rcl-fb-badge:hover img{filter:none}";
+    // fb[文字スタイル・worker6 2026-09-08 事業主 headful]: バッジ文字を footer 調(薄グレー/非太字/hover白)に。旧 cyan+太字は
+    //   loud。文字色=footer の #6f8291・font-weight:400(RCL の <b> も 400)・hover #fff。link 全体 opacity は撤去し文字は
+    //   footer と同 full トーン、ロゴのみ img filter(saturate/brightness)で subtle 維持・hover で filter:none(full)。
+    st.textContent = ".rcl-fb-badge{position:absolute;right:14px;bottom:12px;z-index:60;display:none;align-items:center;gap:7px;font:400 12px/1 ui-monospace,Menlo,Consolas,monospace;text-decoration:none;color:#6f8291;transition:color .18s ease;pointer-events:auto}body.is-xray-deep .rcl-fb-badge{display:inline-flex}body.is-xray-deep .xray-deep-engine{margin-bottom:36px}.rcl-fb-badge img{width:18px;height:18px;border-radius:4px;display:block;filter:saturate(.5) brightness(.9);transition:filter .18s ease}.rcl-fb-badge b{font-weight:400}.rcl-fb-badge:hover{color:#fff}.rcl-fb-badge:hover img{filter:none}";
     (document.head || document.documentElement).appendChild(st);
   }
   var roots = document.querySelectorAll(".topology");
