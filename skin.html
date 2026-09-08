@@ -172,6 +172,11 @@ var PV_STATES = {"ospf": {"success": true, "scenario": "demo", "r3_neighbor_stat
 </script>
 <script>
 (function () {
+  // This page embeds the real engine DeepDive as a live preview — a tool surface, not a public
+  // funnel. Tell the engine to suppress the funnel-back badge here (badge's <a href> would otherwise
+  // intercept the preview's click-to-enlarge). Set before any renderTopology() so the badge never
+  // appears, even on first paint. The .rcl-fb-badge CSS hide below is a belt-and-suspenders backstop.
+  window.xraySkinEditor = true;
   var S = window.XraySkin;
   var LABELS = { ospf:'OSPF', bgp:'BGP', static:'static', link:'link', idle:'forming', down:'stopped' };
   var skin = S.load();
