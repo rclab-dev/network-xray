@@ -3120,8 +3120,34 @@ function _xrayEnsureFbBadge() {
     a.innerHTML = '<img src="' + _RCL_FB_BADGE_LOGO + '" alt="RCL" width="18" height="18"><span>Powered by <b>RCL</b></span>';
     root.appendChild(a);
   }
+  _xrayPositionFbBadge();
+  // green(.xray-deep-engine)の高さ変動(三角=短/通常=長・DeepDive open/view切替/lab切替/resize)に追従して緑枠直下へ再配置。
+  try {
+    var _deB = document.querySelector(".xray-deep-engine");
+    if (window.ResizeObserver && _deB && !_deB._rclFbRO) {
+      _deB._rclFbRO = new ResizeObserver(function () { _xrayPositionFbBadge(); });
+      _deB._rclFbRO.observe(_deB);
+    }
+  } catch (e) {}
+  if (typeof window !== "undefined" && !window._rclFbResizeBound) {
+    window._rclFbResizeBound = true;
+    try { window.addEventListener("resize", _xrayPositionFbBadge); } catch (e) {}
+  }
 }
-if (typeof window !== "undefined") window._xrayEnsureFbBadge = _xrayEnsureFbBadge;
+// fb[三角トポロジ隙間・worker6 2026-09-08 事業主]: バッジを緑枠(.xray-deep-engine)bottom の一定 offset(12px)下に置く。
+//   旧: .topology(cyan 親)底 anchor(bottom:12px)+ green margin-bottom → 通常は自然だが三角(green が短く描画)で
+//   green-bottom が高く topology 底との間が空き隙間過大。green の実 offsetTop+offsetHeight を基準に top を設定=green
+//   高さに依らず常に緑枠直下 12px。.topology mount(wipe 耐性)維持。offsetParent=.topology(position:relative)。
+function _xrayPositionFbBadge() {
+  try {
+    var badge = document.querySelector(".rcl-fb-badge");
+    var de = document.querySelector(".xray-deep-engine");
+    if (!badge || !de || !de.offsetHeight) return;   // green 未描画(overview 等)は据置(badge は is-xray-deep で非表示)
+    badge.style.top = (de.offsetTop + de.offsetHeight + 12) + "px";
+    badge.style.bottom = "auto";
+  } catch (e) {}
+}
+if (typeof window !== "undefined") { window._xrayEnsureFbBadge = _xrayEnsureFbBadge; window._xrayPositionFbBadge = _xrayPositionFbBadge; }
 
 function xrayRenderTopology(config) {
   try { _xrayEnsureFbBadge(); } catch (_bE) {}   // fb funnel-back badge: 永続ルート(.topology)へ冪等 append(OSS gate 内蔵)
