@@ -3109,7 +3109,7 @@ function _xrayEnsureFbBadge() {
     // fb[文字スタイル・worker6 2026-09-08 事業主 headful]: バッジ文字を footer 調(薄グレー/非太字/hover白)に。旧 cyan+太字は
     //   loud。文字色=footer の #6f8291・font-weight:400(RCL の <b> も 400)・hover #fff。link 全体 opacity は撤去し文字は
     //   footer と同 full トーン、ロゴのみ img filter(saturate/brightness)で subtle 維持・hover で filter:none(full)。
-    st.textContent = ".rcl-fb-badge{position:absolute;right:14px;bottom:12px;z-index:60;display:none;align-items:center;gap:7px;font:400 12px/1 ui-monospace,Menlo,Consolas,monospace;text-decoration:none;color:#6f8291;transition:color .18s ease;pointer-events:auto}body.is-xray-deep .rcl-fb-badge{display:inline-flex}body.is-xray-deep .xray-deep-engine{margin-bottom:36px}.rcl-fb-badge img{width:18px;height:18px;border-radius:4px;display:block;filter:saturate(.5) brightness(.9);transition:filter .18s ease}.rcl-fb-badge b{font-weight:400}.rcl-fb-badge:hover{color:#fff}.rcl-fb-badge:hover img{filter:none}";
+    st.textContent = ".rcl-fb-badge{position:absolute;right:14px;bottom:12px;z-index:60;display:none;align-items:center;gap:7px;font:400 12px/1 ui-monospace,Menlo,Consolas,monospace;text-decoration:none;color:#6f8291;transition:color .18s ease;pointer-events:auto}body.is-xray-deep .rcl-fb-badge{display:inline-flex}.rcl-fb-badge img{width:18px;height:18px;border-radius:4px;display:block;filter:saturate(.5) brightness(.9);transition:filter .18s ease}.rcl-fb-badge b{font-weight:400}.rcl-fb-badge:hover{color:#fff}.rcl-fb-badge:hover img{filter:none}";
     (document.head || document.documentElement).appendChild(st);
   }
   var roots = document.querySelectorAll(".topology");
@@ -3148,6 +3148,9 @@ function _xrayPositionFbBadge() {
     var badge = document.querySelector(".rcl-fb-badge");
     var de = document.querySelector(".xray-deep-engine");
     if (!badge || !de || !de.offsetHeight) return;   // green 未描画(overview 等)は据置(badge は is-xray-deep で非表示)
+    // fb[padding fix・worker6 2026-09-08 事業主/worker1 :8610]: badge は緑枠(.xray-deep-engine)下 +12px(緑外・owner 必須=
+    //   緑枠はルータ透視ゆえ内部ロゴ不可)。緑外の room は .topology の padding-bottom が担う(gate else でも min padding を
+    //   残す修正=BGP でも padding 帯確保。旧: BGP は padding 0/0 で room 消失→badge 消滅)。margin 不使用(padding で room)。
     badge.style.top = (de.offsetTop + de.offsetHeight + 12) + "px";
     badge.style.bottom = "auto";
   } catch (e) {}
@@ -4099,8 +4102,11 @@ function _xrayDeAngleView(s) {
         _topo.style.setProperty("padding-bottom", (_XRAY_DE.deCardPadBottomPx || 32) + "px", "important");
         _topo.style.setProperty("padding-top", (_XRAY_DE.deCardPadTopPx || 32) + "px", "important");
       } else {
-        _topo.style.removeProperty("padding-bottom");
-        _topo.style.removeProperty("padding-top");
+        // fb[BGP padding・worker6 2026-09-08 事業主/worker1 :8610]: single-link(BGP)でも .topology に min padding を残す。
+        //   旧 removeProperty は BGP で padding 0/0→緑が cyan 下端まで=badge 緑外 room 消失→消滅。badge 緑外(owner 必須)+
+        //   上下対称のため else でも padding を付与(dual と同値)。緑は固定 460px ゆえ padding は緑外の cyan 帯を確保。
+        _topo.style.setProperty("padding-bottom", (_XRAY_DE.deCardPadBottomPx || 44) + "px", "important");
+        _topo.style.setProperty("padding-top", (_XRAY_DE.deCardPadTopPx || 32) + "px", "important");
       }
     }
     wL.style.transform = "rotate(" + ang.l + "deg)";
@@ -9884,8 +9890,9 @@ function _xrayRenderUnifiedLive(s) {
       _topoU.style.setProperty("padding-top", (_XRAY_DE.deCardPadTopPx || 32) + "px", "important");
       _topoU.style.setProperty("padding-bottom", (_XRAY_DE.deCardPadBottomPx || 44) + "px", "important");
     } else {
-      _topoU.style.removeProperty("padding-top");
-      _topoU.style.removeProperty("padding-bottom");
+      // fb[BGP padding・worker6 2026-09-08]: non-multi(BGP single)でも min padding を残す(badge 緑外 room・BGP padding 0/0 回避)。
+      _topoU.style.setProperty("padding-top", (_XRAY_DE.deCardPadTopPx || 32) + "px", "important");
+      _topoU.style.setProperty("padding-bottom", (_XRAY_DE.deCardPadBottomPx || 44) + "px", "important");
     }
   }
   var glyphPos = "inner";
