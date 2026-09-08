@@ -63,6 +63,9 @@
   /* the engine's in-cylinder "✕ Close" is redundant in the editor (the preview has its own close/enlarge);
      hide it so only the preview's affordances show */
   .pv-stage .xray-focus-close{display:none!important}
+  /* funnel-back "Powered by RCL" badge: the skin editor is a tool, not a public funnel surface, and the
+     badge's link was intercepting the preview's click-to-enlarge. Hide it everywhere on this editor page. */
+  .rcl-fb-badge{display:none!important}
   .pv-stage .topology{position:relative;width:100%;height:100%;background:#1e2a38;overflow:visible}
   .pv-stage .topo-diagram{position:relative;width:100%;height:100%}
   .pv-hint{position:absolute;right:9px;bottom:8px;z-index:5;font:11px/1 monospace;color:#06232a;
