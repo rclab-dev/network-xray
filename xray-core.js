@@ -4198,8 +4198,13 @@ function _xrayDeAngleView(s) {
     // fb[OSS RT arrow・worker1 triage 2026-09-07]: RT 行 click(_xrayRtSel)も arrowOn に含める。init(route_resolution=DROP)で
     // connected route を click しても矢印を出す(click handler が xray-rt-noarrow を外すのに inline gate が再抑制する coordination bug の解消)。
     // lo/mgmt 選択時は _xrayRtSel が非apex を null 化済ゆえ従来通り非表示(iface 名 lo* を除外)。
-    var arrowOn = xrayIsCleared(s) || !!(_rr && (_rr.out_iface || _rr.resolved))
-      || !!(window._xrayRtSel && window._xrayRtSel.iface && !/^lo/i.test(window._xrayRtSel.iface));
+    // fb[OSS RT arrow・worker6 2026-09-08 事業主]: 選択 prefix が routing_table から消滅(行皆無)したら矢印削除(default fallback しない)。
+    //   (A)経路変化(prefix 行有・iface 変)=追従維持 / (B)消滅=arrow off。routing_table 有時のみ判定(demo/RCL は不変)。
+    var _rtSelGone = !!(window._xrayRtSel && window._xrayRtSel.prefix && s && s.routing_table && s.routing_table.length
+      && !s.routing_table.some(function (r) { return r && r.prefix === window._xrayRtSel.prefix; }));
+    var arrowOn = (xrayIsCleared(s) || !!(_rr && (_rr.out_iface || _rr.resolved))
+      || !!(window._xrayRtSel && window._xrayRtSel.iface && !/^lo/i.test(window._xrayRtSel.iface)))
+      && !_rtSelGone;
     var pingReaches = document.body.classList.contains("ping-ok") || xrayIsCleared(s);
     var fa = de._deFlow.querySelector(".de-fwd-a"), fb = de._deFlow.querySelector(".de-fwd-b");
     fa.setAttribute("d", q(inConn, mIn, C));
@@ -5232,12 +5237,29 @@ function _xrayApplyDualLinkDirection(s, peers) {
     var k = Object.keys(s.interfaces || {});
     return k[k.length - 1];
   }();
-  // fb[OSS Q9 arrow flip・worker6 2026-09-07 事業主]: user が RT パネル行 click で選択した route(_xrayRtSel.iface)を
-  //   ~4秒 state poll を跨いで保持する。従来 out=rr.out_iface 固定ゆえ poll が click 選択(例 3.3.3.3/32→eth2/r3)を
-  //   既定 primary(rr.out_iface=eth1/r2)へ revert し矢印 flip(owner Q9 repro)。click 中は選択 iface を direction
-  //   source に採用=xraySetForwardIface と同源。click 無し(_xrayRtSel=null/lo/mgmt)は従来どおり rr.out_iface=非回帰。
-  var _rtSelIf = (window._xrayRtSel && window._xrayRtSel.iface && !/^lo/i.test(window._xrayRtSel.iface)) ? window._xrayRtSel.iface : null;
-  var out = _rtSelIf || rr.out_iface;
+  // fb[OSS Q9 arrow・worker6 2026-09-07→09-08 事業主]: RT パネルで click した PREFIX の現在の out_iface に矢印を向ける。
+  //   ★選択 iface 固定でなく poll 毎に選択 prefix を live routing_table(selected 行)で再解決:
+  //   (a) spurious flip 抑止(経路不変なら同 iface に解決=default primary rr.out_iface へ勝手に戻さない=44d9e242 の意図維持)
+  //   (b) real route change 追従(eth2 down→3.3.3.3/32 が eth1 経由に変われば矢印も eth1 へ・再 click 不要)。
+  //   routing_table 有=選択 prefix の現選択経路(到達不能=selected 行無なら null→他 gate)。routing_table 無(RCL/demo)=
+  //   click 時 iface を hold(従来 flip 修正)。lo/mgmt は除外。
+  var _rtSelIf = null, _rtSelGone = false;
+  if (window._xrayRtSel && window._xrayRtSel.prefix) {
+    var _selPfx = window._xrayRtSel.prefix;
+    if (s.routing_table && s.routing_table.length) {
+      var _pfxRows = s.routing_table.filter(function (r) { return r && r.prefix === _selPfx; });
+      if (!_pfxRows.length) {
+        _rtSelGone = true;   // ★選択 prefix が RT から消滅(行皆無)→ 矢印削除(default rr.out_iface へ fallback しない)
+      } else {
+        var _selRows = _pfxRows.filter(function (r) { return r.selected; });
+        if (_selRows.length && _selRows[0].out_iface && !/^lo/i.test(_selRows[0].out_iface)) _rtSelIf = _selRows[0].out_iface;   // 経路変化に追従
+      }
+    } else if (window._xrayRtSel.iface && !/^lo/i.test(window._xrayRtSel.iface)) {
+      _rtSelIf = window._xrayRtSel.iface;   // routing_table 無(RCL/demo)=click iface hold
+    }
+  }
+  window._xrayRtSelPrefixGone = _rtSelGone;   // arrowOn gate 用(forward-arrow render が読む)
+  var out = _rtSelGone ? null : (_rtSelIf || rr.out_iface);
   var goesLeft = out ? out === _lIf ? true : out === _rIf ? false : out === _lan : false;
   window._xrayDirDbg = {
     out: out,
