@@ -238,17 +238,55 @@ function buildState(opts) {
 
   var fullCount = peers.filter(function (p) { return p.full; }).length;
 
-  // hellos (ospf): IF-scoped hello-OUT + per-peer hello-IN so the engine per-beam drive() lights Hello
-  // only on links actually running OSPF. hello-IN=Init+ (peer heard); off=Down/None/Attempt.
+  // hellos (ospf): IF-scoped for hello-OUT + peer-scoped for hello-IN so the engine per-beam drive()
+  // lights Hello ONLY on links actually running OSPF. Q9: r1-r3 iface not in the OSPF process -> its
+  // beam gets no Hello; r1-r2 (Full) does. See reference_rcl_xray_ospf_active_peer_sending_if_scope_marker.
   if (proto !== 'bgp') {
     peers.forEach(function (p) {
+      // hello-OUT is per-IFACE: emit only when the LOCAL iface participates in OSPF (present in `ifs` =
+      // show ip ospf interface). A peer link whose iface is NOT OSPF-enabled must NOT enter iface_hellos,
+      // else engine drive() `active = hasOwnProperty(iface_hellos, iface)` shows a spurious Hello on it.
       if (p.iface && ifs[p.iface]) ifaceHellos[p.iface] = ifs[p.iface].hello || 10;
+      // hello-IN is per-PEER: we hear a peer's Hello only when its neighbor exists beyond Down/None
+      // (Init+ = a Hello was received). peer_sending_hellos gates hello-in per beam (forming: local
+      // iface active but peer down -> out yes, in no).
+      // hello-IN core value: show Hello RECV whenever we can HEAR the peer = neighbor state >= Init
+      // (Init/2-Way/ExStart/Exchange/Loading/Full). This visualizes "Hello is flowing but the adjacency
+      // is stuck below Full" (timer/router-id/MTU mismatch) -- NOT a Full gate. OFF only when we hear
+      // NOTHING from the peer: Down / None / Attempt (Hellos sent but none received / dead-timer expired).
       var _peerUp = /^(full|loading|exchange|exstart|2-?way|init)/i.test(p.state || '') || !!p.full;
       peerSendingHellos[p.name] = _peerUp;
       if (_peerUp) peerHellos[p.name] = (ifs[p.iface] && ifs[p.iface].hello) || 10;
     });
   }
 
+  // Ensure every real topology-link iface (from adjacency/peers) appears in `interfaces`, even when
+  // it is NOT an OSPF-participating iface. OSPF-only collection (ifs) drops static/connected links
+  // (e.g. q9 r1 eth2 static link to r3), so the engine saw 1 link-iface -> is-single-link-edge ->
+  // the 2nd DeepDive beam had no geometry. Layer link ifaces on with ip/up from show-interface.
+  peers.forEach(function (p) {
+    if (p.iface && p.iface !== 'lo' && !interfaces[p.iface]) {
+      var _pd = ifs[p.iface] || ifFallback[p.iface] || {};
+      interfaces[p.iface] = { up: _pd.up !== false, ip: (_pd.ip || '') + '/' + (_pd.prefix || 24) };
+    }
+  });
+
+  // Recursive out-iface resolver: a BGP route's immediate next-hop is often a remote loopback with
+  // no directly-connected iface (iBGP/eBGP-multihop over an IGP). Resolve it via the RIB (the IGP
+  // route to that next-hop) so the DeepDive knows the TRUE forwarding interface (Q14/Q15 coexist:
+  // 2.2.2.0 via 2.2.2.2[r2 lo] -> OSPF 2.2.2.2/32 out eth1) instead of an empty/eth0-fallback iface
+  // (which the engine reads as output-down -> a spurious red beam over the cyan tunnel).
+  function _resolveIface(ip) {
+    if (!ip) return '';
+    var best = '', bestLen = -1;
+    routes.forEach(function (r) {
+      var nh = (r.nexthops && r.nexthops[0]) || {};
+      if (!nh.iface || nh.iface === 'lo') return;
+      var pl = parseInt((r.prefix || '').split('/')[1], 10); if (isNaN(pl)) return;
+      if (_sameSubnet(r.prefix, ip) && pl > bestLen) { best = nh.iface; bestLen = pl; }
+    });
+    return best;
+  }
   // route_resolution: pick a target = a remote loopback (/32) learned via the protocol,
   // else the farthest learned (non-connected) prefix.
   var rl = routes.filter(function (r) { return r.protocol === proto && r.selected && r.nexthops[0] && r.nexthops[0].ip; });
@@ -257,7 +295,7 @@ function buildState(opts) {
   var routeOk = !!chosen;
   var route_resolution = chosen ? {
     target: chosen.prefix.split('/')[0], resolved: true, protocol: proto,
-    out_iface: chosen.nexthops[0].iface, next_hop: chosen.nexthops[0].ip,
+    out_iface: chosen.nexthops[0].iface || _resolveIface(chosen.nexthops[0].ip), next_hop: chosen.nexthops[0].ip,
     matched_prefix: chosen.prefix
   } : { target: '', resolved: false, protocol: '', out_iface: '', next_hop: '', matched_prefix: '' };
 
@@ -276,8 +314,11 @@ function buildState(opts) {
     _hello = { r1_hello: tHello, r2_hello: tHello, target_hello: tHello, peer_hello: tHello, timer_match: true };
   }
 
-  // State-independent OSPF participation marker: an iface is OSPF-active whenever `show ip ospf
-  // interface` lists it enabled+up, regardless of neighbor state (real OSPF emits Hellos continuously).
+  // State-independent OSPF participation marker (RCL _ospf_iface_participates parity): a data-plane
+  // iface is OSPF-active whenever `show ip ospf interface` lists it enabled+up (Internet Address/Area/
+  // Hello present) -- NOT gated on the neighbor reaching Full. Real OSPF emits Hellos continuously, so
+  // the Hello orb must stay lit while forming and at Full, and survive a transient neighbor-parse gap
+  // or a collect that races ahead of Full (the old `nei.list.some(n=>n.full)` gate baked active=false).
   var _ospfActiveLocal = Object.keys(ifs).some(function (k) {
     return !/^lo/i.test(k) && ifs[k] && ifs[k].ospf !== false && ifs[k].up !== false;
   });
@@ -285,17 +326,37 @@ function buildState(opts) {
     success: true, id: opts.id || selfName, scenario: opts.id || selfName,
     target_node: selfName, peer_node: primaryPeer.name || '',
     interfaces: interfaces,
-    wan_iface: (chosen && chosen.nexthops[0] && chosen.nexthops[0].iface) || primaryPeer.iface || 'eth0',
-    lan_iface: (peers[0] && peers[0].iface) || 'eth0',
+    wan_iface: route_resolution.out_iface || (chosen && chosen.nexthops[0] && chosen.nexthops[0].iface) || primaryPeer.iface || (Object.keys(interfaces).filter(function (k) { return k !== 'lo'; })[0]) || 'eth0',
+    // Input/LAN iface: fall back to a REAL interface, never the mgmt default 'eth0' (excluded from
+    // `interfaces`, so the engine reads it as input-down -> spurious red ✖/beam). For a single-uplink
+    // source router (coexist/iBGP-over-lo: no distinct ingress) the origin is the loopback.
+    // Input/LAN iface: for a genuine dual-link transit use the peer iface; otherwise MIRROR the
+    // uplink (out_iface / first non-lo) so a single-uplink node keeps wan==lan == its one data IF ->
+    // is-single-link-edge stays true (1 beam/band). Never 'eth0'(mgmt->input-down red) nor 'lo'
+    // (lan!=wan -> single-link-edge false -> coexist bands grow BOTH sides = spurious '2 links').
+    lan_iface: (peers[0] && peers[0].iface) || route_resolution.out_iface || (Object.keys(interfaces).filter(function (k) { return k !== 'lo'; })[0]) || 'lo',
     neighbor_state: fullCount > 0 ? 'Full' : (peers[0] ? peers[0].state : 'None'),
     has_full: fullCount > 0, full_count: fullCount,
-    ospf_configured: proto === 'ospf',
-    ospf_active_on_interface: proto === 'ospf' && _ospfActiveLocal,  /* STATE-INDEPENDENT: local iface participates (show ip ospf interface enabled+up) */
-    peer_sending_hello: proto === 'ospf' && nei.list.length > 0,  /* peer HEARD = any OSPF neighbor state (Init+); per-peer refined by wrapper peer_sending_hellos */
+    ospf_configured: opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf'), /* presence-fix-cfg */
+    bgp_configured: opts.bgpConfigured !== undefined ? opts.bgpConfigured : (proto === 'bgp'),
+    ospf_active_on_interface: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && _ospfActiveLocal,  /* STATE-INDEPENDENT: local iface participates in OSPF (show ip ospf interface enabled+up), regardless of neighbor_state -> Hello-out orb lit while forming AND at Full; no blink-out on collect-before-Full / neighbor-parse gap */
+    ospf_neighbor_full: nei.list.some(function (n) { return n.full; }),  /* REAL OSPF Full from show ip ospf neighbor (coexist band Full even under --proto bgp) */
+    peer_sending_hello: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && nei.list.length > 0,  /* peer HEARD = ANY OSPF neighbor state (Init and beyond = we received the peer's Hello), not only Full -> Hello-in orb shows during forming too; honest: absent only when no neighbor at all (peer unconfigured/down) */
     iface_hellos: ifaceHellos, peer_hellos: peerHellos, peer_sending_hellos: peerSendingHellos,
     target_on_path: false,
     cleared: routeOk && fullCount > 0
   };
+
+  // Dual-link leaf: when the node has >=2 distinct link ifaces but the route did not resolve (so wan
+  // fell back to the same iface as lan), split them so the DeepDive draws BOTH beams (in != out).
+  (function () {
+    var _li = peers.map(function (p) { return p.iface; })
+                   .filter(function (v, i, a) { return v && v !== 'lo' && a.indexOf(v) === i; });
+    if (_li.length >= 2 && s.wan_iface === s.lan_iface) {
+      var _other = _li.filter(function (f) { return f !== s.wan_iface; })[0];
+      if (_other) s.lan_iface = _other;
+    }
+  })();
 
   if (proto === 'bgp') {
     s.is_established = fullCount > 0;
@@ -326,7 +387,14 @@ function buildState(opts) {
       return o;
     });
     // prefixes received = number of distinct prefixes (one best per prefix)
-    s.pfx_rcvd = s.bgp_routes.filter(function (r) { return r.best; }).length;
+    // "Prefixes received" = distinct prefixes learned FROM a neighbor (best per prefix).
+    // Exclude locally-originated routes (own lo/32 etc.: next-hop 0.0.0.0/empty) so the count is
+    // what the router RECEIVED, not the total table size (which includes self-origin).
+    // "Prefixes received" = distinct prefixes learned FROM a neighbor (peer next-hop), matching FRR
+    // PfxRcd. NOT filtered by best: a received route can be non-best/unusable (Q15 next-hop-self
+    // missing -> received but 'no valid path') yet it WAS received. Exclude locally-originated
+    // (next-hop 0.0.0.0/empty = self). Dedup by prefix (multiple paths per prefix count once).
+    s.pfx_rcvd = (function(){ var seen={}; s.bgp_routes.forEach(function(r){ if(r.next_hop && r.next_hop!=='0.0.0.0') seen[r.prefix]=1; }); return Object.keys(seen).length; })();
   } else {
     s.has_ospf_route = routeOk && fullCount > 0;
     s.ping_ok = routeOk && fullCount > 0;
@@ -358,10 +426,68 @@ function buildState(opts) {
     return true;
   }).map(function (r) {
     var nh = (r.nexthops && r.nexthops[0]) || {};
+    var _sel = !!r.selected;
+    // mgmt-excluded view: a static default (0.0.0.0/0) is shadowed in the real FIB by the clab mgmt
+    // KERNEL default (selected), which we've just dropped. With mgmt gone the static IS the installed
+    // default, so promote it to selected so the (selected-only) routing-table panel renders it -- the
+    // static row was the lab's intent (owner: 'eth1 static missing'). Gate on out-iface up (mirrors
+    // route_resolution); a down out-iface (Q1 eth1 shutdown) stays unselected = correctly not installed.
+    if (mgmtSubnet && !_sel && r.protocol === 'static' && r.prefix === '0.0.0.0/0'
+        && nh.iface && interfaces[nh.iface] && interfaces[nh.iface].up) _sel = true;
     return { prefix: r.prefix, out_iface: nh.iface || '', next_hop: nh.ip || '',
-             protocol: r.protocol, selected: !!r.selected };
+             protocol: r.protocol, selected: _sel };
   });
 
+  // Static-lab route resolution: a pure-static topology has no OSPF/BGP neighbor (fullCount=0), so the
+  // protocol-based route_resolution above stays empty and the DeepDive would show 'Route: NONE / DROP'
+  // even when the upstream default route is up. Resolve the target via the scenario static default
+  // (0.0.0.0/0 protocol 'static'), ignoring the containerlab mgmt KERNEL default that shadows it
+  // (distance 0). Reachable iff that default's out-iface is up -> FORWARD; iface down (Q1 eth1
+  // shutdown) leaves it unresolved -> NONE/DROP. OSPF/BGP labs are untouched (guarded on !_configured).
+  if (!s.route_resolution.resolved && !s.ospf_configured && !s.bgp_configured) {
+    // Generalized static-lab resolution: the scenario's reachability goal is the static route it
+    // installs. Prefer a default (0.0.0.0/0 -> probe 8.8.8.8 convention); else the most-specific
+    // static /N (e.g. Q4 next-hop-unreachable: 2.2.2.2/32). Ignore the containerlab mgmt KERNEL
+    // default (protocol 'kernel', not 'static'). resolved iff FRR installed it (selected + nexthop
+    // active) AND the out-iface is up -> FORWARD; unresolved (Q1 iface down / Q4 unreachable
+    // next-hop) -> NONE/DROP, but the TARGET is still surfaced so the panel shows the real goal.
+    var _statics = routes.filter(function (r) {
+      return r.protocol === 'static' && r.nexthops && r.nexthops[0];
+    });
+    var _sdef = _statics.filter(function (r) { return r.prefix === '0.0.0.0/0'; })[0];
+    var _sspec = _statics.filter(function (r) { return r.prefix !== '0.0.0.0/0'; })
+      .sort(function (a, b) { return (parseInt(b.prefix.split('/')[1], 10) || 0) - (parseInt(a.prefix.split('/')[1], 10) || 0); })[0];
+    var _st = _sdef || _sspec;
+    if (_st) {
+      var _snh = _st.nexthops[0];
+      var _soif = _snh.iface || '';
+      var _soifUp = !!(_soif && interfaces[_soif] && interfaces[_soif].up);
+      // A static present in the RIB (show ip route) is already FRR-resolved; the mgmt KERNEL default
+      // may shadow a static 0.0.0.0/0 (selected=false) yet the scenario intends it, so gate on
+      // out-iface up (NOT selected). Fully-unresolvable statics (Q4 fault) aren't in the RIB at all
+      // -> handled by the configStatics fallback below (resolved=false).
+      var _stResolved = _soifUp;
+      var _stTarget = (_st.prefix === '0.0.0.0/0') ? (opts.target || '8.8.8.8') : _st.prefix.split('/')[0];
+      s.route_resolution = { target: _stTarget, resolved: _stResolved, protocol: 'static',
+        out_iface: _soif, next_hop: _snh.ip || '', matched_prefix: _st.prefix };
+      s.nh_reachable = _stResolved;
+      s.ping_ok = _stResolved;
+    } else if (opts.configStatics && opts.configStatics.length) {
+      // No static in the RIB (fully-unresolved fault: FRR drops unresolvable statics). Surface the
+      // TARGET from the configured static so the panel reads 'Route to <dest>: NONE / DROP' with the
+      // real scenario destination -- resolution stays false (not installed = not reachable).
+      var _cs = opts.configStatics.filter(function (r) { return r.prefix !== '0.0.0.0/0'; })
+        .sort(function (a, b) { return (parseInt(b.prefix.split('/')[1], 10) || 0) - (parseInt(a.prefix.split('/')[1], 10) || 0); })[0]
+        || opts.configStatics[0];
+      if (_cs) {
+        var _csTarget = (_cs.prefix === '0.0.0.0/0') ? (opts.target || '8.8.8.8') : _cs.prefix.split('/')[0];
+        s.route_resolution = { target: _csTarget, resolved: false, protocol: 'static',
+          out_iface: '', next_hop: _cs.nexthop || '', matched_prefix: _cs.prefix };
+        s.nh_reachable = false;
+        s.ping_ok = false;
+      }
+    }
+  }
   Object.keys(_area).forEach(function (k) { s[k] = _area[k]; });
   Object.keys(_hello).forEach(function (k) { s[k] = _hello[k]; });
 
@@ -369,6 +495,21 @@ function buildState(opts) {
     s[p.name + '_has_full'] = p.full;
     s[p.name + '_iface'] = p.iface;
     s[p.name + '_neighbor_state'] = p.full ? 'Full' : (p.state || 'None');
+  });
+
+  // Real OSPF adjacency state, carried SEPARATELY from the primary (--proto) neighbor_state/has_full.
+  // In a coexist lab the primary is BGP, so neighbor_state/<peer>_neighbor_state are the BGP session;
+  // these dedicated ospf_* fields let the DeepDive OSPF layer show the TRUE OSPF neighbor state
+  // (Full/2-Way/Init/Down) instead of echoing the BGP state. For a pure-OSPF lab they mirror the
+  // primary (nei == the OSPF neighbors), so single-protocol output is unchanged in meaning.
+  var _ospfByPeer = {};
+  nei.list.forEach(function (n) { var _pn = n.iface ? ifaceToPeer[n.iface] : null; if (_pn) _ospfByPeer[_pn] = n; });
+  s.ospf_neighbor_state = nei.list.some(function (n) { return n.full; }) ? 'Full'
+    : (nei.list[0] ? nei.list[0].state : (s.ospf_configured ? 'Down' : 'None'));
+  peers.forEach(function (p) {
+    var _on = _ospfByPeer[p.name];
+    s[p.name + '_ospf_full'] = !!(_on && _on.full);
+    s[p.name + '_ospf_state'] = _on ? (_on.full ? 'Full' : _on.state) : (s.ospf_configured ? 'Down' : 'None');
   });
 
   return s;
@@ -396,10 +537,12 @@ function collectFromJson(args) {
   return buildState({
     selfName: args.node, id: args.id || args.node, proto: proto,
     adjacency: args.adjacency || [], mgmtSubnet: args.mgmtSubnet || '',
+    ospfConfigured: args.ospfConfigured, bgpConfigured: args.bgpConfigured, /* presence-fix-cfg */
     ospfNei: parseOspfNeighbors(args.ospfNeighbor),
     ospfIf: parseOspfInterfaces(args.ospfInterface),
     ifaces: parseInterfaces(args.interface),
     routes: parseRoutes(args.route),
+    configStatics: args.configStatics || [],
     bgpSum: parseBgpSummary(args.bgpSummary),
     bgpRoutes: parseBgpRoutes(args.bgp)
   });
@@ -411,6 +554,28 @@ function _vtyshJson(container, showCmd) {
     { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
   try { return JSON.parse(out); } catch (e) { return null; }
 }
+// Run several `show ... json` commands in ONE vtysh process and return their parsed objects in order.
+// Because the commands execute back-to-back inside a single vtysh session (microseconds apart) the
+// reads are effectively atomic: e.g. `show ip bgp summary` (session state) and `show ip bgp` (learned
+// routes) can never straddle a keepalive tick, so the snapshot is internally consistent by
+// construction (no phantom "session Idle but routes present"). Splits the concatenated top-level
+// JSON objects by brace depth (string-aware; 92 = backslash escape char).
+function _vtyshBatch(container, showCmds) {
+  var args = ['exec', container, 'vtysh'];
+  showCmds.forEach(function (c) { args.push('-c', c + ' json'); });
+  var out;
+  try { out = cp.execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }); }
+  catch (e) { return showCmds.map(function () { return null; }); }
+  var objs = [], depth = 0, start = -1, inStr = false, esc = false;
+  for (var i = 0; i < out.length; i++) {
+    var cc = out.charCodeAt(i);
+    if (inStr) { if (esc) esc = false; else if (cc === 92) esc = true; else if (cc === 34) inStr = false; continue; }
+    if (cc === 34) { inStr = true; continue; }
+    if (cc === 123) { if (depth === 0) start = i; depth++; }
+    else if (cc === 125) { depth--; if (depth === 0 && start >= 0) { objs.push(out.slice(start, i + 1)); start = -1; } }
+  }
+  return showCmds.map(function (c, idx) { try { return JSON.parse(objs[idx]); } catch (e) { return null; } });
+}
 
 function collectLive(opts) {
   var container = 'clab-' + opts.lab + '-' + opts.node;
@@ -420,13 +585,36 @@ function collectLive(opts) {
     route: _safe(function () { return _vtyshJson(container, 'show ip route'); })
   };
   if (proto === 'bgp') {
-    raw.bgpSummary = _safe(function () { return _vtyshJson(container, 'show ip bgp summary'); });
-    raw.bgp = _safe(function () { return _vtyshJson(container, 'show ip bgp'); });
-  } else {
-    raw.ospfNeighbor = _safe(function () { return _vtyshJson(container, 'show ip ospf neighbor'); });
-    raw.ospfInterface = _safe(function () { return _vtyshJson(container, 'show ip ospf interface'); });
+    var _bp = _vtyshBatch(container, ['show ip bgp summary', 'show ip bgp']);  /* atomic pair: no tick straddle */
+    raw.bgpSummary = _bp[0]; raw.bgp = _bp[1];
   }
-  return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [],
+  // Always collect OSPF neighbor/interface (not only under --proto ospf): a coexist lab runs
+  // --proto bgp but ALSO has OSPF, and the DeepDive OSPF band must reflect the REAL adjacency
+  // (Full=green) instead of a presence guess (ospf_configured -> Init). Harmless null on pure BGP.
+  raw.ospfNeighbor = _safe(function () { return _vtyshJson(container, 'show ip ospf neighbor'); });
+  raw.ospfInterface = _safe(function () { return _vtyshJson(container, 'show ip ospf interface'); });
+  // Atomic-consistency guard (BGP): `show ip bgp summary` and `show ip bgp` are separate vtysh
+  // queries; a keepalive tick between them can make the summary momentarily read a peer as not
+  // Established while the table still holds its learned routes -> a phantom 'Idle with routes'
+  // snapshot. Re-query the summary until it is consistent with the table (established, or genuinely
+  // no routes). This reflects the TRUE state via re-measurement, not inference.
+  if (proto === 'bgp') {
+    for (var _bt = 0; _bt < 4; _bt++) {
+      var _sum = parseBgpSummary(raw.bgpSummary);
+      var _rts = parseBgpRoutes(raw.bgp);
+      var _anyEst = _sum.list.some(function (b) { return b.established; });
+      if (_anyEst || !_rts.length) break;
+      var _bpr = _vtyshBatch(container, ['show ip bgp summary', 'show ip bgp']);
+      raw.bgpSummary = _bpr[0]; raw.bgp = _bpr[1];
+    }
+  }
+  var _cfgTxt = _safe(function(){ return cp.execFileSync('docker',['exec',container,'vtysh','-c','show running-config'],{encoding:'utf8',maxBuffer:8*1024*1024}); }) || ''; /* presence-fix-cfg: config présence 権威源=running-config */
+  // Configured static routes (running-config) = TARGET source when a fault leaves the route fully
+  // unresolved (FRR omits unresolvable statics from show ip route), so init/solved agree on the
+  // scenario destination (Q4 2.2.2.2) instead of the 8.8.8.8 default.
+  var _cfgStatics = _cfgTxt.split(String.fromCharCode(10)).map(function(l){ var m=l.trim().match(/^ip route (\S+) (\S+)/); return m?{prefix:m[1],nexthop:m[2]}:null; }).filter(Boolean);
+  return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [], configStatics: _cfgStatics,
+    ospfConfigured: _cfgTxt.split(String.fromCharCode(10)).some(function(l){return l.trim().indexOf('router ospf')===0;}), bgpConfigured: _cfgTxt.split(String.fromCharCode(10)).some(function(l){return l.trim().indexOf('router bgp')===0;}),
     mgmtSubnet: opts.mgmtSubnet || '',
     ospfNeighbor: raw.ospfNeighbor, ospfInterface: raw.ospfInterface, interface: raw.interface,
     route: raw.route, bgpSummary: raw.bgpSummary, bgp: raw.bgp });

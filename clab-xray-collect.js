@@ -122,9 +122,11 @@ function collectAll() {
     } catch (e) { console.error('  ' + n + ' COLLECT FAILED: ' + (e.message || e)); }
   });
   // Cross-node hello-IN (OSPF): a peer is "sending Hello" iff ITS facing iface participates in OSPF
-  // (present in that peer's iface_hellos) -- independent of neighbor state. Resolves "Hello flowing but
-  // adjacency stuck below Full" (router-id dup / timer / MTU). The engine drive() still gates on the
-  // LOCAL iface being up, so a cut link stays dark.
+  // (present in that peer's iface_hellos) -- INDEPENDENT of neighbor state. Makes "Hello flowing but
+  // the adjacency is stuck below Full" visible: router-id duplicate (neighbor None), hello/dead-timer
+  // or MTU mismatch -- both ends run OSPF on the link so Hellos ARE exchanged even though no adjacency
+  // forms. The per-node collector can't see the peer, so resolve it from the peer node's iface_hellos.
+  // RCL parity. The engine drive() still gates hello-in on the LOCAL iface being up (cut link = dark).
   if (proto !== 'bgp') {
     nodes.forEach(function (cn) {
       var st = states[cn]; if (!st) return;
