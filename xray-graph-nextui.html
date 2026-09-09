@@ -228,10 +228,17 @@ window.__xrayGraphBoot = function () {
   function renderView(v, nodeId){
     var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
     var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
-    if (_st && _st.protocol === 'bgp') {
+    if (_st && (_st.bgp_configured || _st.protocol === 'bgp')) {  /* presence-drive (worker1) */
       _cfg.xray.protocol = 'bgp';
       var _others0 = (_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
       _cfg.xray.pattern = _others0.length >= 2 ? 'bgp_multi' : 'bgp';
+    } else if (_st && _st.ospf_configured) {
+      _cfg.xray.protocol = 'ospf';
+    } else if (_st && (_st.ospf_configured !== undefined || _st.bgp_configured !== undefined)) {
+      delete _cfg.xray.protocol;
+    }
+    if (_st && _st.ospf_configured && _st.bgp_configured) {  /* coexist présence (worker1): 両プロト設定=OSPF+BGP 二重IGP */
+      _cfg.xray.deep_coexist_ospf = true;
     }
     try{
       var _tn=(_cfg.nodes||[]).filter(function(n){return n.id===nodeId;})[0];
@@ -444,14 +451,35 @@ window.__initNeXtOverview = function (data) {
         && window.xrayCore && typeof window.xrayCore.openDeepDiveFor === 'function';
   }
   function withStates(base, done){
+    window.__xrayStatesBase = base;   // remember the static prefix for live-refresh re-fetch
     var s = document.createElement('script');
-    // cache-bust the INITIAL state fetch: clab graph serves xray-states.js with no Cache-Control, so a
-    // browser can serve a STALE cached copy across deploys -> stale DeepDive flags. ?t= forces fresh.
+    // cache-bust the INITIAL state fetch too: clab graph serves xray-states.js with only Last-Modified
+    // (no Cache-Control/ETag), so a browser heuristically serves a STALE cached copy across deploys ->
+    // the DeepDive renders last lab's stale flags (e.g. hello-off) even though the served state is fresh.
+    // ?t= forces a fresh fetch every page load (owner-view hello now matches the collected state).
     s.src = base + 'xray-states.js?t=' + Date.now();
     s.onload = done; s.onerror = done;
     document.head.appendChild(s);
   }
   function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
+  // ---- live in-place refresh (worker1 2026-09-04): re-fetch xray-states.js + re-apply the current
+  // node DeepDive WITHOUT reloading the page, so the NeXt UI overview keeps its layout/positions.
+  // Driven by the :8610 picker via postMessage (cross-origin). No iframe reload = no force-relayout.
+  window.__xrayLiveRefresh = function(cb){
+    var s = document.createElement("script");
+    s.src = (window.__xrayStatesBase || "") + "xray-states.js?t=" + Date.now();   // cache-bust; base=static/ (clab graph serves static-dir under /static/)
+    s.onload = function(){ try{
+      var cur = window.__xrayCurNode;
+      var st = cur && window.LIVE_STATES && window.LIVE_STATES[cur];
+      // surgical in-place update of the OPEN DeepDive (RCL-style: no rebuild, scroll/open-state preserved).
+      if (st && document.body.classList.contains("is-xray-deep") && typeof window.applyXrayState === "function") {
+        window._lastXrayState = st; window.applyXrayState(st);
+      } else if (cur && window.__xrayShowNode) { window.__xrayShowNode(cur); }   // fallback: DeepDive closed / other node -> rebuild
+    }catch(e){ try{ if (window.__xrayCurNode && window.__xrayShowNode) window.__xrayShowNode(window.__xrayCurNode); }catch(_){} } s.remove(); if(cb) cb(true); };
+    s.onerror = function(){ s.remove(); if(cb) cb(false); };
+    document.head.appendChild(s);
+  };
+  window.addEventListener("message", function(ev){ if (ev && ev.data && ev.data.type === "xray-refresh") window.__xrayLiveRefresh(); });
   // Default this drop-in to the "signature" skin (same default as xray-graph.html): honors a stored
   // user choice, otherwise applies signature without persisting. The "containerlab" preset stays
   // available in the picker. Applying a skin makes window.XraySkin active so the engine's
