@@ -3036,8 +3036,14 @@ function xrayBgpDeepLines(s, opts) {
     cls: "de-title"
   });
   /* oss_re_bgp_fold: bgp_neighbors[].state を集計→折畳見出しカウント(state 有時のみ) */
-  var _nbAgg = (function () { if (!Array.isArray(s.bgp_neighbors) || !s.bgp_neighbors.length) return ""; var _c = {}, _any = false; s.bgp_neighbors.forEach(function (_n) { if (_n.state) { _any = true; _c[_n.state] = (_c[_n.state] || 0) + 1; } }); if (!_any) return ""; return Object.keys(_c).map(function (_k) { return _k + " " + _c[_k]; }).join(", "); })();
+  var _nbAgg = (function () { if (!Array.isArray(s.bgp_neighbors) || !s.bgp_neighbors.length) return ""; var _c = {}, _any = false; s.bgp_neighbors.forEach(function (_n) { if (_n.state) { _any = true; _c[_n.state] = (_c[_n.state] || 0) + 1; } }); if (!_any) return ""; return Object.keys(_c).map(function (_k) { /* oss_nbagg_per_state_color */ return '<span style="color:' + (/establ/i.test(_k) ? '#a855f7' : '#ffb74d') + '">' + _k + " " + _c[_k] + '</span>'; }).join(", "); })();
   if (s.r2_established !== undefined || s.r3_established !== undefined) {
+    if (_nbAgg) {
+      /* oss_q21_bgp_fold_purple[worker6 2026-09-11 owner]: 案X dual-upstream(q21)fold(RCL parity・toggle で subblock 開閉)。Established 紫#a855f7。 */
+      lines.push({
+        text: '<span class="re-bgp-head" style="cursor:pointer" onclick="window._xrayReBgpToggle && window._xrayReBgpToggle()"><span class="re-bgp-ind">' + (window._reBgpOpen ? "\u25bc" : "\u25b6") + '</span> BGP: ' + _nbAgg + "</span>"
+      });
+    } else {
     if (s.r2_established !== undefined) {
       var r2Color = s.r2_established ? "#a855f7" : "#ff4444";
       lines.push({
@@ -3050,9 +3056,10 @@ function xrayBgpDeepLines(s, opts) {
         text: '> r3 BGP: <span style="color:' + r3Color + '">' + (s.r3_established ? "Established" : "Down") + "</span>"
       });
     }
+    }
   } else if (s.is_established || h.bgpEstablished) {/*oss_bgp_is_established[worker6 2026-09-03]: 権威 s.is_established 優先(stale global window._lastXrayHierarchy 回避=q14/q15-solved "BGP: Idle" 間欠の真因)*/
     lines.push({
-      text: (_nbAgg ? '<span class="re-bgp-head" style="cursor:pointer" onclick="window._xrayReBgpToggle && window._xrayReBgpToggle()"><span class="re-bgp-ind">' + (window._reBgpOpen ? "\u25bc" : "\u25b6") + '</span> BGP: <span class="de-hl">' + _nbAgg + '</span></span>' : '> BGP: <span class="de-hl">' + "Established" + "</span>")
+      text: (_nbAgg ? '<span class="re-bgp-head" style="cursor:pointer" onclick="window._xrayReBgpToggle && window._xrayReBgpToggle()"><span class="re-bgp-ind">' + (window._reBgpOpen ? "\u25bc" : "\u25b6") + '</span> BGP: ' + _nbAgg + '</span>' : '> BGP: <span style="color:#a855f7">' + "Established" + "</span>")
     });
   } else {
     lines.push({
@@ -3068,7 +3075,7 @@ function xrayBgpDeepLines(s, opts) {
       var _kind = _nb.ibgp ? "iBGP" : "eBGP";
       var _kc = _nb.ibgp ? "#7facc9" : "#ffb74d";
       lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.ip + '&nbsp;&nbsp;AS ' + _nb.remote_as + ' </span><span style="color:' + _kc + '">(' + _kind + ')</span>', cls: "re-bgp-nbr", style: _nbHide });
-      if (_nb.state) { var _sc = /establ/i.test(_nb.state) ? "#39ff14" : "#ffb74d"; lines.push({ text: '<span style="color:' + _sc + '">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.state + '</span>', cls: "re-bgp-nbr", style: _nbHide }); }
+      if (_nb.state) { var _sc = /establ/i.test(_nb.state) ? "#a855f7" : "#ffb74d"; lines.push({ text: '<span style="color:' + _sc + '">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.state + '</span>', cls: "re-bgp-nbr", style: _nbHide }); }
     });
   }
   if (s.pfx_rcvd !== undefined) {
