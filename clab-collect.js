@@ -136,7 +136,7 @@ function parseBgpSummary(j) {
   Object.keys(peers).forEach(function (ip) {
     var p = peers[ip] || {};
     var st = p.state || p.peerState || '';
-    var rec = { ip: ip, state: st, established: /establ/i.test(st), remoteAs: p.remoteAs };
+    var rec = { ip: ip, state: st, established: /establ/i.test(st), remoteAs: p.remoteAs, localAs: p.localAs, ibgp: (p.remoteAs != null && p.localAs != null && p.remoteAs === p.localAs) };/*bgp_neighbors_emit[worker1 2026-09-11]: iBGP=remoteAs===localAs(FRR summary json は per-peer localAs/remoteAs 両方持つ)*/
     out.byIp[ip] = rec; out.list.push(rec);
   });
   return out;
@@ -234,6 +234,15 @@ function buildState(opts) {
     if (a.peer && !peers.some(function (p) { return p.name === a.peer; })) {
       peers.push({ name: a.peer, iface: a.iface || '', full: false, state: 'Down', ip: '' });
     }
+  });
+
+  // backfill_peer_iface[worker1 2026-09-10]: a peer whose live-derived iface is empty (iBGP-over-loopback
+  // peer has no connected route; when the uplink is DOWN even the underlay connected route is gone, so
+  // the bgpSum-derived iface stays '') must recover its topology-link iface from --adj. Without this the
+  // link iface never enters `interfaces` -> wan/lan fall back to eth0(mgmt)/lo -> wan!=lan -> a spurious
+  // 2nd DeepDive link is drawn for a single-link node with a shut uplink (owner: Q14 eth1 shut = 2 links).
+  peers.forEach(function (p) {
+    if (!p.iface) { var _ai = adj.filter(function (a) { return a.peer === p.name; })[0]; if (_ai && _ai.iface) p.iface = _ai.iface; }
   });
 
   var fullCount = peers.filter(function (p) { return p.full; }).length;
@@ -343,6 +352,8 @@ function buildState(opts) {
     ospf_neighbor_full: nei.list.some(function (n) { return n.full; }),  /* REAL OSPF Full from show ip ospf neighbor (coexist band Full even under --proto bgp) */
     peer_sending_hello: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && nei.list.length > 0,  /* peer HEARD = ANY OSPF neighbor state (Init and beyond = we received the peer's Hello), not only Full -> Hello-in orb shows during forming too; honest: absent only when no neighbor at all (peer unconfigured/down) */
     iface_hellos: ifaceHellos, peer_hellos: peerHellos, peer_sending_hellos: peerSendingHellos,
+    bgp_neighbors: (bgpSum.list || []).map(function (n) { return { ip: n.ip, remote_as: n.remoteAs, ibgp: !!n.ibgp, state: n.state }; }),
+    ospf_neighbors: (nei.list || []).map(function (n) { var _p = String(n.state || '').split('/'); return { router_id: n.rid, address: n.address, state: _p[0] || '', role: _p[1] || '', iface: n.iface, full: !!n.full }; }),/*ospf_neighbors_emit[worker1 2026-09-11]: OSPF per-neighbor(BGP fold と対称)。state=Full/2-Way/Init… (Full/DR の役割は role へ分離)。heading判定(any Full→Full / process up&0 nbr→Active)は engine 側で ospf_configured+ospf_neighbors.length を使う。既存 summary(ospf_neighbor_full 等)不変・additive。*//*bgp_neighbors_state[worker1 2026-09-11]: per-neighbor state 追加(Established/Active/Idle…)= RE パネル状態カウント+行表示用。summary の peer.state 由来。*//*bgp_neighbors_emit[worker1 2026-09-11]: RE パネル per-neighbor 表示用(OSPF-only lab は空=非破壊・additive)*/
     target_on_path: false,
     cleared: routeOk && fullCount > 0
   };
@@ -434,7 +445,7 @@ function buildState(opts) {
     // route_resolution); a down out-iface (Q1 eth1 shutdown) stays unselected = correctly not installed.
     if (mgmtSubnet && !_sel && r.protocol === 'static' && r.prefix === '0.0.0.0/0'
         && nh.iface && interfaces[nh.iface] && interfaces[nh.iface].up) _sel = true;
-    return { prefix: r.prefix, out_iface: nh.iface || '', next_hop: nh.ip || '',
+    return { prefix: r.prefix, out_iface: nh.iface || _resolveIface(nh.ip) || '', next_hop: nh.ip || '',/*recursive_out_iface[worker1 2026-09-10]: BGP recursive route(nh.iface空+next_hop有)は _resolveIface で out-iface補完→RTパネル行clickの矢印gate(_xrayRtSel.iface)が発火。ospf/直接ifaceは nh.iface優先で不変*/
              protocol: r.protocol, selected: _sel };
   });
 
