@@ -1,0 +1,48 @@
+# X-Ray live bundle — `docker compose up` (no containerlab, no host node, no docker socket).
+name: nx-bgp-lp
+services:
+  r1:
+    image: frrouting/frr:latest
+    hostname: r1
+    cap_add: [NET_ADMIN, SYS_ADMIN, NET_RAW]
+    sysctls: [net.ipv4.ip_forward=1]
+    volumes: [./r1:/etc/frr, frrsock_r1:/var/run/frr]
+    networks:
+        net_r1_r2: { ipv4_address: 10.10.0.10 }
+        net_r1_r3: { ipv4_address: 10.11.0.10 }
+  r2:
+    image: frrouting/frr:latest
+    hostname: r2
+    cap_add: [NET_ADMIN, SYS_ADMIN, NET_RAW]
+    sysctls: [net.ipv4.ip_forward=1]
+    volumes: [./r2:/etc/frr, frrsock_r2:/var/run/frr]
+    networks:
+        net_r1_r2: { ipv4_address: 10.10.0.20 }
+  r3:
+    image: frrouting/frr:latest
+    hostname: r3
+    cap_add: [NET_ADMIN, SYS_ADMIN, NET_RAW]
+    sysctls: [net.ipv4.ip_forward=1]
+    volumes: [./r3:/etc/frr, frrsock_r3:/var/run/frr]
+    networks:
+        net_r1_r3: { ipv4_address: 10.11.0.20 }
+  collector:
+    build: ./collector
+    depends_on: [r1, r2, r3]
+    volumes:
+      - frrsock_r1:/socks/r1
+      - frrsock_r2:/socks/r2
+      - frrsock_r3:/socks/r3
+      - ./web:/web
+  graph:
+    build: ./server
+    depends_on: [collector]
+    ports: ["8080:8080"]
+    volumes: [./web:/web]
+networks:
+  net_r1_r2: { driver: bridge, ipam: { config: [{ subnet: 10.10.0.0/24, gateway: 10.10.0.254 }] } }
+  net_r1_r3: { driver: bridge, ipam: { config: [{ subnet: 10.11.0.0/24, gateway: 10.11.0.254 }] } }
+volumes:
+  frrsock_r1: {}
+  frrsock_r2: {}
+  frrsock_r3: {}

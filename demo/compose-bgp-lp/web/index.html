@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  xray-graph.html — a drop-in containerlab graph template.
+  Usage:  containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
+  static-dir (this gallery root) must contain: xray-core.js, xray-api.js, clab-xray-bridge.js
+
+  Clean 3-layer split (2026-06-21 dedupe):
+    outer shell (this file) = clab graph overview + node/peer selection UX
+    bridge  clabXray.deepViews(fullConfig, nodeId) = enumerate the DeepDive views (per peer-pair)
+    facade  xrayCore.openDeepDiveFor(nodeId, state) = render one view (OSS network-xray 80e3f88+)
+
+  containerlab renders this with Go html/template and passes:
+    nx-bgp-lp — lab name (string)
+    {"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r1","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]} — JSON string of { nodes:[{name,kind,...}], links:[{source,source_endpoint,target,target_endpoint}] }
+-->
+<title>X-Ray graph — nx-bgp-lp</title>
+<!-- deps are loaded by the base-path detector at the end of <body> (works for both GitHub Pages
+     root-serving and `containerlab graph --static-dir`, which serves assets under /static/). -->
+<style>
+  /* Drop-in chrome accent = X-Ray teal (the signature default). The engine's xrayApplyTheme() sets
+     --rc-accent inline from its theme (green) on each apply; an author !important rule beats that inline
+     value so the DeepDive accent chrome reads the X-Ray brand teal. Scoped to this drop-in only.
+     (containerlab-cyan is available by choosing the containerlab preset in the Skin picker.) */
+  :root{--rc-accent:#4dd0e1 !important}
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  h1{font-size:19px;margin:0 0 2px}h1 .x{color:#4dd0e1}h1 small{color:#78909c;font-weight:400;font-size:13px}
+  .sub{color:#90a4ae;font-size:13px;margin:0 0 10px;line-height:1.5}
+  .ov{position:relative;width:560px;height:360px;margin:6px auto;background:#16202b;border-radius:10px;border:1px solid #24323e}
+  .ov svg{position:absolute;inset:0;pointer-events:none}
+  .ov-node{position:absolute;transform:translate(-50%,-50%);background:#141b24;border:2px solid #4dd0e1;border-radius:8px;
+    padding:7px 12px;cursor:pointer;font-weight:700;color:#4dd0e1;font-size:13px;white-space:nowrap;text-align:center}
+  .ov-node .k{display:block;font-size:9px;color:#78909c;font-weight:400}
+  .ov-node:hover{box-shadow:0 0 12px rgba(77,208,225,.6)}
+  .ov-node.sel{border-color:#ef5350;color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.5)}
+  #peers{text-align:center;margin:8px 0;min-height:28px}
+  #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
+  #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
+  #peers button.cur{background:#26c6da;color:#06222a;border-color:#26c6da;font-weight:700}
+  .topology{position:relative;margin:8px 0;min-height:420px;background:#1e2a38;border-radius:10px}
+  #topo{display:none}.xray-deep-engine{min-height:420px}
+  .err{display:none;margin:10px 0;padding:10px 12px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px}
+  .topbar{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin:0 0 6px}
+  .lang-btn{background:transparent;color:#8fa3b3;border:1px solid #37474f;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer}
+  .lang-btn:hover{color:#cfe8ef;border-color:#26c6da}
+  .rcl-footer{margin:18px 0 4px;padding-top:12px;border-top:1px solid #24323e;font-size:12px;color:#6f8291;text-align:center;line-height:1.7}
+  .rcl-footer a{color:#26c6da;text-decoration:none}
+  .rcl-footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body class="is-xray-mode">
+<div class="wrap">
+  <div class="topbar">
+    <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
+  </div>
+  <h1><span class="x">X-Ray</span> graph — <span id="labname">nx-bgp-lp</span> <small data-i18n="subtitle">(containerlab × X-Ray DeepDive)</small></h1>
+  <p class="sub" data-i18n="intro">Overview = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
+    OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.</p>
+  <div class="ov" id="ov"></div>
+  <div id="peers"></div>
+  <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
+  <div class="err" id="err"></div>
+
+  <footer class="rcl-footer" data-i18n="footer">
+    This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).
+  </footer>
+</div>
+
+<!-- language toggle (EN default for OSS reach · JA) + RouteCrushLab attribution -->
+<script>
+(function(){
+  var I18N = {
+    en: {
+      subtitle: '(containerlab × X-Ray DeepDive)',
+      intro: 'Overview = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.',
+      footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
+    },
+    ja: {
+      subtitle: '(containerlab × X-Ray ディープダイブ)',
+      intro: 'オーバービューはあなたの containerlab トポロジ（サイズ自由）。<b>ノードをクリック</b>すると、その<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。オーバービューのレイアウトはありふれたもの、X-Ray がノード単位の DeepDive を足します。',
+      footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
+    }
+  };
+  function pickLang(){ try { var s = localStorage.getItem('nx-lang'); if (s && I18N[s]) return s; } catch(e){} return 'en'; }
+  function apply(lang){
+    var d = I18N[lang] || I18N.en;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){ var k = el.getAttribute('data-i18n'); if (d[k] != null) el.innerHTML = d[k]; });
+    document.documentElement.setAttribute('lang', lang);
+    var btn = document.getElementById('lang-toggle'); if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
+    try { localStorage.setItem('nx-lang', lang); } catch(e){}
+  }
+  function init(){ apply(pickLang()); var btn = document.getElementById('lang-toggle'); if (btn) btn.addEventListener('click', function(){ apply(pickLang() === 'en' ? 'ja' : 'en'); }); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+
+<!-- containerlab injects the topology JSON here (Go html/template). -->
+<script id="clab-data" type="application/json">{"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r1","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]}</script>
+
+<script>
+window.__xrayGraphBoot = function () {
+  function showErr(m){var e=document.getElementById('err');e.style.display='block';e.textContent=m;}
+  if (typeof window.clabXray === 'undefined' || typeof window.clabXray.deepViews !== 'function')
+    return showErr('clabXray.deepViews missing — static-dir needs clab-xray-bridge.js (b8b3afb+).');
+  if (typeof window.xrayCore === 'undefined' || typeof window.xrayCore.openDeepDiveFor !== 'function')
+    return showErr('xrayCore.openDeepDiveFor missing — static-dir needs xray-api.js (80e3f88+).');
+
+  // ---- parse containerlab's injected data ----
+  // This file is a containerlab `graph --template`: clab substitutes the topology JSON into the
+  // clab-data script. Opened directly (e.g. on GitHub Pages) that placeholder is left as the raw
+  // Go-template action — show a friendly pointer to the browser demo instead of a parse error.
+  // NB: write the "{"+"{" probe split so containerlab's Go text/template (which renders this whole
+  // file) doesn't read it as an action and panic with "unterminated character constant".
+  var _raw = (document.getElementById('clab-data').textContent || '').trim();
+  if (!_raw || _raw.indexOf('{' + '{') >= 0) {
+    var _e = document.getElementById('err'); _e.style.display = 'block';
+    _e.innerHTML = 'This page is a <b>containerlab graph template</b> — render it with '
+      + '<code>containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir &lt;this dir&gt;</code>.'
+      + '<br>To try X-Ray in the browser (no containerlab needed), open '
+      + '<a href="clab-paste.html" style="color:#80cbc4">clab-paste.html</a> and paste a <code>.clab.yml</code>.';
+    return;
+  }
+  var DATA;
+  try { DATA = JSON.parse(_raw); }
+  catch (e) { return showErr('Could not parse containerlab topology data: ' + e.message); }
+  var rawNodes = DATA.nodes || [], rawLinks = DATA.links || [];
+
+  var NAMES = rawNodes.map(function (n) { return n.name; }).filter(Boolean);
+  var KIND = {}; rawNodes.forEach(function (n) { KIND[n.name] = n.kind || ''; });
+  function roleOf(n){ var k=(KIND[n]||'').toLowerCase();
+    return (k==='host'||k==='linux-host'||/^(sv|server|host|client|pc|h\d+)$/i.test(n)) ? 'server' : 'router'; }
+
+  // adjacency from links (Link.source / Link.target are node short-names)
+  var ADJ = {}; NAMES.forEach(function (n) { ADJ[n] = []; });
+  var EDGES = [];
+  rawLinks.forEach(function (l) {
+    var a = l.source, b = l.target; if (!a || !b || a === b) return;
+    if (!ADJ[a]) ADJ[a] = []; if (!ADJ[b]) ADJ[b] = [];
+    if (ADJ[a].indexOf(b) < 0) { ADJ[a].push(b); }
+    if (ADJ[b].indexOf(a) < 0) { ADJ[b].push(a); }
+    var k=[a,b].sort().join('|'); if (EDGES.indexOf(k)<0) EDGES.push(k);
+  });
+  Object.keys(ADJ).forEach(function (n) { if (NAMES.indexOf(n) < 0) NAMES.push(n); });
+
+  // ---- build the FULL X-Ray config (all nodes + all networks) that deepViews consumes ----
+  var fullCfg = {
+    id: (document.getElementById('labname').textContent || 'clab'),
+    topology_type: 'multi', layout: '',
+    nodes: NAMES.map(function (n) { var r=roleOf(n); return { id:n, type:r, role: r==='server'?'Server':'Router' }; }),
+    networks: EDGES.map(function (k) { var p=k.split('|');
+      return { name: 'net-'+p[0]+p[1], members:[{node:p[0],host_id:10},{node:p[1],host_id:20}] }; }),
+    modes: ['troubleshoot']
+  };
+
+  // ---- hub-and-spoke / circular auto-layout (any N nodes) ----
+  var W=560,H=360,cx=W/2,cy=H/2,R=Math.min(W,H)/2-60, POS={};
+  // Put the highest-degree node (hub) at top-center with its leaves on the bottom row (NAMES
+  // order, L->R) so the overview's left/right match the hub's DeepDive left/right. Only for >=3
+  // nodes where the hub connects to every leaf; otherwise fall back to the circle (non-breaking).
+  (function(){ var deg=function(n){return (ADJ[n]||[]).length;};
+    if(NAMES.length===1){POS[NAMES[0]]=[cx,cy];return;}
+    // 2 nodes: lay them out horizontally (NAMES order = left→right) so the overview reads [a]—[b] and
+    // the DeepDive's single_link left/right (derived from POS x) points the output toward the real peer.
+    if(NAMES.length===2){ POS[NAMES[0]]=[W*0.30,cy]; POS[NAMES[1]]=[W*0.70,cy]; return; }
+    var hub=NAMES.slice().sort(function(a,b){return deg(b)-deg(a);})[0];
+    var leaves=NAMES.filter(function(n){return n!==hub;});
+    if(NAMES.length>=3 && deg(hub)>=leaves.length){ POS[hub]=[cx,70];
+      leaves.forEach(function(n,i){ var x=leaves.length===1?cx:(W*0.18+(W*0.64)*(i/(leaves.length-1))); POS[n]=[x,H-70]; }); }
+    else { var order=[hub].concat(leaves); order.forEach(function(n,i){ var a=(i/order.length)*Math.PI*2-Math.PI/2; POS[n]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]; }); }
+  })();
+
+  // DeepDive radial: give the config real per-node positions so each peer tunnel is drawn at its true
+  // topology angle (atan2). Prefer collector-supplied coords (window.LIVE_POS, derived from the clab
+  // graph-posX/posY labels) when present; otherwise fall back to the overview auto-layout POS so the
+  // DeepDive angles match what the user sees in the overview. deepViews slices these per sub-scene.
+  fullCfg.positions = (window.LIVE_POS && Object.keys(window.LIVE_POS).length)
+    ? window.LIVE_POS
+    : (function(){ var p={}; Object.keys(POS).forEach(function(n){ p[n]={x:POS[n][0],y:POS[n][1]}; }); return p; })();
+
+  // ================= render one deepView =================
+  // 3-layer: bridge deepViews -> facade openDeepDiveFor. (custom subYaml/pairsOf removed)
+  function renderView(v, nodeId){
+    // Prefer the REAL collected state for this node (xray-states.js) when present; otherwise use the
+    // topology-derived synthetic scaffold from the bridge.
+    var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
+    // Protocol: the collector marks BGP states (s.protocol==='bgp'). Switch the scene to BGP so the
+    // panel, tunnels and direction render as BGP instead of the bridge's OSPF default.
+    if (_st && _st.protocol === 'bgp') {
+      _cfg.xray.protocol = 'bgp';
+      var _others0 = (_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      _cfg.xray.pattern = _others0.length >= 2 ? 'bgp_multi' : 'bgp';
+    }
+    // Overview-geometry alignment: order the node's peers so left-in-overview = left face. For a
+    // single link this sets single_link 'left'/'right'; for a transit (two peers) it reorders the
+    // two peer nodes by their overview x, so leftNode/rightNode (and the forward direction derived
+    // from route_resolution.out_iface) are deterministic and match the overview, instead of the
+    // bridge's adjacency-order which can swap run-to-run.
+    try{
+      var _tn=(_cfg.nodes||[]).filter(function(n){return n.id===nodeId;})[0];
+      if(_tn && _tn.single_link){ var _pe=(ADJ[nodeId]||[])[0];
+        if(_pe && POS[_pe] && POS[nodeId]) _tn.single_link = (POS[_pe][0] < POS[nodeId][0]) ? 'left' : 'right'; }
+      var _peers=(_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
+      if(_peers.length===2 && _tn && POS[_peers[0].id] && POS[_peers[1].id]
+         && POS[_peers[0].id][0] > POS[_peers[1].id][0]){
+        _cfg.nodes = [_peers[1], _tn, _peers[0]];   // index0 = geometrically-left peer
+      }
+    }catch(e){}
+    document.body.classList.remove('is-xray-deep');
+    window.xrayCore.renderTopology('#topo', _cfg, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
+    window.xrayCore.openDeepDiveFor(nodeId, _st);   // facade (a)
+    // BGP: show learned routes in the dedicated right-side BGP table panel (de-bgp-panel) via the
+    // facade, not as Routing-Engine lines. A function source repaints per applyState frame; OSPF
+    // nodes clear it. Maps the collector's bgp_routes (next_hop) to the facade row shape (nexthop).
+    if (window.xrayCore && typeof window.xrayCore.setBgpTable === 'function') {
+      if (_st && _st.protocol === 'bgp') {
+        // pass the collector's bgp_routes as-is (all candidate paths, with status/metric/origin/
+        // local_pref/weight/as_path) so the facade can build the BGP Table + Best-Path Decision.
+        window.xrayCore.setBgpTable(function(st){ return (st && st.bgp_routes) || []; });
+      } else { window.xrayCore.setBgpTable(null); }
+    }
+    var de=document.querySelector('.xray-deep-engine'); if(de) de.style.display='block';
+    // aim the best-path arrow at the contested winner. The arrow reveal is async and re-seeds fwdDir
+    // after openDeepDiveFor, so re-apply once it settles (contested-prefix labs only; see _xrayArrowFollow).
+    if (window._xrayArrowFollow) { window._xrayArrowFollow(_st); [400,900,1500].forEach(function(d){ setTimeout(function(){ if(window.__xrayCurNode===nodeId) window._xrayArrowFollow(_st); }, d); }); }
+    return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
+  }
+
+  // ================= node click → deepViews + (b) peer-pair selector =================
+  function showNode(nodeId){
+    window.__xrayCurNode = nodeId;   // remember the open node so the live poll can refresh it in place
+    document.querySelectorAll('.ov-node').forEach(function(e){e.classList.toggle('sel', e.getAttribute('data-n')===nodeId);});
+    var box=document.getElementById('peers'); box.innerHTML='';
+    var views = window.clabXray.deepViews(fullCfg, nodeId);   // ← bridge (b)
+    if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
+    if (views.length > 1) {
+      box.innerHTML='<span class="lbl">'+nodeId+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      views.forEach(function(v,idx){
+        var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
+        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
+        if(idx===0) b.classList.add('cur'); box.appendChild(b);
+      });
+    }
+    renderView(views[0], nodeId);
+  }
+  window.__xrayShowNode = showNode;   // exposed for tests / external triggers
+
+  // ---- draw overview ----
+  var ov=document.getElementById('ov'); var svg='<svg viewBox="0 0 '+W+' '+H+'">'; var drawn={};
+  NAMES.forEach(function(n){ (ADJ[n]||[]).forEach(function(m){
+    var k=[n,m].sort().join('|'); if(drawn[k]||!POS[m])return; drawn[k]=1;
+    svg+='<line x1="'+POS[n][0]+'" y1="'+POS[n][1]+'" x2="'+POS[m][0]+'" y2="'+POS[m][1]+'" stroke="#455a64" stroke-width="2"/>';
+  });}); svg+='</svg>'; ov.innerHTML=svg;
+  NAMES.forEach(function(n){
+    var b=document.createElement('div'); b.className='ov-node'; b.setAttribute('data-n',n);
+    b.innerHTML=n+(KIND[n]?'<span class="k">'+KIND[n]+'</span>':'');
+    b.style.left=POS[n][0]+'px'; b.style.top=POS[n][1]+'px';
+    b.onclick=function(){ showNode(n); };
+    ov.appendChild(b);
+  });
+
+  if(!NAMES.length){ return showErr('No nodes found in topology data.'); }
+  var start = NAMES.slice().sort(function(a,b){ return (ADJ[b]||[]).length-(ADJ[a]||[]).length; })[0];
+  showNode(start);
+};
+</script>
+
+<!-- Base-path detector + dependency loader. `containerlab graph --static-dir <dir>` serves the
+     assets under /static/ while GitHub Pages serves them next to this page. A wrong base returns
+     THIS html with status 200 (so onload still fires) — we detect success by the globals, not the
+     load event, and fall back to the other base. -->
+<script>
+(function(){
+  var FILES = ['xray-core.js','xray-api.js','clab-xray-bridge.js','xray-skin.js'];
+  function loadSeq(base, done){
+    var i = 0;
+    (function next(){
+      if (i >= FILES.length) { done(); return; }
+      var s = document.createElement('script');
+      s.src = base + FILES[i++];
+      s.onload = next; s.onerror = next;   // continue regardless; we verify by globals below
+      document.head.appendChild(s);
+    })();
+  }
+  function ready(){
+    return window.clabXray && typeof window.clabXray.deepViews === 'function'
+        && window.xrayCore && typeof window.xrayCore.openDeepDiveFor === 'function';
+  }
+  // Optional real per-node state: clab-xray-collect.js writes xray-states.js
+  // (window.LIVE_STATES) next to the assets. Load it from the working base, ignore if absent
+  // (the graph then uses the topology-derived synthetic scaffold).
+  function withStates(base, done){
+    var s = document.createElement('script');
+    // cache-bust the INITIAL state fetch (clab graph serves xray-states.js with no Cache-Control, so a
+    // browser can serve a STALE cached copy across deploys); ?t= forces a fresh fetch every load.
+    s.src = base + 'xray-states.js?t=' + (+new Date());
+    s.onload = done; s.onerror = done;   // optional; 404/HTML is fine
+    document.head.appendChild(s);
+  }
+  function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
+  // Live mode (opt-in): only when the collector ran with --watch (it sets window.LIVE_WATCH) do we
+  // poll xray-states.js from the resolved base. Change-detection skips a redraw when nothing moved
+  // (no idle flicker); when it changes we applyState() the open node in place (smooth) and only fall
+  // back to a full showNode() if applyState isn't available. A one-shot / static graph never polls.
+  // Point the best-path forward arrow at the CURRENT winner. applyState() re-seeds the arrow direction
+  // from route_resolution, so on a contested-prefix lab (one prefix learned from >1 peer, decided by
+  // LocPref/etc) the arrow would lag the table. Re-aim it at the contested prefix's best next-hop via the
+  // engine hook (in-place, no rebuild). Only fires when a contested prefix exists — curated single-path /
+  // scenario-target labs keep the engine's route_resolution arrow untouched.
+  window._xrayArrowFollow = function (st) {
+    if (!st || typeof window.xraySetForwardIface !== 'function') return;
+    var byP = {}; (st.bgp_routes || []).forEach(function (r) { (byP[r.prefix] = byP[r.prefix] || []).push(r); });
+    var nh = null;
+    Object.keys(byP).forEach(function (p) {
+      if (nh == null && byP[p].length > 1) { var b = byP[p].filter(function (r) { return r.best; })[0]; if (b && b.next_hop && b.next_hop !== '0.0.0.0') nh = b.next_hop; }
+    });
+    if (!nh) return;                                       // no contested winner -> leave engine default
+    var ifs = st.interfaces || {}, wif = null, base3 = nh.split('.').slice(0, 3).join('.');
+    Object.keys(ifs).forEach(function (k) { if (k !== 'lo') { var ip = (ifs[k].ip || '').split('/')[0]; if (ip && ip.split('.').slice(0, 3).join('.') === base3) wif = k; } });
+    if (wif) { try { window.xraySetForwardIface(wif); } catch (e) {} }
+  };
+  function startLivePoll(base){
+    if (!window.LIVE_WATCH) return;
+    var POLL_MS = 3000;
+    window.__xrayLastStates = JSON.stringify(window.LIVE_STATES || {});
+    setInterval(function(){ if(window.__xrayAutoFollow===false)return;
+      var s = document.createElement('script');
+      s.src = base + 'xray-states.js?t=' + (+new Date());
+      s.onload = function(){
+        try {
+          var cur = JSON.stringify(window.LIVE_STATES || {});
+          if (cur !== window.__xrayLastStates) {
+            window.__xrayLastStates = cur;
+            var n = window.__xrayCurNode, st = n && window.LIVE_STATES && window.LIVE_STATES[n];
+            if (st && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
+              try { window.xrayCore.applyState(st); window._xrayArrowFollow(st); if(window.__xrayShowNode)window.__xrayShowNode(n); } catch (e) { if (window.__xrayShowNode) window.__xrayShowNode(n); }
+            } else if (n && window.__xrayShowNode) { window.__xrayShowNode(n); }
+          }
+        } catch (e) {}
+        s.remove();
+      };
+      s.onerror = function(){ s.remove(); };
+      document.head.appendChild(s);
+    }, POLL_MS);
+  }
+  // This drop-in defaults to the "signature" skin (X-Ray's built-in look: link #00e5ff / chrome accent
+  // #4dd0e1; OSPF green / BGP purple unchanged). Honors a stored user choice if present; otherwise
+  // applies signature WITHOUT persisting it (a default view, not a user selection). Also points the
+  // DeepDive Skin popover's "Open full editor" at skin.html on the resolved base. containerlab remains
+  // selectable in the Skin picker. (Owner 2026-08-18: default reverted from containerlab to signature.)
+  function initSkin(base){
+    // (chrome accent --rc-accent is forced to X-Ray teal via the :root !important rule above,
+    //  which survives the engine theme re-applying it inline.)
+    if (!window.XraySkin) return;
+    window._xraySkinEditorUrl = base + 'skin.html';
+    try {
+      var stored = window.localStorage && window.localStorage.getItem(window.XraySkin.STORAGE_KEY);
+      if (!stored) window.XraySkin.apply(window.XraySkin.presetById('signature'));
+    } catch(e){ try { window.XraySkin.apply(window.XraySkin.presetById('signature')); } catch(_){} }
+  }
+  // try the clab-graph base (/static/) first, then fall back to the page-relative base (Pages);
+  // once the deps resolve on a base, load the optional live states from that same base, boot, poll.
+  loadSeq('static/', function(){
+    if (ready()) { initSkin('static/'); withStates('static/', function(){ boot(); startLivePoll('static/'); }); }
+    else loadSeq('', function(){ initSkin(''); withStates('', function(){ boot(); startLivePoll(''); }); });
+  });
+})();
+</script>
+
+<script>window.LIVE_WATCH=true;window.__xrayAutoFollow=true;</script>
+<div style="position:fixed;top:8px;right:8px;z-index:99999;font:12px -apple-system,Segoe UI,sans-serif;color:#cfe8ee;background:#10202c;border:1px solid #26c6da;border-radius:6px;padding:4px 9px"><label style="cursor:pointer"><input type="checkbox" id="xray-follow" checked style="vertical-align:middle"> auto-follow</label></div>
+<script>document.addEventListener('DOMContentLoaded',function(){var c=document.getElementById('xray-follow');if(c)c.onchange=function(){window.__xrayAutoFollow=c.checked;};});</script>
+</body>
+</html>
