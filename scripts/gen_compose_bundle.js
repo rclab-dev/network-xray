@@ -144,6 +144,25 @@ var topo = {
 // ---- 7) web/: teal template filled + engine + auto-follow toggle ----
 var html = rd(path.join(NX, 'xray-graph.html'));
 html = html.split('{{ .Name }}').join(labName).split('{{ .Data }}').join(JSON.stringify(topo));
+// compose bundle wording: this is pure docker compose (no containerlab). Rewrite the teal template's
+// containerlab-specific copy so the page doesn't contradict the "no containerlab needed" pitch. Hits
+// both the inline data-i18n defaults and the JS I18N dict (same strings). The upstream containerlab
+// graph template keeps its own wording — only the compose bundle is rewritten here.
+html = html
+  .split('(containerlab × X-Ray DeepDive)').join('(docker compose × X-Ray DeepDive)')
+  .split('(containerlab × X-Ray ディープダイブ)').join('(docker compose × X-Ray ディープダイブ)')
+  .split('your containerlab topology').join('your topology')
+  .split('あなたの containerlab トポロジ').join('あなたのトポロジ');
+// Auto-refresh toggle label i18n: add a dict key the injected toggle references (EN/JA).
+html = html.replace(/(\ben:\s*\{)/, "$1 autorefresh: 'Auto-refresh',").replace(/(\bja:\s*\{)/, "$1 autorefresh: '自動更新',");
+// BGP decision accordion timing: the template calls setBgpTable right after openDeepDiveFor, but the
+// cylinder (de-re-panel) isn't laid out yet, so _paintBgpTable early-returns and the engine's built-in
+// BGP table (no "See all decision steps") stays instead of the api accordion. Re-fire setBgpTable once
+// the cylinder settles so the accordion (per-prefix decision + See-all) renders. Idempotent repaint.
+html = html.replace(
+  "window.xrayCore.setBgpTable(function(st){ return (st && st.bgp_routes) || []; });",
+  "(function(){var _sb=function(){window.xrayCore.setBgpTable(function(st){return (st && st.bgp_routes)||[];});};_sb();try{requestAnimationFrame(function(){requestAnimationFrame(_sb);});}catch(e){}[120,400,900].forEach(function(d){setTimeout(_sb,d);});})();"
+);
 // auto-follow ON/OFF: gate the state-poll setInterval on a global flag (default ON)
 html = html.replace(/setInterval\(function\(\)\s*\{(\s*var s = document\.createElement\('script'\);\s*s\.src = base \+ 'xray-states\.js)/,
   "setInterval(function(){ if(window.__xrayAutoFollow===false)return;$1");
@@ -152,10 +171,13 @@ html = html.replace(/setInterval\(function\(\)\s*\{(\s*var s = document\.createE
 html = html.replace(/window\.xrayCore\.applyState\(st\);\s*window\._xrayArrowFollow\(st\);/,
   "window.xrayCore.applyState(st); window._xrayArrowFollow(st); if(window.__xrayShowNode)window.__xrayShowNode(n);");
 // enable live polling (compose collector publishes fresh xray-states.js every 3s) + toggle UI (top-right)
-var toggle = "\n<script>window.LIVE_WATCH=true;window.__xrayAutoFollow=true;</script>\n<div style=\"position:fixed;top:8px;right:8px;z-index:99999;font:12px -apple-system,Segoe UI,sans-serif;color:#cfe8ee;background:#10202c;border:1px solid #26c6da;border-radius:6px;padding:4px 9px\"><label style=\"cursor:pointer\"><input type=\"checkbox\" id=\"xray-follow\" checked style=\"vertical-align:middle\"> auto-follow</label></div>\n<script>document.addEventListener('DOMContentLoaded',function(){var c=document.getElementById('xray-follow');if(c)c.onchange=function(){window.__xrayAutoFollow=c.checked;};});</script>\n";
+var toggle = "\n<script>window.LIVE_WATCH=true;window.__xrayAutoFollow=true;</script>\n<div style=\"position:fixed;top:8px;right:8px;z-index:99999;font:12px -apple-system,Segoe UI,sans-serif;color:#cfe8ee;background:#10202c;border:1px solid #26c6da;border-radius:6px;padding:4px 9px\"><label style=\"cursor:pointer\"><input type=\"checkbox\" id=\"xray-follow\" checked style=\"vertical-align:middle\"> <span data-i18n=\"autorefresh\">Auto-refresh</span></label></div>\n<script>document.addEventListener('DOMContentLoaded',function(){var c=document.getElementById('xray-follow');if(c)c.onchange=function(){window.__xrayAutoFollow=c.checked;};});</script>\n";
 html = html.replace(/<\/body>/i, toggle + '</body>');
 wr(path.join(OUT, 'web', 'index.html'), html);
-['xray-core.js', 'xray-api.js', 'clab-xray-bridge.js', 'xray-skin.js', 'xray-i18n.js'].forEach(function (f) {
+// skin.html = the DeepDive Skin popover's "Open full editor" target (base + 'skin.html'); ship it so
+// that link isn't a 404. decision-bracket.html = the BGP Decision "See all" Tier3 target (self-contained).
+// Both engine verbatim; their JS deps (xray-core/api/i18n/skin) are already in web/.
+['xray-core.js', 'xray-api.js', 'clab-xray-bridge.js', 'xray-skin.js', 'xray-i18n.js', 'skin.html', 'decision-bracket.html'].forEach(function (f) {
   if (fs.existsSync(path.join(NX, f))) fs.copyFileSync(path.join(NX, f), path.join(OUT, 'web', f));
 });
 wr(path.join(OUT, 'web', 'xray-states.js'), 'window.LIVE_STATES = {};\n');
@@ -165,7 +187,34 @@ fs.mkdirSync(path.join(OUT, 'collector'), { recursive: true });
 fs.copyFileSync(path.join(NX, 'clab-collect.js'), path.join(OUT, 'collector', 'clab-collect.js'));   // MUST be the socketless-patched copy
 fs.copyFileSync(path.join(NX, 'clab-xray-collect.js'), path.join(OUT, 'collector', 'clab-xray-collect.js'));
 if (fs.existsSync(path.join(NX, 'clab-srl-collect.js'))) fs.copyFileSync(path.join(NX, 'clab-srl-collect.js'), path.join(OUT, 'collector', 'clab-srl-collect.js'));
-fs.copyFileSync(CLAB, path.join(OUT, 'collector', 'topo.clab.yml'));
+// topo.clab.yml: collector orchestrator only text-parses nodes/links; binds are vestigial here.
+// Relativize any absolute host bind path (keep last 2 segments = <node>/<file>) so no host path
+// leaks into the published bundle. Lines with only relative binds are left byte-identical.
+var _clabText = fs.readFileSync(CLAB, 'utf8').replace(/binds:\s*\[([^\]]*)\]/g, function (m, inner) {
+  if (!/(^|,)\s*\//.test(inner)) return m;   // no absolute host path -> leave untouched
+  var parts = inner.split(',').map(function (b) {
+    b = b.trim();
+    var ci = b.indexOf(':');
+    if (ci < 0) return b;
+    var host = b.slice(0, ci).trim(), cont = b.slice(ci + 1).trim();
+    if (host.charAt(0) === '/') { host = host.split('/').filter(Boolean).slice(-2).join('/'); }
+    return host + ':' + cont;
+  });
+  return 'binds: [' + parts.join(', ') + ']';
+});
+// Remap link endpoint iface names to the COMPOSE eth ordering (eth<i> = index in the node's networks
+// list; docker names data ifaces eth0,eth1,... in that order). Source labs use containerlab iface
+// names (e.g. r1:eth1<->r2, r1:eth2<->r3), but compose has no mgmt eth0, so the numbering shifts. The
+// collector derives peer<->iface from these endpoints; without the remap it maps a peer to the wrong
+// (containerlab) eth -> a nonexistent iface with no IP -> the engine draws that link as DOWN (dashed).
+var origToEth = {};
+nodes.forEach(function (n) { origToEth[n] = {}; (nodeNets[n] || []).forEach(function (x, i) { origToEth[n][x.origIf] = 'eth' + i; }); });
+_clabText = _clabText.replace(/endpoints:\s*\[([^\]]*)\]/g, function (m, inner) {
+  return 'endpoints: [' + inner.replace(/"([^:"]+):([^"\]]+)"/g, function (mm, node, iface) {
+    return (origToEth[node] && origToEth[node][iface] != null) ? '"' + node + ':' + origToEth[node][iface] + '"' : mm;
+  }) + ']';
+});
+wr(path.join(OUT, 'collector', 'topo.clab.yml'), _clabText);
 wr(path.join(OUT, 'collector', 'Dockerfile'),
   'FROM frrouting/frr:latest\nRUN apk add --no-cache nodejs\nCOPY . /collector/\nRUN chmod +x /collector/watch.sh\nWORKDIR /collector\nENTRYPOINT ["/bin/sh","/collector/watch.sh"]\n');
 wr(path.join(OUT, 'collector', 'watch.sh'),

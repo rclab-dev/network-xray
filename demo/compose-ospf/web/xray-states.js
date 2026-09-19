@@ -1,0 +1,1 @@
+window.LIVE_STATES = {};

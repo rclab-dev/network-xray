@@ -14,10 +14,10 @@
     facade  xrayCore.openDeepDiveFor(nodeId, state) = render one view (OSS network-xray 80e3f88+)
 
   containerlab renders this with Go html/template and passes:
-    nx-bgp-lp — lab name (string)
-    {"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r1","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]} — JSON string of { nodes:[{name,kind,...}], links:[{source,source_endpoint,target,target_endpoint}] }
+    xray-ospf — lab name (string)
+    {"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r2","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]} — JSON string of { nodes:[{name,kind,...}], links:[{source,source_endpoint,target,target_endpoint}] }
 -->
-<title>X-Ray graph — nx-bgp-lp</title>
+<title>X-Ray graph — xray-ospf</title>
 <!-- deps are loaded by the base-path detector at the end of <body> (works for both GitHub Pages
      root-serving and `containerlab graph --static-dir`, which serves assets under /static/). -->
 <style>
@@ -57,7 +57,7 @@
   <div class="topbar">
     <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
   </div>
-  <h1><span class="x">X-Ray</span> graph — <span id="labname">nx-bgp-lp</span> <small data-i18n="subtitle">(docker compose × X-Ray DeepDive)</small></h1>
+  <h1><span class="x">X-Ray</span> graph — <span id="labname">xray-ospf</span> <small data-i18n="subtitle">(docker compose × X-Ray DeepDive)</small></h1>
   <p class="sub" data-i18n="intro">Overview = your topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
     OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.</p>
   <div class="ov" id="ov"></div>
@@ -99,7 +99,7 @@
 </script>
 
 <!-- containerlab injects the topology JSON here (Go html/template). -->
-<script id="clab-data" type="application/json">{"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r1","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]}</script>
+<script id="clab-data" type="application/json">{"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r2","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]}</script>
 
 <script>
 window.__xrayGraphBoot = function () {
