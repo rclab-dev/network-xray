@@ -1,0 +1,9 @@
+name: xray-ospf
+topology:
+  nodes:
+    r1: { kind: linux, image: frrouting/frr:latest, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf] }
+    r2: { kind: linux, image: frrouting/frr:latest, binds: [r2/daemons:/etc/frr/daemons, r2/frr.conf:/etc/frr/frr.conf] }
+    r3: { kind: linux, image: frrouting/frr:latest, binds: [r3/daemons:/etc/frr/daemons, r3/frr.conf:/etc/frr/frr.conf] }
+  links:
+    - endpoints: ["r1:eth0", "r2:eth0"]
+    - endpoints: ["r2:eth1", "r3:eth0"]
