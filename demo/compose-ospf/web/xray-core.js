@@ -9420,7 +9420,7 @@ function _xrayDeepDeconflict() {
         var _ly1 = by + _outer + 15, _ly2 = _ly1 + 14;
         if (!(fullFrame && lp)) {
           var _one = L.iface + (L.peer ? " - " + L.peer : "");
-          var _lyR = CY + HH + 16;
+          var _lyR = _ly1; /* simple_single_link_label_terminus: single-link label follows the link terminus (like the multi-link path) not a fixed bottom slot */
           s += '<text x="' + lx + '" y="' + _lyR.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + _one + "</text>";
           return;
         }
@@ -9996,6 +9996,10 @@ function _xrayRenderUnifiedLive(s) {
     host.id = "xray-deep-unified";
     deEng.appendChild(host);
   }
+  /* simple_first_render_re_left: on the first Simple render #de-re-panel's inline left is unset (it lands
+     indented until a mode toggle runs applyXrayState -> rep.style.left). Set it here every unified
+     render to match _XRAY_DE.rePanelLeft (same value the toggle path applies). Direct set, no loop. */
+  try { var _reU = document.getElementById('de-re-panel'); if (_reU && typeof _XRAY_DE !== 'undefined' && _XRAY_DE.rePanelLeft != null) _reU.style.left = _XRAY_DE.rePanelLeft + 'px'; } catch (e) {}
   var rawSt = s || window._lastXrayState || {};
   var st = rawSt && rawSt.xray_state && typeof rawSt.xray_state === "object" ? rawSt.xray_state : rawSt;
   var node = _xrayUnifiedNodeFromLive(cfg, st);
