@@ -228,7 +228,7 @@ window.__xrayGraphBoot = function () {
   function renderView(v, nodeId){
     var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
     var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
-    if (_st && (_st.bgp_configured || _st.protocol === 'bgp')) {  /* presence-drive (worker1) */
+    if (_st && (_st.bgp_configured || _st.protocol === 'bgp')) {  /* presence-drive */
       _cfg.xray.protocol = 'bgp';
       var _others0 = (_cfg.nodes||[]).filter(function(n){return n.id!==nodeId;});
       _cfg.xray.pattern = _others0.length >= 2 ? 'bgp_multi' : 'bgp';
@@ -237,7 +237,7 @@ window.__xrayGraphBoot = function () {
     } else if (_st && (_st.ospf_configured !== undefined || _st.bgp_configured !== undefined)) {
       delete _cfg.xray.protocol;
     }
-    if (_st && _st.ospf_configured && _st.bgp_configured) {  /* coexist présence (worker1): 両プロト設定=OSPF+BGP 二重IGP */
+    if (_st && _st.ospf_configured && _st.bgp_configured) {  /* coexist presence: both protocols configured = OSPF+BGP dual IGP */
       _cfg.xray.deep_coexist_ospf = true;
     }
     try{
@@ -297,7 +297,7 @@ window.__xrayGraphBoot = function () {
     fullCfg.positions = (function(){ var p={}; Object.keys(POS).forEach(function(n){ p[n]={x:POS[n][0],y:POS[n][1]}; }); return p; })();
     var cur = window.__xrayCurNode; if(!(cur && NAMES.indexOf(cur)>=0)) return;
 
-    // LIGHT PATH (worker1 2026-08-17): mutate the SAME config object renderTopology holds
+    // LIGHT PATH: mutate the SAME config object renderTopology holds
     // (window._scenarioConfig) in place, then applyXrayState() re-angles via _xrayDeAngleView's
     // live atan2 read — no DOM rebuild, safe at drag frequency. Falls back to a full showNode()
     // re-render only if the engine globals aren't present.
@@ -462,7 +462,7 @@ window.__initNeXtOverview = function (data) {
     document.head.appendChild(s);
   }
   function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
-  // ---- live in-place refresh (worker1 2026-09-04): re-fetch xray-states.js + re-apply the current
+  // ---- live in-place refresh: re-fetch xray-states.js + re-apply the current
   // node DeepDive WITHOUT reloading the page, so the NeXt UI overview keeps its layout/positions.
   // Driven by the :8610 picker via postMessage (cross-origin). No iframe reload = no force-relayout.
   window.__xrayLiveRefresh = function(cb){
