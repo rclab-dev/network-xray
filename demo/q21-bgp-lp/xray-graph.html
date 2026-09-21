@@ -93,17 +93,20 @@
   #ov .ov-node:hover{box-shadow:0 0 12px rgba(77,208,225,.6)}
   #ov .ov-node.sel{border-color:#ef5350;color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.5)}
   #ov-toggle{margin-left:8px}
+  .lang-switch{font-size:12px;color:#607d8b}
+  .lang-switch a{color:#607d8b;text-decoration:none;cursor:pointer;padding:0 3px}
+  .lang-switch a.on{color:#4dd0e1;font-weight:700;text-decoration:underline}
 </style>
 </head>
 <body class="is-xray-mode">
 <div class="wrap">
   <div class="topbar">
-    <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
+    <span class="lang-switch" id="lang-toggle"><a data-lang="en">EN</a> / <a data-lang="ja">日本語</a></span>
     <button type="button" class="lang-btn" id="ov-toggle">Static overview</button>
   </div>
   <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small data-i18n="subtitle">(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
-  <p class="sub" data-i18n="intro">Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
-    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
+  <p class="sub" data-i18n="intro">The Overview is a view rendered by the <b>containerlab graph</b> (NeXt UI, any size). <b>Click any node</b> to look
+    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The Overview is the whole-topology view; X-Ray visualizes the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
 
   <div id="nx-problem"></div>
   <div class="ov-frame" id="ov-frame-nextui">
@@ -132,7 +135,7 @@
   var I18N = {
     en: { autorefresh: 'Auto-refresh',
       subtitle: '(containerlab NeXt UI × X-Ray DeepDive)',
-      intro: 'Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.',
+      intro: 'The Overview is a view rendered by the <b>containerlab graph</b> (NeXt UI, any size). <b>Click any node</b> to look <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The Overview is the whole-topology view; X-Ray visualizes the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.',
       topo_label: 'ContainerLab Topology',
       horizontal: 'Horizontal',
       vertical: 'Vertical',
@@ -140,12 +143,12 @@
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
     ja: { autorefresh: '自動更新',
-      subtitle: '(containerlab NeXt UI × X-Ray ディープダイブ)',
-      intro: 'オーバービューは素の <b>containerlab graph</b>（NeXt UI・サイズ自由）。<b>ノードをクリック</b>すると、その下に<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。オーバービューはありふれた図、X-Ray がノード単位の DeepDive を足します。ノード名はトポロジ定義（clab.yml の <code>nodes:</code>）由来で、機器のホスト名ではありません。',
+      subtitle: '(containerlab NeXt UI × X-Ray DeepDive)',
+      intro: 'Overview は <b>containerlab graph</b> による表示です（NeXt UI・サイズ自由）。<b>ノードをクリック</b>すると、その下に<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。Overview は全体図、X-Ray がノード単位の DeepDive を可視化します。ノード名はトポロジ定義（clab.yml の <code>nodes:</code>）由来で、機器のホスト名ではありません。',
       topo_label: 'コンテナラボ トポロジ',
       horizontal: '横',
       vertical: '縦',
-      hint: '▲ オーバービュー（NeXt UI） &nbsp;·&nbsp; <b>ノードをクリック</b> &nbsp;·&nbsp; ▼ X-Ray ディープダイブ',
+      hint: '▲ オーバービュー（NeXt UI） &nbsp;·&nbsp; <b>ノードをクリック</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
   };
@@ -159,15 +162,16 @@
       var k = el.getAttribute('data-i18n'); if (d[k] != null) el.innerHTML = d[k];
     });
     document.documentElement.setAttribute('lang', lang);
-    var btn = document.getElementById('lang-toggle');
-    if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
+    var sw = document.getElementById('lang-toggle');
+    if (sw) { var _as = sw.querySelectorAll('[data-lang]'); for (var _i = 0; _i < _as.length; _i++) { _as[_i].className = (_as[_i].getAttribute('data-lang') === lang) ? 'on' : ''; } }
     try { localStorage.setItem('nx-lang', lang); } catch(e){}
+    if (window.__nxPaintProblem) window.__nxPaintProblem(lang);
   }
   window.__xrayApplyI18n = function(){ try { apply(pickLang()); } catch(e){} };
   function init(){
     apply(pickLang());
-    var btn = document.getElementById('lang-toggle');
-    if (btn) btn.addEventListener('click', function(){ apply(pickLang() === 'en' ? 'ja' : 'en'); });
+    var sw = document.getElementById('lang-toggle');
+    if (sw) { var _as = sw.querySelectorAll('[data-lang]'); for (var _i = 0; _i < _as.length; _i++) { _as[_i].addEventListener('click', function(e){ e.preventDefault(); apply(this.getAttribute('data-lang')); }); } }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
@@ -525,20 +529,16 @@ window.__initNeXtOverview = function (data) {
           ja: { title: pj.title_ja || pj.title_en || pj.title || '', body: pj.problem_ja || pj.problem_en || pj.problem || '', cta: pj.cta_label_ja || ctaJaDef, url: baseUrl }
         };
         var hasJa = !!(pj.title_ja || pj.problem_ja);
-        var cur = 'en';
-        try { var st = localStorage.getItem('nx-problem-lang'); if (st === 'ja' && hasJa) cur = 'ja'; } catch (e) {}
-        function paint(){
-          var c = C[cur];
-          host.innerHTML = '<div class="nxp-head"><span class="nxp-badge">' + esc(pj.q_number) + '</span>'
-            + (hasJa ? '<span class="nxp-lang"><a data-nxl="en" class="' + (cur === 'en' ? 'on' : '') + '">EN</a> / <a data-nxl="ja" class="' + (cur === 'ja' ? 'on' : '') + '">日本語</a></span>' : '')
-            + '</div>'
+        window.__nxPaintProblem = function(lang){
+          var L = (lang === 'ja' && hasJa) ? 'ja' : 'en';
+          var c = C[L];
+          host.innerHTML = '<div class="nxp-head"><span class="nxp-badge">' + esc(pj.q_number) + '</span></div>'
             + '<div class="nxp-title">' + esc(c.title) + '</div>'
             + '<div class="nxp-body">' + esc(c.body) + '</div>'
             + '<a class="nxp-cta" href="' + c.url + '" target="_blank" rel="noopener">&#9654; ' + esc(c.cta) + '</a>';
-          var links = host.querySelectorAll('[data-nxl]');
-          for (var i = 0; i < links.length; i++) { links[i].onclick = function(e){ e.preventDefault(); cur = this.getAttribute('data-nxl'); try { localStorage.setItem('nx-problem-lang', cur); } catch (x) {} paint(); }; }
-        }
-        paint();
+        };
+        var _pl = 'en'; try { var _s = localStorage.getItem('nx-lang'); if (_s) _pl = _s; } catch (e) {}
+        window.__nxPaintProblem(_pl);
         host.style.display = 'block';
       }).catch(function(){});
     } catch (e) {}
