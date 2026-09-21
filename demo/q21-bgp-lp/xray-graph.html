@@ -641,6 +641,28 @@ window.__nxSetOverview = function(mode){
     if(nu)nu.style.display=''; if(sv)sv.style.display='none';
     if(btn) btn.textContent='Static overview';
   }
+  // nx_overview_toggle_reangle: the overview toggle only showed/hid the two overviews; the open DeepDive kept the
+  // tunnel angles it computed under the PREVIOUS view -> in a quiescent lab they stay frozen (e.g. NeXt
+  // angles while the static inverted-V is shown). Re-render the open DeepDive so the engine recomputes
+  // angles against the now-active overview. tunnel-instant CSS (transition:none) makes this snap with no
+  // angle-move animation. rAF x2 so the just-shown overview has laid out before we read its geometry.
+  try {
+    if (window.__xrayCurNode) {
+      var _reangle = function(){
+        try {
+          if (mode === 'static') {
+            var pm={}; document.querySelectorAll('#ov .ov-node').forEach(function(bn){
+              var nm=bn.getAttribute('data-n'); if(!nm) return; var r=bn.getBoundingClientRect();
+              if(r.width>0) pm[nm]={x:r.x+r.width/2, y:r.y+r.height/2};
+            });
+            if (window.__xrayApplyLayout && Object.keys(pm).length){ window.__xrayApplyLayout(pm); return; }
+          } else if (window.__xrayPushLayout){ window.__xrayPushLayout(); return; }
+          if (window.__xrayShowNode) window.__xrayShowNode(window.__xrayCurNode);
+        } catch(e){}
+      };
+      requestAnimationFrame(function(){ requestAnimationFrame(_reangle); });
+    }
+  } catch(e){}
 };
 (function(){ var t=document.getElementById('ov-toggle'); if(t) t.addEventListener('click', function(){ var cur; try{cur=localStorage.getItem('nx-overview')||'nextui';}catch(e){cur='nextui';} window.__nxSetOverview(cur==='static'?'nextui':'static'); }); })();
 </script>
