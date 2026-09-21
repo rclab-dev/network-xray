@@ -1,0 +1,16 @@
+name: q21-bgp-lp
+# network-xray demo lab — RCL "Q21" faithful: 3 FRR routers, eBGP, a SINGLE prefix
+# 8.8.8.0/24 reachable via both r2 (AS65002) and r3 (AS65003). r1 de-preferences r2 with
+# LocalPref 50 (route-map LOW_LP), so r3 (default LocalPref 100) wins by Local Preference
+# (100 > 50). The X-Ray Best-Path Decision shows the winner + reason; clicking the loser
+# row draws the counterfactual (Loser-Path) arrow with "LocPrf 50 < 100".
+#   Next-Hop: r2 = 10.10.0.20 (loser, LP50) · r3 = 10.11.0.20 (best, LP100)
+# Matches RouteCrushLab Q21 and the Zenn article "bgp-bestpath-visualized".
+topology:
+  nodes:
+    r1: { kind: linux, image: frrouting/frr:latest, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf, r1/vtysh.conf:/etc/frr/vtysh.conf] }
+    r2: { kind: linux, image: frrouting/frr:latest, binds: [r2/daemons:/etc/frr/daemons, r2/frr.conf:/etc/frr/frr.conf, r2/vtysh.conf:/etc/frr/vtysh.conf] }
+    r3: { kind: linux, image: frrouting/frr:latest, binds: [r3/daemons:/etc/frr/daemons, r3/frr.conf:/etc/frr/frr.conf, r3/vtysh.conf:/etc/frr/vtysh.conf] }
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]
+    - endpoints: ["r1:eth2", "r3:eth1"]

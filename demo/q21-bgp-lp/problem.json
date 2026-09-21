@@ -1,0 +1,10 @@
+{
+  "q_number": "Q21",
+  "title_en": "Why was this path chosen? — BGP Local Preference",
+  "title_ja": "なぜこの経路が選ばれた？— BGP Local Preference",
+  "problem_en": "r1 hears 8.8.8.0/24 from both r2 and r3. r1 de-prefers r2 with LocalPref 50, so r3 (default 100) wins. Open r1 and read the Best-Path Decision in the DeepDive to see why.",
+  "problem_ja": "8.8.8.0/24 を r2・r3 双方から受信。r1 が r2 を LocalPref 50 に下げ、r3（既定100）が勝つ。r1 を開き DeepDive の Best-Path Decision で理由を見る。",
+  "rcl_qid": "q21",
+  "rcl_mode": "tl",
+  "ref": "oss-clab"
+}
