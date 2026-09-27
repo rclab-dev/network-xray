@@ -313,6 +313,15 @@ function xrayEvaluateState(s) {
   var _ls = _xrayLinkSides(s);
   state.outLinkDown = _ls.outDown;
   state.inLinkDown = _ls.inDown;
+  // nx_hello_discard: an incoming Hello is link-level. If the peer sends Hello on this link and the link is up,
+  // the Hello reaches this interface even when this node does not run OSPF; it is then discarded (not processed).
+  // (protocol === "ospf" keeps its own helloIn below.) Collector fills peer_sending_hello from the PEER's state.
+  // nx_hello_recv_perlink: per link — some peer sends Hello on a link that is up here.
+  var _pshL = s.peer_sending_hellos || {}, _pshK = Object.keys(_pshL);
+  var _recvAny = _pshK.length ? _pshK.some(function (p) { var ifn = s[p + "_iface"]; return !!_pshL[p] && !(ifn && _xrayLinkDown(s, ifn)); })
+                              : (!!s.peer_sending_hello && !_ls.outDown && !_ls.inDown);
+  state.helloDiscard = protocol !== "ospf" && _recvAny;
+  if (state.helloDiscard) state.helloIn = true;
   if (protocol === "ospf") {
     var ns = s.neighbor_state || "None";
     state.helloIn = !!s.peer_sending_hello;
@@ -435,6 +444,7 @@ function xrayApplyHierarchy(state) {
   var _ho = _useLeft ? "hello-left-out" : "hello-out";
   state.helloIn ? b.add(_hi) : b.remove(_hi);
   state.helloOut ? b.add(_ho) : b.remove(_ho);
+  b.toggle("hello-discard", !!state.helloDiscard);  /* nx_hello_discard */
   b.remove(_useLeft ? "hello-in" : "hello-left-in");
   b.remove(_useLeft ? "hello-out" : "hello-left-out");
   state.cleared ? b.add("is-cleared") : b.remove("is-cleared");
@@ -1289,6 +1299,8 @@ var _HELLO_TRAVEL_TIME = 1.5;
 
 var _helloKfCache = {};
 
+/* nx_hello_orange: every Hello orb keeps the normal colour; a discarded incoming Hello differs only in motion
+   (it stops at the interface and fades, see the "in-discard" keyframe positions). */
 function _xrayBuildHelloKf(name, interval, direction) {
   var key = name + "_" + interval;
   if (_helloKfCache[key]) return _helloKfCache[key];
@@ -1311,6 +1323,15 @@ function _xrayBuildHelloKf(name, interval, direction) {
     "left-in": {
       start: "12px",
       end: "calc(50% - 10px)"
+    },
+    // nx_hello_discard: stop at the interface (cylinder surface) and fade there
+    "in-discard": {
+      start: "calc(100% - 12px)",
+      end: "calc(50% + 70px)"
+    },
+    "left-in-discard": {
+      start: "12px",
+      end: "calc(50% - 70px)"
     }
   };
   var pos = positions[direction] || positions["out"];
@@ -1439,7 +1460,7 @@ function _xrayApplyHelloTiming(state) {
     outOrb.style.animation = kf + " " + r1Hello + "s ease-in-out infinite";
   }
   if (!_triDeepH && inOrb && state.helloIn) {
-    var kf = _xrayBuildHelloKf("deHIn", r2Hello, "in");
+    var kf = state.helloDiscard ? _xrayBuildHelloKf("deHInDiscard", r2Hello, "in-discard") : _xrayBuildHelloKf("deHIn", r2Hello, "in");  /* nx_hello_discard */
     inOrb.style.animation = kf + " " + r2Hello + "s ease-in-out " + Math.floor(r2Hello / 2) + "s infinite";
   }
   _xrayEnsureOvHelloElements();
@@ -1473,7 +1494,7 @@ function _xrayApplyHelloTiming(state) {
     leftOut.style.animation = kfLO + " " + r1Hello + "s ease-in-out infinite";
   }
   if (!_triDeepH && leftIn) {
-    var kfLI = _xrayBuildHelloKf("deHLI", r2Hello, "left-in");
+    var kfLI = state.helloDiscard ? _xrayBuildHelloKf("deHLIDiscard", r2Hello, "left-in-discard") : _xrayBuildHelloKf("deHLI", r2Hello, "left-in");  /* nx_hello_discard */
     leftIn.style.animation = kfLI + " " + r2Hello + "s ease-in-out " + Math.floor(r2Hello / 2) + "s infinite";
   }
 }
@@ -4767,7 +4788,7 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += '<div class="de-packet"></div><div class="de-packet p2"></div>';
   html += '<div class="de-ping-orb" id="de-ping-req"></div><div class="de-ping-orb reply" id="de-ping-rep"></div>';
   html += '<div class="de-ping-orb left-req"></div><div class="de-ping-orb left-rep"></div>';
-  if (isOspf || isBgp) {
+  if (isOspf || isBgp || !!_deSt.peer_sending_hello) {  /* nx_hello_discard */
     html += '<div class="de-hello-orb out"></div><div class="de-hello-orb in"></div>';
     html += '<div class="de-hello-orb left-out"></div><div class="de-hello-orb left-in"></div>';
   }
@@ -5893,6 +5914,7 @@ function xrayBuildApplyState(config) {
       _xrayApplyDualLinkDirection(s, _triNodes);
       document.body.classList.toggle("is-input-down", _liDown);
       document.body.classList.toggle("is-output-down", _riDown);
+      if (!(pattern === "ospf_triangle" || protocol === "ospf") && s.peer_sending_hello) _xrayApplyDualLinkHello(s, _leftLink.ifName, _rightLink.ifName, _lId, _rId);  /* nx_hello_recv_all */
       if (pattern === "ospf_triangle" || protocol === "ospf") {
         var _ifaces = s.interfaces || {};
         var _lIfDown = s[_lId + "_iface"] && _ifaces[s[_lId + "_iface"]] && !_ifaces[s[_lId + "_iface"]].up;
@@ -9294,7 +9316,9 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
       var _fromC = _isLeftB ? "calc(50% - 10px)" : "calc(50% + 10px)";
       var _endStr = _isLeftB ? "calc(50% - " + _far + "px)" : "calc(50% + " + _far + "px)";
       _kfParts.push(_mkKf(kfOut + "P", _fromC, _endStr, outH));
-      _kfParts.push(_mkKf(kfIn + "P", _endStr, _fromC, inH));
+      var _selfNoOspf = !(window.__xrayDeriveProto && window.__xrayDeriveProto(s).ospf);  /* nx_hello_recv_all */
+      var _inTo = _selfNoOspf ? (_isLeftB ? "calc(50% - 70px)" : "calc(50% + 70px)") : _fromC;
+      _kfParts.push(_mkKf(kfIn + "P", _endStr, _inTo, inH));
     }
     var _oAnim = kfOut + "P " + outH + "s linear " + (-(outH * _phF)).toFixed(2) + "s infinite";
     var _iAnim = kfIn + "P " + inH + "s linear " + _inDelay.toFixed(2) + "s infinite";
@@ -9964,7 +9988,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
   var isOspf = protoRaw === "ospf";
   var ospfFull = _xrayOspfFull(s);  /* nx_ospf_full_helper */
   var helloSend = isOspf && !!(ospfFull || s.ospf_active_on_interface);
-  var helloRecv = isOspf;
+  var helloRecv = (s.peer_sending_hellos && Object.keys(s.peer_sending_hellos).length) ? !!s.peer_sending_hello : isOspf;  /* nx_hello_recv_all */
   var peers = nodes.filter(function(n) {
     return n.id !== targetId;
   });
@@ -9994,6 +10018,8 @@ function _xrayUnifiedNodeFromLive(config, s) {
           send: !!(_selfHello || est),
           recv: !!_peerHello
         };
+      } else if (iface && _psh[pid] && ifUp(iface)) {
+        ph = { send: false, recv: true };  /* nx_hello_recv_all: peer sends on this link; we don't run OSPF */
       }
       return {
         iface: iface || pid,
@@ -10032,7 +10058,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
         })) ? {
           send: helloSend,
           recv: helloRecv
-        } : null,
+        } : (!isOspf && isOut && s.peer_sending_hello && ifUp(ifn) ? { send: false, recv: true } : null),  /* nx_hello_recv_all */
         selected: isOut,
         up: ifUp(ifn)
       };
@@ -10048,7 +10074,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
       ospfHello: isOut && isOspf ? {
         send: helloSend,
         recv: helloRecv
-      } : null,
+      } : (isOut && !isOspf && s.peer_sending_hello && ifUp(ifn) ? { send: false, recv: true } : null),  /* nx_hello_recv_all */
       selected: isOut,
       up: ifUp(ifn)
     };
