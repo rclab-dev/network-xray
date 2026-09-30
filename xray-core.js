@@ -1628,7 +1628,7 @@ window.xrayCfDraw = function() {
   var cfP = de._deFlow.querySelector(".de-fwd-cf"), cfLd = de._deFlow.querySelector(".de-cf-leader");
   var cf = window._xrayCf, side = cf && cf.side ? cf.side : null;
   var isBest = cf && cf.kind === "best", isLoser = cf && cf.kind === "loser";
-  var arw = function(cn){ var ax = C[0] + (cn[0] - C[0]) * 0.82, ay = C[1] + (cn[1] - C[1]) * 0.82; return { d: q(C, [ (C[0]+ax)/2, (C[1]+ay)/2 ], [ax, ay]), x: ax, y: ay }; };
+  var arw = function(cn){ var ax = C[0] + (cn[0] - C[0]) * 0.90, ay = C[1] + (cn[1] - C[1]) * 0.90; return { d: q(C, [ (C[0]+ax)/2, (C[1]+ay)/2 ], [ax, ay]), x: ax, y: ay }; };
 
   if (fb && window._xrayArrowClickDriven) {
     if (isBest && side) {
@@ -1656,8 +1656,83 @@ window.xrayCfDraw = function() {
   }
 };
 window.xrayCfShow = function(kind, side, badge) { window._xrayCf = { kind: kind, side: side, badge: badge, bestVia: (window._lastXrayState && window._lastXrayState.best_path_via) || "" }; window.xrayCfDraw(); };
-window.xrayCfClear = function() { window._xrayCf = null; if (window.xrayCfDraw) window.xrayCfDraw(); var _lr = document.querySelectorAll(".de-bgp-table tr.cf-on"); for (var i = 0; i < _lr.length; i++) _lr[i].classList.remove("cf-on"); };
-(function(){ if (document.getElementById("xray-cf-css")) return; var st = document.createElement("style"); st.id = "xray-cf-css"; st.textContent = ".de-bgp-panel .de-bgp-table tr.cf-on td{background:rgba(200,212,224,0.10)!important;box-shadow:inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}.de-bgp-panel .de-bgp-table tr.cf-on td:first-child{box-shadow:inset 3px 0 0 #8a97a6,inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}"; (document.head||document.documentElement).appendChild(st); })();
+// Loser-Path: click a non-best BGP row -> grey dashed arrow toward the loser peer + "why it lost" badge.
+// The loser side comes from the row's next hop (mapped to the apex peer iface the same way the live
+// arrow follow maps the winner), not from the current arrow direction. Ephemeral: cleared on re-click,
+// when the best path changes, and on DeepDive close. Not shown during TRACE.
+function _xrayCfIfaceForNh(nh) {
+  var s = window._lastXrayState;
+  if (!s || !nh) return null;
+  var ifs = s.interfaces || {}, base3 = String(nh).split(".").slice(0, 3).join("."), wif = null;
+  Object.keys(ifs).forEach(function(k) { if (k !== "lo") { var ip = (ifs[k].ip || "").split("/")[0]; if (ip && ip.split(".").slice(0, 3).join(".") === base3) wif = k; } });
+  return wif;
+}
+// Best-row click: point the purple FORWARD arrow (with its prefix label) at this prefix's winner, using the
+// same selection state as a Routing-table row click, so the two stay consistent (the last click wins).
+function _xrayBestArrowFor(pfx) {
+  var s = window._lastXrayState, grp = (window._xrayLastBgpRoutes || []).filter(function(r) { return r && r.prefix === pfx; });
+  var best = grp.filter(function(r) { return (r.status || "").indexOf(">") !== -1; })[0];
+  var oif = best && _xrayCfIfaceForNh(best.nexthop || best.next_hop);
+  // no peer-side winner (e.g. a locally originated prefix, next hop 0.0.0.0): no arrow rather than a stale one
+  if (!oif || typeof window.xraySetForwardIface !== "function") { window._xrayRtSel = null; document.body.classList.add("xray-rt-noarrow"); return false; }
+  var rtp = pfx;
+  ((s && s.routing_table) || []).some(function(r) { if (r && r.prefix && (r.prefix === pfx || r.prefix.indexOf(pfx + "/") === 0)) { rtp = r.prefix; return true; } return false; });
+  window._xrayRtSel = { prefix: rtp, iface: oif };
+  var dir = window.xraySetForwardIface(oif);
+  if (!dir) { window._xrayRtSel = null; return false; }
+  document.body.classList.remove("xray-rt-noarrow");
+  if (typeof _xrayDeAngleView === "function" && s) _xrayDeAngleView(s);
+  return true;
+}
+window._xrayBestArrowFor = _xrayBestArrowFor;
+// Hide the Best-Path Decision (and drop the selected best-row highlight) — used when the current selection
+// is not a BGP best path, so the panel never explains a different prefix than the one on screen.
+function _xrayDecisionHide() {
+  window._xrayBgpSelPrefix = null;
+  var rs = window._xrayLastBgpRoutes;
+  if (Array.isArray(rs) && typeof xrayBuildBgpView === "function") {
+    var v = xrayBuildBgpView(rs), tbl = document.querySelector(".de-bgp-panel .de-bgp-table");
+    if (tbl && tbl.parentNode) { var tmp = document.createElement("div"); tmp.innerHTML = v.table; var nt = tmp.querySelector("table"); if (nt) tbl.parentNode.replaceChild(nt, tbl); }
+  }
+  var drows = document.querySelector(".de-bgp-decision-panel .de-bgp-decision-rows"); if (drows) drows.innerHTML = "";
+  var dbox = document.getElementById("de-bgp-decision-panel"); if (dbox) dbox.style.display = "none";
+}
+window._xrayDecisionHide = _xrayDecisionHide;
+// RT-row click: the Decision follows the row when that prefix is in the BGP table, otherwise it is hidden.
+function _xrayDecisionFollow(pfx) {
+  if (!pfx || typeof window.xrayBgpShowDecision !== "function") return;
+  var bare = String(pfx).replace(/\/\d+$/, ""), rs = window._xrayLastBgpRoutes || [];
+  var hit = rs.filter(function(r) { return r && (r.prefix === pfx || r.prefix === bare); })[0];
+  if (!hit) { _xrayDecisionHide(); return; }
+  window._xrayDecOnly = true;
+  try { window.xrayBgpShowDecision(hit.prefix); } finally { window._xrayDecOnly = false; }
+}
+window._xrayDecisionFollow = _xrayDecisionFollow;
+function _xrayCfSideForNh(nh) {
+  var s = window._lastXrayState, tn = window._triNodes;
+  if (!s || !nh || !tn) return null;
+  var wif = _xrayCfIfaceForNh(nh);
+  var dbg = window._xrayDirDbg || {};
+  var lIf = s[tn.left + "_iface"] || dbg.lIf, rIf = s[tn.right + "_iface"] || dbg.rIf;
+  return wif && wif === lIf ? "left" : wif && wif === rIf ? "right" : null;
+}
+window.xrayCfToggle = function(rowEl, pfx, nh) {
+  if (document.body.classList.contains("trace-active")) return;
+  var cur = window._xrayCf;
+  if (cur && cur.kind === "loser" && cur.pfx === pfx && cur.nh === nh) { window.xrayCfClear(); return; }
+  var info = (window._xrayCfRows || {})[pfx + "|" + nh], side = _xrayCfSideForNh(nh);
+  if (!info || !side) return;
+  window.xrayCfClear();
+  // Loser shown alone: drop the purple arrow + prefix label (back to the no-arrow state) before drawing the grey one.
+  window._xrayRtSel = null; document.body.classList.add("xray-rt-noarrow");
+  window.xrayCfShow("loser", side, info.reason);
+  window._xrayCf.pfx = pfx; window._xrayCf.nh = nh; window._xrayCf.bestNh = info.bestNh;
+  if (rowEl && rowEl.classList) rowEl.classList.add("cf-on");
+  if (window._xrayDecisionHide) window._xrayDecisionHide();   // loser shown alone: no Decision, no purple arrow, no prefix label
+  document.body.classList.add("xray-cf-on");   // un-hide svg.de-flow under xray-rt-noarrow (only .de-fwd-cf shows)
+};
+window.xrayCfClear = function() { window._xrayCf = null; document.body.classList.remove("xray-cf-on"); if (window.xrayCfDraw) window.xrayCfDraw(); var _lr = document.querySelectorAll(".de-bgp-table tr.cf-on"); for (var i = 0; i < _lr.length; i++) _lr[i].classList.remove("cf-on"); };
+(function(){ if (document.getElementById("xray-cf-css")) return; var st = document.createElement("style"); st.id = "xray-cf-css"; st.textContent = "body:not(.trace-active) .de-bgp-panel .de-bgp-table tr.de-bgp-loser{cursor:pointer}body.xray-rt-noarrow.xray-cf-on .de-flow{display:block!important}body.xray-rt-noarrow.xray-cf-on .de-flow .de-fwd-dest{display:none!important}.de-bgp-panel .de-bgp-table tr.cf-on td{background:rgba(200,212,224,0.10)!important;box-shadow:inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}.de-bgp-panel .de-bgp-table tr.cf-on td:first-child{box-shadow:inset 3px 0 0 #8a97a6,inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}"; (document.head||document.documentElement).appendChild(st); })();
 
 function xrayDeepDiveClose() {
   if (window.xrayCfClear) window.xrayCfClear();
@@ -2312,6 +2387,8 @@ function _xrayPaintRoutingPanel(s) {
     if (!tr || !el.contains(tr)) return;
     ev.stopPropagation();
     var pfx = tr.getAttribute("data-prefix");
+    if (window._xrayCf && window.xrayCfClear) window.xrayCfClear();   /* purple-arrow selections end the Loser-Path */
+    if (window._xrayDecisionFollow) window._xrayDecisionFollow(pfx);
     var ls = window._lastXrayState;
     var lrt = (ls && ls.routing_table) || rt;
     // Prefer the installed (selected) row for this prefix so the arrow follows the same route the
@@ -10921,6 +10998,10 @@ window.xrayBgpEnsureRaise = function() {
 };
 window.xrayBgpShowDecision = function(pfx){
   if(!pfx) return;
+  if (!window._xrayDecOnly) {   /* _xrayDecOnly = just retarget the Decision (loser / RT-row clicks) */
+    if (window._xrayCf && window.xrayCfClear) window.xrayCfClear();   /* Loser-Path is ephemeral: a best-row click shows the Decision instead */
+    if (!document.body.classList.contains("trace-active") && window._xrayBestArrowFor) window._xrayBestArrowFor(pfx);   /* purple arrow + prefix toward this prefix's winner */
+  }
   window._xrayBgpSelPrefix = pfx;
   // nx_state_driven_tab: a prefix click means the user wants the Best-Path Decision -> switch the dual
   // right-bottom tab to Best-Path (default tab is LSDB; Best-Path is click-triggered). No-op if not dual.
@@ -10939,6 +11020,8 @@ window.xrayBgpShowDecision = function(pfx){
 function xrayBuildBgpView(routes) {
   /* LocPrf field parity: accept local_pref when locprf is empty, so non-best paths render their real LocPrf. */
   if (Array.isArray(routes)) routes.forEach(function(r){ if (r && (r.locprf === undefined || r.locprf === null || r.locprf === '') && r.local_pref !== undefined && r.local_pref !== null && r.local_pref !== '') r.locprf = String(r.local_pref); });
+  /* Next-Hop field parity: the live collector emits next_hop; accept it when nexthop is empty (the column was blank). */
+  if (Array.isArray(routes)) routes.forEach(function(r){ if (r && !r.nexthop && r.next_hop) r.nexthop = r.next_hop; });
   window._xrayLastBgpRoutes = routes;   /* keep the last routes so click-reveal can rebuild the view */
   var order = [], groups = {};
   routes.forEach(function(r) {
@@ -10954,6 +11037,9 @@ function xrayBuildBgpView(routes) {
   order.forEach(function(p) {
     var grp = groups[p];
     var dec = xrayBgpDecision(grp);
+    var _cfBest = grp.filter(function(r) { return (r.status || "").indexOf(">") !== -1; })[0], _cfBestNh = _cfBest ? (_cfBest.nexthop || "") : "";
+    window._xrayCfRows = window._xrayCfRows || {};
+    if (window._xrayCf && window._xrayCf.kind === "loser" && window._xrayCf.pfx === p && window._xrayCf.bestNh !== _cfBestNh) setTimeout(function() { if (window.xrayCfClear) window.xrayCfClear(); }, 0);
     var decCol = dec && dec.kind === "decided" ? dec.col : null;
     grp.forEach(function(rt) {
       var st = rt.status || "";
@@ -10964,7 +11050,13 @@ function xrayBuildBgpView(routes) {
       function cell(colName, val) {
         return "<td" + (isBest && decCol === colName ? ' class="bgp-decider"' : "") + ">" + val + "</td>";
       }
-      html += "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"' : "") + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + (rt.prefix || "") + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";
+      var _cfTr = "";
+      if (!isBest && dec && dec.kind === "decided" && dec.criterion && rt.nexthop) {
+        window._xrayCfRows[p + "|" + rt.nexthop] = { reason: dec.criterion.label + " " + dec.cmpVal + " " + (dec.criterion.dir > 0 ? "<" : ">") + " " + dec.bestVal + " \u2715", bestNh: _cfBestNh };
+        var _cfOn = window._xrayCf && window._xrayCf.kind === "loser" && window._xrayCf.pfx === p && window._xrayCf.nh === rt.nexthop;
+        _cfTr = ' class="de-bgp-loser' + (_cfOn ? ' cf-on' : '') + '" onclick="event.stopPropagation();if(window.xrayCfToggle)window.xrayCfToggle(this,\'' + p + '\',\'' + rt.nexthop + '\')"';
+      }
+      html += "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"' : _cfTr) + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + (rt.prefix || "") + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";
     });
     if (p === window._xrayBgpSelPrefix) reasons += xrayBgpReasonHtml(p, dec, grp);   /* decision only for the currently selected prefix (hidden by default) */
   });
