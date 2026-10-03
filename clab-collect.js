@@ -305,9 +305,16 @@ function buildState(opts) {
   var rl = routes.filter(function (r) { return r.protocol === proto && r.selected && r.nexthops[0] && r.nexthops[0].ip; });
   var loop = rl.filter(function (r) { return /\/32$/.test(r.prefix); })[0];
   var chosen = loop || rl[0] || null;
+  // rr_static_hostroute_fallback: proto-matched RIB has no target (e.g. Q12 ospf-static where the target /32 is
+  // reached via a floating/base static, protocol!=proto) -> resolve rr from the selected best route
+  // in the RIB so the DeepDive draws the forward arrow + RE Route line + dest (rr feeds many consumers).
+  if (!chosen) {
+    var _srl = routes.filter(function (r) { return r.selected && r.nexthops[0] && r.nexthops[0].ip && r.nexthops[0].iface && r.nexthops[0].iface !== 'lo'; });
+    chosen = _srl.filter(function (r) { return /\/32$/.test(r.prefix); })[0] || _srl[0] || null;
+  }
   var routeOk = !!chosen;
   var route_resolution = chosen ? {
-    target: chosen.prefix.split('/')[0], resolved: true, protocol: proto,
+    target: chosen.prefix.split('/')[0], resolved: true, protocol: chosen.protocol || proto,
     out_iface: chosen.nexthops[0].iface || _resolveIface(chosen.nexthops[0].ip), next_hop: chosen.nexthops[0].ip,
     matched_prefix: chosen.prefix
   } : { target: '', resolved: false, protocol: '', out_iface: '', next_hop: '', matched_prefix: '' };
@@ -376,14 +383,15 @@ function buildState(opts) {
   if (proto === 'bgp') {
     s.is_established = fullCount > 0;
     s.has_bgp_route = routeOk && fullCount > 0;
-    s.protocol = 'bgp';
+    if (s.bgp_configured) s.protocol = 'bgp';  /* nx_state_driven: only when BGP actually configured (was forced for --proto bgp) */
     s.ping_ok = routeOk && fullCount > 0;
     s.has_ospf_route = false;
     // We ran --proto bgp against this node, so BGP IS configured here. Surface that + a session
     // state so a down/isolated node reads "BGP: Active" (configured, not up) instead of the engine's
     // "NOT CONFIGURED" default (which is for RCL scenarios with no bgp data at all).
-    s.bgp_configured = true;
-    if (!s.is_established) {
+    /* nx_state_driven: (removed the former `s.bgp_configured = true;` collect-mode force — L356 config-gates */
+    /* bgp_configured from opts.bgpConfigured=running-config `router bgp`, so live BGP removal is reflected. */
+    if (s.bgp_configured && !s.is_established) {  /* nx_state_driven: no bgp_state residual when BGP removed from config */
       var _dp = peers.filter(function (p) { return !p.full; })[0];
       s.bgp_state = (_dp && _dp.state && _dp.state !== 'Down') ? _dp.state : 'Active';
     }
@@ -420,8 +428,11 @@ function buildState(opts) {
   // so the DeepDive LSDB can show the whole picture (link networks + remote loopbacks) instead of
   // just the one decision target. OSPF only: LSDB is an OSPF concept; BGP learned routes go through
   // s.bgp_routes (the BGP table), not here.
-  if (proto !== 'bgp') {
-    s.lsdb_prefixes = routes.filter(function (r) { return r.protocol === proto; }).map(function (r) {
+  // nx_state_driven: LSDB is an OSPF concept -> build from OSPF routes whenever OSPF is configured, regardless
+  // of collect --proto (an OSPF node in a bgp-collected/mixed lab, or after live BGP removal, still has an LSDB).
+  // Was gated on proto!=='bgp' + filtered by collect-mode proto -> empty LSDB for OSPF nodes under --proto bgp.
+  if (s.ospf_configured) {
+    s.lsdb_prefixes = routes.filter(function (r) { return r.protocol === 'ospf'; }).map(function (r) {
       var via = (r.nexthops && r.nexthops[0]) || {};
       return { text: r.prefix, own: !via.ip, via: via.ip || via.iface || '' };
     });
@@ -526,6 +537,23 @@ function buildState(opts) {
     s[p.name + '_ospf_full'] = !!(_on && _on.full);
     s[p.name + '_ospf_state'] = _on ? (_on.full ? 'Full' : _on.state) : (s.ospf_configured ? 'Down' : 'None');
   });
+  // nx_bgp_mode_ospf_hello (2026-10-01): --proto bgp skips the OSPF Hello maps above (`if (proto !== 'bgp')`),
+  // so a BGP-collected node that ALSO runs OSPF (coexist / OSPF-only after BGP removal) drew no Hello at all.
+  // Same rules as the ospf branch: OUT = local iface listed by `show ip ospf interface`; IN = this peer's
+  // REAL OSPF neighbor (_ospfByPeer) is Init or beyond. Only fills the maps when empty (ospf mode unchanged).
+  if (proto === 'bgp' && s.ospf_configured) {
+    var _ih = s.iface_hellos || {}, _ph = s.peer_hellos || {}, _psh = s.peer_sending_hellos || {};
+    if (!Object.keys(_ih).length && !Object.keys(_ph).length && !Object.keys(_psh).length) {
+      peers.forEach(function (p) {
+        if (p.iface && ifs[p.iface]) _ih[p.iface] = ifs[p.iface].hello || 10;
+        var _on = _ospfByPeer[p.name];
+        var _up = !!(_on && (_on.full || /^(full|loading|exchange|exstart|2-?way|init)/i.test(_on.state || '')));
+        _psh[p.name] = _up;
+        if (_up) _ph[p.name] = (ifs[p.iface] && ifs[p.iface].hello) || 10;
+      });
+      s.iface_hellos = _ih; s.peer_hellos = _ph; s.peer_sending_hellos = _psh;
+    }
+  }
 
   return s;
 }

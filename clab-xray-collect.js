@@ -112,7 +112,7 @@ function collectAll() {
     var script = srl ? srlCollect : collect;
     var adjStr = adj[n].map(function (l) { return (srl ? srlIface(l.iface) : l.iface) + ':' + l.peer; }).join(',');
     var mg = srl ? '' : mgmtArg;   // --exclude-mgmt is an FRR-collector flag; srl ignores it
-    var out = path.join(os.tmpdir(), 'xray-state-' + n + '.json');
+    var out = path.join(os.tmpdir(), 'xray-state-' + lab + '-' + n + '.json');   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
     try {
       cp.execSync('node ' + JSON.stringify(script) + ' --lab ' + lab + ' --node ' + n +
         ' --proto ' + proto + ' --adj ' + adjStr + mg + ' --out ' + JSON.stringify(out),
