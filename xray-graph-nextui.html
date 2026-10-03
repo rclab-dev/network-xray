@@ -46,7 +46,12 @@
   .ov-bar button:first-of-type{border-radius:6px 0 0 6px}
   .ov-bar button:last-of-type{border-radius:0 6px 6px 0;border-left:none}
   .ov-bar button.cur{color:#fff;background:#0386d2}
-  #clab-topology{width:100%;height:360px}
+  #clab-topology{width:100%;height:360px;position:relative}
+  /* nx_static_align_reposition: mask NeXt UI force shuffle until nodes are re-aligned to RCL layout */
+  .nx-wait-overlay{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fbfdff;color:#607d8b;font:13px -apple-system,Segoe UI,sans-serif;transition:opacity .35s ease}
+  .nx-wait-overlay.hide{opacity:0;pointer-events:none}
+  .nx-wait-overlay .sp{width:30px;height:30px;border:3px solid #cfe0ea;border-top-color:#4dd0e1;border-radius:50%;animation:nxsp .9s linear infinite;margin-bottom:10px}
+  @keyframes nxsp{to{transform:rotate(360deg)}}
 
   .hint{text-align:center;color:#607d8b;font-size:12px;margin:6px 0 2px}
   .hint b{color:#4dd0e1}
@@ -251,6 +256,10 @@ window.__xrayGraphBoot = function () {
       }
     }catch(e){}
     document.body.classList.remove('is-xray-deep');
+    document.body.classList.remove('show-bestpath');  // nx_state_driven_tabreset: fresh DeepDive defaults to LSDB (Best-Path is click-triggered)
+    if (_st) window._lastXrayState = _st;  // nx_state_driven_lxs: engine's state-driven isOspf/isBgp reads
+                                            // window._lastXrayState at build time — set it to THIS node's
+                                            // state before render (else a stale prior node's state leaks in).
     window.xrayCore.renderTopology('#topo', _cfg, { topology: v.scene.topo, trace:{success:true,reached:true,hops:[]} });
     window.xrayCore.openDeepDiveFor(nodeId, _st);
     if (window.xrayCore && typeof window.xrayCore.setBgpTable === 'function') {
@@ -353,6 +362,71 @@ window.__initNeXtOverview = function (data) {
     tooltipManagerConfig:{ nodeTooltipContentClass:'CustomNodeTooltip' }
   });
   window.__nxTopo = topo;
+  // nx_static_align_reposition: after NeXt's force layout settles, snap nodes to the RCL 'Static view' layout
+  // (hub top-centre / leaves bottom, 2-node left-right). A 'Please Wait' overlay hides the shuffle;
+  // it fades out once nodes have landed. tunnel-instant means the DeepDive re-angle is jump-free.
+  (function(){
+    var host = document.getElementById('clab-topology');
+    var ov = null;
+    if (host) { ov = document.createElement('div'); ov.className='nx-wait-overlay';
+      ov.innerHTML = '<div class="sp"></div><div>Please wait\u2026 arranging topology</div>'; host.appendChild(ov); }
+    function _pos(){ var gd = data || {}; var names=(gd.nodes||[]).map(function(n){return n.name;}).filter(Boolean);
+      var adj={}; names.forEach(function(n){adj[n]=[];});
+      (gd.links||[]).forEach(function(l){var a=l.source,b=l.target; if(!a||!b||a===b)return; if(adj[a]&&adj[a].indexOf(b)<0)adj[a].push(b); if(adj[b]&&adj[b].indexOf(a)<0)adj[b].push(a);});
+      var deg=function(n){return (adj[n]||[]).length;}; var W=560,H=360,cx=W/2,cy=H/2,POS={};
+      if(names.length===1){POS[names[0]]=[cx,cy];}
+      else if(names.length===2){POS[names[0]]=[W*0.30,cy];POS[names[1]]=[W*0.70,cy];}
+      else{ /* nx_star_inline_layout: 3-node linear (gateway q1/q2 inet-r1-sv, path q15 r1-r2-r3) -> inline horizontal
+        (follows the RCL Static view). Distinguish from triangle (3 links / all deg2) by presence of 2 degree-1 ends.
+        Order: ISP/inet(=WAN) on the right, the other leaf (server/LAN) on the left, middle centred
+        (RCL flow sv->r1->inet). Generic path: ends alphabetical (smaller left). */
+        var _d1=names.filter(function(n){return deg(n)===1;}), _d2=names.filter(function(n){return deg(n)===2;});
+        if(names.length===3 && _d1.length===2 && _d2.length===1){ var _mid=_d2[0], _e=_d1.slice();
+          var _isIsp=function(n){return /inet|isp|internet|wan/i.test(n);}; var _L,_R;
+          if(_isIsp(_e[0])&&!_isIsp(_e[1])){_L=_e[1];_R=_e[0];} else if(_isIsp(_e[1])&&!_isIsp(_e[0])){_L=_e[0];_R=_e[1];}
+          else{var _s=_e.slice().sort();_L=_s[0];_R=_s[1];}
+          /* nx_star_perq_apex: star/hub-spoke family per-Q layout (same degree sig, different RCL Static):
+             q1/q2 gateway + q15 path = inline; q21 hub-spoke = apex (hub _mid top / leaves bottom L,R). */
+          /* apex for BGP hub-spoke (q21=nx-bgp-lp / multi-prefix=bgp-bestpath-multiprefix): r1 hub at top.
+             Keyed on topo NAME in <title> (title carries the topo name, not qN) so it also works on the
+             real picker :8600 where q21's title is 'nx-bgp-lp'. q1/q2 gateway + q15 path stay inline. */
+          var _isApexStar=/bgp-lp|bestpath|multiprefix/i.test(document.title||'');
+          if(_isApexStar){ POS[_mid]=[cx,70]; POS[_L]=[W*0.20,H-70]; POS[_R]=[W*0.80,H-70]; }
+          else { POS[_L]=[W*0.18,cy]; POS[_mid]=[cx,cy]; POS[_R]=[W*0.82,cy]; } }
+        else if(names.length===3 && _d1.length===0){ /* nx_triangle_apex_perq: 3-node full triangle (cycle).
+          RCL Static's apex is scenario-role-based (q6=r2, q11=r1 have identical topology but different apex),
+          so drive it from a per-Q map keyed off the topology name in <title>. Fallback = middle sorted node.
+          Left/right of the two non-apex nodes = sorted order (per question). */
+          var _APEX={q6:'r2', q9:'r1', q11:'r1', q12:'r1'}; /* apex per question; other labs fall back to degree-based detection */
+          var _qid=((document.title||'').match(/q\d+/)||[])[0];
+          var _apex=(_qid && _APEX[_qid] && names.indexOf(_APEX[_qid])>=0) ? _APEX[_qid] : names.slice().sort()[1];
+          var _oth=names.filter(function(n){return n!==_apex;}).sort();
+          POS[_apex]=[cx,70]; POS[_oth[0]]=[W*0.20,H-70]; POS[_oth[1]]=[W*0.80,H-70]; }
+        else { var hub=names.slice().sort(function(a,b){return deg(b)-deg(a);})[0]; var leaves=names.filter(function(n){return n!==hub;});
+        if(deg(hub)>=leaves.length){POS[hub]=[cx,70]; leaves.forEach(function(n,i){var x=leaves.length===1?cx:(W*0.18+(W*0.64)*(i/(leaves.length-1))); POS[n]=[x,H-70];});}
+        else{var order=[hub].concat(leaves),R=Math.min(W,H)/2-60; order.forEach(function(n,i){var a=(i/order.length)*Math.PI*2-Math.PI/2; POS[n]=[cx+R*Math.cos(a),cy+R*Math.sin(a)];});}
+      } } return {names:names,POS:POS}; }
+    function _reposition(){ try{ var pp=_pos(); pp.names.forEach(function(n){ if(!pp.POS[n])return; var nd=topo.getNode(n); if(!nd||typeof nd.position!=='function')return; var c=nd.position(); if(!c)return; nd.move(pp.POS[n][0]-c.x, pp.POS[n][1]-c.y); }); }catch(e){} }
+    // center the repositioned nodes' bounding box inside #clab-topology (nx.fit() is a no-op for this
+    // layout, and nx has a ~fixed y-offset). Measure the on-screen bbox, then move every node by the
+    // screen->center delta (nx scale ~= 1). Guarantees all nodes visible + centred at any viewport size.
+    function _center(){ try{ var hostEl=document.getElementById('clab-topology'); if(!hostEl) return;
+      var hb=hostEl.getBoundingClientRect(); var xs=[],ys=[];
+      document.querySelectorAll('#clab-topology g.node').forEach(function(g){var b=g.getBoundingClientRect(); if(b.width){xs.push(b.left+b.width/2-hb.left); ys.push(b.top+b.height/2-hb.top);}});
+      if(!xs.length) return; var cx=(Math.min.apply(null,xs)+Math.max.apply(null,xs))/2, cy=(Math.min.apply(null,ys)+Math.max.apply(null,ys))/2;
+      var dx=hb.width/2-cx, dy=hb.height/2-cy; var gd=data||{};
+      (gd.nodes||[]).forEach(function(n){var nd=topo.getNode(n.name); if(nd&&typeof nd.move==='function') nd.move(dx,dy);});
+    }catch(e){} }
+    function _done(){ _reposition();
+      setTimeout(function(){ _center();
+        if(window.__xrayPushLayout) try{window.__xrayPushLayout();}catch(e){}
+        if(ov){ ov.classList.add('hide'); setTimeout(function(){ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); },400); } }, 200); }
+    // reposition after the force layout has settled (topologyGenerated + a short settle)
+    try{ topo.on('topologyGenerated', function(){ setTimeout(_done, 1400); }); }catch(e){}
+    // safety fallback if the event never fires
+    setTimeout(function(){ if(ov && !ov.classList.contains('hide')) _done(); }, 4500);
+    window.__nxAlign = _reposition;
+  })();
 
   function nameOf(node){
     try{ var m=node.model(); if(m){ if(typeof m.name==='function') return m.name();
@@ -441,7 +515,8 @@ window.__initNeXtOverview = function (data) {
     (function next(){
       if (i >= FILES.length) { done(); return; }
       var s = document.createElement('script');
-      s.src = base + FILES[i++];
+      /* fb[2026-09-18 engine cache trap]: load the engine cache-busted so a fixed engine is picked up without a hard refresh (same as states.js). */
+      s.src = base + FILES[i++] + (base.indexOf("?")<0 ? "?t=" + (window.__xrayEngineV || (window.__xrayEngineV = Date.now())) : "");
       s.onload = next; s.onerror = next;
       document.head.appendChild(s);
     })();
@@ -471,10 +546,27 @@ window.__initNeXtOverview = function (data) {
     s.onload = function(){ try{
       var cur = window.__xrayCurNode;
       var st = cur && window.LIVE_STATES && window.LIVE_STATES[cur];
-      // surgical in-place update of the OPEN DeepDive (RCL-style: no rebuild, scroll/open-state preserved).
-      if (st && document.body.classList.contains("is-xray-deep") && typeof window.applyXrayState === "function") {
+      // nx_state_driven_protocol (case B, 2026-09-25): X-Ray structure is state-driven, not config-baked.
+      // The live protocol-intent can change (user configures/removes OSPF/BGP after [init]). applyXrayState is
+      // state-only and won't add/remove the protocol STRUCTURE (OSPF ball+LSDB / BGP ball+Table), so detect a
+      // structure-intent change vs the current DOM and do a full rebuild (__xrayShowNode -> renderView re-derives
+      // protocol) instead of the surgical update. Aligned with renderView's BGP-priority (wantOspf = ospf && !bgp)
+      // so the "both configured" case does NOT rebuild-churn (both-balls emit is the separate engine change).
+      var _structChanged = false;
+      if (st) {
+        /* nx_state_driven_helper: same SoT as engine emit (window.__xrayDeriveProto) -> no emit/detect drift */
+        var _wp = (window.__xrayDeriveProto ? window.__xrayDeriveProto(st) : {ospf:false,bgp:false});
+        var _wantOspf = _wp.ospf;
+        var _wantBgp = _wp.bgp;
+        var _hasOspf = !!document.querySelector('.de-ospf-core');
+        var _hasBgp = !!document.querySelector('.de-bgp-proc-core');
+        _structChanged = (_wantOspf !== _hasOspf) || (_wantBgp !== _hasBgp);
+      }
+      // surgical in-place update of the OPEN DeepDive (RCL-style: no rebuild, scroll/open-state preserved) —
+      // only when the protocol structure is unchanged; otherwise rebuild so the structure follows live state.
+      if (st && !_structChanged && document.body.classList.contains("is-xray-deep") && typeof window.applyXrayState === "function") {
         window._lastXrayState = st; window.applyXrayState(st);
-      } else if (cur && window.__xrayShowNode) { window.__xrayShowNode(cur); }   // fallback: DeepDive closed / other node -> rebuild
+      } else if (cur && window.__xrayShowNode) { window.__xrayShowNode(cur); }   // structure changed / DeepDive closed / other node -> rebuild
     }catch(e){ try{ if (window.__xrayCurNode && window.__xrayShowNode) window.__xrayShowNode(window.__xrayCurNode); }catch(_){} } s.remove(); if(cb) cb(true); };
     s.onerror = function(){ s.remove(); if(cb) cb(false); };
     document.head.appendChild(s);
