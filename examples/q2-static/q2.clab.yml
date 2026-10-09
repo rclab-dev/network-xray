@@ -1,6 +1,6 @@
 name: q2-static
 # nx_lab_isolated_routes: nodes do not route via the containerlab mgmt network (RouteCrushLab parity)
-# Auto-generated from RouteCrushLab q2 by gen_lab_bundle.py — regenerate when RCL publishes new problems.
+# Lab for RouteCrushLab q2 (https://routecrushlab.com)
 topology:
   nodes:
     r1: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf], exec: ["sh -c 'ip route del default 2>/dev/null || true'", "sh -c 'grep -q \"^router bgp\" /etc/frr/frr.conf || exit 0; for i in $(seq 1 30); do vtysh -c \"show running-config\" 2>/dev/null | grep -q \"^router bgp\" && exit 0; sleep 2; vtysh -f /etc/frr/frr.conf >/dev/null 2>&1; done'"] }  # nx_bgp_reapply

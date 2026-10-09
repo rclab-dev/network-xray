@@ -101,7 +101,7 @@ cd network-xray
 5. Compare with the solved version: stop (Ctrl-C) and run `./demo.sh examples/q21-bgp-lp-solved/q21.clab.yml`.
 6. Clean up: Ctrl-C, then `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup`.
 
-**More labs:** `examples/` has 22 problems (OSPF / BGP / static), each with a broken version and a `-solved` version, and a README (the problem, how to check it, how to start and stop). Run any of them the same way: `./demo.sh examples/<problem>/<file>.clab.yml`.
+**More labs:** `examples/` has 21 problems (q1–q21, OSPF / BGP / static) plus one BGP best-path sample, each with a broken version and a `-solved` version, and a README (the problem, how to check it, how to start and stop). Run any of them the same way: `./demo.sh examples/<problem>/<file>.clab.yml`.
 No git? Download one problem as a folder from the **[Releases](https://github.com/rclab-dev/network-xray/releases/latest)** page and run `./run.sh` in it (opens on :50080).
 
 **Your own problem:** put a `problem.json` next to your `*.clab.yml` (the problem text, the route to focus on, and a `check` that turns the band to **✓ Solved**) — the format is in [docs/problem-format.md](docs/problem-format.md).
@@ -388,7 +388,7 @@ open `topo-explorer.html` (topology view + detail side by side, draggable with l
 ## What people build with it
 
 - **Interactive teaching modules** — embed an OSPF/BGP walkthrough in a blog post or course.
-- **Live NOC / lab dashboards** — point `startPolling()` at your telemetry (Containerlab, FRR, EVE-NG).
+- **Live NOC / lab dashboards** — point `startPolling()` at your telemetry (e.g. Containerlab, FRR).
 - **Paste-to-visualize** — drop CLI output in the browser to reconstruct a topology, no setup.
 - **Postmortem & MOP figures** — render before/after state to show what rerouted, for a writeup.
 
@@ -481,6 +481,9 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 
 *[English](#network-xray) | 日本語*
 
+**ブラウザで試す** — 一番上の **Open in GitHub Codespaces** ボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。
+- ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。** コンテナのノード (FRR など) だけ動きます (Codespaces では入れ子の仮想化ができないため)。
+
 **ルータが *なぜ* その経路を選んだかを見る。** `network-xray` は、ルータの生きた状態(`show` / JSON)を転送判断の絵にします — どの経路が勝ち、どれが負け、なぜか。インストール不要・ブラウザだけ。
 
 `network-xray` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
@@ -497,7 +500,7 @@ FRR・SR Linux に向ける。「何が(what)」の上に立つ「なぜ(why)」
 
 **シミュレータではなく記述的(descriptive)**:与えられた実際の状態を描くだけで、経路計算もプロトコル実行も
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
-FRRouting・Cisco IOS・Arista … いずれも小さなアダプタで対応できます。
+FRRouting と **Nokia SR Linux** は実装済みです (FRR と SR Linux が混ざったラボも同じように描けます)。Cisco IOS・Arista … も同じ小さなアダプタの形で載せられます。
 
 **現状:** containerlab の FRR / SR Linux に対応しています。IOS-XE と CML2 への対応を進めています。
 
@@ -520,7 +523,9 @@ FRRouting・Cisco IOS・Arista … いずれも小さなアダプタで対応で
 
 ## 見る
 
-上の静止画は **DeepDive 円柱**(OSPF 隣接が Full:hello・LSDB 同期・学習した経路)。
+![ルータの中 — DeepDive 円柱](docs/deepdive.png)
+
+**DeepDive 円柱**(OSPF 隣接が Full:hello・LSDB 同期・学習した経路)。
 **▶ ライブで試す(インストール不要)**:ルータの `show` 出力を貼る → トポロジが描かれ、ルータをクリックすると
 中が見える — **<https://rclab-dev.github.io/network-xray/>**(貼って試すなら
 [frr-paste.html](https://rclab-dev.github.io/network-xray/frr-paste.html))。
@@ -548,7 +553,7 @@ cd network-xray
 5. 解決版と比べる: Ctrl-C で止めて `./demo.sh examples/q21-bgp-lp-solved/q21.clab.yml`。
 6. 片付け: Ctrl-C のあと `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup`。
 
-**ほかの例題:** `examples/` に 22 問 (OSPF / BGP / static)。各問に壊れた版と `-solved` の版、README (問題文・確かめ方・起動と停止) がある。どれも同じく `./demo.sh examples/<問>/<ファイル>.clab.yml` で動く。
+**ほかの例題:** `examples/` に 21 問 (q1〜q21・OSPF / BGP / static) と BGP の best path の見本 1 つ。各問に壊れた版と `-solved` の版、README (問題文・確かめ方・起動と停止) がある。どれも同じく `./demo.sh examples/<問>/<ファイル>.clab.yml` で動く。
 git を使わない場合は **[Releases](https://github.com/rclab-dev/network-xray/releases/latest)** から 1 問ずつのフォルダを取って、その中で `./run.sh` (:50080 で開く)。
 
 **自分の問題を作る:** `*.clab.yml` の隣に `problem.json` (問題文・注目する経路・帯を **✓ Solved** にする `check`) を置く — 書き方は [docs/problem-format.md](docs/problem-format.md) (英語)。
@@ -619,6 +624,7 @@ view.openDeepDive();                                      // ルータの中へ
 | **`frr-paste.html`** | 自分の `show ip route` + `show ip ospf neighbor` を貼る → トポロジを再構築して描画。*データ持ち込み・セットアップ不要。* |
 | **`bgp-paste.html`** | 自分の `show bgp summary` + `show ip bgp` を貼る → eBGP 隣接・セッション状態・学習プレフィックスを描画。円柱で BGP プロセッサ + テーブルを表示。*小規模 eBGP・データ持ち込み。* |
 | **`clab-paste.html`** | **containerlab** の `.clab.yml` を貼る → ラボのノード/リンクを X-Ray 図にマップ(OSPF 状態・障害・DeepDive)。*小規模 FRR ラボ: 2〜3 ノード(link / path / triangle)。* |
+| **`srl-paste.html`** | **Nokia SR Linux** のノードの `info from state … \| as json` を貼る → そのノードの OSPF/BGP の DeepDive を描画。*FRR と同じ X-Ray の見た目を、実際の `sr_cli` の状態から。* |
 | **`xray-graph.html`** | **containerlab `graph --template`** の drop-in:稼働中ラボを**任意サイズ**の全体図で描き、ノードをクリックでそのノードの X-Ray DeepDive。*下記 [containerlab graph テンプレート](#containerlab-graph-テンプレート) 参照。* |
 | **`ccna-ospf.html`** | OSPF の7状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 準拠)。 |
 | **`bgp-session.html`** | eBGP の FSM(Idle→Established)を2つの AS 間で1歩ずつ。DeepDive で BGP プロセッサとセッショントンネルを表示し、Established で `203.0.113.0/24` を学習(RFC 4271 §8)。 |
@@ -678,7 +684,7 @@ DeepDive を駆動)。live 検証済は今のところ FRR 8.4 のみ。FRR バ�
 ## 何に使えるか
 
 - **インタラクティブ教材** — OSPF/BGP の解説をブログ記事や講座に埋め込む。
-- **ライブ NOC / ラボ ダッシュボード** — `startPolling()` を自分のテレメトリ(Containerlab・FRR・EVE-NG)へ。
+- **ライブ NOC / ラボ ダッシュボード** — `startPolling()` を自分のテレメトリ(Containerlab・FRR など)へ。
 - **貼って可視化** — CLI 出力をブラウザに貼るだけでトポロジを再構築、セットアップ不要。
 - **ポストモーテム・MOP 図** — 障害前後の状態を描いて「何が迂回したか」を報告書に。
 
@@ -690,7 +696,7 @@ DeepDive を駆動)。live 検証済は今のところ FRR 8.4 のみ。FRR バ�
 
 1. **貼る(最速)** — `frr-paste.html` を開いて `show ip route` + `show ip ospf neighbor` を貼る。
    **すべてブラウザ内で動き、config はアップロードされません。** 現在の対応範囲:
-   **FRR・OSPF・小規模トポロジ**。BGP・大規模メッシュ・他ベンダーはまだ自動解析しません。
+   **FRR・OSPF・小規模トポロジ**。BGP は **`bgp-paste.html`** (`show bgp summary` + `show ip bgp` を貼る)。大規模メッシュ・他ベンダーはまだ自動解析しません。
 2. **`state` を直接渡す(任意ベンダー)** — ドキュメント化された `config`/`state` を作って
    `view.applyState(state)` を呼ぶ。**Cisco IOS / Arista / Juniper** はこの方法:自分の OS の
    `show` 出力を **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** の形(FRR ↔ Cisco IOS の `show`

@@ -29,11 +29,12 @@ From a release package (one folder per problem): run `./run.sh` in that folder a
 2. **Topology view** — the whole lab (containerlab graph, NeXt UI).
 3. **DeepDive** — click a node to look inside the router: Routing Engine, routing table, LSDB / BGP Table, OSPF Hellos, tunnels. Red link = that interface is down.
 The view follows the live lab (it re-collects every few seconds), so it changes as you fix things.
+The band at the top turns **✓ Solved** once the lab is in the fixed state (a few seconds after the routes settle).
 
 ## Work on the lab
 ```bash
-docker exec -it clab-q1-static-r1 vtysh      # router (FRR CLI)
-docker exec -it clab-q1-static-inet sh         # Linux node (inet, sv), e.g. ping 8.8.8.8
+docker exec -it clab-q1-static-solved-r1 vtysh      # router (FRR CLI)
+docker exec -it clab-q1-static-solved-inet sh         # Linux node (inet, sv), e.g. ping 8.8.8.8
 ```
 The lab is closed: nodes cannot reach the real internet, just like on RouteCrushLab.
 
@@ -54,7 +55,7 @@ sudo containerlab destroy -t examples/q1-static-solved/q1.clab.yml --cleanup
 | a collector is left after stopping | `pkill -f clab-xray-collect.js`, then `./stop.sh` |
 
 ## Answer and explanation
-This package gives you the broken lab and the X-Ray view. **Hints, the check of your answer, and the explanation are on RouteCrushLab** — use the "Solve it on RouteCrushLab (guest)" button (no account needed).
+This package gives you the solved lab and the X-Ray view. **Hints and the explanation are on RouteCrushLab** — use the "Solve it on RouteCrushLab (guest)" button (no account needed).
 
 ---
 
@@ -89,11 +90,12 @@ This package gives you the broken lab and the X-Ray view. **Hints, the check of 
 2. **全体図** — トポロジ全体(containerlab graph・NeXt UI)。
 3. **DeepDive** — ノードをクリックするとルータの中が見える: Routing Engine・経路表・LSDB / BGP Table・OSPF の Hello・トンネル。赤いリンク = その IF が down。
 画面は動いているラボに追従します(数秒ごとに取り直し)。直すと表示も変わります。
+ラボが直った状態になると、上の帯が **✓ Solved** になります(経路が落ち着いてから数秒)。
 
 ## ラボを操作する
 ```bash
-docker exec -it clab-q1-static-r1 vtysh      # ルータ(FRR の CLI)
-docker exec -it clab-q1-static-inet sh         # Linux ノード(inet・sv)。例: ping 8.8.8.8
+docker exec -it clab-q1-static-solved-r1 vtysh      # ルータ(FRR の CLI)
+docker exec -it clab-q1-static-solved-inet sh         # Linux ノード(inet・sv)。例: ping 8.8.8.8
 ```
 このラボは外部と切り離されています(RouteCrushLab と同じく、本物のインターネットには出られません)。
 
@@ -114,4 +116,4 @@ sudo containerlab destroy -t examples/q1-static-solved/q1.clab.yml --cleanup
 | 止めた後に収集プロセスが残る | `pkill -f clab-xray-collect.js` → `./stop.sh` |
 
 ## 答えと解説
-このパッケージは「壊れたラボ」と X-Ray の画面です。**ヒント・答え合わせ・解説は RouteCrushLab にあります** — 問題カードの「RouteCrushLab で解く (guest)」から(アカウント不要)。
+このパッケージは「直したラボ」と X-Ray の画面です。**ヒントと解説は RouteCrushLab にあります** — 問題カードの「RouteCrushLab で解く (guest)」から(アカウント不要)。
