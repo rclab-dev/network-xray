@@ -97,7 +97,7 @@ var svc = nodes.map(function (n) {
   var nets = nodeNets[n].map(function (x) { return '        ' + x.net + ': { ipv4_address: ' + x.ip + ' }'; }).join('\n');
   return [
     '  ' + n + ':',
-    '    image: frrouting/frr:latest',
+    '    image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce',
     '    hostname: ' + n,
     '    cap_add: [NET_ADMIN, SYS_ADMIN, NET_RAW]',
     '    sysctls: [net.ipv4.ip_forward=1]',
@@ -137,7 +137,7 @@ wr(path.join(OUT, 'compose.yml'), compose);
 
 // ---- 6) topo.json (overview clab-data) ----
 var topo = {
-  nodes: nodes.map(function (n) { return { name: n, image: 'frrouting/frr:latest', kind: 'linux', state: 'running/Up', ipv4_address: '', ipv6_address: '' }; }),
+  nodes: nodes.map(function (n) { return { name: n, image: 'frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce', kind: 'linux', state: 'running/Up', ipv4_address: '', ipv6_address: '' }; }),
   links: links.map(function (l) { return { source: l.a, source_endpoint: l.ai, target: l.b, target_endpoint: l.bi }; })
 };
 
@@ -216,7 +216,7 @@ _clabText = _clabText.replace(/endpoints:\s*\[([^\]]*)\]/g, function (m, inner) 
 });
 wr(path.join(OUT, 'collector', 'topo.clab.yml'), _clabText);
 wr(path.join(OUT, 'collector', 'Dockerfile'),
-  'FROM frrouting/frr:latest\nRUN apk add --no-cache nodejs\nCOPY . /collector/\nRUN chmod +x /collector/watch.sh\nWORKDIR /collector\nENTRYPOINT ["/bin/sh","/collector/watch.sh"]\n');
+  'FROM frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce\nRUN apk add --no-cache nodejs\nCOPY . /collector/\nRUN chmod +x /collector/watch.sh\nWORKDIR /collector\nENTRYPOINT ["/bin/sh","/collector/watch.sh"]\n');
 wr(path.join(OUT, 'collector', 'watch.sh'),
   '#!/bin/sh\nexport XRAY_VTY_SOCK_DIR=/socks\ncd /collector\nfirst=1\necho "collector-watch: socketless re-collect (3s) -> /web/xray-states.js"\nwhile true; do\n  node clab-xray-collect.js topo.clab.yml /collector ' + proto + ' >/tmp/collect.log 2>&1 || true\n  if [ -f /collector/xray-states.js ]; then\n    # anti-flicker: hold the first publish until the lab has converged (a best route / Full adj),\n    # so the initial view is never an empty "no routes" flash. after that, publish every cycle.\n    if [ "$first" = "1" ]; then grep -qE \'"best":true|"full":true|"state":"Full"\' /collector/xray-states.js && first=0; fi\n    if [ "$first" = "0" ]; then cp -f /collector/xray-states.js /web/.xs.tmp && mv -f /web/.xs.tmp /web/xray-states.js; fi\n  fi\n  sleep 3\ndone\n');
 

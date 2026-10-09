@@ -1,0 +1,52 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q17-ospf-static-solved",
+  "q_number": "Q17",
+  "title_en": "Problem 17 — \"I redistributed, but the route doesn't appear\"",
+  "title_ja": "第17問「Redistributeしたのに経路が出ない」",
+  "problem_en": "You want to ping r1's loopback (<code>1.1.1.1</code>) from r2, but there is no connectivity.<br>Fix r1's configuration so that <code>ping 1.1.1.1</code> from r2 succeeds.<br>After fixing it, confirm on r2 that <code>show ip route 1.1.1.0/24</code> shows an OSPF route and that <code>ping 1.1.1.1</code> gets a reply.",
+  "problem_ja": "r2 から r1 のループバック (<code>1.1.1.1</code>) に ping を飛ばしたいのですが、通信できません。<br>r1 の設定を直して、r2 から <code>ping 1.1.1.1</code> が通るようにしてください。<br>直したら、r2 で <code>show ip route 1.1.1.0/24</code> に OSPF の経路が表示され、<code>ping 1.1.1.1</code> が応答することを確認してください。",
+  "rcl_qid": "q17",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r2",
+    "prefix": "1.1.1.0/24"
+  },
+  "check": {
+    "all": [
+      [
+        "r2",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "1.1.1.0/24"
+          ],
+          [
+            "protocol",
+            "eq",
+            "ospf"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 1.1.1.1 from r2 succeeds.",
+  "check_note_ja": "手で確かめる: r2 から ping 1.1.1.1 が通ること。"
+}

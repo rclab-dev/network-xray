@@ -79,6 +79,20 @@
     font-size:12px;color:#6f8291;text-align:center;line-height:1.7}
   .rcl-footer a{color:#26c6da;text-decoration:none}
   .rcl-footer a:hover{text-decoration:underline}
+  /* nx_problem_band (2026-10-06): problem.json の題・問題文 (日英) */
+  #nx-problem{display:none;background:#1c2736;border-left:3px solid #4dd0e1;padding:14px 20px;margin:14px 0 20px;border-radius:0 6px 6px 0}
+  #nx-problem .nxp-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  #nx-problem .nxp-badge{display:inline-block;font-size:11px;font-weight:700;color:#0f1318;background:#4dd0e1;border-radius:10px;padding:1px 9px}
+  #nx-problem .nxp-title{font-size:15px;font-weight:700;color:#4dd0e1;margin-bottom:5px}
+  #nx-problem .nxp-body{font-size:13px;color:#cfd8dc;line-height:1.7}
+  #nx-problem .nxp-body code{color:#ffd54f;cursor:pointer;border-radius:3px;padding:0 2px;transition:background .2s}   /* nx_code_copy */
+  #nx-problem .nxp-body code:hover{background:rgba(255,213,79,.14)}
+  #nx-problem .nxp-body code.nx-copied{color:#66bb6a}
+  #nx-problem .nxp-cta{display:inline-block;margin-top:10px;font-size:12.5px;color:#0f1318;background:#4dd0e1;border-radius:6px;padding:5px 12px;text-decoration:none;font-weight:700}
+  #nx-problem .nxp-cta:hover{background:#80deea}
+  /* nx_solved_check: Solved badge on the problem band */
+  #nx-problem.nx-solved{border-left-color:#66bb6a}
+  #nx-problem .nxp-solved{display:inline-block;margin-left:auto;font-size:12px;font-weight:700;color:#0f1318;background:#66bb6a;border-radius:10px;padding:2px 10px}
 </style>
 </head>
 <body class="is-xray-mode">
@@ -87,9 +101,10 @@
     <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
   </div>
   <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small data-i18n="subtitle">(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
-  <p class="sub" data-i18n="intro">Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
-    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
+  <p class="sub" data-i18n="intro">The topology view = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
+    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The topology view is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
 
+  <div id="nx-problem"></div>
   <div class="ov-frame">
     <div class="ov-bar">
       <span class="cap"><span data-i18n="topo_label">ContainerLab Topology</span> <b id="ovname">{{ .Name }}</b></span>
@@ -98,7 +113,7 @@
     </div>
     <div id="clab-topology"></div>
   </div>
-  <p class="hint" data-i18n="hint">▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
+  <p class="hint" data-i18n="hint">▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
 
   <div id="peers"></div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
@@ -115,20 +130,20 @@
   var I18N = {
     en: {
       subtitle: '(containerlab NeXt UI × X-Ray DeepDive)',
-      intro: 'Overview = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The overview is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.',
+      intro: 'The topology view = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The topology view is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.',
       topo_label: 'ContainerLab Topology',
       horizontal: 'Horizontal',
       vertical: 'Vertical',
-      hint: '▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
+      hint: '▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
     ja: {
-      subtitle: '(containerlab NeXt UI × X-Ray ディープダイブ)',
-      intro: 'オーバービューは素の <b>containerlab graph</b>（NeXt UI・サイズ自由）。<b>ノードをクリック</b>すると、その下に<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。オーバービューはありふれた図、X-Ray がノード単位の DeepDive を足します。ノード名はトポロジ定義（clab.yml の <code>nodes:</code>）由来で、機器のホスト名ではありません。',
-      topo_label: 'コンテナラボ トポロジ',
-      horizontal: '横',
-      vertical: '縦',
-      hint: '▲ オーバービュー（NeXt UI） &nbsp;·&nbsp; <b>ノードをクリック</b> &nbsp;·&nbsp; ▼ X-Ray ディープダイブ',
+      subtitle: '(containerlab NeXt UI × X-Ray DeepDive)',
+      intro: '全体図は素の <b>containerlab graph</b>（NeXt UI・サイズ自由）。<b>ノードをクリック</b>すると、その下に<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。全体図はありふれた図、X-Ray がノード単位の DeepDive を足します。ノード名はトポロジ定義（clab.yml の <code>nodes:</code>）由来で、機器のホスト名ではありません。',
+      topo_label: 'ContainerLab Topology',   // NeXt UI part: stays English in JA too
+      horizontal: 'Horizontal',
+      vertical: 'Vertical',
+      hint: '▲ 全体図（NeXt UI） &nbsp;·&nbsp; <b>ノードをクリック</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
   };
@@ -145,6 +160,7 @@
     var btn = document.getElementById('lang-toggle');
     if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
     try { localStorage.setItem('nx-lang', lang); } catch(e){}
+    if (window.__nxPaintProblem) window.__nxPaintProblem(lang);   /* nx_problem_band */
   }
   function init(){
     apply(pickLang());
@@ -324,6 +340,11 @@ window.__xrayGraphBoot = function () {
   if(!NAMES.length){ return showErr('No nodes found in topology data.'); }
   // auto-open the highest-degree node so the DeepDive shows something immediately
   var start = NAMES.slice().sort(function(a,b){ return (ADJ[b]||[]).length-(ADJ[a]||[]).length; })[0];
+  /* nx_start_focus (2026-10-08, q17): an example lab opens on the node its problem is about
+     (problem.json focus.node -> window.XRAY_PROBLEM, written into xray-states.js by clab-xray-collect.js).
+     Labs without a focus (your own lab) keep the highest-degree node. */
+  try { var _sf = window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.node;
+        if (_sf && NAMES.indexOf(String(_sf)) >= 0) start = String(_sf); } catch (e) {}
   showNode(start);
 
   // ---- wire up the NeXt UI overview (once nx + data are ready) ----
@@ -387,9 +408,9 @@ window.__initNeXtOverview = function (data) {
           else{var _s=_e.slice().sort();_L=_s[0];_R=_s[1];}
           /* nx_star_perq_apex: star/hub-spoke family per-Q layout (same degree sig, different RCL Static):
              q1/q2 gateway + q15 path = inline; q21 hub-spoke = apex (hub _mid top / leaves bottom L,R). */
-          /* apex for BGP hub-spoke (q21=nx-bgp-lp / multi-prefix=bgp-bestpath-multiprefix): r1 hub at top.
+          /* apex for BGP hub-spoke (q21=q21-bgp-lp / multi-prefix=bgp-bestpath-multiprefix): r1 hub at top.
              Keyed on topo NAME in <title> (title carries the topo name, not qN) so it also works on the
-             real picker :8600 where q21's title is 'nx-bgp-lp'. q1/q2 gateway + q15 path stay inline. */
+             real picker :8600 where q21's title is 'q21-bgp-lp'. q1/q2 gateway + q15 path stay inline. */
           var _isApexStar=/bgp-lp|bestpath|multiprefix/i.test(document.title||'');
           if(_isApexStar){ POS[_mid]=[cx,70]; POS[_L]=[W*0.20,H-70]; POS[_R]=[W*0.80,H-70]; }
           else { POS[_L]=[W*0.18,cy]; POS[_mid]=[cx,cy]; POS[_R]=[W*0.82,cy]; } }
@@ -509,13 +530,13 @@ window.__initNeXtOverview = function (data) {
   // lets the engine fire its OSS gates (body.xray-oss-deep → hide the modal Close + show the Skin
   // picker; body.xray-rt-live → hide ping/hello orbs when a routing_table is present). Without it the
   // DeepDive would fall out of parity with the static template.
-  var FILES = ['xray-core.js','xray-api.js','clab-xray-bridge.js','xray-skin.js'];
+  var FILES = ['xray-core.js','xray-api.js','clab-xray-bridge.js','xray-skin.js','solved-check.js'];   /* nx_solved_check: + solved-check.js */
   function loadSeq(base, done){
     var i = 0;
     (function next(){
       if (i >= FILES.length) { done(); return; }
       var s = document.createElement('script');
-      /* fb[2026-09-18 engine cache trap]: load the engine cache-busted so a fixed engine is picked up without a hard refresh (same as states.js). */
+      /* engine cache trap (2026-09-18): load the engine cache-busted so a fixed engine is picked up without a hard refresh (same as states.js). */
       s.src = base + FILES[i++] + (base.indexOf("?")<0 ? "?t=" + (window.__xrayEngineV || (window.__xrayEngineV = Date.now())) : "");
       s.onload = next; s.onerror = next;
       document.head.appendChild(s);
@@ -531,7 +552,7 @@ window.__initNeXtOverview = function (data) {
     // cache-bust the INITIAL state fetch too: clab graph serves xray-states.js with only Last-Modified
     // (no Cache-Control/ETag), so a browser heuristically serves a STALE cached copy across deploys ->
     // the DeepDive renders last lab's stale flags (e.g. hello-off) even though the served state is fresh.
-    // ?t= forces a fresh fetch every page load (owner-view hello now matches the collected state).
+    // ?t= forces a fresh fetch every page load (the hello on screen now matches the collected state).
     s.src = base + 'xray-states.js?t=' + Date.now();
     s.onload = done; s.onerror = done;
     document.head.appendChild(s);
@@ -543,7 +564,12 @@ window.__initNeXtOverview = function (data) {
   window.__xrayLiveRefresh = function(cb){
     var s = document.createElement("script");
     s.src = (window.__xrayStatesBase || "") + "xray-states.js?t=" + Date.now();   // cache-bust; base=static/ (clab graph serves static-dir under /static/)
-    s.onload = function(){ try{
+    s.onload = function(){
+      /* nx_live_poll (2026-10-08): nothing changed since the last load -> no redraw (no idle flicker; picker + poll never double-draw) */
+      var _sig = ""; try { _sig = JSON.stringify(window.LIVE_STATES || {}); } catch (_e) {}
+      if (_sig && _sig === window.__xrayLastStates) { s.remove(); if (cb) cb(true); return; }
+      window.__xrayLastStates = _sig;
+      try{
       var cur = window.__xrayCurNode;
       var st = cur && window.LIVE_STATES && window.LIVE_STATES[cur];
       // nx_state_driven_protocol (case B, 2026-09-25): X-Ray structure is state-driven, not config-baked.
@@ -572,6 +598,14 @@ window.__initNeXtOverview = function (data) {
     document.head.appendChild(s);
   };
   window.addEventListener("message", function(ev){ if (ev && ev.data && ev.data.type === "xray-refresh") window.__xrayLiveRefresh(); });
+  /* nx_live_poll (2026-10-08 v10): a standalone run.sh has no :8610 picker to post "xray-refresh", so the DeepDive
+     only changed on reload. Same opt-in as xray-graph.html startLivePoll: only when the collector runs with --watch
+     (xray-states.js sets window.LIVE_WATCH) poll every 3 s; __xrayLiveRefresh redraws only when the states changed. */
+  function startLivePoll(){
+    try { window.__xrayLastStates = JSON.stringify(window.LIVE_STATES || {}); } catch (_e) {}
+    if (!window.LIVE_WATCH || window.__xrayLivePollId) return;
+    window.__xrayLivePollId = setInterval(function(){ window.__xrayLiveRefresh(); }, 1000);   /* nx_live_poll_1s (2026-10-09): 3 s -> 1 s (small file, redraw only on change) */
+  }
   // Default this drop-in to the "signature" skin (same default as xray-graph.html): honors a stored
   // user choice, otherwise applies signature without persisting. The "containerlab" preset stays
   // available in the picker. Applying a skin makes window.XraySkin active so the engine's
@@ -585,10 +619,132 @@ window.__initNeXtOverview = function (data) {
       if (!stored) window.XraySkin.apply(window.XraySkin.presetById('signature'));
     } catch(e){ try { window.XraySkin.apply(window.XraySkin.presetById('signature')); } catch(_){} }
   }
+  /* nx_problem_band (2026-10-06): the lab's problem.json (format network-xray-lab/0) -> a problem band above the overview.
+     Shown when it has title_<lang> or problem_<lang> (any lab, not only RCL examples); a missing language falls back
+     en -> ja. The RouteCrushLab button appears only with rcl_qid (rcl_* = optional RCL bridge). Body HTML: br/code/strong/span only. */
+  function renderProblem(base){
+    try {
+      fetch(base + 'problem.json', { cache: 'no-store' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(pj){
+        if (!pj || typeof pj !== 'object') return;
+        var host = document.getElementById('nx-problem'); if (!host) return;
+        var pick = function(k, L){ var o = L === 'ja' ? ['ja', 'en'] : ['en', 'ja']; for (var i = 0; i < o.length; i++) { var v = pj[k + '_' + o[i]]; if (v) return v; } return pj[k] || ''; };
+        if (!pick('title', 'en') && !pick('problem', 'en')) return;
+        var esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+        var cta = null;
+        if (pj.rcl_qid) {
+          var enc = encodeURIComponent, mode = pj.rcl_mode || 'tl';
+          var url = 'https://routecrushlab.com/lab/' + enc(mode) + '/' + enc(pj.rcl_qid) + '?try=guest&ref=' + enc(pj.ref || 'oss-clab');
+          cta = { en: { t: pj.cta_label_en || (mode === 'tl' ? 'Solve it on RouteCrushLab (guest)' : 'Open in RouteCrushLab (guest)'), u: url + '&lang=en' },
+                  ja: { t: pj.cta_label_ja || (mode === 'tl' ? 'RouteCrushLab で解く (guest)' : 'RouteCrushLab で開く (guest)'), u: url } };
+        }
+        window.__nxPaintProblem = function(lang){
+          var L = lang === 'ja' ? 'ja' : 'en';
+          host.innerHTML = (pj.q_number ? '<div class="nxp-head"><span class="nxp-badge">' + esc(pj.q_number) + '</span></div>' : '')
+            + '<div class="nxp-title">' + esc(pick('title', L)) + '</div>'
+            + '<div class="nxp-body">' + esc(pick('problem', L)).replace(/&lt;([/]?)(br|code|strong|span)&gt;/g, '<$1$2>') + '</div>'
+            + (cta ? '<a class="nxp-cta" href="' + cta[L].u + '" target="_blank" rel="noopener">&#9654; ' + esc(cta[L].t) + '</a>' : '');
+        };
+        var _pl = 'en'; try { var _s = localStorage.getItem('nx-lang'); if (_s) _pl = _s; } catch (e) {}
+        window.__nxPaintProblem(_pl);
+        host.style.display = 'block';
+        (function(){ var p = window.__nxPaintProblem; window.__nxPaintProblem = function(l){ p(l); nxSolvedPaint(); }; })();   /* nx_solved_check */
+        nxSolvedPaint();
+      }).catch(function(){});
+    } catch (e) {}
+  }
+  /* nx_solved_check (2026-10-08): problem.json `check` -> XRAY_PROBLEM.check (written by clab-xray-collect.js) -> NetworkXrayCheck
+     (solved-check.js). Evaluated on every state load; "Solved" after 2 consecutive passes, removed when it stops passing.
+     No check (own labs / problems without check) = nothing shown. */
+  var _nxSolvedTrack = null;
+  window.__nxSolved = false;
+  function nxSolvedPaint(){
+    var host = document.getElementById('nx-problem'); if (!host) return;
+    var b = host.querySelector('.nxp-solved');
+    host.classList.toggle('nx-solved', !!window.__nxSolved);
+    if (!window.__nxSolved) { if (b) b.remove(); return; }
+    var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
+    var txt = L === 'ja' ? '\u2713 \u89e3\u3051\u307e\u3057\u305f (Solved)' : '\u2713 Solved';
+    if (b) { b.textContent = txt; return; }
+    var head = host.querySelector('.nxp-head');
+    if (!head) { head = document.createElement('div'); head.className = 'nxp-head'; host.insertBefore(head, host.firstChild); }
+    b = document.createElement('span'); b.className = 'nxp-solved'; b.textContent = txt; head.appendChild(b);
+  }
+  window.__nxSolvedTick = function(){
+    try {
+      if (!window.NetworkXrayCheck) return;
+      /* nx_solved_hold: with --watch, solved = the check keeps holding for NX_SOLVED_HOLD_MS (default 4 s, longer than one
+         collector round) since it first held; any miss resets. One-shot collect (no LIVE_WATCH): the page does not
+         re-read, so one pass is enough. */
+      var r = window.NetworkXrayCheck.evaluate(window.XRAY_PROBLEM, window.LIVE_STATES);
+      var hold = window.LIVE_WATCH ? (+window.NX_SOLVED_HOLD_MS || 4000) : 0;
+      if (r.defined && r.ok) { if (!window.__nxSolvedSince) window.__nxSolvedSince = Date.now(); }
+      else window.__nxSolvedSince = 0;
+      r.solved = !!(r.defined && r.ok && window.__nxSolvedSince && (Date.now() - window.__nxSolvedSince >= hold));
+      window.__nxSolvedLast = r;                 // for debugging: {defined, ok, results, solved}
+      window.__nxSolved = !!r.solved;
+      nxSolvedPaint();
+    } catch (e) {}
+  };
+  (function(){                                   // re-run after every live refresh (v11 poll / :8610 picker)
+    var orig = window.__xrayLiveRefresh;
+    if (typeof orig !== 'function') return;
+    window.__xrayLiveRefresh = function(cb){ return orig(function(ok){ try { window.__nxSolvedTick(); } catch (e) {} if (cb) cb(ok); }); };
+  })();
   loadSeq('static/', function(){
-    if (ready()) { initSkin('static/'); withStates('static/', function(){ boot(); }); }
-    else loadSeq('', function(){ initSkin(''); withStates('', function(){ boot(); }); });
+    if (ready()) { initSkin('static/'); renderProblem('static/'); withStates('static/', function(){ boot(); window.__nxSolvedTick(); startLivePoll(); }); }
+    else loadSeq('', function(){ initSkin(''); renderProblem(''); withStates('', function(){ boot(); window.__nxSolvedTick(); startLivePoll(); }); });
   });
+})();
+</script>
+<script>
+/* nx_code_copy (2026-10-09): click a <code> in the problem band to copy its text (IPs, prefixes, commands).
+   One delegated listener on #nx-problem, so it keeps working after the band is repainted (language toggle).
+   navigator.clipboard needs a secure context (https / localhost); on plain http + IP it falls back to a
+   hidden textarea + execCommand('copy'). */
+(function(){
+  function legacyCopy(t){
+    var ta = document.createElement('textarea');
+    ta.value = t; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function copyText(t, done){
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(t).then(function(){ done(true); }, function(){ done(legacyCopy(t)); });
+    } else done(legacyCopy(t));
+  }
+  function isJa(){ return (document.documentElement.getAttribute('lang') || '') === 'ja'; }
+  function pick(host, e){
+    var c = e.target && e.target.closest ? e.target.closest('.nxp-body code') : null;
+    return (c && host.contains(c)) ? c : null;
+  }
+  function bind(){
+    var host = document.getElementById('nx-problem');
+    if (!host || host.__nxCodeCopy) return;
+    host.__nxCodeCopy = true;
+    host.addEventListener('mouseover', function(e){
+      var c = pick(host, e);
+      if (c && !c.classList.contains('nx-copied')) c.title = isJa() ? 'クリックでコピー' : 'Click to copy';
+    });
+    host.addEventListener('click', function(e){
+      var c = pick(host, e);
+      if (!c || c.classList.contains('nx-copied')) return;
+      var t = (c.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!t) return;
+      e.preventDefault();
+      copyText(t, function(ok){
+        if (!ok) return;
+        var orig = c.textContent;
+        c.textContent = isJa() ? 'コピーしました' : 'Copied!';
+        c.classList.add('nx-copied');
+        setTimeout(function(){ if (c.classList.contains('nx-copied')) { c.textContent = orig; c.classList.remove('nx-copied'); } }, 1200);
+      });
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
 })();
 </script>
 </body>

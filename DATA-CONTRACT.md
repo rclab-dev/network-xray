@@ -100,9 +100,9 @@ Render path is chosen by `config.topology_type` / `config.xray.pattern`
 
 ### Per-node DeepDive / 任意ノードの DeepDive — `view.openDeepDiveFor(nodeId, state)`
 
-Re-target the DeepDive cylinder to **any** node and open it. Use when the overview lives in another
+Re-target the DeepDive cylinder to **any** node and open it. Use when the topology view lives in another
 graph tool (e.g. a containerlab graph) and you want node-click → "look inside that node", without
-re-rendering an X-Ray overview. `state` is that node's snapshot (you supply it — a per-node collector
+re-rendering an X-Ray topology view. `state` is that node's snapshot (you supply it — a per-node collector
 or your adapter); it is pure (no server fetch). Pairs with `xrayCore.renderTopology(...)` having been
 called once first (the shared topology config is remembered).
 
@@ -119,7 +119,7 @@ view.openDeepDiveFor('r2', r2Snapshot);   // re-points the cylinder to r2 and zo
 **Multi-peer nodes (degree > 2) / 多ピアノード — `clabXray.deepViews(config, nodeId)`** (clab bridge helper):
 the cylinder is two-sided, so a node with 3+ neighbors has several inspectable views (one per peer
 pair). `deepViews` enumerates them — each entry is a 3-node sub-scene (`nodeId` + the two peers) that
-stays within X-Ray's shapes, so you never feed a full N-node graph to the engine. A host overview can
+stays within X-Ray's shapes, so you never feed a full N-node graph to the engine. A host topology view can
 turn the list into a peer-pair selector.
 
 シリンダーは2側ゆえ、隣接 3+ のノードは見られるビューが複数(ピア対ごと)。`deepViews` がそれを列挙

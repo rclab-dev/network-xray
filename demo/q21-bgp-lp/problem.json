@@ -1,10 +1,19 @@
 {
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/demo/q21-bgp-lp",
   "q_number": "Q21",
-  "title_en": "Why was this path chosen? — BGP Local Preference",
-  "title_ja": "なぜこの経路が選ばれた？— BGP Local Preference",
-  "problem_en": "r1 hears 8.8.8.0/24 from both r2 and r3. r1 de-prefers r2 with LocalPref 50, so r3 (default 100) wins. Open r1 and read the Best-Path Decision in the DeepDive to see why.",
-  "problem_ja": "8.8.8.0/24 を r2・r3 双方から受信。r1 が r2 を LocalPref 50 に下げ、r3（既定100）が勝つ。r1 を開き DeepDive の Best-Path Decision で理由を見る。",
+  "title_en": "Problem 21 — \"Two ISPs, yet everything takes the slow one\"",
+  "title_ja": "第21問「2つのISPがあるのに遅い方ばかり」",
+  "problem_en": "r1 is connected to two ISPs, r2 (fast ISP, AS65002) and r3 (slow ISP, AS65003), and receives <code>8.8.8.0/24</code> from both.<br>But on r1, the path via r3 (the slow ISP) is the best path.<br>Look into r1's BGP configuration and fix it so that the path via r2 (the fast ISP) becomes the best path.<br>Keep the route from r3 as a backup.<br>After fixing it, confirm with <code>show ip bgp 8.8.8.0/24</code> on r1 that the path via r2 is best (>) and that the path via r3 is still there.",
+  "problem_ja": "r1 は r2 (高速 ISP, AS65002) と r3 (低速 ISP, AS65003) の 2 つの ISP につながっていて、両方から <code>8.8.8.0/24</code> を受け取っています。<br>ところが r1 では、r3 (低速 ISP) 経由が best path になっています。<br>r1 の BGP の設定を調べて、r2 (高速 ISP) 経由が best path になるように直してください。<br>r3 からの経路は予備として残してください。<br>直したら、r1 で <code>show ip bgp 8.8.8.0/24</code> を見て、r2 経由の経路が best (>) になり、r3 経由の経路も残っていることを確認してください。",
   "rcl_qid": "q21",
   "rcl_mode": "tl",
-  "ref": "oss-clab"
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "8.8.8.0/24"
+  }
 }

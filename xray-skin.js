@@ -139,7 +139,7 @@
 
   // Namespace bridge (universal skin): the SR-Linux node panel / topo-explorer use their own
   // --xnp-* "Network Palette" namespace. Map the skin's 6 colors onto the --xnp-* SEMANTIC tokens so
-  // one skin JSON drives both --xto-* (engine) and --xnp-* (panel/graph). Owner decision 2026-07-16:
+  // one skin JSON drives both --xto-* (engine) and --xnp-* (panel/graph). Decision 2026-07-16:
   //   - unify defaults to the skin canonical (a); idle → --xnp-decider is deferred (decider stays independent).
   //   - structural chrome (bg/fg/border/accent/sel/note/font) is NOT a skin color — left untouched.
   function applyXnpVars(s) {

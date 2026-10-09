@@ -1,0 +1,78 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q20-bgp",
+  "q_number": "Q20",
+  "title_en": "Problem 20 — \"The route I advertise never shows up on my peer\"",
+  "title_ja": "第20問「送ったはずの経路が相手に載らない」",
+  "problem_en": "On r2, the <code>1.1.1.0/24</code> route that r1 should be advertising is not visible.<br>The BGP session is Established, but <code>1.1.1.0/24</code> is not in r2's BGP table.<br>Look into r1 and fix r1's outbound configuration so that <code>1.1.1.0/24</code> reaches r2.<br>Do not change r2's configuration, including its filter.<br>After fixing it, confirm on r2 that <code>show ip bgp</code> shows <code>1.1.1.0/24</code> and that <code>ping 1.1.1.1</code> gets a reply.",
+  "problem_ja": "r2 で、r1 が広報しているはずの <code>1.1.1.0/24</code> が見えません。<br>BGP のセッションは Established ですが、r2 の BGP テーブルに <code>1.1.1.0/24</code> がありません。<br>r1 を調べて、r1 の outbound の設定を直し、<code>1.1.1.0/24</code> が r2 に届くようにしてください。<br>r2 の設定 (フィルタを含む) は変更しないでください。<br>直したら、r2 で <code>show ip bgp</code> に <code>1.1.1.0/24</code> が表示され、<code>ping 1.1.1.1</code> が応答することを確認してください。",
+  "rcl_qid": "q20",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r2",
+    "prefix": "1.1.1.0/24"
+  },
+  "check": {
+    "all": [
+      [
+        "r2",
+        "bgp_routes",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "1.1.1.0"
+          ],
+          [
+            "best",
+            "eq",
+            true
+          ],
+          [
+            "as_path",
+            "in",
+            [
+              "65001",
+              "65001 65001",
+              "65001 65001 65001"
+            ]
+          ]
+        ]
+      ],
+      [
+        "r2",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "1.1.1.0/24"
+          ],
+          [
+            "protocol",
+            "eq",
+            "bgp"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Solved when r2 learns 1.1.1.0/24 with an AS path of only r1's AS (65001, up to 3 times), i.e. r1 no longer adds 65099. Fixing it on r2 instead (removing r2's filter) also brings the route in, but with AS path 65001 65099 65099, so it does not count as Solved.",
+  "check_note_ja": "r2 が 1.1.1.0/24 を r1 の AS だけの AS パス (65001・3 回まで) で受け取った時に Solved (r1 が 65099 を足さなくなった)。r2 を触って直しても (フィルタを外す) 経路は入るが、AS パスが 65001 65099 65099 のままなので Solved にならない。"
+}

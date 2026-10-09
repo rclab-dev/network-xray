@@ -91,7 +91,7 @@
 view.startPolling(() =&gt; fetch(<span style="color:#a5d6a7">'/api/state'</span>).then(r =&gt; r.json()), 3000);
 
 <span class="c">// the fetcher may return a bare state, or a full snapshot:</span>
-<span class="c">//   { state, topology, trace }  ← overview links/arrows update too</span></pre>
+<span class="c">//   { state, topology, trace }  ← topology view links/arrows update too</span></pre>
 
   <div class="foot">
     Field shapes: see <code>DATA-CONTRACT.md</code>. Descriptive only — it reflects the state your feed
@@ -154,7 +154,7 @@ view.startPolling(() =&gt; fetch(<span style="color:#a5d6a7">'/api/state'</span>
   // polling while the cylinder is open, so the DeepDive follows the drift (normal/detour/dead) in place.
   function setDeepLabel(open) {
     var b = document.getElementById('deepBtn');
-    if (b) b.innerHTML = open ? '◂ Back to overview' : 'Open the router (r2) ▸';
+    if (b) b.innerHTML = open ? '◂ Back to topology view' : 'Open the router (r2) ▸';
   }
   window.toggleDeep = function () {
     if (!view) return;

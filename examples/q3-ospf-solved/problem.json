@@ -1,0 +1,59 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q3-ospf-solved",
+  "q_number": "Q3",
+  "title_en": "Problem 3 — \"OSPF neighbor won't come up?\"",
+  "title_ja": "第3問「OSPFネイバーが確立しない？」",
+  "problem_en": "A ping from r1 to r2's loopback (<code>2.2.2.2</code>) fails.<br>r1 and r2 are supposed to exchange routes with OSPF, but that does not seem to be working.<br>Bring up the OSPF neighbor between r1 and r2 so that a ping from r1 to <code>2.2.2.2</code> succeeds.<br>After fixing it, confirm on r1 that <code>show ip ospf neighbor</code> shows r2 as Full and that <code>ping 2.2.2.2</code> gets a reply.",
+  "problem_ja": "r1 から r2 のループバック (<code>2.2.2.2</code>) に ping が通りません。<br>r1 と r2 の間は OSPF で経路を交換するはずですが、うまくいっていないようです。<br>r1 と r2 の間で OSPF のネイバーを確立させて、r1 から <code>2.2.2.2</code> に ping が通るようにしてください。<br>直したら、r1 で <code>show ip ospf neighbor</code> に r2 が Full で表示され、<code>ping 2.2.2.2</code> が応答することを確認してください。",
+  "rcl_qid": "q3",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "2.2.2.2/32"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "ospf_neighbors",
+        "some",
+        [
+          [
+            "full",
+            "eq",
+            true
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.2/32"
+          ],
+          [
+            "protocol",
+            "eq",
+            "ospf"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 2.2.2.2 from r1 succeeds.",
+  "check_note_ja": "手で確かめる: r1 から ping 2.2.2.2 が通ること。"
+}

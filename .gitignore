@@ -11,3 +11,9 @@ deepdive-modes.html
 skin-preview.js
 unified-derisk.html
 unified-showcase.html
+# demo.sh / collector output for the lab you are running (rewritten every run) - not part of the repo
+/xray-states.js
+/problem.json
+# containerlab's per-lab working folders and local backups
+examples/*/clab-*/
+*.bak*

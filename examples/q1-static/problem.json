@@ -1,0 +1,59 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q1-static",
+  "q_number": "Q1",
+  "title_en": "Problem 1 — \"Why won't the ping go through?\"",
+  "title_ja": "第1問「pingが通らない原因は？」",
+  "problem_en": "You want to ping the internet (<code>8.8.8.8</code>) from sv (the server), but there is no connectivity.<br>Running <code>ping 8.8.8.8</code> on sv gets no reply.<br>Look into r1 (the gateway router that sv uses to get out) and fix the cause.<br>After fixing it, confirm that <code>ping 8.8.8.8</code> on sv gets a reply.",
+  "problem_ja": "sv (サーバ) からインターネット (<code>8.8.8.8</code>) に ping を飛ばしたいのですが、通信できません。<br>sv で <code>ping 8.8.8.8</code> を実行しても応答がありません。<br>sv の出口になっている r1 (ゲートウェイルータ) を調べて、原因を直してください。<br>直したら、sv で <code>ping 8.8.8.8</code> が応答することを確認してください。",
+  "rcl_qid": "q1",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "0.0.0.0/0"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "interfaces.eth1.up",
+        "eq",
+        true
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "0.0.0.0/0"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "route_resolution.resolved",
+        "eq",
+        true
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 8.8.8.8 from sv succeeds (judged here by r1's route, not by a live ping).",
+  "check_note_ja": "手で確かめる: sv から ping 8.8.8.8 が通ること (ここでは r1 の経路で判定)。"
+}

@@ -1,0 +1,81 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q9-ospf",
+  "q_number": "Q9",
+  "title_en": "Problem 9 — \"Two paths, and neither one works?\"",
+  "title_ja": "第9問「2つの道、どちらも通れない？」",
+  "problem_en": "You want to ping r3's loopback (<code>3.3.3.3</code>) from r1, but there is no connectivity.<br>The r1-r3 direct link is the primary path, and the OSPF path that detours via r1-r2-r3 is the backup path.<br>Investigate r1 and fix it so that both the primary and the backup paths work.<br>After confirming that the ping goes through over the primary path, shut down r1's <code>eth2</code>,<br>and confirm that <code>ping 3.3.3.3</code> from r1 succeeds over the backup path.<br>* Do not change r2 or r3 (fix r1 only).",
+  "problem_ja": "r1 から r3 のループバック (<code>3.3.3.3</code>) に ping を飛ばしたいのですが、通信できません。<br>r1-r3 の直通リンクがメイン用経路で、r1-r2-r3 と迂回する OSPF の経路がバックアップ用経路です。<br>r1 を調査し、メイン/バックアップ用 それぞれが動作するように修正してください。<br>メイン用経路で ping が飛ぶことを確認後、r1 の <code>eth2</code> を shutdown して、<br>バックアップ用経路を使用して r1 から <code>ping 3.3.3.3</code> が成功することを確認してください。<br>※ r2, r3 の設定は変更しないでください (r1 だけを直します)。",
+  "rcl_qid": "q9",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "3.3.3.3/32"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "3.3.3.3/32"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ],
+          [
+            "next_hop",
+            "eq",
+            "10.11.0.20"
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "3.3.3.3/32"
+          ],
+          [
+            "protocol",
+            "eq",
+            "ospf"
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "ospf_neighbors",
+        "some",
+        [
+          [
+            "router_id",
+            "eq",
+            "2.2.2.2"
+          ],
+          [
+            "full",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: the router-IDs of r1 and r2 are different (show ip ospf), and when the r1-r3 link is shut, 3.3.3.3 is still reached via r2. Not judged here.",
+  "check_note_ja": "手で確かめる: r1 と r2 の Router-ID が重複していないこと (show ip ospf)、r1-r3 を切っても r2 経由で 3.3.3.3 に届くこと。ここでは判定しない。"
+}

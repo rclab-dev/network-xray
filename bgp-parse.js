@@ -226,7 +226,7 @@
 
   if (typeof window !== 'undefined') window.BGPFRR = { parseSummary: parseSummary, parseBgpTable: parseBgpTable, build: build };
 
-  // Node self-test — real FRR fixture (owner's live multipath data). Run: `node bgp-parse.js`.
+  // Node self-test — real FRR fixture (live multipath data). Run: `node bgp-parse.js`.
   // Browser: typeof process is undefined → skipped. (Not fabricated: this is a captured FRR paste.)
   if (typeof process !== 'undefined' && process.argv && /bgp-parse\.js$/.test(process.argv[1] || '')) {
     var SUM = ["BGP router identifier 10.59.0.10, local AS number 65001 vrf-id 0","","Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc","10.58.0.20      4      65002        15        15        2    0    0 00:00:27            1        1 N/A","10.59.0.20      4      65003        12        13        2    0    0 00:00:26            1        1 N/A","Total number of neighbors 2"].join('\n');

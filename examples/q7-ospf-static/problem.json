@@ -1,0 +1,47 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q7-ospf-static",
+  "q_number": "Q7",
+  "title_en": "Problem 7 — \"There's a route, but the ping won't go through?\"",
+  "title_ja": "第7問「経路があるのにpingが通らない？」",
+  "problem_en": "A ping from r1 to r2's loopback (<code>2.2.2.2</code>) fails.<br>However, a ping to the directly connected r2-side interface (the link IP) works.<br>Find the cause and fix it so that a ping from r1 to <code>2.2.2.2</code> succeeds.<br>After fixing it, check which route is selected with <code>show ip route 2.2.2.2</code> on r1, and confirm that <code>ping 2.2.2.2</code> gets a reply.",
+  "problem_ja": "r1 から r2 のループバック (<code>2.2.2.2</code>) に ping が通りません。<br>ただし、直接つながっている r2 側のインターフェース (リンクの IP) には ping が通ります。<br>原因を調べて、r1 から <code>2.2.2.2</code> に ping が通るように直してください。<br>直したら、r1 で <code>show ip route 2.2.2.2</code> を見て選ばれている経路を確かめ、<code>ping 2.2.2.2</code> が応答することを確認してください。",
+  "rcl_qid": "q7",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "2.2.2.2/32"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.2/32"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ],
+          [
+            "next_hop",
+            "eq",
+            "10.10.0.20"
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 2.2.2.2 from r1 succeeds, and show ip route 2.2.2.2 shows which route is selected.",
+  "check_note_ja": "手で確かめる: r1 から ping 2.2.2.2 が通ること・show ip route 2.2.2.2 でどの経路が選ばれているか。"
+}

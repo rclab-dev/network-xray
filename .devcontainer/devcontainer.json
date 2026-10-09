@@ -1,0 +1,13 @@
+{
+  "name": "network-xray demo (containerlab + FRR)",
+  "image": "ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:0.79.0@sha256:6cd6b883edc07a442349ec6dbdd3f659ce8315db036e0e435a59f5d30354981f",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+  "hostRequirements": { "cpus": 4, "memory": "8gb", "storage": "32gb" },
+  "forwardPorts": [8600],
+  "portsAttributes": {
+    "8600": { "label": "network-xray", "onAutoForward": "openBrowser" }
+  },
+  "postStartCommand": "bash .devcontainer/start-demo.sh"
+}

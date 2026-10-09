@@ -1,4 +1,4 @@
-name: nx-bgp-lp
+name: compose-bgp-lp
 # network-xray demo lab — RCL "Q21" faithful: 3 FRR routers, eBGP, a SINGLE prefix
 # 8.8.8.0/24 reachable via both r2 (AS65002) and r3 (AS65003). r1 de-preferences r2 with
 # LocalPref 50 (route-map LOW_LP), so r3 (default LocalPref 100) wins by Local Preference
@@ -8,9 +8,9 @@ name: nx-bgp-lp
 # Matches RouteCrushLab Q21 and the Zenn article "bgp-bestpath-visualized".
 topology:
   nodes:
-    r1: { kind: linux, image: frrouting/frr:latest, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf] }
-    r2: { kind: linux, image: frrouting/frr:latest, binds: [r2/daemons:/etc/frr/daemons, r2/frr.conf:/etc/frr/frr.conf] }
-    r3: { kind: linux, image: frrouting/frr:latest, binds: [r3/daemons:/etc/frr/daemons, r3/frr.conf:/etc/frr/frr.conf] }
+    r1: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf] }
+    r2: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r2/daemons:/etc/frr/daemons, r2/frr.conf:/etc/frr/frr.conf] }
+    r3: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r3/daemons:/etc/frr/daemons, r3/frr.conf:/etc/frr/frr.conf] }
   links:
     - endpoints: ["r1:eth0", "r2:eth0"]
     - endpoints: ["r1:eth1", "r3:eth0"]

@@ -102,11 +102,11 @@
 <div class="wrap">
   <div class="topbar">
     <span class="lang-switch" id="lang-toggle"><a data-lang="en">EN</a> / <a data-lang="ja">日本語</a></span>
-    <button type="button" class="lang-btn" id="ov-toggle">Static overview</button>
+    <button type="button" class="lang-btn" id="ov-toggle">Static topology view</button>
   </div>
   <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small data-i18n="subtitle">(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
-  <p class="sub" data-i18n="intro">The Overview is a view rendered by the <b>containerlab graph</b> (NeXt UI, any size). <b>Click any node</b> to look
-    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The Overview is the whole-topology view; X-Ray visualizes the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
+  <p class="sub" data-i18n="intro">The topology view is rendered by the <b>containerlab graph</b> (NeXt UI, any size). <b>Click any node</b> to look
+    <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The topology view shows the whole lab; X-Ray visualizes the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
 
   <div id="nx-problem"></div>
   <div class="ov-frame" id="ov-frame-nextui">
@@ -118,7 +118,7 @@
     <div id="clab-topology"></div>
   </div>
   <div id="ov" style="display:none"></div>
-  <p class="hint" data-i18n="hint">▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
+  <p class="hint" data-i18n="hint">▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
 
   <div id="peers"></div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
@@ -135,19 +135,19 @@
   var I18N = {
     en: { autorefresh: 'Auto-refresh',
       subtitle: '(containerlab NeXt UI × X-Ray DeepDive)',
-      intro: 'The Overview is a view rendered by the <b>containerlab graph</b> (NeXt UI, any size). <b>Click any node</b> to look <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The Overview is the whole-topology view; X-Ray visualizes the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.',
+      intro: 'The topology view is rendered by the <b>containerlab graph</b> (NeXt UI, any size). <b>Click any node</b> to look <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The topology view shows the whole lab; X-Ray visualizes the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.',
       topo_label: 'ContainerLab Topology',
       horizontal: 'Horizontal',
       vertical: 'Vertical',
-      hint: '▲ overview (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
+      hint: '▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
     ja: { autorefresh: '自動更新',
       subtitle: '(containerlab NeXt UI × X-Ray DeepDive)',
-      intro: 'Overview は <b>containerlab graph</b> による表示です（NeXt UI・サイズ自由）。<b>ノードをクリック</b>すると、その下に<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。Overview は全体図、X-Ray がノード単位の DeepDive を可視化します。ノード名はトポロジ定義（clab.yml の <code>nodes:</code>）由来で、機器のホスト名ではありません。',
-      topo_label: 'コンテナラボ トポロジ',
-      horizontal: '横',
-      vertical: '縦',
+      intro: '全体図は <b>containerlab graph</b> による表示です（NeXt UI・サイズ自由）。<b>ノードをクリック</b>すると、その下に<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。全体図は全体図、X-Ray がノード単位の DeepDive を可視化します。ノード名はトポロジ定義（clab.yml の <code>nodes:</code>）由来で、機器のホスト名ではありません。',
+      topo_label: 'ContainerLab Topology',   // NeXt UI part: stays English in JA too
+      horizontal: 'Horizontal',
+      vertical: 'Vertical',
       hint: '▲ オーバービュー（NeXt UI） &nbsp;·&nbsp; <b>ノードをクリック</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
@@ -483,7 +483,7 @@ window.__initNeXtOverview = function (data) {
     // cache-bust the INITIAL state fetch too: clab graph serves xray-states.js with only Last-Modified
     // (no Cache-Control/ETag), so a browser heuristically serves a STALE cached copy across deploys ->
     // the DeepDive renders last lab's stale flags (e.g. hello-off) even though the served state is fresh.
-    // ?t= forces a fresh fetch every page load (owner-view hello now matches the collected state).
+    // ?t= forces a fresh fetch every page load (the hello on screen now matches the collected state).
     s.src = base + 'xray-states.js?t=' + Date.now();
     s.onload = done; s.onerror = done;
     document.head.appendChild(s);
@@ -635,11 +635,11 @@ window.__nxSetOverview = function(mode){
   if(mode==='static'){
     if(window.__initStaticOverview) window.__initStaticOverview(window.__xrayGraphData);
     if(nu)nu.style.display='none'; if(sv)sv.style.display='';
-    if(btn) btn.textContent='NeXt UI overview';
+    if(btn) btn.textContent='NeXt UI topology view';
   } else {
     if(!window.__nxDone && window.__initNeXtOverview) window.__initNeXtOverview(window.__xrayGraphData);
     if(nu)nu.style.display=''; if(sv)sv.style.display='none';
-    if(btn) btn.textContent='Static overview';
+    if(btn) btn.textContent='Static topology view';
   }
   // nx_overview_toggle_reangle: the overview toggle only showed/hid the two overviews; the open DeepDive kept the
   // tunnel angles it computed under the PREVIOUS view -> in a quiescent lab they stay frozen (e.g. NeXt

@@ -1,0 +1,52 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q15-bgp-ospf-static",
+  "q_number": "Q15",
+  "title_en": "Problem 15 — \"The route is in the BGP table, but packets don't arrive?\"",
+  "title_ja": "第15問「BGP テーブルに経路情報があるのに、パケットが届かない？」",
+  "problem_en": "A ping from r1 to r3's loopback (<code>8.8.8.8</code>) fails.<br>r1-r2 are connected with iBGP and OSPF, and r2-r3 with eBGP.<br>r1's BGP table shows <code>8.8.8.0/24</code>, yet packets are not forwarded.<br>Change r2's configuration so that a ping from r1 to <code>8.8.8.8</code> succeeds.<br>After fixing it, confirm on r1 that the route in <code>show ip bgp 8.8.8.0/24</code> becomes best (<code>*></code>) and that <code>ping 8.8.8.8</code> gets a reply.",
+  "problem_ja": "r1 から r3 のループバック (<code>8.8.8.8</code>) に ping が通りません。<br>r1-r2 間は iBGP と OSPF、r2-r3 間は eBGP でつながっています。<br>r1 の BGP テーブルには <code>8.8.8.0/24</code> が見えているのに、パケットが転送されません。<br>r2 の設定を変えて、r1 から <code>8.8.8.8</code> に ping が通るようにしてください。<br>直したら、r1 で <code>show ip bgp 8.8.8.0/24</code> の経路が best (<code>*></code>) になり、<code>ping 8.8.8.8</code> が応答することを確認してください。",
+  "rcl_qid": "q15",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "8.8.8.0/24"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "8.8.8.0/24"
+          ],
+          [
+            "protocol",
+            "eq",
+            "bgp"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 8.8.8.8 from r1 succeeds.",
+  "check_note_ja": "手で確かめる: r1 から ping 8.8.8.8 が通ること。"
+}

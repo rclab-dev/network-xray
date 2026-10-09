@@ -1,12 +1,12 @@
 # X-Ray Core — Skin Contract / スキン契約
 
 > **EN** — `xray-core.js` separates **what it means** (the data contract + the two promises:
-> *Overview = an x-ray of the topology*, *DeepDive = inside the router*) from **how it looks**
+> *the topology view = an X-ray of the whole lab*, *DeepDive = inside the router*) from **how it looks**
 > (shapes, colors, stacking order). The meaning is fixed (see `DATA-CONTRACT.md`); the look is a
 > **skin** — a small plain object you can pick, edit, export, and share. This document is the
 > frozen shape of that skin object and the rules the engine follows when it applies one.
 >
-> **JA** — `xray-core.js` は **意味**(データ契約 + 2つの約束: *Overview=トポロジの透視* /
+> **JA** — `xray-core.js` は **意味**(データ契約 + 2つの約束: *全体図=トポロジの透視* /
 > *DeepDive=ルータの中*)と **見た目**(形・色・上下順)を分離します。意味は不変
 > (`DATA-CONTRACT.md`)、見た目は **スキン** = 選べて・編集でき・export/import で共有できる小さな
 > プレーンオブジェクトです。本書はそのスキンオブジェクトの**凍結された形**と、engine が適用時に
@@ -16,7 +16,7 @@
   interpreted in Phase 2 — see §4). / Phase 1 凍結。キーは凍結済、一部は*予約*(今宣言・Phase 2 で解釈)。
 - **Authority**: schema keys and bundled presets are defined by this document; engine interpretation
   lives in `xray-core.js`; wording follows the gallery copy. / スキーマキー=本書 / engine 解釈=`xray-core.js` / 文言=ギャラリー表記に準拠。
-- **Related**: `DATA-CONTRACT.md`(意味・不変)/ `事業化/xray_表現層スキン化_設計メモ.md`(設計権威)。
+- **Related**: `DATA-CONTRACT.md`(意味・不変)。
 
 ---
 
@@ -156,7 +156,7 @@ actually make/share skins) justifies the UI + test-matrix cost. / Phase 2 で一
 
 ```js
 xrayCore.setSkin(skinObj);        // GLOBAL default: applies to every view rendered afterward
-view.setSkin(skinObj);            // PER-VIEW override (de-risk / preview / one embedded demo)
+view.setSkin(skinObj);            // PER-VIEW override (preview / one embedded demo)
 xrayCore.renderTopology('#topo', config /* config.skin = fallback */, opts);
 ```
 

@@ -1,0 +1,64 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q14-bgp",
+  "q_number": "Q14",
+  "title_en": "Problem 14 — \"The iBGP neighbor won't come up\"",
+  "title_ja": "第14問「iBGPネイバーが張れない」",
+  "problem_en": "r1 and r2 are iBGP neighbors in the same AS (65001), configured to peer between their loopbacks (<code>1.1.1.1</code> ⇔ <code>2.2.2.2</code>).<br>But the session stays <strong>Active</strong> and never reaches Established.<br>Look into r1's BGP configuration and fix it so that the iBGP session becomes Established.<br>After fixing it, confirm on r1 that the State/PfxRcd column for <code>2.2.2.2</code> in <code>show bgp summary</code> shows the number of received routes.",
+  "problem_ja": "r1 と r2 は同じ AS (65001) の iBGP ネイバーで、ループバック同士 (<code>1.1.1.1</code> ⇔ <code>2.2.2.2</code>) でセッションを張る設定です。<br>ところが、セッションが Active のままで Established になりません。<br>r1 の BGP の設定を調べて、iBGP のセッションが Established になるように直してください。<br>直したら、r1 で <code>show bgp summary</code> の <code>2.2.2.2</code> の行の State/PfxRcd に受け取った経路の数が表示されることを確認してください。",
+  "rcl_qid": "q14",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "2.2.2.0/24"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "bgp_neighbors",
+        "some",
+        [
+          [
+            "ibgp",
+            "eq",
+            true
+          ],
+          [
+            "state",
+            "eq",
+            "Established"
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.0/24"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: show bgp summary on r1 shows the number of received routes for 2.2.2.2.",
+  "check_note_ja": "手で確かめる: r1 の show bgp summary で 2.2.2.2 の State/PfxRcd に受け取った経路の数が出ること。"
+}

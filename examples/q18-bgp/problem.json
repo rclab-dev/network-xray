@@ -1,0 +1,64 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q18-bgp",
+  "q_number": "Q18",
+  "title_en": "Problem 18 — \"Only some routes don't arrive\"",
+  "title_ja": "第18問「一部の経路だけ来ない」",
+  "problem_en": "r2 advertises <code>2.2.2.0/24</code> and <code>1.1.1.0/24</code> over BGP.<br>But on r1, <code>1.1.1.0/24</code> is visible while <code>2.2.2.0/24</code> is not.<br>Look into r1's BGP configuration and fix it so that r1 also receives <code>2.2.2.0/24</code>.<br>After fixing it, confirm on r1 that <code>show ip bgp</code> shows <code>2.2.2.0/24</code> and that <code>ping 2.2.2.2</code> gets a reply.",
+  "problem_ja": "r2 は <code>2.2.2.0/24</code> と <code>1.1.1.0/24</code> を BGP で広報しています。<br>ところが r1 では、<code>1.1.1.0/24</code> は見えるのに <code>2.2.2.0/24</code> が見えません。<br>r1 の BGP の設定を調べて、<code>2.2.2.0/24</code> も受け取れるように直してください。<br>直したら、r1 で <code>show ip bgp</code> に <code>2.2.2.0/24</code> が表示され、<code>ping 2.2.2.2</code> が応答することを確認してください。",
+  "rcl_qid": "q18",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "2.2.2.0/24"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "bgp_routes",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.0"
+          ],
+          [
+            "best",
+            "eq",
+            true
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.0/24"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 2.2.2.2 from r1 succeeds.",
+  "check_note_ja": "手で確かめる: r1 から ping 2.2.2.2 が通ること。"
+}

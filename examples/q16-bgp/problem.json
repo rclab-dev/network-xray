@@ -1,0 +1,52 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q16-bgp",
+  "q_number": "Q16",
+  "title_en": "Problem 16 — \"BGP came up, but the route doesn't arrive?\"",
+  "title_ja": "第16問「BGPは張れたのに経路が届かない？」",
+  "problem_en": "A ping from r2 to r1's loopback (<code>1.1.1.1</code>) fails.<br>The BGP session is <strong>Established</strong>, and traffic from r1 to r2 (<code>2.2.2.2</code>) works fine.<br>Fix r1 so that <code>ping 1.1.1.1</code> from r2 succeeds.<br>Do not change r2's configuration.<br>After fixing it, confirm on r2 that <code>show ip bgp</code> shows <code>1.1.1.1/32</code> and that <code>ping 1.1.1.1</code> gets a reply.",
+  "problem_ja": "r2 から r1 のループバック (<code>1.1.1.1</code>) に ping が通りません。<br>BGP のセッションは Established で、r1 から r2 (<code>2.2.2.2</code>) への通信は正常です。<br>r1 を直して、r2 から <code>ping 1.1.1.1</code> が成功するようにしてください。r2 の設定は変更しないでください。<br>直したら、r2 で <code>show ip bgp</code> に <code>1.1.1.1/32</code> が表示され、<code>ping 1.1.1.1</code> が応答することを確認してください。",
+  "rcl_qid": "q16",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r2",
+    "prefix": "1.1.1.1/32"
+  },
+  "check": {
+    "all": [
+      [
+        "r2",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "1.1.1.1/32"
+          ],
+          [
+            "protocol",
+            "eq",
+            "bgp"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 1.1.1.1 from r2 succeeds.",
+  "check_note_ja": "手で確かめる: r2 から ping 1.1.1.1 が通ること。"
+}

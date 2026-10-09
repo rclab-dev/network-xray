@@ -1,0 +1,62 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q6-ospf-solved",
+  "q_number": "Q6",
+  "title_en": "Problem 6 — \"There's a redundant path, so why no failover?\"",
+  "title_ja": "第6問「冗長パスがあるのに迂回しない？」",
+  "problem_en": "A ping from r1 to r3's loopback (<code>3.3.3.3</code>) works.<br>Even if the r1-r3 direct link goes down, r1 must still be able to reach it by detouring via r1-r2-r3.<br>Currently, when you shut down r1's link toward r3 (<code>eth2</code>), the ping to <code>3.3.3.3</code> stops.<br>Find the cause and fix it so that the detour path can be used.<br>After fixing it, confirm that <code>ping 3.3.3.3</code> from r1 succeeds even with r1's <code>eth2</code> shut down,<br>and finally bring it back with <code>no shutdown</code>.<br>(To shut it down, in r1's vtysh: <code>configure terminal</code> → <code>interface eth2</code> → <code>shutdown</code>.)",
+  "problem_ja": "r1 から r3 のループバック (<code>3.3.3.3</code>) への ping は通っています。<br>r1-r3 の直通リンクが切れても、r1-r2-r3 と迂回して通信できる必要があります。<br>現在、r1 の r3 側のリンク (<code>eth2</code>) を shutdown すると、<code>3.3.3.3</code> への ping が途絶えてしまいます。<br>原因を調べて、迂回経路が使えるように直してください。<br>直したら、r1 の <code>eth2</code> を shutdown しても r1 から <code>ping 3.3.3.3</code> が成功することを確認し、<br>最後に <code>no shutdown</code> で戻してください。<br>(shutdown は r1 の vtysh で <code>configure terminal</code> → <code>interface eth2</code> → <code>shutdown</code> です)",
+  "rcl_qid": "q6",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "3.3.3.3/32"
+  },
+  "check": {
+    "all": [
+      [
+        "r2",
+        "ospf_neighbors",
+        "count_ge",
+        [
+          2,
+          [
+            [
+              "full",
+              "eq",
+              true
+            ]
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "3.3.3.3/32"
+          ],
+          [
+            "protocol",
+            "eq",
+            "ospf"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: shut the r1-r3 link and confirm ping 3.3.3.3 from r1 still works (detour via r2). Not judged here.",
+  "check_note_ja": "手で確かめる: r1-r3 のリンクを切っても r1 から ping 3.3.3.3 が通ること (r2 経由に迂回)。ここでは判定しない。"
+}

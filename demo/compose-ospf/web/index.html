@@ -15,7 +15,7 @@
 
   containerlab renders this with Go html/template and passes:
     xray-ospf — lab name (string)
-    {"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r2","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]} — JSON string of { nodes:[{name,kind,...}], links:[{source,source_endpoint,target,target_endpoint}] }
+    {"nodes":[{"name":"r1","image":"frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r2","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]} — JSON string of { nodes:[{name,kind,...}], links:[{source,source_endpoint,target,target_endpoint}] }
 -->
 <title>X-Ray graph — xray-ospf</title>
 <!-- deps are loaded by the base-path detector at the end of <body> (works for both GitHub Pages
@@ -58,8 +58,8 @@
     <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
   </div>
   <h1><span class="x">X-Ray</span> graph — <span id="labname">xray-ospf</span> <small data-i18n="subtitle">(docker compose × X-Ray DeepDive)</small></h1>
-  <p class="sub" data-i18n="intro">Overview = your topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
-    OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.</p>
+  <p class="sub" data-i18n="intro">The topology view = your topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
+    OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.</p>
   <div class="ov" id="ov"></div>
   <div id="peers"></div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
@@ -76,12 +76,12 @@
   var I18N = {
     en: { autorefresh: 'Auto-refresh',
       subtitle: '(docker compose × X-Ray DeepDive)',
-      intro: 'Overview = your topology (any size). <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.',
+      intro: 'The topology view = your topology (any size). <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.',
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
     ja: { autorefresh: '自動更新',
-      subtitle: '(docker compose × X-Ray ディープダイブ)',
-      intro: 'オーバービューはあなたのトポロジ（サイズ自由）。<b>ノードをクリック</b>すると、その<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。オーバービューのレイアウトはありふれたもの、X-Ray がノード単位の DeepDive を足します。',
+      subtitle: '(docker compose × X-Ray DeepDive)',
+      intro: '全体図はあなたのトポロジ（サイズ自由）。<b>ノードをクリック</b>すると、その<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。全体図のレイアウトはありふれたもの、X-Ray がノード単位の DeepDive を足します。',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
   };
@@ -99,7 +99,7 @@
 </script>
 
 <!-- containerlab injects the topology JSON here (Go html/template). -->
-<script id="clab-data" type="application/json">{"nodes":[{"name":"r1","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr:latest","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r2","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]}</script>
+<script id="clab-data" type="application/json">{"nodes":[{"name":"r1","image":"frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r2","image":"frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""},{"name":"r3","image":"frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce","kind":"linux","state":"running/Up","ipv4_address":"","ipv6_address":""}],"links":[{"source":"r1","source_endpoint":"eth1","target":"r2","target_endpoint":"eth1"},{"source":"r2","source_endpoint":"eth2","target":"r3","target_endpoint":"eth1"}]}</script>
 
 <script>
 window.__xrayGraphBoot = function () {
@@ -351,7 +351,7 @@ window.__xrayGraphBoot = function () {
   // #4dd0e1; OSPF green / BGP purple unchanged). Honors a stored user choice if present; otherwise
   // applies signature WITHOUT persisting it (a default view, not a user selection). Also points the
   // DeepDive Skin popover's "Open full editor" at skin.html on the resolved base. containerlab remains
-  // selectable in the Skin picker. (Owner 2026-08-18: default reverted from containerlab to signature.)
+  // selectable in the Skin picker. (2026-08-18: default reverted from containerlab to signature.)
   function initSkin(base){
     // (chrome accent --rc-accent is forced to X-Ray teal via the :root !important rule above,
     //  which survives the engine theme re-applying it inline.)

@@ -1,0 +1,59 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q10-ospf-solved",
+  "q_number": "Q10",
+  "title_en": "Problem 10 — \"For some reason, no Hellos are going out?\"",
+  "title_ja": "第10問「なぜかHelloが出ていない？」",
+  "problem_en": "A ping from r1 to r2's loopback (<code>2.2.2.2</code>) fails.<br>However, a ping from r1 to r2's directly connected link IP works.<br>Find the cause and fix it so that a ping from r1 to <code>2.2.2.2</code> succeeds.<br>After fixing it, confirm on r1 that <code>show ip ospf neighbor</code> shows r2 as Full and that <code>ping 2.2.2.2</code> gets a reply.",
+  "problem_ja": "r1 から r2 のループバック (<code>2.2.2.2</code>) に ping が通りません。<br>ただし、r1 から直接つながっている r2 のリンクの IP には ping が通ります。<br>原因を調べて、r1 から <code>2.2.2.2</code> に ping が通るように直してください。<br>直したら、r1 で <code>show ip ospf neighbor</code> に r2 が Full で表示され、<code>ping 2.2.2.2</code> が応答することを確認してください。",
+  "rcl_qid": "q10",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "2.2.2.2/32"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "ospf_neighbors",
+        "some",
+        [
+          [
+            "full",
+            "eq",
+            true
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.2/32"
+          ],
+          [
+            "protocol",
+            "eq",
+            "ospf"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 2.2.2.2 from r1 succeeds.",
+  "check_note_ja": "手で確かめる: r1 から ping 2.2.2.2 が通ること。"
+}

@@ -1,0 +1,11 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/bgp-bestpath-multiprefix",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "8.8.8.0/24"
+  }
+}

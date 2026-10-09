@@ -1,0 +1,109 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q19-bgp",
+  "q_number": "Q19",
+  "title_en": "Problem 19 — \"The BGP session suddenly dropped\"",
+  "title_ja": "第19問「BGPセッションが突然切れた」",
+  "problem_en": "The BGP session between r1 and r2 has suddenly gone down.<br>Fix r1's configuration to bring up the BGP neighbor with r2 so that <code>ping 2.2.2.2</code> from r1 succeeds.<br>r1 should be able to accept up to 15 routes from r2.<br>Also, make r1 reject the routes advertised by r2 that fall in the private IP address ranges (RFC 1918).<br>After fixing it, confirm on r1 that the line for r2 in <code>show bgp summary</code> shows the number of received routes,<br>that <code>show ip bgp</code> has no routes in <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code> or <code>192.168.0.0/16</code>, and that <code>ping 2.2.2.2</code> gets a reply.",
+  "problem_ja": "r1 と r2 の BGP セッションが突然切れてしまいました。<br>r1 の設定を直して r2 との BGP ネイバーを確立させ、r1 から <code>ping 2.2.2.2</code> が通るようにしてください。<br>r1 は r2 から最大 15 の経路を受け取れるようにします。<br>また、r2 が広報する経路のうち、プライベート IP アドレス (RFC 1918) に当たる経路は受け取らないようにしてください。<br>直したら、r1 で <code>show bgp summary</code> の r2 の行に受け取った経路の数が表示されること、<br><code>show ip bgp</code> に <code>10.0.0.0/8</code>・<code>172.16.0.0/12</code>・<code>192.168.0.0/16</code> の経路が無いこと、<code>ping 2.2.2.2</code> が応答することを確認してください。",
+  "rcl_qid": "q19",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "2.2.2.0/24"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "bgp_neighbors",
+        "some",
+        [
+          [
+            "state",
+            "eq",
+            "Established"
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "bgp_routes",
+        "none",
+        [
+          [
+            "prefix",
+            "in",
+            [
+              "10.0.0.0",
+              "172.16.0.0",
+              "192.168.0.0"
+            ]
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "bgp_routes",
+        "count_ge",
+        [
+          7,
+          [
+            [
+              "as_path",
+              "eq",
+              "65002"
+            ]
+          ]
+        ]
+      ],
+      [
+        "r2",
+        "bgp_routes",
+        "count_ge",
+        [
+          3,
+          [
+            [
+              "prefix",
+              "in",
+              [
+                "10.0.0.0",
+                "172.16.0.0",
+                "192.168.0.0"
+              ]
+            ]
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.0/24"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 2.2.2.2 from r1 succeeds.",
+  "check_note_ja": "手で確かめる: r1 から ping 2.2.2.2 が通ること。"
+}

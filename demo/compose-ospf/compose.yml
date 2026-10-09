@@ -2,7 +2,7 @@
 name: xray-ospf
 services:
   r1:
-    image: frrouting/frr:latest
+    image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce
     hostname: r1
     cap_add: [NET_ADMIN, SYS_ADMIN, NET_RAW]
     sysctls: [net.ipv4.ip_forward=1]
@@ -10,7 +10,7 @@ services:
     networks:
         net_r1_r2: { ipv4_address: 10.1.12.1 }
   r2:
-    image: frrouting/frr:latest
+    image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce
     hostname: r2
     cap_add: [NET_ADMIN, SYS_ADMIN, NET_RAW]
     sysctls: [net.ipv4.ip_forward=1]
@@ -19,7 +19,7 @@ services:
         net_r1_r2: { ipv4_address: 10.1.12.2 }
         net_r2_r3: { ipv4_address: 10.2.23.2 }
   r3:
-    image: frrouting/frr:latest
+    image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce
     hostname: r3
     cap_add: [NET_ADMIN, SYS_ADMIN, NET_RAW]
     sysctls: [net.ipv4.ip_forward=1]

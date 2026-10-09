@@ -1,0 +1,52 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q11-ospf-static",
+  "q_number": "Q11",
+  "title_en": "Problem 11 — \"There's a direct link, so why the detour?\"",
+  "title_ja": "第11問「直結があるのに、なぜ遠回り？」",
+  "problem_en": "A ping from r1 to r3's loopback (<code>3.3.3.3</code>) works.<br>But when you check with <code>traceroute 3.3.3.3</code>, it takes a detour via r2 instead of the direct link.<br>Fix it so that r1 uses the direct route it learned via OSPF.<br>After fixing it, confirm on r1 that <code>traceroute 3.3.3.3</code> reaches r3 directly without going through r2.",
+  "problem_ja": "r1 から r3 のループバック (<code>3.3.3.3</code>) への ping は通ります。<br>ところが <code>traceroute 3.3.3.3</code> で確かめると、直通のリンクではなく r2 経由で遠回りしています。<br>r1 が OSPF で学んだ直通の経路を使うように直してください。<br>直したら、r1 で <code>traceroute 3.3.3.3</code> が r2 を通らずに r3 へ直接届くことを確認してください。",
+  "rcl_qid": "q11",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "3.3.3.3/32"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "3.3.3.3/32"
+          ],
+          [
+            "protocol",
+            "eq",
+            "ospf"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth2"
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: traceroute 3.3.3.3 from r1 reaches r3 directly, without going through r2.",
+  "check_note_ja": "手で確かめる: r1 から traceroute 3.3.3.3 が r2 を通らずに r3 へ直接届くこと。"
+}

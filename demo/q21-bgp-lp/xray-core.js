@@ -1,3 +1,6 @@
+/* nx_bgp_see_all: the folder this engine was loaded from ("static/" under containerlab graph, "" on the gallery / GitHub Pages).
+   decision-bracket.html always ships next to xray-core.js, so links to it are built from here. */
+var _nxEngineBase = (function () { try { var _s = (typeof document !== "undefined" && document.currentScript && document.currentScript.getAttribute("src")) || ""; _s = _s.split("?")[0]; return _s.slice(0, _s.lastIndexOf("/") + 1); } catch (e) { return ""; } })();
 window.xrayApplyTheme = function(labMode) {
   var themes = {
     troubleshoot: {
@@ -88,7 +91,7 @@ window.xrayApplyTheme = function(labMode) {
   if (document.getElementById("xray-core-css")) return;
   var s = document.createElement("style");
   s.id = "xray-core-css";
-  s.textContent = [ ".is-xray-deep:not(.xray-state-ready) .de-beam," + ".is-xray-deep:not(.xray-state-ready) .de-energy," + ".is-xray-deep:not(.xray-state-ready) .de-label," + ".is-xray-deep:not(.xray-state-ready) .de-tunnel," + ".is-xray-deep:not(.xray-state-ready) .de-hello-orb," + ".is-xray-deep:not(.xray-state-ready) .de-ping-orb," + ".is-xray-deep:not(.xray-state-ready) .de-packet," + ".is-xray-deep:not(.xray-state-ready) .de-panel{visibility:hidden!important}", ".is-xray-deep.xray-switching .de-beam," + ".is-xray-deep.xray-switching .de-energy," + ".is-xray-deep.xray-switching .de-label," + ".is-xray-deep.xray-switching .de-tunnel," + ".is-xray-deep.xray-switching .de-hello-orb," + ".is-xray-deep.xray-switching .de-ping-orb," + ".is-xray-deep.xray-switching .de-packet," + ".is-xray-deep.xray-switching .de-panel{visibility:hidden!important}", '.xray-deep-engine::before{content:"✖";position:absolute;left:1.7%;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-input-down.is-xray-deep .de-if-marker.left,.is-output-down.is-xray-deep .de-if-marker.right{z-index:11}", '.is-input-down.is-xray-deep .de-if-marker.left::after,.is-output-down.is-xray-deep .de-if-marker.right::after{content:"✖";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:24px;text-align:center;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);pointer-events:none;z-index:11}', ".is-input-down .de-beam.in{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-input-down .de-label.in{color:#ef5350!important;text-shadow:0 0 6px rgba(239,83,80,0.5)!important}", ".is-input-down .de-energy.el{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%)!important;box-shadow:0 0 10px rgba(255,60,60,0.3)!important;animation:none!important}", ".is-input-down.is-xray-deep .de-packet,.is-input-down.is-xray-deep .de-packet.p2{animation:none!important;opacity:0!important}", '.xray-deep-engine::after{content:"✖";position:absolute;right:1.7%;top:50%;transform:translate(50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-output-down.is-xray-deep .xray-deep-engine::after{opacity:0}", ".is-output-down.is-xray-deep .de-beam.out{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-output-down.is-xray-deep .de-energy.er{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%);box-shadow:0 0 10px rgba(255,60,60,0.3);animation:none}", ".is-output-down.is-xray-deep .de-label.out{color:#ef5350;text-shadow:0 0 6px rgba(239,83,80,0.5)}", ".is-cleared .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-cleared .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 60px rgba(var(--xto-link-rgb,0,229,255),0.25);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-cleared .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-packet{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 10px 4px rgba(255,255,255,0.7),0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.8);transform:translateY(-50%);z-index:6;opacity:0;display:none}", ".xray-state-ready .de-packet{display:block}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet{animation:xrayDeepPacketStop 2s ease-in-out infinite}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet.p2{animation-delay:1s}", ":not(.ping-ok).is-xray-deep.ping-from-r1 .de-packet{display:none}", ".is-xray-deep.ping-from-r1 .de-beam.in{display:none!important}", ".is-xray-deep.ping-from-r1 .de-energy.el{display:none!important}", ".is-xray-deep.ping-from-r1 .de-label.in{display:none!important}", ":not(.ping-ok).is-xray-deep.ping-cylinder-to-left .de-packet{display:none}", ".is-xray-deep.ping-cylinder-to-left .de-beam.out,.is-xray-deep.ping-cylinder-to-left .de-if-marker.right{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-energy.er{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-label.out{display:none!important}", ".xray-advertiser-view .de-beam.out,.xray-advertiser-view .de-tunnel:not(.left-side),.xray-advertiser-view .de-energy.er,.xray-advertiser-view .de-label.out,.xray-advertiser-view #de-ping-req,.xray-advertiser-view .de-ping-orb.reply,.xray-advertiser-view .de-if-marker.right{display:none!important}", ".xray-advertiser-view .de-packet,.xray-advertiser-view .de-packet.p2{display:none!important}", ".is-xray-deep.ping-from-r1 .de-beam.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-beam.in,.is-xray-deep.ping-from-r1 .de-if-marker.left,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-if-marker.left{display:none}", "body[data-topo-triangle].is-xray-deep .de-beam.in,body[data-topo-triangle].is-xray-deep .de-if-marker.left,body[data-topo-triangle].is-xray-deep .de-label.in{display:block!important}", "body[data-topo-triangle].is-single-link-edge.is-xray-deep .de-beam.in,body[data-topo-triangle].is-single-link-edge.is-xray-deep .de-if-marker.left,body[data-topo-triangle].is-single-link-edge.is-xray-deep .de-label.in{display:block!important}", ".is-xray-deep.ping-from-r1 .de-energy.el,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-energy.el{display:none}", ".is-xray-deep.ping-from-r1 .de-label.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-label.in{display:none}", "[data-topo-triangle].is-xray-deep .de-beam.in,[data-topo-triangle].is-xray-deep .de-if-marker.left{display:block!important}", "[data-topo-triangle].is-xray-deep .de-energy.el{display:block!important}", "[data-topo-triangle].is-xray-deep .de-label.in{display:block!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.out{display:none!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.in{display:none!important}", ".is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-beam.in,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-if-marker.left,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-hello-orb.in,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-tunnel.left-side,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-side-left,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-label.in{display:none!important}.is-single-link-edge.is-xray-deep.ping-cylinder-to-left #de-re-panel{top:4%!important;bottom:auto!important;min-height:0!important;height:auto!important;z-index:12!important;background:rgba(0,8,16,0.97)!important}", "[data-topo-triangle].is-xray-deep.hello-out .de-hello-orb.left-out{display:block!important}", "[data-topo-triangle].is-xray-deep.hello-in .de-hello-orb.left-in{display:block!important}", "@keyframes xrayDeepPacketStop{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}10%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% - 60px);transform:translateY(-50%) scale(1.3)}55%{left:calc(50% - 60px);opacity:0.5;transform:translateY(-50%) scale(0.7)}80%{left:calc(50% - 60px);opacity:0}100%{left:calc(50% - 60px);opacity:0}}", ".ping-ok.is-xray-deep .de-packet{animation:xrayDeepPacket 2.8s ease-in-out infinite}", ".ping-ok.is-xray-deep .de-packet.p2{animation-delay:1.4s}", "@keyframes xrayDeepPacket{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}42%{left:47%;transform:translateY(-50%) scale(1.5)}58%{left:53%;transform:translateY(-50%) scale(1.5)}92%{opacity:1;transform:translateY(-50%) scale(1)}100%{left:97%;opacity:0;transform:translateY(-50%) scale(0.4)}}", "@keyframes xrayEnergyPulse{0%{transform:translate(-50%,-50%) scale(0.7);opacity:0.6}100%{transform:translate(-50%,-50%) scale(1.3);opacity:1}}", ".de-ping-orb{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-link-rgb,0,229,255),0.8));box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.7);transform:translateY(-50%);z-index:8;opacity:0;display:none}", ".ping-ok.is-xray-deep .de-ping-orb{display:block}", ".ping-ok.is-xray-deep .de-packet{display:none}", ".ping-ok.is-xray-deep .de-packet.p2{display:none}", ":not(.ping-ok).is-xray-deep .de-ping-orb{display:none!important}", ".xray-target-bypassed.is-xray-deep .de-ping-orb{display:none!important;animation:none!important}", ".xray-target-bypassed.is-xray-deep .de-packet{display:none!important;animation:none!important}", ".xray-target-bypassed.is-xray-deep .de-packet.p2{display:none!important;animation:none!important}", ".xray-target-bypassed:not(.xray-input-session-up).is-xray-deep .de-tunnel.left-side{height:0!important;opacity:0!important}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb{animation:dePingR1Req 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb.reply{animation:dePingR1Rep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingR1Req{0%{left:calc(50% + 10px);opacity:0}6%{opacity:1}40%{left:calc(100% - 14px);opacity:0.8}44%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingR1Rep{0%{left:calc(100% - 14px);opacity:0}6%{opacity:1}40%{left:calc(50% + 10px);opacity:0.8}44%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb{animation:dePingThruReq 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb.reply{animation:dePingThruRep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingThruReq{0%{left:3%;opacity:0}4%{opacity:1}20%{left:calc(50% - 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% + 10px);transform:translateY(-50%) scale(1.3)}45%{left:calc(100% - 14px);opacity:0.8}48%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingThruRep{0%{left:calc(100% - 14px);opacity:0}4%{opacity:1}20%{left:calc(50% + 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% - 10px);transform:translateY(-50%) scale(1.3)}45%{left:3%;opacity:0.8}48%{left:3%;opacity:0}100%{opacity:0}}", ".de-hello-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-idle-rgb,255,140,0),0.9));box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.7);z-index:7;opacity:0;display:none}", ".de-hello-orb.out{top:calc(50% + 10px)}", ".de-hello-orb.in{top:calc(50% - 18px)}", ".is-xray-deep.hello-out .de-hello-orb.out{display:block;animation:deHelloOut 10s ease-in-out infinite}", ".is-xray-deep.hello-in .de-hello-orb.in{display:block;animation:deHelloIn 10s ease-in-out 5s infinite}" + ".is-single-link-edge.is-xray-deep.hello-in:not(.ping-cylinder-to-left) .de-hello-orb.in{display:block!important}", "@keyframes deHelloOut{0%{left:calc(50% + 10px);opacity:0}2%{opacity:1}15%{left:calc(100% - 12px);opacity:0.8}18%{left:calc(100% - 12px);opacity:0}100%{opacity:0}}", "@keyframes deHelloIn{0%{left:calc(100% - 12px);opacity:0}2%{opacity:1}15%{left:calc(50% + 10px);opacity:0.8}18%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".de-hello-orb.left-out{top:calc(50% + 10px)}", ".de-hello-orb.left-in{top:calc(50% - 18px)}", ".is-xray-deep.hello-left-out .de-hello-orb.left-out{display:block;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.hello-left-in .de-hello-orb.left-in{display:block;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", "@keyframes deHelloLeftOut{0%{left:calc(50% - 10px);opacity:0}2%{opacity:1}15%{left:12px;opacity:0.8}18%{left:12px;opacity:0}100%{opacity:0}}", "@keyframes deHelloLeftIn{0%{left:12px;opacity:0}2%{opacity:1}15%{left:calc(50% - 10px);opacity:0.8}18%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".is-input-down .de-hello-orb.left-out{display:none!important}", ".is-input-down .de-hello-orb.left-in{display:none!important}", '.de-panel{position:absolute;z-index:8;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:5px;padding:12px 14px;font-family:"Courier New",monospace;font-size:11px;line-height:1.8;color:rgba(var(--xto-link-rgb,0,229,255),0.95);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.1);backdrop-filter:blur(8px);min-width:220px;max-width:280px;opacity:0;transition:opacity 0.5s ease 0.3s}', ".xray-deep-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto}", ".is-xray-deep .de-panel{opacity:1}", ".dd-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto;opacity:1}", ".xray-deep-engine .de-bgp-panel,.dd-engine .de-bgp-panel{top:30px;bottom:auto;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px;max-height:360px;overflow-y:auto;overflow-x:auto}", "body.trace-active .xray-deep-engine .de-bgp-panel,body.trace-active .xray-deep-engine .de-bgp-decision-panel{max-width:calc(50% - 120px)}", "body.trace-active .de-bgp-panel{min-width:0}", "body.trace-active .de-bgp-panel .de-bgp-table{font-size:calc(10px * var(--de-bgp-fs,1))}", "body.trace-active .de-bgp-panel .de-bgp-table th{padding:2px 6px 3px 0;font-size:calc(9px * var(--de-bgp-fs,1));letter-spacing:0}", "body.trace-active .de-bgp-panel .de-bgp-table td{padding:2px 6px 2px 0}", ".de-bgp-panel .de-title{color:#bb86fc;text-shadow:0 0 8px rgba(187,134,252,0.55)}", ".de-bgp-panel .de-title,.de-bgp-decision-panel .de-title{font-size:calc(12px * var(--de-bgp-fs,1))}", ".de-bgp-panel .de-bgp-table{width:100%;border-collapse:collapse;font-size:calc(12px * var(--de-bgp-fs,1));margin-top:4px}", ".de-bgp-panel .de-bgp-table th{color:#bb86fc;text-align:left;font-weight:700;padding:2px 11px 4px 0;border-bottom:1px solid rgba(187,134,252,0.3);font-size:calc(11px * var(--de-bgp-fs,1));letter-spacing:0.3px}", ".de-bgp-fs-ctl{float:right;display:inline-flex;gap:3px;margin-left:8px}", ".de-bgp-fs-ctl button{background:rgba(187,134,252,0.12);border:1px solid rgba(187,134,252,0.4);color:#bb86fc;font-size:11px;line-height:1.1;padding:1px 6px;border-radius:4px;cursor:pointer;pointer-events:auto!important}", ".de-bgp-fs-ctl button:hover{background:rgba(187,134,252,0.28)}", ".de-bgp-panel .de-bgp-table td{color:rgba(var(--xto-link-rgb,0,229,255),0.9);padding:2px 11px 2px 0;white-space:nowrap}", ".de-bgp-panel .bgp-st{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-bgp-panel .de-bgp-table tr.bgp-best td{color:#aef5b0;background:rgba(var(--xto-ospf-rgb,57,255,20),0.10)}tr.bgp-best{cursor:pointer}tr.bgp-best.de-bgp-pfx-active td{box-shadow:inset 0 0 0 1px rgba(255,213,79,0.7)}", ".de-bgp-panel .de-bgp-table tr.bgp-best .bgp-st{color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".de-bgp-panel .de-bgp-table td.bgp-decider{background:rgba(255,193,7,0.22);color:#ffd54f;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,193,7,0.55)}", ".de-bgp-panel .de-bgp-table .bgp-default{color:rgba(var(--xto-link-rgb,0,229,255),0.45);font-style:italic}", ".de-bgp-panel .de-bgp-table td.bgp-decider .bgp-default{color:#ffd54f;font-style:normal}", ".xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto;bottom:64px;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px;z-index:40}", ".xray-deep-engine.xray-unified-mode .de-bgp-decision-panel{top:calc(50% + 64px);bottom:auto;max-height:calc(50% - 84px);overflow-y:auto}", ".de-bgp-decision-panel .de-title{color:#ffd54f;text-shadow:0 0 8px rgba(255,193,7,0.5)}", ".de-bgp-decision-panel .bgp-reason{margin-top:6px;font-size:calc(12px * var(--de-bgp-fs,1));color:#66bb6a;line-height:1.5}", ".de-bgp-decision-panel .bgp-reason b{color:#ffd54f}", ".de-bgp-decision-panel .bgp-reason.bgp-reason-note{color:#7facc9}", ".de-bgp-decision-panel .bgp-chain{margin-top:3px;font-size:calc(10px * var(--de-bgp-fs,1));color:var(--xto-static,#888);line-height:1.6;letter-spacing:0.2px}", ".de-bgp-decision-panel .bgp-chain .bgp-step-tie{color:#6b7b8c}", ".de-bgp-decision-panel .bgp-chain .bgp-step-win{color:#ffd54f;font-weight:700}", ".de-bgp-decision-panel .bgp-chain .bgp-step-amb{color:#e0a060;font-weight:700}", ".de-bgp-decision-panel .bgp-legend{margin-top:5px;font-size:calc(10px * var(--de-bgp-fs,1));color:#999;letter-spacing:0.3px}", ".de-bgp-decision-panel .bgp-crit-btn{color:#ffd54f;cursor:pointer;border-bottom:1.5px dashed #ffd54f;padding:0 1px;font-weight:800;pointer-events:auto}", '.de-bgp-decision-panel .bgp-crit-btn::after{content:" \\25BE";font-size:0.85em}', ".de-bgp-decision-panel .bgp-crit-btn:hover,.de-bgp-decision-panel .bgp-crit-btn:focus-visible{background:rgba(255,213,79,0.16);border-radius:4px;outline:none}", ".de-bgp-bracket-pop{position:relative;z-index:2;margin-top:8px;background:#0c1a28;border:1px solid rgba(255,213,79,0.55);border-radius:8px;padding:8px 10px;display:none;box-shadow:0 8px 24px -10px rgba(0,0,0,0.8)}", ".de-bgp-bracket-pop.open{display:block}", ".de-bgp-bracket-pop .bp-h{display:flex;align-items:center;font-size:calc(11px * var(--de-bgp-fs,1));font-weight:700;color:#ffd54f;margin-bottom:6px}", ".de-bgp-bracket-pop .bp-x{margin-left:auto;cursor:pointer;color:#8fb0c8;border:none;background:transparent;font-size:13px;line-height:1;padding:0 2px;pointer-events:auto!important}", ".de-bgp-bracket-pop .bp-x:hover{color:#ff4d4d}", ".de-bgp-bracket-pop .bp-row{display:flex;justify-content:space-between;gap:14px;font-size:calc(11px * var(--de-bgp-fs,1));padding:2px 2px;font-variant-numeric:tabular-nums}", ".de-bgp-bracket-pop .bp-row .k{color:#8fb0c8}", ".de-bgp-bracket-pop .bp-row.tie .v{color:#6b7b8c}", ".de-bgp-bracket-pop .bp-row.win{background:rgba(57,255,20,0.08);border-radius:4px}", ".de-bgp-bracket-pop .bp-row.win .v b{color:#00e5ff}", ".de-bgp-bracket-pop .bp-more{display:block;margin-top:8px;padding-top:7px;border-top:1px dashed rgba(255,213,79,0.25);font-size:calc(11px * var(--de-bgp-fs,1));color:#00e5ff;text-decoration:none;font-weight:700;pointer-events:auto!important}", ".de-bgp-bracket-pop .bp-more:hover{text-decoration:underline}", ".de-panel .de-title{color:var(--xto-link,#00e5ff);font-weight:700;font-size:12px;margin-bottom:6px;letter-spacing:1px;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-panel .de-hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-panel .de-dim{color:rgba(var(--xto-link-rgb,0,229,255),0.35);font-size:10px}", ".de-panel .de-err{color:#ff4444;font-weight:700}", ".de-panel .de-warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".de-tunnel{position:absolute;top:50%;left:calc(50% + 60px);right:0;height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:none}", ".is-xray-deep.xray-state-full .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)}", ".is-xray-deep.xray-bgp-established .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", "@keyframes xBgpTunnelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-bgp-rgb,168,85,247),0.8)}}", ".is-xray-deep.xray-bgp-idle .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px);opacity:0.42;box-shadow:none}", ".is-xray-deep.xray-bgp-idle .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 100%)}", ".is-xray-deep.xray-bgp-idle .de-tunnel-label{opacity:0.55;color:var(--xto-bgp,#a855f7);text-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.3)}", ".de-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".de-tunnel-wall.top{top:0}", ".de-tunnel-wall.bot{bottom:0}", ".de-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0s}", ".is-xray-deep.xray-state-full .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", '.de-tunnel-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:9px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:1px;opacity:0;white-space:nowrap;transition:opacity 0.6s ease 0s}/* deepdive_tunnel_instant: render the DeepDive tunnel at its final angle instantly with the cyan link on a node switch (no angle-move animation); linear (de-tunnel/.left-side/xray-tunnel-body/fill/label) + angle view (de-angle-active #de-tunnel-left/right); pulse/content/color/state unchanged. */', ".is-xray-deep.xray-state-full .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-ospftun-init .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-2way .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-exchange .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-2way.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-exchange.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)}", ".is-xray-deep.xray-ospftun-2way .de-tunnel > .de-tunnel-wall{background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-fill,.is-xray-deep.xray-ospftun-2way .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.06) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.06) 100%)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 100%)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-label,.is-xray-deep.xray-ospftun-2way .de-tunnel-label{opacity:0.85;color:var(--xto-idle,#ff8c00);text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-label{opacity:0.85;color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.4)}", ".is-xray-deep:not(.de-angle-active).xray-ospftun-init .de-tunnel-fill,.is-xray-deep:not(.de-angle-active).xray-ospftun-2way .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.42) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.28) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.42) 100%)}", ".is-xray-deep:not(.de-angle-active).xray-ospftun-exchange .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)}", ".is-xray-deep:not(.de-angle-active).xray-state-full .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)}", ".de-tunnel-inner{position:absolute;top:calc(50% - 8px);bottom:calc(50% - 8px);left:0;right:0;display:none;pointer-events:none}", ".is-xray-deep .de-tunnel.de-coexist .de-tunnel-wall{height:3px}", ".de-tunnel.de-coexist .de-tunnel-inner{display:block}", ".de-tunnel.de-coexist-init .de-tunnel-inner .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)!important}", ".de-tunnel.de-coexist-2way .de-tunnel-inner .de-tunnel-wall{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5)!important}", ".de-tunnel.de-coexist-exchange .de-tunnel-inner .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important}", ".de-tunnel.de-coexist-full .de-tunnel-inner .de-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}" + ".is-xray-deep .de-tunnel.de-coexist-2way .de-tunnel-inner,.is-xray-deep .de-tunnel.de-coexist-exchange .de-tunnel-inner{background:rgba(var(--xto-idle-rgb,255,140,0),0.42)!important}" + ".is-xray-deep .de-tunnel.de-coexist-full .de-tunnel-inner{background:rgba(var(--xto-ospf-rgb,57,255,20),0.42)!important}", ".is-xray-deep .de-tunnel.de-coexist .de-tunnel-inner{display:block!important}", ".is-xray-deep .de-tunnel.de-coexist.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.42) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.30) 26%,transparent 27%,transparent 73%,rgba(var(--xto-bgp-rgb,168,85,247),0.30) 74%,rgba(var(--xto-bgp-rgb,168,85,247),0.42) 100%)!important}", ".is-xray-deep .de-tunnel.de-coexist > .de-tunnel-fill{position:relative}", '.is-xray-deep .de-tunnel.de-coexist > .de-tunnel-fill::after{content:none;position:absolute;left:0;right:0;top:calc(50% + 2px);height:10px;transform:translateY(-50%);pointer-events:none;z-index:1}', ".is-xray-deep .de-tunnel.de-coexist-full > .de-tunnel-fill::after{background:rgba(var(--xto-ospf-rgb,57,255,20),0.9);box-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".is-xray-deep .de-tunnel.de-coexist-exchange > .de-tunnel-fill::after{background:repeating-linear-gradient(90deg,rgba(var(--xto-ospf-rgb,57,255,20),0.9) 0 6px,transparent 6px 11px)}", ".is-xray-deep .de-tunnel.de-coexist-2way > .de-tunnel-fill::after{background:rgba(var(--xto-idle-rgb,255,140,0),0.9);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-deep .de-tunnel.de-coexist-init > .de-tunnel-fill::after{background:repeating-linear-gradient(90deg,rgba(var(--xto-idle-rgb,255,140,0),0.9) 0 6px,transparent 6px 11px)}", ".is-xray-deep .de-tunnel.de-side-show{height:36px!important;opacity:1!important}", ".is-xray-deep .de-tunnel.de-side-show > .de-tunnel-fill{opacity:0!important}", ".is-xray-deep .de-tunnel.de-side-bgp > .de-tunnel-wall{background:var(--xto-bgp,#a855f7)!important;box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)!important}", ".is-xray-deep .de-tunnel.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}", ".is-xray-deep .de-tunnel.de-side-bgp-idle > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px)!important;opacity:0.42!important;box-shadow:none!important}", ".is-xray-deep .de-tunnel.de-side-ospf-full > .de-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-full > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-exchange > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-2way > .de-tunnel-wall{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-init > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)!important}", ".is-xray-deep .xray-deep-engine .de-tunnel.left-side.de-side-show{height:36px!important;opacity:1!important}", ".is-xray-deep .xray-deep-engine .de-tunnel:not(.left-side).de-side-show{height:36px!important;opacity:1!important}", "@keyframes xtunnelLabelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-ospf-rgb,57,255,20),0.8)}}", ".de-panel-initial{display:block}", ".de-panel-cleared{display:none}", ".is-cleared .de-panel-initial{display:none}", ".is-cleared .de-panel-cleared{display:block}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-energy.er{animation:none}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.5)}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-label.out{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".xray-deep-engine{position:relative;width:100%;height:0;overflow:hidden;opacity:0;transition:opacity 0.4s,height 0.4s;border-radius:6px;margin-top:10px;display:none}", ".xray-deep-engine::before,.xray-deep-engine::after{display:none!important}", ".is-xray-deep .xray-deep-engine{display:block}", ".is-xray-deep .xray-deep-engine::before,.is-xray-deep .xray-deep-engine::after{display:block!important}", ".is-xray-deep .xray-deep-engine{opacity:1;height:400px}", ".is-xray-deep .topo-diagram{display:none!important}", ".is-xray-deep .topo-header{display:none!important}", ".is-xray-deep .topology{background:transparent!important;padding:0!important;border-radius:0!important}", ".is-xray-deep .btn-xray{display:none!important}", ".is-xray-deep .neighbor-panel,.is-xray-deep .link-status,.is-xray-deep .topo-tri-arrows,.is-replaying .neighbor-panel,.is-replaying .link-status,.is-replaying .topo-tri-arrows,.is-replaying .panels-row{display:none!important}", ".de-box-svg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}", ".de-cyl-svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:160px;height:320px;z-index:3}", ".de-beam{position:absolute;top:50%;height:4px;z-index:2;box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-beam.out{left:calc(50% + 60px);right:0;background:var(--xto-link,#00e5ff)}", ".de-energy{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);z-index:4;background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 15px 6px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 40px rgba(var(--xto-link-rgb,0,229,255),0.2);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".de-energy.er{left:calc(50% + 60px)}", '.de-label{position:absolute;top:50%;z-index:5;font-family:"Courier New",monospace;font-size:12px;font-weight:700;color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5);white-space:nowrap}', ".de-label.out{right:10px;transform:translateY(14px)}", ".de-r1-label{position:absolute;top:24px;left:60px;z-index:7;text-align:left;opacity:0;transition:opacity 0.4s ease 0.2s}", ".is-xray-deep .de-r1-label{opacity:1}", ".de-r1-name{font-size:22px;font-weight:700;color:var(--xto-ospf,#39ff14);text-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.5);letter-spacing:3px}", ".de-r1-sub{font-size:10px;color:rgba(var(--xto-ospf-rgb,57,255,20),0.4);margin-top:2px}", ".is-xray-deep.xray-state-init .de-beam.out,.is-xray-deep.xray-state-exchange .de-beam.out{background:var(--xto-link,#00e5ff)!important;box-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-deep.xray-state-init .de-energy.er,.is-xray-deep.xray-state-exchange .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-state-init .de-label.out,.is-xray-deep.xray-state-exchange .de-label.out{color:var(--xto-idle,#ff8c00)!important;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)!important}", ".is-xray-deep.xray-state-full .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-state-full .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-state-full .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-ospf{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-ospf-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-ospf-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-state-init .de-ospf-core,.is-xray-deep.xray-state-exchange .de-ospf-core,.is-xray-deep.xray-state-full .de-ospf-core{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", '.de-ospf-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-state-init .de-ospf-label,.is-xray-deep.xray-state-exchange .de-ospf-label{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-full .de-ospf-label{color:var(--xto-ospf,#39ff14)}", ".de-ospf-coexist{display:none;top:auto;bottom:18%}", "body.de-coexist-glyph .de-ospf-coexist{display:flex;flex-direction:column-reverse;align-items:center}", ".de-ospf-coexist .de-ospf-label{margin-top:0;margin-bottom:3px}", ".de-bgp-proc{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-bgp-proc-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-bgp-proc-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core{border-color:#c4b5fd;box-shadow:0 0 20px rgba(196,181,253,0.55)}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core .inner{background:#c4b5fd}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core{border-color:var(--xto-bgp,#a855f7);box-shadow:0 0 20px rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core .inner{background:var(--xto-bgp,#a855f7)}", '.de-bgp-proc-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-label{color:#c4b5fd}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-label{color:var(--xto-bgp,#a855f7)}", '.de-lsdb{position:absolute;bottom:14%;left:50%;transform:translateX(-50%);z-index:5;width:180px;background:rgba(0,8,16,0.9);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.3);border-radius:5px;padding:10px 12px;font-family:"Courier New",monospace;font-size:9px;color:rgba(var(--xto-idle-rgb,255,140,0),0.7);backdrop-filter:blur(4px);transition:all 0.5s}', ".de-lsdb .lsdb-hd{font-weight:700;font-size:10px;color:var(--xto-idle,#ff8c00);margin-bottom:4px;letter-spacing:1px;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".de-lsdb .lsdb-bar{height:4px;background:#1a1a1a;border-radius:3px;overflow:hidden;margin-bottom:6px}", ".de-lsdb .lsdb-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--xto-idle,#ff8c00),#ffb347);border-radius:3px;transition:width 0.4s}", ".de-lsdb .lsdb-row{padding:2px 0;border-bottom:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.1)}", ".de-lsdb .lsdb-row .type{color:var(--xto-idle,#ff8c00);font-weight:700}", '.de-loading-ind{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;display:none;align-items:center;gap:8px;font-family:"Courier New",monospace;font-size:12px;color:var(--xto-idle,#ff8c00);letter-spacing:1px;text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}', ".is-xray-deep.de-loading .de-loading-ind{display:flex}", ".de-loading-ind .de-load-spin{width:14px;height:14px;border:2px solid rgba(var(--xto-idle-rgb,255,140,0),0.25);border-top-color:var(--xto-idle,#ff8c00);border-radius:50%;animation:deLoadSpin 0.8s linear infinite}", "@keyframes deLoadSpin{to{transform:rotate(360deg)}}", ".is-xray-deep.de-loading .xray-deep-engine .de-cyl-svg,.is-xray-deep.de-loading .xray-deep-engine .de-ospf,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-proc,.is-xray-deep.de-loading .xray-deep-engine .de-lsdb,.is-xray-deep.de-loading .xray-deep-engine .de-panel,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-panel,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-decision-panel,.is-xray-deep.de-loading .xray-deep-engine .de-tunnel,.is-xray-deep.de-loading .xray-deep-engine .de-beam,.is-xray-deep.de-loading .xray-deep-engine .de-energy,.is-xray-deep.de-loading .xray-deep-engine .de-label,.is-xray-deep.de-loading .xray-deep-engine .de-if-marker,.is-xray-deep.de-loading .xray-deep-engine .de-ping-orb,.is-xray-deep.de-loading .xray-deep-engine .de-hello-orb,.is-xray-deep.de-loading .xray-deep-engine .de-packet,.is-xray-deep.de-loading .xray-deep-engine .de-lsa-container,.is-xray-deep.de-loading .xray-deep-engine #xray-deep-unified{visibility:hidden!important}", ".de-beam.in{left:0;right:calc(50% + 60px);background:var(--xto-link,#00e5ff);box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-if-marker{position:absolute;top:calc(50% + 2px);width:8px;height:8px;background:var(--xto-bg,#0d1620);border:1.5px solid var(--xto-link,#00e5ff);box-sizing:border-box;z-index:4;pointer-events:none}", ".de-if-marker.left{left:1.67%;transform:translate(-50%,-50%)}", ".de-if-marker.right{right:1.67%;transform:translate(50%,-50%)}", ".is-input-down .de-if-marker.left,.is-output-down .de-if-marker.right{border-color:var(--xto-linkDown,#ff4d4d)}", ".de-energy.el{left:calc(50% - 60px);right:auto}", ".de-label.in{left:1.7%;transform:translateY(20px);text-align:left}", ".de-tunnel.left-side{position:absolute;top:50%;left:0;right:calc(50% + 60px);height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:none}", ".de-tunnel.left-side.tunnel-active{height:36px;opacity:1}", "#de-tunnel-left:not(.tunnel-active):not(.tunnel-2way),#de-tunnel-right:not(.tunnel-active):not(.tunnel-2way){height:0!important;opacity:0!important}", "#de-tunnel-left.tunnel-active,#de-tunnel-right.tunnel-active{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-active .de-tunnel-fill,#de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-active .de-tunnel-wall,#de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", "#de-tunnel-left.tunnel-active .de-tunnel-label,#de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", "#de-tunnel-left.tunnel-2way,#de-tunnel-right.tunnel-2way{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-2way .de-tunnel-fill,#de-tunnel-right.tunnel-2way .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-2way .de-tunnel-wall,#de-tunnel-right.tunnel-2way .de-tunnel-wall{background:#ffcc80;box-shadow:0 0 6px rgba(255,204,128,0.5),0 0 14px rgba(255,204,128,0.2)}", "#de-tunnel-left.tunnel-2way .de-tunnel-label,#de-tunnel-right.tunnel-2way .de-tunnel-label{opacity:1;color:#ffcc80;text-shadow:0 0 8px rgba(255,204,128,0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-wall,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-fill,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-label,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-wall,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px);opacity:0.42;box-shadow:none}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-fill,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 100%)}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-label,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-label{opacity:0.55;color:var(--xto-bgp,#a855f7);text-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.3)}", ".de-tunnel.left-side .de-tunnel-fill{opacity:1}", ".de-tunnel.left-side .de-tunnel-label{opacity:1;animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".de-ping-orb.left-req{animation:none;display:none}", ".de-ping-orb.left-rep{animation:none;display:none}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-req{display:block;animation:dePingLeftReq 4s ease-in-out infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-rep{display:block;animation:dePingLeftRep 4s ease-in-out 2s infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb:not(.left-req):not(.left-rep){display:none}", "@keyframes dePingLeftReq{0%{left:calc(50% - 10px);opacity:0}6%{opacity:1}40%{left:14px;opacity:0.8}44%{left:14px;opacity:0}100%{opacity:0}}", "@keyframes dePingLeftRep{0%{left:14px;opacity:0}6%{opacity:1}40%{left:calc(50% - 10px);opacity:0.8}44%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".xray-ospf-unit{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(var(--xto-down-rgb,85,85,85),0.3);transition:all 0.6s;z-index:2;display:none}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".xray-ospf-unit .xray-ospf-dot{width:10px;height:10px;border-radius:50%;background:var(--xto-down,#555);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".xray-ospf-unit.ospf-active{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-ospf-unit.ospf-active .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-packet{top:calc(50% - 18px)}", ".is-output-down .de-hello-orb.out{display:none!important}", ".is-output-down .de-hello-orb.in{display:none!important}", ".is-output-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-output-down:not([data-topo-triangle]) .de-tunnel{opacity:0!important;height:0!important}", ".is-input-down .de-hello-orb.in{display:none!important}", ".is-input-down .de-hello-orb.out{display:none!important}", ".is-input-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-input-down .de-packet{display:none!important}", ".is-input-down .de-packet.p2{display:none!important}", ".is-input-down.is-output-down .de-hello-orb{display:none!important}", ".is-input-down.is-output-down .de-packet{display:none!important}", ".btn-xray{position:absolute;top:16px;right:16px;z-index:12;background:rgba(var(--xto-ospf-rgb,57,255,20),0.12);color:var(--xto-ospf,#39ff14);border:1px solid rgba(var(--xto-ospf-rgb,57,255,20),0.3);font-size:11px;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:bold;transition:all 0.3s;animation:xrayBtnBlink 1.5s ease-in-out infinite alternate}", ".btn-xray:hover{background:rgba(var(--xto-ospf-rgb,57,255,20),0.22)}", ".btn-xray.active{background:rgba(var(--xto-ospf-rgb,57,255,20),0.35);border-color:var(--xto-ospf,#39ff14);box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4);animation:xrayBtnActive 0.8s ease-in-out infinite alternate}", "@keyframes xrayBtnBlink{0%{box-shadow:0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}100%{box-shadow:0 0 16px rgba(var(--xto-ospf-rgb,57,255,20),0.6),0 0 30px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}}", "@keyframes xrayBtnActive{0%{box-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.4);transform:scale(1)}100%{box-shadow:0 0 24px rgba(var(--xto-ospf-rgb,57,255,20),0.8),0 0 50px rgba(var(--xto-ospf-rgb,57,255,20),0.3);transform:scale(1.08)}}", ".xray-packet-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,0.7),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.8);top:50%;transform:translateY(-50%);opacity:0;pointer-events:none;z-index:5}", ".is-xray-mode:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-mode.ping-through .xray-packet-orb{animation:xrayPktDyn 2.4s ease-in-out infinite;animation-delay:2s}", ".is-xray-mode .xray-packet-orb.orb2{animation-delay:3.2s;width:7px;height:7px;box-shadow:0 0 8px 3px rgba(255,255,255,0.5),0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ":not(.is-cleared).is-xray-mode.ping-through .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-from-r1 .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-cylinder-to-left .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-deep.ping-cylinder-to-left .de-tunnel:not(.left-side){display:none!important}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.out{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.in{display:none!important}", ".is-xray-deep.ping-cylinder-to-left.hello-out .de-hello-orb.left-out{display:block!important;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.ping-cylinder-to-left.hello-in .de-hello-orb.left-in{display:block!important;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", ".is-input-down.is-xray-mode .xray-packet-orb{animation:none!important;opacity:0!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb{animation:xrayOvPingReq 4s ease-in-out infinite!important;animation-delay:0s!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb.orb2{animation:xrayOvPingRep 4s ease-in-out infinite!important;animation-delay:2s!important}", ".is-xray-mode .topology{background:rgba(5,15,25,0.4)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important;overflow:hidden}", ".is-xray-mode .topo-box{background:rgba(0,15,30,0.95)!important;border-color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.3),inset 0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.08)!important;position:relative;z-index:1}", ".is-xray-mode .topo-box:not(.target) h4{color:var(--xto-link,#00e5ff)!important;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5)}", ".is-xray-mode .topo-box:not(.target) .role{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", ".is-xray-mode .topo-box:not(.target) .terminal-hint{visibility:hidden}", ".is-xray-mode .topo-iface .ip,.is-xray-mode .topo-link-subnet{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode a.topo-box-link{pointer-events:none!important;cursor:default!important}", ".is-xray-mode .topo-box.target .role,.is-xray-mode .topo-box.target .topo-iface,.is-xray-mode .topo-box.target .terminal-hint{visibility:hidden}", ".is-xray-mode .xray-logic .label{color:#78909c!important}", ".is-xray-mode .xray-logic .ip{color:var(--rc-topo-ip)!important;cursor:pointer;border-radius:2px;padding:0 2px;pointer-events:auto;position:relative;z-index:6}", ".is-xray-mode .xray-logic .ip.copied{background:#27ae60!important;color:#fff!important}", ".is-xray-mode .topo-box.target{border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:none!important;outline:none;animation:xrayR1Blink 1.5s ease-in-out infinite alternate}", ".is-xray-mode .topo-box.target h4{visibility:visible!important;color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 10px rgba(var(--xto-ospf-rgb,57,255,20),0.6);position:relative;z-index:8}", ".is-xray-mode .topo-box.deepdive-target:not(.target){border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important;cursor:pointer}", ".is-xray-mode .topo-box.deepdive-target:not(.target) h4{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".is-xray-mode a.topo-box-link:has(> .topo-box.deepdive-target){cursor:pointer;pointer-events:auto!important}", ".is-xray-mode .topo-link-line{background:#607d8b!important;box-shadow:none!important;height:4px!important;position:relative;z-index:1}", ".is-xray-mode .topo-link-label{color:rgba(var(--xto-link-rgb,0,229,255),0.8)!important;text-shadow:0 0 6px rgba(var(--xto-link-rgb,0,229,255),0.4)}", ".is-xray-mode .topo-link-subnet{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", "@keyframes xrayR1Blink{from{outline:2px solid transparent;outline-offset:2px;filter:drop-shadow(0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2))}to{outline:3px solid var(--xto-ospf,#39ff14);outline-offset:4px;filter:drop-shadow(0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.8)) drop-shadow(0 0 40px rgba(var(--xto-ospf-rgb,57,255,20),0.4))}}", ".is-xray-mode .topo-link-line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".is-xray-mode .topo-link-line{align-self:stretch!important;width:auto!important;margin-left:-5px!important;margin-right:-5px!important}", ".is-xray-mode{background:#03030a!important;color:#b0d4e8!important}", ".is-xray-mode .header{background:rgba(3,5,12,0.98)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .header h1,.is-xray-mode .header h1 a{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .scenario-title{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .difficulty{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .lab-timer{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .lab-plan{color:rgba(var(--xto-link-rgb,0,229,255),0.4)!important}", ".is-xray-mode .user-info{border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .user-name{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .user-rank-ja,.is-xray-mode .user-rank-en{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .question-map{background:rgba(3,5,12,0.95)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.15)!important}", ".is-xray-mode .qmap-sep{color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .topo-target-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".rcl-refonly-badge{position:absolute;top:3px;right:3px;background:rgba(255,183,77,0.18);color:#ffb74d;border:1px solid rgba(255,183,77,0.5);border-radius:3px;font-size:9px;font-weight:bold;padding:1px 5px;z-index:9;pointer-events:none;line-height:1.3}", ".is-xray-mode .xray-grid-overlay{opacity:1}", ".is-xray-mode .xray-logic{opacity:1;transition:none}", ".is-cleared .xray-initial{display:none}", ".is-cleared .xray-cleared{display:flex}", ".xray-focus-close{position:absolute;top:8px;right:8px;z-index:20;background:rgba(255,100,60,0.15);color:#f96;border:1px solid rgba(255,100,60,0.4);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;transition:opacity 0.3s}", ".is-xray-deep .xray-holo-panel{display:none!important}", ".is-xray-deep .xray-focus-close{opacity:1;pointer-events:auto}", ".trace-active .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-xray-mode .topo-diagram{position:relative;overflow:visible!important}", ".is-xray-mode .xray-flash-scene{display:block}", ".is-cleared .xray-trace{display:none}", ".is-xray-mode .topo-box.target{cursor:pointer}", ".is-xray-mode a.topo-box-link:has(> .topo-box.target){cursor:pointer}", ".is-xray-mode .capture-panel,.is-xray-mode .hint,.is-xray-mode .problem,.is-xray-mode .explanation,.is-xray-mode .info,.is-xray-mode .result-panel,.is-xray-mode .link-status,.is-xray-mode .neighbor-panel{background:rgba(3,8,16,0.9)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important;color:#b0d4e8!important}", ".is-xray-mode .capture-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .capture-header h3{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .capture-body{background:rgba(3,8,16,0.6)!important}", ".is-xray-mode .tab-btn{background:rgba(0,15,30,0.6)!important;color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .tab-btn.active{background:rgba(var(--xto-link-rgb,0,229,255),0.12)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .tab-content{background:rgba(3,8,16,0.8)!important}", ".is-xray-mode .hint h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .problem h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .hint code,.is-xray-mode .problem code{background:rgba(var(--xto-link-rgb,0,229,255),0.08)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .hint-level{background:rgba(0,15,30,0.5)!important;border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:#b0d4e8!important}", ".is-xray-mode .hint-level.standard-tier{background:rgba(123,44,191,0.1)!important;border-left-color:rgba(167,139,250,0.5)!important}", ".is-xray-mode .hint-level.standard-tier strong{color:#a78bfa!important}", ".is-xray-mode .hint-btn{background:rgba(var(--xto-link-rgb,0,229,255),0.1)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .topo-flow-node{background:rgba(0,15,30,0.6)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .seg-label,.is-xray-mode .seg-arrow,.is-xray-mode .arrow-line{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .ttyd-card{background:rgba(3,8,16,0.9)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .ttyd-card-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .ttyd-card-header h3{color:#0f0!important}", ".is-xray-mode .ttyd-toggle{color:#0f0!important}", ".is-xray-mode .ttyd-radios label{color:rgba(0,255,0,0.7)!important}", '.is-xray-mode .ttyd-radios input[type="radio"]{accent-color:var(--xto-link,#00e5ff)!important}', ".is-xray-mode .ttyd-card,.is-xray-mode .ttyd-card *{pointer-events:auto!important;cursor:auto!important}", ".is-xray-mode .ttyd-card a,.is-xray-mode .ttyd-card button{pointer-events:auto!important;cursor:pointer!important;opacity:1!important}", ".is-xray-mode .floating-action button{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .scroll-top button{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode a:not(.critical-tl-btn):not(.unlock-btn):not(.logo-link):not(.bp-more),.is-xray-mode button:not(.btn-xray):not(.xray-focus-close):not(.xray-deep-mode-toggle):not(.xray-trace-btn):not(.topo-zoom button):not(.trace-close):not(.trace-back):not(.trace-next):not(.critical-btn):not(.end-mode):not(.replay-skip):not(.shutdown-btn):not(#font-size-btn):not(.bp-x){pointer-events:none!important;cursor:default!important}", ".is-xray-mode .controls .btn,.is-xray-mode .floating-action .check-float,.is-xray-mode .floating-action .reset-mode,.is-xray-mode .floating-action .fb-float-btn{opacity:0.3!important}", ".is-xray-mode .capture-btn,.is-xray-mode .hint-btn,.is-xray-mode .check-btn,.is-xray-mode .reset-btn{opacity:0.3!important}", ".is-xray-mode .header h1 a,.is-xray-mode .logo-link{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode .qmap-item,.is-xray-mode .qmap-nav{pointer-events:none!important;cursor:default!important;opacity:0.4!important}", ".is-xray-mode .capture-header{pointer-events:none!important}", ".is-xray-mode .tab-btn{pointer-events:none!important;opacity:0.4!important}", ".is-xray-mode .scroll-top button{pointer-events:none!important;opacity:0.3!important}", ".is-xray-mode .help-guide-btn{pointer-events:none!important;opacity:0.3!important}", ".xray-flash{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;opacity:0}", ".xray-flash.active{animation:xrayFlashBang 0.8s ease-out}", "@keyframes xrayFlashBang{0%{opacity:0.9;background:radial-gradient(circle,rgba(255,200,100,0.95),rgba(var(--xto-idle-rgb,255,140,0),0.7) 40%,transparent 70%)}30%{opacity:0.6;background:linear-gradient(90deg,transparent 15%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 85%)}100%{opacity:0}}", ".is-xray-deep .capture-panel,.is-xray-deep .hint,.is-xray-deep .hint-level,.is-xray-deep .problem,.is-xray-deep .explanation,.is-xray-deep .result-panel,.is-xray-deep .next-question,.is-xray-deep .question-map,.is-xray-deep .floating-action,.is-xray-deep .scroll-top{display:none!important}", ".is-xray-deep .mode-title{display:none!important}", ".is-xray-deep .xray-spark-container{display:none!important}", ".is-xray-deep .xray-hello-container{display:none!important}", ".is-xray-deep .xray-packet-orb{display:none!important}", ".is-xray-deep .xray-ping-orb{display:none!important}", ".is-xray-deep .xray-fib-entry{display:none!important}", "body.trace-active .main{margin-left:370px;transition:margin-left 0.3s}", "body.trace-active .header{margin-left:370px;transition:margin-left 0.3s}", "@media (max-width:800px){body.trace-active .main,body.trace-active .header{margin-left:0}}", ".is-xray-deep .xray-ospf-tunnel{display:none!important}", '.xray-logic{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;padding:8px 10px;font-family:"Courier New",monospace;font-size:11px;line-height:1.7;color:rgba(var(--xto-link-rgb,0,229,255),0.85);text-align:left;opacity:0;pointer-events:none;z-index:5;overflow:hidden}', ".xray-logic .hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-logic .warn{color:#ff6b35}", ".xray-logic .dim{color:rgba(var(--xto-link-rgb,0,229,255),0.4);font-size:11px}", ".xray-logic .off{color:#78909c;font-weight:700}", ".is-xray-mode .xray-logic{background:rgba(0,15,30,0.95)!important;border-radius:6px!important}", ".is-xray-mode .xray-ospf-unit{z-index:8!important}", ".is-xray-mode .xray-spark{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px var(--xto-idle,#ff8c00)!important}", ".is-xray-mode .xray-spark-container{opacity:0!important}", ".is-xray-mode .route-arrow{display:none!important}", ".is-xray-mode .topo-link-subnet{display:none!important}", ".is-xray-mode .topo-tri-label{color:rgba(100,100,100,0.5)!important}", ".is-xray-mode .anim-status{display:none!important}", '.xray-holo-panel{position:absolute;top:50px;left:16px;z-index:10;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.35);border-radius:6px;padding:14px 18px;font-family:"Courier New",monospace;font-size:11px;line-height:1.9;color:rgba(var(--xto-idle-rgb,255,140,0),0.9);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.08);backdrop-filter:blur(8px);min-width:240px;max-width:280px;transition:all 0.5s;display:none}', ".is-xray-mode .xray-holo-panel{display:block}", ".xray-holo-panel .title{font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:6px;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-holo-panel .ok{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-holo-panel .err{color:#ff4444;font-weight:700}", ".xray-holo-panel .dim{color:rgba(var(--xto-idle-rgb,255,140,0),0.35);font-size:10px}", ".xray-holo-panel .warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".topo-diagram:has(.topo-triangle) .xray-holo-panel{left:10px;top:10px}", ".topo-diagram:has(.topo-multi-node) ~ .xray-holo-panel{top:auto!important;bottom:16px!important;right:auto!important;left:16px!important}", ".xray-deep-engine{transition:none!important}", ":not(.ping-ok) .xray-ping-orb{display:none!important}", ".xray-flash-scene{position:absolute;top:0;left:0;width:100%;height:100%;z-index:50;pointer-events:none;opacity:0;display:none}", ".is-xray-mode .xray-flash-scene{display:block}", ".xray-flash-scene.fire{animation:xflashFire 0.8s ease-out forwards}", ".xray-flash-scene.full{animation:xflashFull 1.2s ease-out forwards}", "@keyframes xflashFull{0%{opacity:0.8;background:linear-gradient(90deg,transparent 20%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 80%)}40%{opacity:0.4}100%{opacity:0}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-spark-container{position:absolute;top:calc(50% - 10px);transform:translate(50%,-50%);z-index:5;pointer-events:none;opacity:0;display:none}", ".xray-spark{position:absolute;width:3px;height:3px;border-radius:50%;background:#ff4444;box-shadow:0 0 6px #ff4444}", ".xray-spark:nth-child(1){top:-8px;left:0;animation:xsparkFly1 0.4s ease-out infinite}", ".xray-spark:nth-child(2){top:0;left:8px;animation:xsparkFly2 0.4s ease-out infinite}", ".xray-spark:nth-child(3){top:8px;left:2px;animation:xsparkFly3 0.4s ease-out infinite}", ".xray-spark:nth-child(4){top:-4px;left:-6px;animation:xsparkFly4 0.4s ease-out infinite}", ".xray-ospf-tunnel{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:hidden;display:none}", ".xray-bgp-established .xray-ospf-tunnel{display:block!important}", ".xray-bgp-established .xray-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".xray-bgp-established .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)}", ".xray-bgp-established .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-bgp-rgb,168,85,247),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-bgp-rgb,168,85,247),0.4)!important}", ".xray-bgp-established .xray-tunnel-ring{background:rgba(var(--xto-bgp-rgb,168,85,247),0.12);box-shadow:0 0 3px rgba(var(--xto-bgp-rgb,168,85,247),0.08)}", ".xray-bgp-established .xray-tunnel-label{color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}", "#topo-diagram:not(.xray-overview-ready) .xray-tunnel-body,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-portal,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-label,#topo-diagram:not(.xray-overview-ready) .xray-ospf-tunnel{opacity:0!important;visibility:hidden!important;transition:none!important}", ".xray-tunnel-body{position:absolute;top:50%;left:var(--xr1,38%);right:var(--xr2r,30%);height:0;transform:translateY(-50%);border-radius:3px;overflow:hidden;opacity:0;transition:none}", ".xray-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".xray-tunnel-wall.top{top:0}", ".xray-tunnel-wall.bot{bottom:0}", ".xray-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0s}", ".xray-tunnel-ring{position:absolute;top:50%;height:100%;width:1px;background:rgba(var(--xto-idle-rgb,255,140,0),0.12);transform:translateY(-50%);box-shadow:0 0 3px rgba(var(--xto-idle-rgb,255,140,0),0.08);opacity:0;transition:opacity 0.4s}", ".xray-tunnel-portal{position:absolute;top:50%;width:4px;height:36px;transform:translateY(-50%);border-radius:2px;opacity:0;transition:all 0.6s ease 0.2s;z-index:3}", ".xray-tunnel-portal.entry{left:var(--xr1,38%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".xray-tunnel-portal.exit{right:var(--xr2r,30%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", '.xray-tunnel-label{position:absolute;top:calc(50% + 28px);left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:11px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:2px;opacity:0;z-index:4;transition:opacity 0.6s ease 0.8s;white-space:nowrap}', ".xray-state-full .xray-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".xray-state-full .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)!important}", ".xray-state-full .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-ospf-rgb,57,255,20),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4)!important}", ".xray-state-full .xray-tunnel-ring{background:rgba(var(--xto-ospf-rgb,57,255,20),0.12)!important;box-shadow:0 0 3px rgba(var(--xto-ospf-rgb,57,255,20),0.08)!important}", ".xray-state-full .xray-tunnel-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)!important}", ".xray-ping-orb{position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#fff 30%,rgba(255,255,255,0.6) 60%,transparent 100%);box-shadow:0 0 10px 3px rgba(255,255,255,0.6),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.4);top:50%;transform:translateY(-50%);z-index:8;opacity:0;pointer-events:none;display:none}", '.xray-fib-entry{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:10;font-family:"Courier New",monospace;font-size:14px;font-weight:700;color:var(--xto-link,#00e5ff);text-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6);opacity:0;pointer-events:none;white-space:nowrap;transition:opacity 0.3s;display:none}', ".is-xray-mode .topo-triangle .topo-box{background:rgba(0,15,30,0.95)!important}", ".is-xray-mode .topo-triangle .topo-box.target{background:rgba(0,20,10,0.95)!important}", ".topo-triangle svg line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".topo-link{position:relative}", ".topo-link-pipe{position:absolute;top:0;left:0;right:0;height:4px;display:none;pointer-events:none;z-index:0}", ".topo-link-pipe.pipe-full,.topo-link-pipe.pipe-2way,.topo-link-pipe.pipe-exchange,.topo-link-pipe.pipe-init,.topo-link-pipe.pipe-bgp,.topo-link-pipe.pipe-bgp-idle{display:block}", ".topo-link-pipe.pipe-full,.topo-link-pipe.pipe-exchange{--pipe-col:var(--xto-ospf,#39ff14);--pipe-glow:rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".topo-link-pipe.pipe-2way,.topo-link-pipe.pipe-init{--pipe-col:var(--xto-idle,#ff8c00);--pipe-glow:rgba(var(--xto-idle-rgb,255,140,0),0.6)}", ".topo-link-pipe.pipe-bgp,.topo-link-pipe.pipe-bgp-idle{--pipe-col:var(--xto-bgp,#a855f7);--pipe-glow:rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", '.topo-link-pipe::before,.topo-link-pipe::after{content:"";position:absolute;left:0;right:0;height:2.5px;background:repeating-linear-gradient(90deg,var(--pipe-col) 0 10px,transparent 10px 16px);background-size:16px 100%;filter:drop-shadow(0 0 6px var(--pipe-glow))}', ".topo-link-pipe.pipe-full::before,.topo-link-pipe.pipe-full::after,.topo-link-pipe.pipe-2way::before,.topo-link-pipe.pipe-2way::after,.topo-link-pipe.pipe-bgp::before,.topo-link-pipe.pipe-bgp::after{animation:pipeFlow 1.2s linear infinite}", ".topo-link-pipe.pipe-bgp-idle::before,.topo-link-pipe.pipe-bgp-idle::after{opacity:0.42}", ".topo-link-pipe::before{top:-4px}", ".topo-link-pipe::after{bottom:-4px}", ".topo-link-pipe.pipe-inner{z-index:2}", ".topo-link-pipe.pipe-inner::before,.topo-link-pipe.pipe-inner::after{height:2px}", ".topo-link-pipe.pipe-inner::before{top:-3px}", ".topo-link-pipe.pipe-inner::after{bottom:-3px}", ".topo-link-pipe.pipe-coexist::before{top:-7px}", ".topo-link-pipe.pipe-coexist::after{bottom:-7px}", "@keyframes pipeFlow{to{background-position:16px 0}}", ".topo-diagram:has(.topo-link-pipe) .xray-ping-orb,.topo-diagram:has(.topo-link-pipe) .xray-packet-orb,.topo-diagram:has(.topo-link-pipe) .xray-hello-pkt{top:calc(50% - 9px)}", ".is-xray-mode .topo-diagram:has(.topo-link-pipe) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-packet-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-hello-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ping-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-spark-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-lsa-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-fib-entry{display:none!important}", "@keyframes triRouteDash{to{stroke-dashoffset:-28}}", ".de-lsa-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:6;pointer-events:none}", ".de-routing{position:absolute;bottom:2%;left:90px;z-index:8;max-height:70%;overflow-y:auto;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:5px;padding:9px 11px;font-family:\"Courier New\",monospace;font-size:10.5px;color:rgba(var(--xto-link-rgb,0,229,255),0.92);box-shadow:0 0 18px rgba(var(--xto-link-rgb,0,229,255),0.1);backdrop-filter:blur(6px);min-width:220px;max-width:280px;pointer-events:auto}", ".de-routing:empty{display:none!important}", ".de-rt-hd{font-size:11px;letter-spacing:0.5px;opacity:0.9;margin-bottom:7px;font-weight:700}", ".de-rt-tbl{border-collapse:collapse;width:100%}", ".de-rt-tbl td{padding:2px 8px 2px 0;white-space:nowrap;color:rgba(var(--xto-link-rgb,0,229,255),0.92)}", ".de-rt-tbl td.de-rt-proto{color:#78909c;font-size:9px;text-align:right;width:100%}", ".de-rt-tbl tr[data-prefix]{cursor:pointer}", ".de-rt-tbl tr[data-prefix]:hover td{background:rgba(var(--xto-link-rgb,0,229,255),0.12)}", ".de-rt-tbl tr.de-rt-sel td{background:rgba(57,255,20,0.18);color:#5fe38a}", ".de-skin-wrap{position:absolute;left:30px;bottom:2.5%;z-index:9;pointer-events:auto}" + ".de-skin-wrap:empty{display:none}" + ".de-skin-btn{cursor:pointer;font:700 9px monospace;background:rgba(0,8,16,0.92);color:rgba(var(--xto-link-rgb,0,229,255),0.95);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.5);border-radius:5px;padding:3px 7px;backdrop-filter:blur(6px)}" + ".de-skin-btn:hover{background:rgba(var(--xto-link-rgb,0,229,255),0.14)}" + ".de-skin-pop{position:absolute;left:0;bottom:100%;margin-bottom:6px;background:rgba(0,8,16,0.96);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.5);border-radius:6px;padding:7px;min-width:158px;box-shadow:0 0 18px rgba(0,0,0,0.5)}" + ".de-skin-pop[hidden]{display:none}" + ".de-skin-pop-hd{font:700 9.5px monospace;color:#78909c;letter-spacing:0.5px;margin:0 2px 5px;text-transform:uppercase}" + ".de-skin-item{display:block;width:100%;text-align:left;cursor:pointer;font:12px monospace;background:transparent;color:rgba(var(--xto-link-rgb,0,229,255),0.92);border:1px solid transparent;border-radius:4px;padding:4px 8px;margin:1px 0}" + ".de-skin-item:hover{background:rgba(var(--xto-link-rgb,0,229,255),0.12)}" + ".de-skin-item.de-skin-on{background:rgba(var(--xto-link-rgb,0,229,255),0.18);border-color:rgba(var(--xto-link-rgb,0,229,255),0.5);font-weight:700}" + ".de-skin-full{display:block;margin-top:5px;padding:5px 8px 2px;font:11px monospace;color:#78909c;text-decoration:none;border-top:1px solid rgba(120,144,156,0.3)}" + ".de-skin-full:hover{color:rgba(var(--xto-link-rgb,0,229,255),0.95)}", "body.xray-rt-noarrow .de-fwd-a,body.xray-rt-noarrow .de-fwd-b,body.xray-rt-noarrow .de-flow,body.xray-rt-noarrow #de-cyl-fwd-arrow,body.xray-topo-preview .de-fwd-a,body.xray-topo-preview .de-fwd-b,body.xray-topo-preview .de-flow,body.xray-topo-preview #de-cyl-fwd-arrow{display:none!important}", "body.xray-oss-deep .de-ping-orb,body.xray-oss-deep .de-packet,body.xray-oss-deep .de-ping-ball,body.xray-oss-deep .de-conn-ball{display:none!important}", ".de-lsa{position:absolute;width:8px;height:4px;border-radius:2px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.7);opacity:0}", ".is-xray-deep.xray-state-exchange .de-lsa{animation:deLsaGather var(--dur) ease-in var(--delay) infinite}", "@keyframes deLsaGather{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% + 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", "@keyframes deLsaGatherLeft{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% - 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", "@keyframes deLsaGatherRight{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(82% - 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:82%;top:76%;opacity:0;transform:scale(0.2)}}", ".is-xray-deep.xray-state-inactive .de-packet{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 4px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.3);animation:deHelloReject 3s ease-in-out infinite!important;opacity:0}", ".is-xray-deep:not(.xray-state-init):not(.xray-state-exchange):not(.xray-state-full) .de-packet.p2{animation-delay:1.5s!important}", "@keyframes deHelloReject{0%{left:96%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% + 70px);opacity:1;transform:translateY(-50%) scale(1)}50%{left:calc(50% + 65px);opacity:1;transform:translateY(-50%) scale(1.5)}55%{left:calc(50% + 70px);opacity:0.5;transform:translateY(-50%) scale(0.5)}65%{left:calc(50% + 80px);opacity:0}100%{left:calc(50% + 80px);opacity:0}}", ".is-xray-deep.xray-state-init .de-packet,.is-xray-deep.xray-state-exchange .de-packet{animation:none!important;opacity:0!important}", "@keyframes ospfCorePulse{0%{transform:translate(-50%,-50%) scale(0.8);box-shadow:0 0 6px var(--xto-idle,#ff8c00)}100%{transform:translate(-50%,-50%) scale(1.3);box-shadow:0 0 16px var(--xto-idle,#ff8c00)}}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit .xray-ospf-dot,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00);animation:ospfCorePulse 0.8s ease-in-out infinite alternate}", ".is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px var(--xto-idle,#ff8c00)}", ".xray-fib-entry{display:none!important}", "@keyframes xlinkPulse{0%{box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.4)}100%{box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.8)}}", "@keyframes xlineBlink{0%{opacity:1}100%{opacity:0.35}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".is-xray-mode.hello-out .xray-hello-container,.is-xray-mode.hello-in .xray-hello-container{display:block}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-iface-dot,.xray-if-dot{display:none}", ".is-xray-mode .xray-iface-dot,.is-xray-mode .xray-if-dot{display:inline-block}", ".is-xray-mode .topo-box:not(.target) .xray-logic{display:none!important}", ".is-replaying .btn-xray{display:none!important}", ".is-replaying .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-replaying .xray-holo-panel{display:none!important}", ".replay-skip{position:fixed;bottom:24px;right:24px;z-index:9999;background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.3);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:bold;cursor:pointer;pointer-events:auto;transition:all 0.3s;backdrop-filter:blur(6px);display:none}", ".replay-skip:hover{background:rgba(255,255,255,0.25);color:#fff;transform:translateY(-2px)}", ".is-replaying .replay-skip{display:block}", '[data-mode="troubleshoot"] .xray-trace-btn{color:#ccc;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);box-shadow:none}', '[data-mode="troubleshoot"] .xray-trace-btn:hover{background:rgba(255,255,255,0.2);color:#fff}', '[data-mode="destroy"] .xray-trace-btn{color:#fff;background:#e74c3c!important;border-color:#c0392b;box-shadow:0 0 25px rgba(231,76,60,0.6);z-index:8200!important;opacity:1!important;pointer-events:auto!important}', '[data-mode="destroy"] .xray-trace-btn:hover{background:rgba(231,76,60,0.2);color:#ff6b6b;box-shadow:0 0 30px rgba(231,76,60,0.3)}', ".capture-toggle{order:-1!important}", "#next-question-content a{color:var(--rc-accent,#4dd0e1);text-decoration:underline;font-weight:600}", "#next-question-content a:hover{color:#fff}" ].join("\n");
+  s.textContent = [ ".is-xray-deep:not(.xray-state-ready) .de-beam," + ".is-xray-deep:not(.xray-state-ready) .de-energy," + ".is-xray-deep:not(.xray-state-ready) .de-label," + ".is-xray-deep:not(.xray-state-ready) .de-tunnel," + ".is-xray-deep:not(.xray-state-ready) .de-hello-orb," + ".is-xray-deep:not(.xray-state-ready) .de-ping-orb," + ".is-xray-deep:not(.xray-state-ready) .de-packet," + ".is-xray-deep:not(.xray-state-ready) .de-panel{visibility:hidden!important}", ".is-xray-deep.xray-switching .de-beam," + ".is-xray-deep.xray-switching .de-energy," + ".is-xray-deep.xray-switching .de-label," + ".is-xray-deep.xray-switching .de-tunnel," + ".is-xray-deep.xray-switching .de-hello-orb," + ".is-xray-deep.xray-switching .de-ping-orb," + ".is-xray-deep.xray-switching .de-packet," + ".is-xray-deep.xray-switching .de-panel{visibility:hidden!important}", '.xray-deep-engine::before{content:"✖";position:absolute;left:1.7%;top:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-input-down.is-xray-deep .de-if-marker.left,.is-output-down.is-xray-deep .de-if-marker.right{z-index:11}", '.is-input-down.is-xray-deep .de-if-marker.left::after,.is-output-down.is-xray-deep .de-if-marker.right::after{content:"✖";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:24px;text-align:center;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);pointer-events:none;z-index:11}', ".is-input-down .de-beam.in{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-input-down .de-label.in{color:#ef5350!important;text-shadow:0 0 6px rgba(239,83,80,0.5)!important}", ".is-input-down .de-energy.el{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%)!important;box-shadow:0 0 10px rgba(255,60,60,0.3)!important;animation:none!important}", ".is-input-down.is-xray-deep .de-packet,.is-input-down.is-xray-deep .de-packet.p2{animation:none!important;opacity:0!important}", '.xray-deep-engine::after{content:"✖";position:absolute;right:1.7%;top:50%;transform:translate(50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:28px;text-align:center;z-index:10;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);opacity:0;transition:opacity 0.3s;pointer-events:none}', ".is-output-down.is-xray-deep .xray-deep-engine::after{opacity:0}", ".is-output-down.is-xray-deep .de-beam.out{background:repeating-linear-gradient(90deg,rgba(255,60,60,0.5) 0,rgba(255,60,60,0.5) 8px,transparent 8px,transparent 16px)!important;box-shadow:none!important}", ".is-output-down.is-xray-deep .de-energy.er{background:radial-gradient(circle,rgba(255,80,60,0.6) 0%,rgba(255,60,60,0.2) 40%,transparent 70%);box-shadow:0 0 10px rgba(255,60,60,0.3);animation:none}", ".is-output-down.is-xray-deep .de-label.out{color:#ef5350;text-shadow:0 0 6px rgba(239,83,80,0.5)}", ".is-cleared .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-cleared .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 60px rgba(var(--xto-link-rgb,0,229,255),0.25);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-cleared .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-packet{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 10px 4px rgba(255,255,255,0.7),0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.8);transform:translateY(-50%);z-index:6;opacity:0;display:none}", ".xray-state-ready .de-packet{display:block}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet{animation:xrayDeepPacketStop 2s ease-in-out infinite}", ":not(.ping-ok).is-xray-deep.ping-through .de-packet.p2{animation-delay:1s}", ":not(.ping-ok).is-xray-deep.ping-from-r1 .de-packet{display:none}", ".is-xray-deep.ping-from-r1 .de-beam.in{display:none!important}", ".is-xray-deep.ping-from-r1 .de-energy.el{display:none!important}", ".is-xray-deep.ping-from-r1 .de-label.in{display:none!important}", ":not(.ping-ok).is-xray-deep.ping-cylinder-to-left .de-packet{display:none}", ".is-xray-deep.ping-cylinder-to-left .de-beam.out,.is-xray-deep.ping-cylinder-to-left .de-if-marker.right{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-energy.er{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-label.out{display:none!important}", ".xray-advertiser-view .de-beam.out,.xray-advertiser-view .de-tunnel:not(.left-side),.xray-advertiser-view .de-energy.er,.xray-advertiser-view .de-label.out,.xray-advertiser-view #de-ping-req,.xray-advertiser-view .de-ping-orb.reply,.xray-advertiser-view .de-if-marker.right{display:none!important}", ".xray-advertiser-view .de-packet,.xray-advertiser-view .de-packet.p2{display:none!important}", ".is-xray-deep.ping-from-r1 .de-beam.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-beam.in,.is-xray-deep.ping-from-r1 .de-if-marker.left,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-if-marker.left{display:none}", "body[data-topo-triangle].is-xray-deep .de-beam.in,body[data-topo-triangle].is-xray-deep .de-if-marker.left,body[data-topo-triangle].is-xray-deep .de-label.in{display:block!important}", "body[data-topo-triangle].is-single-link-edge.is-xray-deep .de-beam.in,body[data-topo-triangle].is-single-link-edge.is-xray-deep .de-if-marker.left,body[data-topo-triangle].is-single-link-edge.is-xray-deep .de-label.in{display:block!important}", ".is-xray-deep.ping-from-r1 .de-energy.el,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-energy.el{display:none}", ".is-xray-deep.ping-from-r1 .de-label.in,.is-xray-deep:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .de-label.in{display:none}", "[data-topo-triangle].is-xray-deep .de-beam.in,[data-topo-triangle].is-xray-deep .de-if-marker.left{display:block!important}", "[data-topo-triangle].is-xray-deep .de-energy.el{display:block!important}", "[data-topo-triangle].is-xray-deep .de-label.in{display:block!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.out{display:none!important}", "[data-topo-triangle].is-xray-deep .de-hello-orb.in{display:none!important}", ".is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-beam.in,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-if-marker.left,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-hello-orb.in,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-tunnel.left-side,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-side-left,.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-label.in{display:none!important}body:not([data-topo-triangle]).is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .de-if-marker.left{display:none!important}/*nx_single_link_left_marker*/body.xray-oss-deep.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .xray-deep-engine .de-if-marker.left,body.xray-oss-deep.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .xray-deep-engine .de-beam.in,body.xray-oss-deep.is-single-link-edge.is-xray-deep:not(.ping-cylinder-to-left) .xray-deep-engine .de-label.in{display:none!important}#xray-deep-engine.xray-unified-mode .de-beam,#xray-deep-engine.xray-unified-mode .de-if-marker,#xray-deep-engine.xray-unified-mode .de-label,#xray-deep-engine.xray-unified-mode .de-energy{display:none!important}/*nx_oss_single_link_left_side*/.is-single-link-edge.is-xray-deep.ping-cylinder-to-left #de-re-panel{top:4%!important;bottom:auto!important;min-height:0!important;height:auto!important;z-index:12!important;background:rgba(0,8,16,0.97)!important}", "[data-topo-triangle].is-xray-deep.hello-out .de-hello-orb.left-out{display:block!important}", "[data-topo-triangle].is-xray-deep.hello-in .de-hello-orb.left-in{display:block!important}", "@keyframes xrayDeepPacketStop{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}10%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% - 60px);transform:translateY(-50%) scale(1.3)}55%{left:calc(50% - 60px);opacity:0.5;transform:translateY(-50%) scale(0.7)}80%{left:calc(50% - 60px);opacity:0}100%{left:calc(50% - 60px);opacity:0}}", ".ping-ok.is-xray-deep .de-packet{animation:xrayDeepPacket 2.8s ease-in-out infinite}", ".ping-ok.is-xray-deep .de-packet.p2{animation-delay:1.4s}", "@keyframes xrayDeepPacket{0%{left:3%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}42%{left:47%;transform:translateY(-50%) scale(1.5)}58%{left:53%;transform:translateY(-50%) scale(1.5)}92%{opacity:1;transform:translateY(-50%) scale(1)}100%{left:97%;opacity:0;transform:translateY(-50%) scale(0.4)}}", "@keyframes xrayEnergyPulse{0%{transform:translate(-50%,-50%) scale(0.7);opacity:0.6}100%{transform:translate(-50%,-50%) scale(1.3);opacity:1}}", ".de-ping-orb{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-link-rgb,0,229,255),0.8));box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.7);transform:translateY(-50%);z-index:8;opacity:0;display:none}", ".ping-ok.is-xray-deep .de-ping-orb{display:block}", ".ping-ok.is-xray-deep .de-packet{display:none}", ".ping-ok.is-xray-deep .de-packet.p2{display:none}", ":not(.ping-ok).is-xray-deep .de-ping-orb{display:none!important}", ".xray-target-bypassed.is-xray-deep .de-ping-orb{display:none!important;animation:none!important}", "body.xray-no-target.is-xray-deep .de-ping-orb,body.xray-no-target.is-xray-deep .de-packet{display:none!important;animation:none!important}", "body.xray-no-target.is-xray-deep:not(.xray-rt-live) .de-fwd-a,body.xray-no-target.is-xray-deep:not(.xray-rt-live) .de-fwd-b,body.xray-no-target.is-xray-deep:not(.xray-rt-live) #de-cyl-fwd-arrow{display:none!important}", "body.xray-no-target.is-xray-mode .topo-box.target,body.xray-no-target.is-xray-mode .topo-box.deepdive-target{border-color:var(--xto-link,#00e5ff)!important;box-shadow:none!important;animation:none!important}", "body.xray-no-target.is-xray-mode .topo-box.target h4{color:var(--xto-link,#00e5ff)!important;text-shadow:none!important}", "body.is-xray-deep .de-bgp-panel,body.dd-engine .de-bgp-panel{top:30px!important;bottom:auto!important;left:auto!important;right:16px!important;max-width:calc(50% - 110px)!important;min-width:0!important;--de-bgp-fs:0.9}/*oss-bgptable-cyl-avoid-20260925: a populated (wide) BGP Table must not slide behind the cylinder: clamp max-width to the right zone, compress font to 0.9, min-width:0 (overflow-x:auto comes from base). oss-reposition-oss-wide-20260925: place the BGP Table top-right for every OSS DeepDive (with or without a target). CSS is OSS-engine only.*/ body.is-xray-deep .de-lsdb,body.dd-engine .de-lsdb{left:auto!important;right:22%!important;bottom:2%!important;top:auto!important;transform:none!important}/* nx_state_driven_tab: right-bottom [Best-Path|LSDB] tab (dual-stack only) */.de-br-tabs{position:absolute;right:22%;bottom:2%;z-index:41;display:none;gap:3px}.xray-de-dualbr .de-br-tabs{display:flex}.de-br-tab{cursor:pointer;font:700 9px 'Courier New',monospace;border-radius:0 0 4px 4px;padding:2px 8px;border:1px solid rgba(120,144,156,0.4);background:rgba(10,26,36,0.9);color:#78909c}.de-br-tab.on{color:#39ff14;border-color:rgba(57,255,20,0.5);background:rgba(10,26,16,0.9)}.xray-de-dualbr #de-lsdb{bottom:calc(2% + 32px)!important}.xray-de-dualbr #de-bgp-decision-panel{display:none}.xray-de-dualbr.show-bestpath #de-lsdb{display:none}.xray-de-dualbr.show-bestpath #de-bgp-decision-panel{display:block}/*oss-reposition-oss-wide-20260925 + oss-lsdb-pos-tune-20260925: align the LSDB bottom with the routing table (.de-routing bottom:2%) and move it toward the middle of the r1-r2 link (right:22%, first cut).*/", ".xray-target-bypassed.is-xray-deep .de-packet{display:none!important;animation:none!important}", ".xray-target-bypassed.is-xray-deep .de-packet.p2{display:none!important;animation:none!important}", ".xray-target-bypassed:not(.xray-input-session-up).is-xray-deep .de-tunnel.left-side{height:0!important;opacity:0!important}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb{animation:dePingR1Req 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-from-r1 .de-ping-orb.reply{animation:dePingR1Rep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingR1Req{0%{left:calc(50% + 10px);opacity:0}6%{opacity:1}40%{left:calc(100% - 14px);opacity:0.8}44%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingR1Rep{0%{left:calc(100% - 14px);opacity:0}6%{opacity:1}40%{left:calc(50% + 10px);opacity:0.8}44%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb{animation:dePingThruReq 4s ease-in-out infinite}", ".ping-ok.is-xray-deep.ping-through .de-ping-orb.reply{animation:dePingThruRep 4s ease-in-out infinite;animation-delay:2s}", "@keyframes dePingThruReq{0%{left:3%;opacity:0}4%{opacity:1}20%{left:calc(50% - 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% + 10px);transform:translateY(-50%) scale(1.3)}45%{left:calc(100% - 14px);opacity:0.8}48%{left:calc(100% - 14px);opacity:0}100%{opacity:0}}", "@keyframes dePingThruRep{0%{left:calc(100% - 14px);opacity:0}4%{opacity:1}20%{left:calc(50% + 10px);opacity:1;transform:translateY(-50%) scale(1.3)}25%{left:calc(50% - 10px);transform:translateY(-50%) scale(1.3)}45%{left:3%;opacity:0.8}48%{left:3%;opacity:0}100%{opacity:0}}", ".de-hello-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,#fff,rgba(var(--xto-idle-rgb,255,140,0),0.9));box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.7);z-index:7;opacity:0;display:none}", ".de-hello-orb.out{top:calc(50% + 10px)}", ".de-hello-orb.in{top:calc(50% - 18px)}", ".is-xray-deep.hello-out .de-hello-orb.out{display:block;animation:deHelloOut 10s ease-in-out infinite}", ".is-xray-deep.hello-in .de-hello-orb.in{display:block;animation:deHelloIn 10s ease-in-out 5s infinite}" + ".is-single-link-edge.is-xray-deep.hello-in:not(.ping-cylinder-to-left) .de-hello-orb.in{display:block!important}", "@keyframes deHelloOut{0%{left:calc(50% + 10px);opacity:0}2%{opacity:1}15%{left:calc(100% - 12px);opacity:0.8}18%{left:calc(100% - 12px);opacity:0}100%{opacity:0}}", "@keyframes deHelloIn{0%{left:calc(100% - 12px);opacity:0}2%{opacity:1}15%{left:calc(50% + 10px);opacity:0.8}18%{left:calc(50% + 10px);opacity:0}100%{opacity:0}}", ".de-hello-orb.left-out{top:calc(50% + 10px)}", ".de-hello-orb.left-in{top:calc(50% - 18px)}", ".is-xray-deep.hello-left-out .de-hello-orb.left-out{display:block;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.hello-left-in .de-hello-orb.left-in{display:block;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", "@keyframes deHelloLeftOut{0%{left:calc(50% - 10px);opacity:0}2%{opacity:1}15%{left:12px;opacity:0.8}18%{left:12px;opacity:0}100%{opacity:0}}", "@keyframes deHelloLeftIn{0%{left:12px;opacity:0}2%{opacity:1}15%{left:calc(50% - 10px);opacity:0.8}18%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".is-input-down .de-hello-orb.left-out{display:none!important}", ".is-input-down .de-hello-orb.left-in{display:none!important}", '.de-panel{position:absolute;z-index:8;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:5px;padding:12px 14px;font-family:"Courier New",monospace;font-size:11px;line-height:1.8;color:rgba(var(--xto-link-rgb,0,229,255),0.95);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.1);backdrop-filter:blur(8px);min-width:220px;max-width:280px;opacity:0;transition:opacity 0.5s ease 0.3s}', ".xray-deep-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto}", ".is-xray-deep .de-panel{opacity:1}", ".dd-engine .de-panel{top:30px;right:calc(50% + 100px);left:auto;opacity:1}", ".xray-deep-engine .de-bgp-panel,.dd-engine .de-bgp-panel{top:30px;bottom:auto;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px;max-height:360px;overflow-y:auto;overflow-x:auto}", "body.trace-active .xray-deep-engine .de-bgp-panel,body.trace-active .xray-deep-engine .de-bgp-decision-panel{max-width:calc(50% - 120px)}", "body.trace-active .de-bgp-panel{min-width:0}", "body.trace-active .de-bgp-panel .de-bgp-table{font-size:calc(10px * var(--de-bgp-fs,1))}", "body.trace-active .de-bgp-panel .de-bgp-table th{padding:2px 6px 3px 0;font-size:calc(9px * var(--de-bgp-fs,1));letter-spacing:0}", "body.trace-active .de-bgp-panel .de-bgp-table td{padding:2px 6px 2px 0}", ".de-bgp-panel .de-title{color:#bb86fc;text-shadow:0 0 8px rgba(187,134,252,0.55)}", ".de-bgp-panel .de-title,.de-bgp-decision-panel .de-title{font-size:calc(12px * var(--de-bgp-fs,1))}", ".de-bgp-panel .de-bgp-table{width:100%;border-collapse:collapse;font-size:calc(12px * var(--de-bgp-fs,1));margin-top:4px}", ".de-bgp-panel .de-bgp-table th{color:#bb86fc;text-align:left;font-weight:700;padding:2px 11px 4px 0;border-bottom:1px solid rgba(187,134,252,0.3);font-size:calc(11px * var(--de-bgp-fs,1));letter-spacing:0.3px}", ".de-bgp-fs-ctl{float:right;display:inline-flex;gap:3px;margin-left:8px}", ".de-bgp-fs-ctl button{background:rgba(187,134,252,0.12);border:1px solid rgba(187,134,252,0.4);color:#bb86fc;font-size:11px;line-height:1.1;padding:1px 6px;border-radius:4px;cursor:pointer;pointer-events:auto!important}", ".de-bgp-fs-ctl button:hover{background:rgba(187,134,252,0.28)}", ".de-bgp-panel .de-bgp-table td{color:rgba(var(--xto-link-rgb,0,229,255),0.9);padding:2px 11px 2px 0;white-space:nowrap}", ".de-bgp-panel .bgp-st{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-bgp-panel .de-bgp-table tr.bgp-best td{color:#aef5b0;background:rgba(var(--xto-ospf-rgb,57,255,20),0.10)}tr.bgp-best{cursor:pointer}tr.bgp-best.de-bgp-pfx-active td{box-shadow:inset 0 1px 0 rgba(255,213,79,0.7),inset 0 -1px 0 rgba(255,213,79,0.7)}.de-bgp-panel .de-bgp-table tr.bgp-best.de-bgp-pfx-active td:first-child{box-shadow:inset 1px 0 0 rgba(255,213,79,0.7),inset 0 1px 0 rgba(255,213,79,0.7),inset 0 -1px 0 rgba(255,213,79,0.7)}.de-bgp-panel .de-bgp-table tr.bgp-best.de-bgp-pfx-active td:last-child{box-shadow:inset -1px 0 0 rgba(255,213,79,0.7),inset 0 1px 0 rgba(255,213,79,0.7),inset 0 -1px 0 rgba(255,213,79,0.7)}.de-bgp-panel .de-bgp-table tr.bgp-best.de-bgp-pfx-active td.bgp-decider{background:rgba(var(--xto-ospf-rgb,57,255,20),0.10);box-shadow:inset 0 1px 0 rgba(255,213,79,0.7),inset 0 -1px 0 rgba(255,213,79,0.7)}.de-bgp-panel .de-bgp-table tr.bgp-best.de-bgp-pfx-active td.bgp-decider:last-child{box-shadow:inset -1px 0 0 rgba(255,213,79,0.7),inset 0 1px 0 rgba(255,213,79,0.7),inset 0 -1px 0 rgba(255,213,79,0.7)}/*bgp_best_row_frame*//*bgp_best_row_frame_lr*/", ".de-bgp-panel .de-bgp-table tr.bgp-best .bgp-st{color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".de-bgp-panel .de-bgp-table td.bgp-decider{background:rgba(255,193,7,0.22);color:#ffd54f;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,193,7,0.55)}", ".de-bgp-panel .de-bgp-table .bgp-default{color:rgba(var(--xto-link-rgb,0,229,255),0.45);font-style:italic}", ".de-bgp-panel .de-bgp-table td.bgp-decider .bgp-default{color:#ffd54f;font-style:normal}", ".xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto;bottom:64px;left:calc(50% + 100px);right:auto;min-width:280px;max-width:560px;z-index:40}", ".xray-deep-engine.xray-unified-mode .de-bgp-decision-panel{top:calc(50% + 64px);bottom:auto;max-height:calc(50% - 84px);overflow-y:auto}", ".de-bgp-decision-panel .de-title{color:#ffd54f;text-shadow:0 0 8px rgba(255,193,7,0.5)}", ".de-bgp-decision-panel .bgp-reason{margin-top:6px;font-size:calc(12px * var(--de-bgp-fs,1));color:#66bb6a;line-height:1.5}", ".de-bgp-decision-panel .bgp-reason b{color:#ffd54f}", ".de-bgp-decision-panel .bgp-reason.bgp-reason-note{color:#7facc9}", ".de-bgp-decision-panel .bgp-chain{margin-top:3px;font-size:calc(10px * var(--de-bgp-fs,1));color:var(--xto-static,#888);line-height:1.6;letter-spacing:0.2px}", ".de-bgp-decision-panel .bgp-chain .bgp-step-tie{color:#6b7b8c}", ".de-bgp-decision-panel .bgp-chain .bgp-step-win{color:#ffd54f;font-weight:700}", ".de-bgp-decision-panel .bgp-chain .bgp-step-amb{color:#e0a060;font-weight:700}", ".de-bgp-decision-panel .bgp-legend{margin-top:5px;font-size:calc(10px * var(--de-bgp-fs,1));color:#999;letter-spacing:0.3px}", ".de-bgp-decision-panel .bgp-crit-btn{color:#ffd54f;cursor:pointer;border-bottom:1.5px dashed #ffd54f;padding:0 1px;font-weight:800;pointer-events:auto}", '.de-bgp-decision-panel .bgp-crit-btn::after{content:" \\25BE";font-size:0.85em}', ".de-bgp-decision-panel .bgp-crit-btn:hover,.de-bgp-decision-panel .bgp-crit-btn:focus-visible{background:rgba(255,213,79,0.16);border-radius:4px;outline:none}", ".de-bgp-bracket-pop{position:relative;z-index:2;margin-top:8px;background:#0c1a28;border:1px solid rgba(255,213,79,0.55);border-radius:8px;padding:8px 10px;display:none;box-shadow:0 8px 24px -10px rgba(0,0,0,0.8)}", ".de-bgp-bracket-pop.open{display:block}", ".de-bgp-bracket-pop .bp-h{display:flex;align-items:center;font-size:calc(11px * var(--de-bgp-fs,1));font-weight:700;color:#ffd54f;margin-bottom:6px}", ".de-bgp-bracket-pop .bp-x{margin-left:auto;cursor:pointer;color:#8fb0c8;border:none;background:transparent;font-size:13px;line-height:1;padding:0 2px;pointer-events:auto!important}", ".de-bgp-bracket-pop .bp-x:hover{color:#ff4d4d}", ".de-bgp-bracket-pop .bp-row{display:flex;justify-content:space-between;gap:14px;font-size:calc(11px * var(--de-bgp-fs,1));padding:2px 2px;font-variant-numeric:tabular-nums}", ".de-bgp-bracket-pop .bp-row .k{color:#8fb0c8}", ".de-bgp-bracket-pop .bp-row.tie .v{color:#6b7b8c}", ".de-bgp-bracket-pop .bp-row.win{background:rgba(57,255,20,0.08);border-radius:4px}", ".de-bgp-bracket-pop .bp-row.win .v b{color:#00e5ff}", ".de-bgp-bracket-pop .bp-more{display:block;margin-top:8px;padding-top:7px;border-top:1px dashed rgba(255,213,79,0.25);font-size:calc(11px * var(--de-bgp-fs,1));color:#00e5ff;text-decoration:none;font-weight:700;pointer-events:auto!important}", ".de-bgp-bracket-pop .bp-more:hover{text-decoration:underline}", ".de-panel .de-title{color:var(--xto-link,#00e5ff);font-weight:700;font-size:12px;margin-bottom:6px;letter-spacing:1px;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-panel .de-hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".de-panel .de-dim{color:rgba(var(--xto-link-rgb,0,229,255),0.35);font-size:10px}", ".de-panel .de-err{color:#ff4444;font-weight:700}", ".de-panel .de-warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".de-tunnel{position:absolute;top:50%;left:calc(50% + 60px);right:0;height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:none}", ".is-xray-deep.xray-state-full .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-established .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)}", ".is-xray-deep.xray-bgp-established .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", "@keyframes xBgpTunnelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-bgp-rgb,168,85,247),0.8)}}", ".is-xray-deep.xray-bgp-idle .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-bgp-idle .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px);opacity:0.42;box-shadow:none}", ".is-xray-deep.xray-bgp-idle .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 100%)}", ".is-xray-deep.xray-bgp-idle .de-tunnel-label{opacity:0.55;color:var(--xto-bgp,#a855f7);text-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.3)}", ".de-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".de-tunnel-wall.top{top:0}", ".de-tunnel-wall.bot{bottom:0}", ".de-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0s}", ".is-xray-deep.xray-state-full .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", '.de-tunnel-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:9px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:1px;opacity:0;white-space:nowrap;transition:opacity 0.6s ease 0s}/* deepdive_tunnel_instant: render the DeepDive tunnel at its final angle instantly with the cyan link on a node switch (no angle-move animation); linear (de-tunnel/.left-side/xray-tunnel-body/fill/label) + angle view (de-angle-active #de-tunnel-left/right); pulse/content/color/state unchanged. */', ".is-xray-deep.xray-state-full .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-ospftun-init .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-2way .de-tunnel:not(.left-side),.is-xray-deep.xray-ospftun-exchange .de-tunnel:not(.left-side){height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-2way.ping-through .de-tunnel.left-side,.is-xray-deep.xray-ospftun-exchange.ping-through .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-ospftun-init .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)}", ".is-xray-deep.xray-ospftun-2way .de-tunnel > .de-tunnel-wall{background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px);box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-fill,.is-xray-deep.xray-ospftun-2way .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.06) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.06) 100%)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.06) 100%)}", ".is-xray-deep.xray-ospftun-init .de-tunnel-label,.is-xray-deep.xray-ospftun-2way .de-tunnel-label{opacity:0.85;color:var(--xto-idle,#ff8c00);text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".is-xray-deep.xray-ospftun-exchange .de-tunnel-label{opacity:0.85;color:var(--xto-ospf,#39ff14);text-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.4)}", ".is-xray-deep:not(.de-angle-active).xray-ospftun-init .de-tunnel-fill,.is-xray-deep:not(.de-angle-active).xray-ospftun-2way .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.42) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.28) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.42) 100%)}", ".is-xray-deep:not(.de-angle-active).xray-ospftun-exchange .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)}", ".is-xray-deep:not(.de-angle-active).xray-state-full .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)}", ".de-tunnel-inner{position:absolute;top:calc(50% - 8px);bottom:calc(50% - 8px);left:0;right:0;display:none;pointer-events:none}", ".is-xray-deep .de-tunnel.de-coexist .de-tunnel-wall{height:3px}", ".de-tunnel.de-coexist .de-tunnel-inner{display:block}", ".de-tunnel.de-coexist-init .de-tunnel-inner .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)!important}", ".de-tunnel.de-coexist-2way .de-tunnel-inner .de-tunnel-wall{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5)!important}", ".de-tunnel.de-coexist-exchange .de-tunnel-inner .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important}", ".de-tunnel.de-coexist-full .de-tunnel-inner .de-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}" + ".is-xray-deep .de-tunnel.de-coexist-2way .de-tunnel-inner,.is-xray-deep .de-tunnel.de-coexist-exchange .de-tunnel-inner{background:rgba(var(--xto-idle-rgb,255,140,0),0.42)!important}" + ".is-xray-deep .de-tunnel.de-coexist-full .de-tunnel-inner{background:rgba(var(--xto-ospf-rgb,57,255,20),0.42)!important}", ".is-xray-deep .de-tunnel.de-coexist .de-tunnel-inner{display:block!important}", ".is-xray-deep .de-tunnel.de-coexist.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.42) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.30) 26%,transparent 27%,transparent 73%,rgba(var(--xto-bgp-rgb,168,85,247),0.30) 74%,rgba(var(--xto-bgp-rgb,168,85,247),0.42) 100%)!important}", ".is-xray-deep .de-tunnel.de-coexist > .de-tunnel-fill{position:relative}", '.is-xray-deep .de-tunnel.de-coexist > .de-tunnel-fill::after{content:none;position:absolute;left:0;right:0;top:calc(50% + 2px);height:10px;transform:translateY(-50%);pointer-events:none;z-index:1}', ".is-xray-deep .de-tunnel.de-coexist-full > .de-tunnel-fill::after{background:rgba(var(--xto-ospf-rgb,57,255,20),0.9);box-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".is-xray-deep .de-tunnel.de-coexist-exchange > .de-tunnel-fill::after{background:repeating-linear-gradient(90deg,rgba(var(--xto-ospf-rgb,57,255,20),0.9) 0 6px,transparent 6px 11px)}", ".is-xray-deep .de-tunnel.de-coexist-2way > .de-tunnel-fill::after{background:rgba(var(--xto-idle-rgb,255,140,0),0.9);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-deep .de-tunnel.de-coexist-init > .de-tunnel-fill::after{background:repeating-linear-gradient(90deg,rgba(var(--xto-idle-rgb,255,140,0),0.9) 0 6px,transparent 6px 11px)}", ".is-xray-deep .de-tunnel.de-side-show{height:36px!important;opacity:1!important}", ".is-xray-deep .de-tunnel.de-side-show > .de-tunnel-fill{opacity:0!important}", ".is-xray-deep .de-tunnel.de-side-bgp > .de-tunnel-wall{background:var(--xto-bgp,#a855f7)!important;box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)!important}", ".is-xray-deep .de-tunnel.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}", ".is-xray-deep .de-tunnel.de-side-bgp-idle > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px)!important;opacity:0.42!important;box-shadow:none!important}", ".is-xray-deep .de-tunnel.de-side-ospf-full > .de-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-full > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-exchange > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-ospf,#39ff14) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-2way > .de-tunnel-wall{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5)!important}", ".is-xray-deep .de-tunnel.de-side-ospf-init > .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-idle,#ff8c00) 0 6px,transparent 6px 11px)!important;box-shadow:0 0 5px rgba(var(--xto-idle-rgb,255,140,0),0.35)!important}", ".is-xray-deep .xray-deep-engine .de-tunnel.left-side.de-side-show{height:36px!important;opacity:1!important}", ".is-xray-deep .xray-deep-engine .de-tunnel:not(.left-side).de-side-show{height:36px!important;opacity:1!important}", "@keyframes xtunnelLabelPulse{0%{text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}100%{text-shadow:0 0 18px rgba(var(--xto-ospf-rgb,57,255,20),0.8)}}", ".de-panel-initial{display:block}", ".de-panel-cleared{display:none}", ".is-cleared .de-panel-initial{display:none}", ".is-cleared .de-panel-cleared{display:block}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-energy.er{animation:none}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.5)}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-idle .xray-deep-engine .de-label.out{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established .xray-deep-engine .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".xray-deep-engine{position:relative;width:100%;height:0;overflow:hidden;opacity:0;transition:opacity 0.4s,height 0.4s;border-radius:6px;margin-top:10px;display:none}", ".xray-deep-engine::before,.xray-deep-engine::after{display:none!important}", ".is-xray-deep .xray-deep-engine{display:block}", ".is-xray-deep .xray-deep-engine::before,.is-xray-deep .xray-deep-engine::after{display:block!important}", ".is-xray-deep .xray-deep-engine{opacity:1;height:400px}", ".is-xray-deep .topo-diagram{display:none!important}", ".is-xray-deep .topo-header{display:none!important}", ".is-xray-deep .topology{background:transparent!important;padding:0!important;border-radius:0!important}", ".is-xray-deep .btn-xray{display:none!important}", ".is-xray-deep .neighbor-panel,.is-xray-deep .link-status,.is-xray-deep .topo-tri-arrows,.is-replaying .neighbor-panel,.is-replaying .link-status,.is-replaying .topo-tri-arrows,.is-replaying .panels-row{display:none!important}", ".de-box-svg{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}", ".de-cyl-svg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:160px;height:320px;z-index:3}", ".de-beam{position:absolute;top:50%;height:4px;z-index:2;box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-beam.out{left:calc(50% + 60px);right:0;background:var(--xto-link,#00e5ff)}", ".de-energy{position:absolute;top:50%;width:20px;height:20px;border-radius:50%;transform:translate(-50%,-50%);z-index:4;background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 15px 6px rgba(var(--xto-link-rgb,0,229,255),0.5),0 0 40px rgba(var(--xto-link-rgb,0,229,255),0.2);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".de-energy.er{left:calc(50% + 60px)}", '.de-label{position:absolute;top:50%;z-index:5;font-family:"Courier New",monospace;font-size:12px;font-weight:700;color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5);white-space:nowrap}', ".de-label.out{right:10px;transform:translateY(14px)}", ".de-r1-label{position:absolute;top:24px;left:60px;z-index:7;text-align:left;opacity:0;transition:opacity 0.4s ease 0.2s}", ".is-xray-deep .de-r1-label{opacity:1}", ".de-r1-name{font-size:22px;font-weight:700;color:var(--xto-ospf,#39ff14);text-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.5);letter-spacing:3px}", ".de-r1-sub{font-size:10px;color:rgba(var(--xto-ospf-rgb,57,255,20),0.4);margin-top:2px}", ".is-xray-deep.xray-state-init .de-beam.out,.is-xray-deep.xray-state-exchange .de-beam.out{background:var(--xto-link,#00e5ff)!important;box-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-deep.xray-state-init .de-energy.er,.is-xray-deep.xray-state-exchange .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-state-init .de-label.out,.is-xray-deep.xray-state-exchange .de-label.out{color:var(--xto-idle,#ff8c00)!important;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)!important}", ".is-xray-deep.xray-state-full .de-beam.out{background:var(--xto-link,#00e5ff);box-shadow:0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.7),0 0 50px rgba(var(--xto-link-rgb,0,229,255),0.3)}", ".is-xray-deep.xray-state-full .de-energy.er{background:radial-gradient(circle,#fff 0%,rgba(var(--xto-link-rgb,0,229,255),0.9) 25%,rgba(var(--xto-link-rgb,0,229,255),0.3) 50%,transparent 70%);box-shadow:0 0 25px 10px rgba(var(--xto-link-rgb,0,229,255),0.5);animation:xrayEnergyPulse 1.5s ease-in-out infinite alternate}", ".is-xray-deep.xray-state-full .de-label.out{color:rgba(var(--xto-link-rgb,0,229,255),0.95);text-shadow:0 0 10px rgba(var(--xto-link-rgb,0,229,255),0.6)}", ".de-ospf{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-ospf-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-ospf-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-state-init .de-ospf-core,.is-xray-deep.xray-state-exchange .de-ospf-core,.is-xray-deep.xray-state-full .de-ospf-core{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", '.de-ospf-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-state-init .de-ospf-label,.is-xray-deep.xray-state-exchange .de-ospf-label{color:var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-full .de-ospf-label{color:var(--xto-ospf,#39ff14)}", ".de-ospf-coexist{display:none;top:auto;bottom:18%}", "body.de-coexist-glyph .de-ospf-coexist{display:flex;flex-direction:column-reverse;align-items:center}", ".de-ospf-coexist .de-ospf-label{margin-top:0;margin-bottom:3px}", ".de-bgp-proc{position:absolute;top:16%;left:50%;transform:translateX(-50%);z-index:5;text-align:center}", ".de-bgp-proc-core{width:50px;height:50px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(40,40,40,0.4);margin:0 auto;transition:all 0.6s;position:relative}", ".de-bgp-proc-core .inner{width:16px;height:16px;border-radius:50%;background:#333;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core{border-color:#c4b5fd;box-shadow:0 0 20px rgba(196,181,253,0.55)}", ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-core .inner{background:#c4b5fd}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core{border-color:var(--xto-bgp,#a855f7);box-shadow:0 0 20px rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-core .inner{background:var(--xto-bgp,#a855f7)}", '.de-bgp-proc-label{font-family:"Courier New",monospace;font-size:8px;color:#666;margin-top:4px;transition:color 0.5s}', ".is-xray-deep.xray-bgpproc-up .de-bgp-proc-label{color:#c4b5fd}", ".is-xray-deep.xray-bgpproc-est .de-bgp-proc-label{color:var(--xto-bgp,#a855f7)}", '.de-lsdb{position:absolute;bottom:14%;left:50%;transform:translateX(-50%);z-index:5;width:180px;background:rgba(0,8,16,0.9);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.3);border-radius:5px;padding:10px 12px;font-family:"Courier New",monospace;font-size:9px;color:rgba(var(--xto-idle-rgb,255,140,0),0.7);backdrop-filter:blur(4px);transition:all 0.5s}', ".de-lsdb .lsdb-hd{font-weight:700;font-size:10px;color:var(--xto-idle,#ff8c00);margin-bottom:4px;letter-spacing:1px;text-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".de-lsdb .lsdb-bar{height:4px;background:#1a1a1a;border-radius:3px;overflow:hidden;margin-bottom:6px}", ".de-lsdb .lsdb-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--xto-idle,#ff8c00),#ffb347);border-radius:3px;transition:width 0.4s}", ".de-lsdb .lsdb-row{padding:2px 0;border-bottom:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.1)}", ".de-lsdb .lsdb-row .type{color:var(--xto-idle,#ff8c00);font-weight:700}", '.de-loading-ind{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;display:none;align-items:center;gap:8px;font-family:"Courier New",monospace;font-size:12px;color:var(--xto-idle,#ff8c00);letter-spacing:1px;text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}', ".is-xray-deep.de-loading .de-loading-ind{display:flex}", ".de-loading-ind .de-load-spin{width:14px;height:14px;border:2px solid rgba(var(--xto-idle-rgb,255,140,0),0.25);border-top-color:var(--xto-idle,#ff8c00);border-radius:50%;animation:deLoadSpin 0.8s linear infinite}", "@keyframes deLoadSpin{to{transform:rotate(360deg)}}", ".is-xray-deep.de-loading .xray-deep-engine .de-cyl-svg,.is-xray-deep.de-loading .xray-deep-engine .de-ospf,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-proc,.is-xray-deep.de-loading .xray-deep-engine .de-lsdb,.is-xray-deep.de-loading .xray-deep-engine .de-panel,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-panel,.is-xray-deep.de-loading .xray-deep-engine .de-bgp-decision-panel,.is-xray-deep.de-loading .xray-deep-engine .de-tunnel,.is-xray-deep.de-loading .xray-deep-engine .de-beam,.is-xray-deep.de-loading .xray-deep-engine .de-energy,.is-xray-deep.de-loading .xray-deep-engine .de-label,.is-xray-deep.de-loading .xray-deep-engine .de-if-marker,.is-xray-deep.de-loading .xray-deep-engine .de-ping-orb,.is-xray-deep.de-loading .xray-deep-engine .de-hello-orb,.is-xray-deep.de-loading .xray-deep-engine .de-packet,.is-xray-deep.de-loading .xray-deep-engine .de-lsa-container,.is-xray-deep.de-loading .xray-deep-engine #xray-deep-unified{visibility:hidden!important}", ".de-beam.in{left:0;right:calc(50% + 60px);background:var(--xto-link,#00e5ff);box-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.2)}", ".de-if-marker{position:absolute;top:calc(50% + 2px);width:8px;height:8px;background:var(--xto-bg,#0d1620);border:1.5px solid var(--xto-link,#00e5ff);box-sizing:border-box;z-index:4;pointer-events:none}", ".de-if-marker.left{left:1.67%;transform:translate(-50%,-50%)}", ".de-if-marker.right{right:1.67%;transform:translate(50%,-50%)}", ".is-input-down .de-if-marker.left,.is-output-down .de-if-marker.right{border-color:var(--xto-linkDown,#ff4d4d)}", ".de-energy.el{left:calc(50% - 60px);right:auto}", ".de-label.in{left:1.7%;transform:translateY(20px);text-align:left}", ".de-tunnel.left-side{position:absolute;top:50%;left:0;right:calc(50% + 60px);height:0;transform:translateY(-50%);z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:none}", ".de-tunnel.left-side.tunnel-active{height:36px;opacity:1}", "#de-tunnel-left:not(.tunnel-active):not(.tunnel-2way),#de-tunnel-right:not(.tunnel-active):not(.tunnel-2way){height:0!important;opacity:0!important}", "#de-tunnel-left.tunnel-active,#de-tunnel-right.tunnel-active{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-active .de-tunnel-fill,#de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-active .de-tunnel-wall,#de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", "#de-tunnel-left.tunnel-active .de-tunnel-label,#de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", "#de-tunnel-left.tunnel-2way,#de-tunnel-right.tunnel-2way{height:36px!important;opacity:1!important}", "#de-tunnel-left.tunnel-2way .de-tunnel-fill,#de-tunnel-right.tunnel-2way .de-tunnel-fill{opacity:1}", "#de-tunnel-left.tunnel-2way .de-tunnel-wall,#de-tunnel-right.tunnel-2way .de-tunnel-wall{background:#ffcc80;box-shadow:0 0 6px rgba(255,204,128,0.5),0 0 14px rgba(255,204,128,0.2)}", "#de-tunnel-left.tunnel-2way .de-tunnel-label,#de-tunnel-right.tunnel-2way .de-tunnel-label{opacity:1;color:#ffcc80;text-shadow:0 0 8px rgba(255,204,128,0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-wall,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-fill,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)}", ".is-xray-deep.xray-bgp-established #de-tunnel-left.tunnel-active .de-tunnel-label,.is-xray-deep.xray-bgp-established #de-tunnel-right.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5);animation:xBgpTunnelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-wall,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-wall{background:repeating-linear-gradient(90deg,var(--xto-bgp,#a855f7) 0 6px,transparent 6px 11px);opacity:0.42;box-shadow:none}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-fill,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.02) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.05) 100%)}", ".is-xray-deep.xray-bgp-idle #de-tunnel-left.tunnel-active .de-tunnel-label,.is-xray-deep.xray-bgp-idle #de-tunnel-right.tunnel-active .de-tunnel-label{opacity:0.55;color:var(--xto-bgp,#a855f7);text-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.3)}", ".de-tunnel.left-side .de-tunnel-fill{opacity:1}", ".de-tunnel.left-side .de-tunnel-label{opacity:1;animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".de-ping-orb.left-req{animation:none;display:none}", ".de-ping-orb.left-rep{animation:none;display:none}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-req{display:block;animation:dePingLeftReq 4s ease-in-out infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb.left-rep{display:block;animation:dePingLeftRep 4s ease-in-out 2s infinite}", ".ping-left.ping-ok.is-xray-deep .de-ping-orb:not(.left-req):not(.left-rep){display:none}", "@keyframes dePingLeftReq{0%{left:calc(50% - 10px);opacity:0}6%{opacity:1}40%{left:14px;opacity:0.8}44%{left:14px;opacity:0}100%{opacity:0}}", "@keyframes dePingLeftRep{0%{left:14px;opacity:0}6%{opacity:1}40%{left:calc(50% - 10px);opacity:0.8}44%{left:calc(50% - 10px);opacity:0}100%{opacity:0}}", ".xray-ospf-unit{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:50%;border:2px solid var(--xto-down,#555);background:rgba(var(--xto-down-rgb,85,85,85),0.3);transition:all 0.6s;z-index:2;display:none}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".is-xray-mode .xray-ospf-unit{display:none!important}", ".xray-ospf-unit .xray-ospf-dot{width:10px;height:10px;border-radius:50%;background:var(--xto-down,#555);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:all 0.6s}", ".xray-ospf-unit.ospf-active{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-ospf-unit.ospf-active .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00)}", ".is-xray-deep.xray-state-inactive .xray-deep-engine .de-packet{top:calc(50% - 18px)}", ".is-output-down .de-hello-orb.out{display:none!important}", ".is-output-down .de-hello-orb.in{display:none!important}", ".is-output-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-output-down:not([data-topo-triangle]) .de-tunnel{opacity:0!important;height:0!important}", ".is-input-down .de-hello-orb.in{display:none!important}", ".is-input-down .de-hello-orb.out{display:none!important}", ".is-input-down:not(.ping-ok) .de-ping-orb{display:none!important}", ".is-input-down .de-packet{display:none!important}", ".is-input-down .de-packet.p2{display:none!important}", ".is-input-down.is-output-down .de-hello-orb{display:none!important}", ".is-output-down.hello-out .de-hello-orb.out{display:block!important}", ".is-output-down.hello-in .de-hello-orb.in{display:block!important}", ".is-input-down.hello-left-out .de-hello-orb.left-out{display:block!important}", ".is-input-down.hello-left-in .de-hello-orb.left-in{display:block!important}", /* nx_hello_ospf_output_down_override */ ".is-input-down.is-output-down .de-packet{display:none!important}", ".btn-xray{position:absolute;top:16px;right:16px;z-index:12;background:rgba(var(--xto-ospf-rgb,57,255,20),0.12);color:var(--xto-ospf,#39ff14);border:1px solid rgba(var(--xto-ospf-rgb,57,255,20),0.3);font-size:11px;padding:6px 12px;border-radius:4px;cursor:pointer;font-weight:bold;transition:all 0.3s;animation:xrayBtnBlink 1.5s ease-in-out infinite alternate}", ".btn-xray:hover{background:rgba(var(--xto-ospf-rgb,57,255,20),0.22)}", ".btn-xray.active{background:rgba(var(--xto-ospf-rgb,57,255,20),0.35);border-color:var(--xto-ospf,#39ff14);box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4);animation:xrayBtnActive 0.8s ease-in-out infinite alternate}", "@keyframes xrayBtnBlink{0%{box-shadow:0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}100%{box-shadow:0 0 16px rgba(var(--xto-ospf-rgb,57,255,20),0.6),0 0 30px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}}", "@keyframes xrayBtnActive{0%{box-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.4);transform:scale(1)}100%{box-shadow:0 0 24px rgba(var(--xto-ospf-rgb,57,255,20),0.8),0 0 50px rgba(var(--xto-ospf-rgb,57,255,20),0.3);transform:scale(1.08)}}", ".xray-packet-orb{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,0.7),0 0 30px rgba(var(--xto-link-rgb,0,229,255),0.8);top:50%;transform:translateY(-50%);opacity:0;pointer-events:none;z-index:5}", ".is-xray-mode:not(.ping-through):not(.ping-from-r1):not(.ping-cylinder-to-left) .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-mode.ping-through .xray-packet-orb{animation:xrayPktDyn 2.4s ease-in-out infinite;animation-delay:2s}", ".is-xray-mode .xray-packet-orb.orb2{animation-delay:3.2s;width:7px;height:7px;box-shadow:0 0 8px 3px rgba(255,255,255,0.5),0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ":not(.is-cleared).is-xray-mode.ping-through .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-from-r1 .xray-packet-orb{animation:none!important;opacity:0!important}", ":not(.is-cleared).is-xray-mode.ping-cylinder-to-left .xray-packet-orb{animation:none!important;opacity:0!important}", ".is-xray-deep.ping-cylinder-to-left .de-tunnel:not(.left-side){display:none!important}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side{height:36px;opacity:1}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-fill{opacity:1;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}", ".is-xray-deep.xray-state-full.ping-cylinder-to-left .de-tunnel.left-side .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.out{display:none!important}", ".is-xray-deep.ping-cylinder-to-left .de-hello-orb.in{display:none!important}", ".is-xray-deep.ping-cylinder-to-left.hello-out .de-hello-orb.left-out{display:block!important;animation:deHelloLeftOut 10s ease-in-out infinite}", ".is-xray-deep.ping-cylinder-to-left.hello-in .de-hello-orb.left-in{display:block!important;animation:deHelloLeftIn 10s ease-in-out 5s infinite}", ".is-input-down.is-xray-mode .xray-packet-orb{animation:none!important;opacity:0!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb{animation:xrayOvPingReq 4s ease-in-out infinite!important;animation-delay:0s!important}", ".ping-ok.is-xray-mode:not(.is-xray-deep) .xray-packet-orb.orb2{animation:xrayOvPingRep 4s ease-in-out infinite!important;animation-delay:2s!important}", ".is-xray-mode .topology{background:rgba(5,15,25,0.4)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important;overflow:hidden}", ".is-xray-mode .topo-box{background:rgba(0,15,30,0.95)!important;border-color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.3),inset 0 0 20px rgba(var(--xto-link-rgb,0,229,255),0.08)!important;position:relative;z-index:1}", ".is-xray-mode .topo-box:not(.target) h4{color:var(--xto-link,#00e5ff)!important;text-shadow:0 0 8px rgba(var(--xto-link-rgb,0,229,255),0.5)}", ".is-xray-mode .topo-box:not(.target) .role{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", ".is-xray-mode .topo-box:not(.target) .terminal-hint{visibility:hidden}", ".is-xray-mode .topo-iface .ip,.is-xray-mode .topo-link-subnet{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode a.topo-box-link{pointer-events:none!important;cursor:default!important}", ".is-xray-mode .topo-box.target .role,.is-xray-mode .topo-box.target .topo-iface,.is-xray-mode .topo-box.target .terminal-hint{visibility:hidden}", ".is-xray-mode .xray-logic .label{color:#78909c!important}", ".is-xray-mode .xray-logic .ip{color:var(--rc-topo-ip)!important;cursor:pointer;border-radius:2px;padding:0 2px;pointer-events:auto;position:relative;z-index:6}", ".is-xray-mode .xray-logic .ip.copied{background:#27ae60!important;color:#fff!important}", ".is-xray-mode .topo-box.target{border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:none!important;outline:none;animation:xrayR1Blink 1.5s ease-in-out infinite alternate}", ".is-xray-mode .topo-box.target h4{visibility:visible!important;color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 10px rgba(var(--xto-ospf-rgb,57,255,20),0.6);position:relative;z-index:8}", ".is-xray-mode .topo-box.deepdive-target:not(.target){border-color:var(--xto-ospf,#39ff14)!important;border-width:2px!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.35)!important;cursor:pointer}", ".is-xray-mode .topo-box.deepdive-target:not(.target) h4{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".is-xray-mode a.topo-box-link:has(> .topo-box.deepdive-target){cursor:pointer;pointer-events:auto!important}", ".is-xray-mode .topo-link-line{background:#607d8b!important;box-shadow:none!important;height:4px!important;position:relative;z-index:1}", ".is-xray-mode .topo-link-label{color:rgba(var(--xto-link-rgb,0,229,255),0.8)!important;text-shadow:0 0 6px rgba(var(--xto-link-rgb,0,229,255),0.4)}", ".is-xray-mode .topo-link-subnet{color:rgba(var(--xto-link-rgb,0,229,255),0.6)!important}", "@keyframes xrayR1Blink{from{outline:2px solid transparent;outline-offset:2px;filter:drop-shadow(0 0 4px rgba(var(--xto-ospf-rgb,57,255,20),0.2))}to{outline:3px solid var(--xto-ospf,#39ff14);outline-offset:4px;filter:drop-shadow(0 0 20px rgba(var(--xto-ospf-rgb,57,255,20),0.8)) drop-shadow(0 0 40px rgba(var(--xto-ospf-rgb,57,255,20),0.4))}}", ".is-xray-mode .topo-link-line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".is-xray-mode .topo-link-line{align-self:stretch!important;width:auto!important;margin-left:-5px!important;margin-right:-5px!important}", ".is-xray-mode{background:#03030a!important;color:#b0d4e8!important}", ".is-xray-mode .header{background:rgba(3,5,12,0.98)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .header h1,.is-xray-mode .header h1 a{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .scenario-title{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .difficulty{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .lab-timer{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode .lab-plan{color:rgba(var(--xto-link-rgb,0,229,255),0.4)!important}", ".is-xray-mode .user-info{border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .user-name{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .user-rank-ja,.is-xray-mode .user-rank-en{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .question-map{background:rgba(3,5,12,0.95)!important;border-bottom-color:rgba(var(--xto-link-rgb,0,229,255),0.15)!important}", ".is-xray-mode .qmap-sep{color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .topo-target-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)}", ".rcl-refonly-badge{position:absolute;top:3px;right:3px;background:rgba(255,183,77,0.18);color:#ffb74d;border:1px solid rgba(255,183,77,0.5);border-radius:3px;font-size:9px;font-weight:bold;padding:1px 5px;z-index:9;pointer-events:none;line-height:1.3}", ".is-xray-mode .xray-grid-overlay{opacity:1}", ".is-xray-mode .xray-logic{opacity:1;transition:none}", ".is-cleared .xray-initial{display:none}", ".is-cleared .xray-cleared{display:flex}", ".xray-focus-close{position:absolute;top:8px;right:8px;z-index:20;background:rgba(255,100,60,0.15);color:#f96;border:1px solid rgba(255,100,60,0.4);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;transition:opacity 0.3s}", ".is-xray-deep .xray-holo-panel{display:none!important}", ".is-xray-deep .xray-focus-close{opacity:1;pointer-events:auto}", ".trace-active .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-xray-mode .topo-diagram{position:relative;overflow:visible!important}", ".is-xray-mode .xray-flash-scene{display:block}", ".is-cleared .xray-trace{display:none}", ".is-xray-mode .topo-box.target{cursor:pointer}", ".is-xray-mode a.topo-box-link:has(> .topo-box.target){cursor:pointer}", ".is-xray-mode .capture-panel,.is-xray-mode .hint,.is-xray-mode .problem,.is-xray-mode .explanation,.is-xray-mode .info,.is-xray-mode .result-panel,.is-xray-mode .link-status,.is-xray-mode .neighbor-panel{background:rgba(3,8,16,0.9)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.2)!important;color:#b0d4e8!important}", ".is-xray-mode .capture-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .capture-header h3{color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .capture-body{background:rgba(3,8,16,0.6)!important}", ".is-xray-mode .tab-btn{background:rgba(0,15,30,0.6)!important;color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .tab-btn.active{background:rgba(var(--xto-link-rgb,0,229,255),0.12)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .tab-content{background:rgba(3,8,16,0.8)!important}", ".is-xray-mode .hint h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .problem h3{color:rgba(var(--xto-link-rgb,0,229,255),0.7)!important}", ".is-xray-mode .hint code,.is-xray-mode .problem code{background:rgba(var(--xto-link-rgb,0,229,255),0.08)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .hint-level{background:rgba(0,15,30,0.5)!important;border-left-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:#b0d4e8!important}", ".is-xray-mode .hint-level.standard-tier{background:rgba(123,44,191,0.1)!important;border-left-color:rgba(167,139,250,0.5)!important}", ".is-xray-mode .hint-level.standard-tier strong{color:#a78bfa!important}", ".is-xray-mode .hint-btn{background:rgba(var(--xto-link-rgb,0,229,255),0.1)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .topo-flow-node{background:rgba(0,15,30,0.6)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important;color:var(--xto-link,#00e5ff)!important}", ".is-xray-mode .seg-label,.is-xray-mode .seg-arrow,.is-xray-mode .arrow-line{color:rgba(var(--xto-link-rgb,0,229,255),0.5)!important}", ".is-xray-mode .ttyd-card{background:rgba(3,8,16,0.9)!important;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .ttyd-card-header{background:rgba(0,15,30,0.7)!important}", ".is-xray-mode .ttyd-card-header h3{color:#0f0!important}", ".is-xray-mode .ttyd-toggle{color:#0f0!important}", ".is-xray-mode .ttyd-radios label{color:rgba(0,255,0,0.7)!important}", '.is-xray-mode .ttyd-radios input[type="radio"]{accent-color:var(--xto-link,#00e5ff)!important}', ".is-xray-mode .ttyd-card,.is-xray-mode .ttyd-card *{pointer-events:auto!important;cursor:auto!important}", ".is-xray-mode .ttyd-card a,.is-xray-mode .ttyd-card button{pointer-events:auto!important;cursor:pointer!important;opacity:1!important}", ".is-xray-mode .floating-action button{background:rgba(var(--xto-link-rgb,0,229,255),0.15)!important;color:var(--xto-link,#00e5ff)!important;box-shadow:0 0 15px rgba(var(--xto-link-rgb,0,229,255),0.2)!important}", ".is-xray-mode .scroll-top button{background:rgba(0,15,30,0.8)!important;color:var(--xto-link,#00e5ff)!important;border-color:rgba(var(--xto-link-rgb,0,229,255),0.3)!important}", ".is-xray-mode a:not(.critical-tl-btn):not(.unlock-btn):not(.logo-link):not(.bp-more),.is-xray-mode button:not(.btn-xray):not(.xray-focus-close):not(.xray-deep-mode-toggle):not(.xray-trace-btn):not(.topo-zoom button):not(.trace-close):not(.trace-back):not(.trace-next):not(.critical-btn):not(.end-mode):not(.replay-skip):not(.shutdown-btn):not(#font-size-btn):not(.bp-x){pointer-events:none!important;cursor:default!important}", ".is-xray-mode .controls .btn,.is-xray-mode .floating-action .check-float,.is-xray-mode .floating-action .reset-mode,.is-xray-mode .floating-action .fb-float-btn{opacity:0.3!important}", ".is-xray-mode .capture-btn,.is-xray-mode .hint-btn,.is-xray-mode .check-btn,.is-xray-mode .reset-btn{opacity:0.3!important}", ".is-xray-mode .header h1 a,.is-xray-mode .logo-link{pointer-events:auto!important;cursor:pointer!important}", ".is-xray-mode .qmap-item,.is-xray-mode .qmap-nav{pointer-events:none!important;cursor:default!important;opacity:0.4!important}", ".is-xray-mode .capture-header{pointer-events:none!important}", ".is-xray-mode .tab-btn{pointer-events:none!important;opacity:0.4!important}", ".is-xray-mode .scroll-top button{pointer-events:none!important;opacity:0.3!important}", ".is-xray-mode .help-guide-btn{pointer-events:none!important;opacity:0.3!important}", ".xray-flash{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;opacity:0}", ".xray-flash.active{animation:xrayFlashBang 0.8s ease-out}", "@keyframes xrayFlashBang{0%{opacity:0.9;background:radial-gradient(circle,rgba(255,200,100,0.95),rgba(var(--xto-idle-rgb,255,140,0),0.7) 40%,transparent 70%)}30%{opacity:0.6;background:linear-gradient(90deg,transparent 15%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 85%)}100%{opacity:0}}", ".is-xray-deep .capture-panel,.is-xray-deep .hint,.is-xray-deep .hint-level,.is-xray-deep .problem,.is-xray-deep .explanation,.is-xray-deep .result-panel,.is-xray-deep .next-question,.is-xray-deep .question-map,.is-xray-deep .floating-action,.is-xray-deep .scroll-top{display:none!important}", ".is-xray-deep .mode-title{display:none!important}", ".is-xray-deep .xray-spark-container{display:none!important}", ".is-xray-deep .xray-hello-container{display:none!important}", ".is-xray-deep .xray-packet-orb{display:none!important}", ".is-xray-deep .xray-ping-orb{display:none!important}", ".is-xray-deep .xray-fib-entry{display:none!important}", "body.trace-active .main{margin-left:370px;transition:margin-left 0.3s}", "body.trace-active .header{margin-left:370px;transition:margin-left 0.3s}", "@media (max-width:800px){body.trace-active .main,body.trace-active .header{margin-left:0}}", ".is-xray-deep .xray-ospf-tunnel{display:none!important}", '.xray-logic{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;padding:8px 10px;font-family:"Courier New",monospace;font-size:11px;line-height:1.7;color:rgba(var(--xto-link-rgb,0,229,255),0.85);text-align:left;opacity:0;pointer-events:none;z-index:5;overflow:hidden}', ".xray-logic .hl{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-logic .warn{color:#ff6b35}", ".xray-logic .dim{color:rgba(var(--xto-link-rgb,0,229,255),0.4);font-size:11px}", ".xray-logic .off{color:#78909c;font-weight:700}", ".is-xray-mode .xray-logic{background:rgba(0,15,30,0.95)!important;border-radius:6px!important}", ".is-xray-mode .xray-ospf-unit{z-index:8!important}", ".is-xray-mode .xray-spark{background:var(--xto-idle,#ff8c00)!important;box-shadow:0 0 6px var(--xto-idle,#ff8c00)!important}", ".is-xray-mode .xray-spark-container{opacity:0!important}", ".is-xray-mode .route-arrow{display:none!important}", ".is-xray-mode .topo-link-subnet{display:none!important}", ".is-xray-mode .topo-tri-label{color:rgba(100,100,100,0.5)!important}", ".is-xray-mode .anim-status{display:none!important}", '.xray-holo-panel{position:absolute;top:50px;left:16px;z-index:10;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-idle-rgb,255,140,0),0.35);border-radius:6px;padding:14px 18px;font-family:"Courier New",monospace;font-size:11px;line-height:1.9;color:rgba(var(--xto-idle-rgb,255,140,0),0.9);box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.08);backdrop-filter:blur(8px);min-width:240px;max-width:280px;transition:all 0.5s;display:none}', ".is-xray-mode .xray-holo-panel{display:block}", ".xray-holo-panel .title{font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:6px;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".xray-holo-panel .ok{color:var(--xto-ospf,#39ff14);font-weight:700}", ".xray-holo-panel .err{color:#ff4444;font-weight:700}", ".xray-holo-panel .dim{color:rgba(var(--xto-idle-rgb,255,140,0),0.35);font-size:10px}", ".xray-holo-panel .warn{color:var(--xto-idle,#ff8c00);font-weight:700}", ".topo-diagram:has(.topo-triangle) .xray-holo-panel{left:10px;top:10px}", ".topo-diagram:has(.topo-multi-node) ~ .xray-holo-panel{top:auto!important;bottom:16px!important;right:auto!important;left:16px!important}", ".xray-deep-engine{transition:none!important}", ":not(.ping-ok) .xray-ping-orb{display:none!important}", ".xray-flash-scene{position:absolute;top:0;left:0;width:100%;height:100%;z-index:50;pointer-events:none;opacity:0;display:none}", ".is-xray-mode .xray-flash-scene{display:block}", ".xray-flash-scene.fire{animation:xflashFire 0.8s ease-out forwards}", ".xray-flash-scene.full{animation:xflashFull 1.2s ease-out forwards}", "@keyframes xflashFull{0%{opacity:0.8;background:linear-gradient(90deg,transparent 20%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 35%,rgba(255,200,100,0.9) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.6) 65%,transparent 80%)}40%{opacity:0.4}100%{opacity:0}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-spark-container{position:absolute;top:calc(50% - 10px);transform:translate(50%,-50%);z-index:5;pointer-events:none;opacity:0;display:none}", ".xray-spark{position:absolute;width:3px;height:3px;border-radius:50%;background:#ff4444;box-shadow:0 0 6px #ff4444}", ".xray-spark:nth-child(1){top:-8px;left:0;animation:xsparkFly1 0.4s ease-out infinite}", ".xray-spark:nth-child(2){top:0;left:8px;animation:xsparkFly2 0.4s ease-out infinite}", ".xray-spark:nth-child(3){top:8px;left:2px;animation:xsparkFly3 0.4s ease-out infinite}", ".xray-spark:nth-child(4){top:-4px;left:-6px;animation:xsparkFly4 0.4s ease-out infinite}", ".xray-ospf-tunnel{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:hidden;display:none}", ".xray-bgp-established .xray-ospf-tunnel{display:block!important}", ".xray-bgp-established .xray-tunnel-wall{background:var(--xto-bgp,#a855f7);box-shadow:0 0 6px rgba(var(--xto-bgp-rgb,168,85,247),0.5),0 0 14px rgba(var(--xto-bgp-rgb,168,85,247),0.2)}", ".xray-bgp-established .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 30%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 70%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)}", ".xray-bgp-established .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-bgp-rgb,168,85,247),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-bgp-rgb,168,85,247),0.4)!important}", ".xray-bgp-established .xray-tunnel-ring{background:rgba(var(--xto-bgp-rgb,168,85,247),0.12);box-shadow:0 0 3px rgba(var(--xto-bgp-rgb,168,85,247),0.08)}", ".xray-bgp-established .xray-tunnel-label{color:var(--xto-bgp,#a855f7);text-shadow:0 0 8px rgba(var(--xto-bgp-rgb,168,85,247),0.5)}", "#topo-diagram:not(.xray-overview-ready) .xray-tunnel-body,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-portal,#topo-diagram:not(.xray-overview-ready) .xray-tunnel-label,#topo-diagram:not(.xray-overview-ready) .xray-ospf-tunnel{opacity:0!important;visibility:hidden!important;transition:none!important}", ".xray-tunnel-body{position:absolute;top:50%;left:var(--xr1,38%);right:var(--xr2r,30%);height:0;transform:translateY(-50%);border-radius:3px;overflow:hidden;opacity:0;transition:none}", ".xray-tunnel-wall{position:absolute;left:0;right:0;height:1.5px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 6px rgba(var(--xto-idle-rgb,255,140,0),0.5),0 0 14px rgba(var(--xto-idle-rgb,255,140,0),0.2)}", ".xray-tunnel-wall.top{top:0}", ".xray-tunnel-wall.bot{bottom:0}", ".xray-tunnel-fill{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.08) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 30%,rgba(var(--xto-idle-rgb,255,140,0),0.03) 70%,rgba(var(--xto-idle-rgb,255,140,0),0.08) 100%);opacity:0;transition:opacity 0.6s ease 0s}", ".xray-tunnel-ring{position:absolute;top:50%;height:100%;width:1px;background:rgba(var(--xto-idle-rgb,255,140,0),0.12);transform:translateY(-50%);box-shadow:0 0 3px rgba(var(--xto-idle-rgb,255,140,0),0.08);opacity:0;transition:opacity 0.4s}", ".xray-tunnel-portal{position:absolute;top:50%;width:4px;height:36px;transform:translateY(-50%);border-radius:2px;opacity:0;transition:all 0.6s ease 0.2s;z-index:3}", ".xray-tunnel-portal.entry{left:var(--xr1,38%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", ".xray-tunnel-portal.exit{right:var(--xr2r,30%);background:linear-gradient(180deg,transparent,rgba(var(--xto-idle-rgb,255,140,0),0.7),transparent);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.4)}", '.xray-tunnel-label{position:absolute;top:calc(50% + 28px);left:50%;transform:translateX(-50%);font-family:"Courier New",monospace;font-size:11px;font-weight:700;color:var(--xto-idle,#ff8c00);text-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.5);letter-spacing:2px;opacity:0;z-index:4;transition:opacity 0.6s ease 0.8s;white-space:nowrap}', ".xray-state-full .xray-tunnel-wall{background:var(--xto-ospf,#39ff14)!important;box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)!important}", ".xray-state-full .xray-tunnel-fill{background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 30%,rgba(var(--xto-ospf-rgb,57,255,20),0.03) 70%,rgba(var(--xto-ospf-rgb,57,255,20),0.08) 100%)!important}", ".xray-state-full .xray-tunnel-portal{background:linear-gradient(180deg,transparent,rgba(var(--xto-ospf-rgb,57,255,20),0.7),transparent)!important;box-shadow:0 0 12px rgba(var(--xto-ospf-rgb,57,255,20),0.4)!important}", ".xray-state-full .xray-tunnel-ring{background:rgba(var(--xto-ospf-rgb,57,255,20),0.12)!important;box-shadow:0 0 3px rgba(var(--xto-ospf-rgb,57,255,20),0.08)!important}", ".xray-state-full .xray-tunnel-label{color:var(--xto-ospf,#39ff14)!important;text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5)!important}", ".xray-ping-orb{position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#fff 30%,rgba(255,255,255,0.6) 60%,transparent 100%);box-shadow:0 0 10px 3px rgba(255,255,255,0.6),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.4);top:50%;transform:translateY(-50%);z-index:8;opacity:0;pointer-events:none;display:none}", '.xray-fib-entry{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:10;font-family:"Courier New",monospace;font-size:14px;font-weight:700;color:var(--xto-link,#00e5ff);text-shadow:0 0 12px rgba(var(--xto-link-rgb,0,229,255),0.6);opacity:0;pointer-events:none;white-space:nowrap;transition:opacity 0.3s;display:none}', ".is-xray-mode .topo-triangle .topo-box{background:rgba(0,15,30,0.95)!important}", ".is-xray-mode .topo-triangle .topo-box.target{background:rgba(0,20,10,0.95)!important}", ".topo-triangle svg line{transition:stroke 0.5s,stroke-width 0.3s,filter 0.5s}", ".topo-link{position:relative}", ".topo-link-pipe{position:absolute;top:0;left:0;right:0;height:4px;display:none;pointer-events:none;z-index:0}", ".topo-link-pipe.pipe-full,.topo-link-pipe.pipe-2way,.topo-link-pipe.pipe-exchange,.topo-link-pipe.pipe-init,.topo-link-pipe.pipe-bgp,.topo-link-pipe.pipe-bgp-idle{display:block}", ".topo-link-pipe.pipe-full,.topo-link-pipe.pipe-exchange{--pipe-col:var(--xto-ospf,#39ff14);--pipe-glow:rgba(var(--xto-ospf-rgb,57,255,20),0.6)}", ".topo-link-pipe.pipe-2way,.topo-link-pipe.pipe-init{--pipe-col:var(--xto-idle,#ff8c00);--pipe-glow:rgba(var(--xto-idle-rgb,255,140,0),0.6)}", ".topo-link-pipe.pipe-bgp,.topo-link-pipe.pipe-bgp-idle{--pipe-col:var(--xto-bgp,#a855f7);--pipe-glow:rgba(var(--xto-bgp-rgb,168,85,247),0.6)}", '.topo-link-pipe::before,.topo-link-pipe::after{content:"";position:absolute;left:0;right:0;height:2.5px;background:repeating-linear-gradient(90deg,var(--pipe-col) 0 10px,transparent 10px 16px);background-size:16px 100%;filter:drop-shadow(0 0 6px var(--pipe-glow))}', ".topo-link-pipe.pipe-full::before,.topo-link-pipe.pipe-full::after,.topo-link-pipe.pipe-2way::before,.topo-link-pipe.pipe-2way::after,.topo-link-pipe.pipe-bgp::before,.topo-link-pipe.pipe-bgp::after{animation:pipeFlow 1.2s linear infinite}", ".topo-link-pipe.pipe-bgp-idle::before,.topo-link-pipe.pipe-bgp-idle::after{opacity:0.42}", ".topo-link-pipe::before{top:-4px}", ".topo-link-pipe::after{bottom:-4px}", ".topo-link-pipe.pipe-inner{z-index:2}", ".topo-link-pipe.pipe-inner::before,.topo-link-pipe.pipe-inner::after{height:2px}", ".topo-link-pipe.pipe-inner::before{top:-3px}", ".topo-link-pipe.pipe-inner::after{bottom:-3px}", ".topo-link-pipe.pipe-coexist::before{top:-7px}", ".topo-link-pipe.pipe-coexist::after{bottom:-7px}", "@keyframes pipeFlow{to{background-position:16px 0}}", ".topo-diagram:has(.topo-link-pipe) .xray-ping-orb,.topo-diagram:has(.topo-link-pipe) .xray-packet-orb,.topo-diagram:has(.topo-link-pipe) .xray-hello-pkt{top:calc(50% - 9px)}", ".is-xray-mode .topo-diagram:has(.topo-link-pipe) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ospf-tunnel,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ospf-tunnel{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-packet-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-packet-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-hello-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-hello-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-ping-orb,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-ping-orb{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-spark-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-spark-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-lsa-container,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-lsa-container{display:none!important}", ".is-xray-mode .topo-diagram:has(.topo-triangle) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-multi-node) .xray-fib-entry,.is-xray-mode .topo-diagram:has(.topo-inverted-v) .xray-fib-entry{display:none!important}", "@keyframes triRouteDash{to{stroke-dashoffset:-28}}", ".de-lsa-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:6;pointer-events:none}", ".de-routing{position:absolute;bottom:2%;left:90px;z-index:8;max-height:70%;overflow-y:auto;background:rgba(0,8,16,0.92);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:5px;padding:9px 11px;font-family:\"Courier New\",monospace;font-size:10.5px;color:rgba(var(--xto-link-rgb,0,229,255),0.92);box-shadow:0 0 18px rgba(var(--xto-link-rgb,0,229,255),0.1);backdrop-filter:blur(6px);min-width:220px;max-width:280px;pointer-events:auto}", ".de-routing:empty{display:none!important}", ".de-rt-hd{font-size:11px;letter-spacing:0.5px;opacity:0.9;margin-bottom:7px;font-weight:700}", ".de-rt-tbl{border-collapse:collapse;width:100%}", ".de-rt-tbl td{padding:2px 8px 2px 0;white-space:nowrap;color:rgba(var(--xto-link-rgb,0,229,255),0.92)}", ".de-rt-tbl td.de-rt-proto{color:#78909c;font-size:9px;text-align:right;width:100%}", ".de-rt-tbl tr[data-prefix]{cursor:pointer}", ".de-rt-tbl tr[data-prefix]:hover td{background:rgba(var(--xto-link-rgb,0,229,255),0.12)}", ".de-rt-tbl tr.de-rt-sel td{background:rgba(57,255,20,0.18);color:#5fe38a}", ".de-skin-wrap{position:absolute;left:30px;bottom:2.5%;z-index:9;pointer-events:auto}" + ".de-skin-wrap:empty{display:none}" + ".de-skin-btn{cursor:pointer;font:700 9px monospace;background:rgba(0,8,16,0.92);color:rgba(var(--xto-link-rgb,0,229,255),0.95);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.5);border-radius:5px;padding:3px 7px;backdrop-filter:blur(6px)}" + ".de-skin-btn:hover{background:rgba(var(--xto-link-rgb,0,229,255),0.14)}" + ".de-skin-pop{position:absolute;left:0;bottom:100%;margin-bottom:6px;background:rgba(0,8,16,0.96);border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.5);border-radius:6px;padding:7px;min-width:158px;box-shadow:0 0 18px rgba(0,0,0,0.5)}" + ".de-skin-pop[hidden]{display:none}" + ".de-skin-pop-hd{font:700 9.5px monospace;color:#78909c;letter-spacing:0.5px;margin:0 2px 5px;text-transform:uppercase}" + ".de-skin-item{display:block;width:100%;text-align:left;cursor:pointer;font:12px monospace;background:transparent;color:rgba(var(--xto-link-rgb,0,229,255),0.92);border:1px solid transparent;border-radius:4px;padding:4px 8px;margin:1px 0}" + ".de-skin-item:hover{background:rgba(var(--xto-link-rgb,0,229,255),0.12)}" + ".de-skin-item.de-skin-on{background:rgba(var(--xto-link-rgb,0,229,255),0.18);border-color:rgba(var(--xto-link-rgb,0,229,255),0.5);font-weight:700}" + ".de-skin-full{display:block;margin-top:5px;padding:5px 8px 2px;font:11px monospace;color:#78909c;text-decoration:none;border-top:1px solid rgba(120,144,156,0.3)}" + ".de-skin-full:hover{color:rgba(var(--xto-link-rgb,0,229,255),0.95)}", "body.xray-rt-noarrow .de-fwd-a,body.xray-rt-noarrow .de-fwd-b,body.xray-rt-noarrow .de-flow,body.xray-rt-noarrow #de-cyl-fwd-arrow,body.xray-topo-preview .de-fwd-a,body.xray-topo-preview .de-fwd-b,body.xray-topo-preview .de-flow,body.xray-topo-preview #de-cyl-fwd-arrow{display:none!important}", "body.xray-oss-deep .de-ping-orb,body.xray-oss-deep .de-packet,body.xray-oss-deep .de-ping-ball,body.xray-oss-deep .de-conn-ball{display:none!important}", ".de-lsa{position:absolute;width:8px;height:4px;border-radius:2px;background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px rgba(var(--xto-idle-rgb,255,140,0),0.7);opacity:0}", ".is-xray-deep.xray-state-exchange .de-lsa{animation:deLsaGather var(--dur) ease-in var(--delay) infinite}", "@keyframes deLsaGather{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% + 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", "@keyframes deLsaGatherLeft{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(50% - 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:50%;top:76%;opacity:0;transform:scale(0.2)}}", "@keyframes deLsaGatherRight{0%{opacity:0;transform:scale(0.4)}8%{opacity:1;transform:scale(1)}60%{opacity:1;transform:scale(1)}80%{left:calc(82% - 10px);top:70%;opacity:0.8;transform:scale(0.5)}100%{left:82%;top:76%;opacity:0;transform:scale(0.2)}}", ".is-xray-deep.xray-state-inactive .de-packet{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 4px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.3);animation:deHelloReject 3s ease-in-out infinite!important;opacity:0}", ".is-xray-deep:not(.xray-state-init):not(.xray-state-exchange):not(.xray-state-full) .de-packet.p2{animation-delay:1.5s!important}", "@keyframes deHelloReject{0%{left:96%;opacity:0;transform:translateY(-50%) scale(0.4)}8%{opacity:1;transform:translateY(-50%) scale(1)}40%{left:calc(50% + 70px);opacity:1;transform:translateY(-50%) scale(1)}50%{left:calc(50% + 65px);opacity:1;transform:translateY(-50%) scale(1.5)}55%{left:calc(50% + 70px);opacity:0.5;transform:translateY(-50%) scale(0.5)}65%{left:calc(50% + 80px);opacity:0}100%{left:calc(50% + 80px);opacity:0}}", ".is-xray-deep.xray-state-init .de-packet,.is-xray-deep.xray-state-exchange .de-packet{animation:none!important;opacity:0!important}", "@keyframes ospfCorePulse{0%{transform:translate(-50%,-50%) scale(0.8);box-shadow:0 0 6px var(--xto-idle,#ff8c00)}100%{transform:translate(-50%,-50%) scale(1.3);box-shadow:0 0 16px var(--xto-idle,#ff8c00)}}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit,.is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit{border-color:var(--xto-idle,#ff8c00);box-shadow:0 0 12px rgba(var(--xto-idle-rgb,255,140,0),0.5)}", ".is-xray-mode.xray-state-init .topo-box.target .xray-ospf-unit .xray-ospf-dot,.is-xray-mode.xray-state-exchange .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 8px var(--xto-idle,#ff8c00);animation:ospfCorePulse 0.8s ease-in-out infinite alternate}", ".is-xray-mode.xray-state-full .topo-box.target .xray-ospf-unit .xray-ospf-dot{background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px var(--xto-idle,#ff8c00)}", ".xray-fib-entry{display:none!important}", "@keyframes xlinkPulse{0%{box-shadow:0 0 10px rgba(var(--xto-idle-rgb,255,140,0),0.4)}100%{box-shadow:0 0 20px rgba(var(--xto-idle-rgb,255,140,0),0.8)}}", "@keyframes xlineBlink{0%{opacity:1}100%{opacity:0.35}}", ".xray-hello-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;display:none}", ".is-xray-mode.hello-out .xray-hello-container,.is-xray-mode.hello-in .xray-hello-container{display:block}", ".xray-hello-pkt{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--xto-idle,#ff8c00);box-shadow:0 0 10px 3px rgba(var(--xto-idle-rgb,255,140,0),0.7),0 0 25px rgba(var(--xto-idle-rgb,255,140,0),0.3);top:50%;transform:translateY(-50%);opacity:0;z-index:4}", ".xray-iface-dot,.xray-if-dot{display:none}", ".is-xray-mode .xray-iface-dot,.is-xray-mode .xray-if-dot{display:inline-block}", ".is-xray-mode .topo-box:not(.target) .xray-logic{display:none!important}", ".is-replaying .btn-xray{display:none!important}", ".is-replaying .xray-focus-close{opacity:0!important;pointer-events:none!important}", ".is-replaying .xray-holo-panel{display:none!important}", ".replay-skip{position:fixed;bottom:24px;right:24px;z-index:9999;background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.3);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:bold;cursor:pointer;pointer-events:auto;transition:all 0.3s;backdrop-filter:blur(6px);display:none}", ".replay-skip:hover{background:rgba(255,255,255,0.25);color:#fff;transform:translateY(-2px)}", ".is-replaying .replay-skip{display:block}", '[data-mode="troubleshoot"] .xray-trace-btn{color:#ccc;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);box-shadow:none}', '[data-mode="troubleshoot"] .xray-trace-btn:hover{background:rgba(255,255,255,0.2);color:#fff}', '[data-mode="destroy"] .xray-trace-btn{color:#fff;background:#e74c3c!important;border-color:#c0392b;box-shadow:0 0 25px rgba(231,76,60,0.6);z-index:8200!important;opacity:1!important;pointer-events:auto!important}', '[data-mode="destroy"] .xray-trace-btn:hover{background:rgba(231,76,60,0.2);color:#ff6b6b;box-shadow:0 0 30px rgba(231,76,60,0.3)}', ".capture-toggle{order:-1!important}", "#next-question-content a{color:var(--rc-accent,#4dd0e1);text-decoration:underline;font-weight:600}", "#next-question-content a:hover{color:#fff}" ].join("\n");
   var target = document.head || document.documentElement || document.body;
   if (target) {
     target.appendChild(s);
@@ -179,6 +182,110 @@ if (typeof window._xrayEnsureTopology !== "function") {
   window._xrayEnsureTopology = function() {};
 }
 
+// _xrayOspfFull(s): REAL OSPF full (proto non-dependent). Under --proto bgp collect the primary neighbor
+// fields (neighbor_state/has_full) are BGP-oriented, so read the true OSPF neighbor full. Canonical SoT
+// reviewed (2026-09-25) — single source for every OSPF-full decision (ball/tunnel/phase/LSDB/holo)
+// to kill the one-site-at-a-time drift (Q15 tunnel regression proved the risk). nx_ospf_full_helper.
+// nx_ospf_specific_fields (2026-10-01): a state that carries OSPF-specific fields (clab-collect always emits
+// ospf_neighbor_full bool + ospf_neighbors[]) must be judged by THEM only — under --proto bgp the primary
+// has_full / neighbor_state are the BGP session (BGP Established + OSPF down read as OSPF Full). Others
+// (RCL / old collectors) keep the original fallback.
+// nx_rtsel_arrow_color: colour of the FORWARD arrow for the selected routing-table row (null = no selection).
+function _xrayRtSelArrowCol() {
+  try {
+    var _sel = window._xrayRtSel; if (!_sel || !_sel.prefix) return null;
+    var _rt = (window._lastXrayState && window._lastXrayState.routing_table) || [];
+    var _row = null;
+    for (var i = 0; i < _rt.length; i++) { if ((_rt[i].prefix || "") === _sel.prefix) { if (_rt[i].selected) { _row = _rt[i]; break; } if (!_row) _row = _rt[i]; } }
+    if (!_row) return null;
+    var _p = String(_row.protocol || "").toLowerCase();
+    return _p === "ospf" ? "#39ff14" : _p === "bgp" ? "#a855f7" : _p === "static" ? "#ffb347" : "#b0bec5";  /* connected etc. = gray (2026-10-02; Loser arrow is #8a97a6 dashed) */
+  } catch (e) { return null; }
+}
+function _xrayOspfSpecific(s) {
+  return !!(s && (typeof s.ospf_neighbor_full === "boolean" || Array.isArray(s.ospf_neighbors)));
+}
+function _xrayOspfNbrState(s) {
+  if (_xrayOspfSpecific(s)) return s.ospf_neighbor_state || (_xrayOspfFull(s) ? "Full" : "None");
+  return s && s.neighbor_state || "None";
+}
+function _xrayOspfFull(s) {
+  if (_xrayOspfSpecific(s)) return !!(s.ospf_neighbor_full === true ||
+    (Array.isArray(s.ospf_neighbors) && s.ospf_neighbors.some(function (n) { return n.full || n.state === "Full"; })));
+  return !!(s && (s.ospf_neighbor_full || s.has_full || s.neighbor_state === "Full" ||
+    (Array.isArray(s.ospf_neighbors) && s.ospf_neighbors.some(function (n) { return n.full || n.state === "Full"; }))));
+}
+// nx_link_state_only (2026-09-26, link-state display principle): the red link state
+// (is-output-down / is-input-down, red-dash beam, ✖ marker) is decided ONLY by whether a real topology link
+// interface is explicitly down. Route presence, route_resolution.out_iface, and interfaces missing from the
+// state (e.g. the clab mgmt eth0 excluded by --exclude-mgmt) never make a link red. Single SoT for every
+// red decision on the Standard single/linear view (reviewed).
+function _xrayIsLinkIf(s, n) {
+  var ifs = (s && s.interfaces) || {};
+  if (!n || /^lo/i.test(n) || /^system\d/.test(n) || !ifs[n]) return false;
+  return !/^172\.20\.20\./.test(String(ifs[n].ip || ""));   // clab mgmt (same test as the Simple radial)
+}
+function _xrayLinkDown(s, n) {
+  return _xrayIsLinkIf(s, n) && s.interfaces[n].up === false;
+}
+// nx_link_sides_topo (2026-09-26): node position for side assignment. SAME source
+// and order as the single-link tunnel angle (rendered overview via _xrayOvXY, then cfg.positions), so the red
+// side can never disagree with where the link/tunnel is drawn.
+function _xrayNodeXY(id) {
+  if (!id) return null;
+  var p = typeof _xrayOvXY === "function" ? _xrayOvXY(id) : null;
+  if (p) return p;
+  var P = (typeof window !== "undefined" && window._scenarioConfig || {}).positions;
+  return P && P[id] && typeof P[id].x === "number" ? { x: P[id].x, y: P[id].y } : null;
+}
+// Left/right link sides for red — TOPOLOGY + LAYOUT only (never the route, never wan_iface/lan_iface, which the
+// collector derives from the route/neighbors: q1 WAN shut had wan=mgmt, lan=the shut WAN IF -> red on the wrong
+// side). Links = the per-peer *_iface the collector emits from clab.yml links. Side = is the peer drawn right or
+// left of this node. Every link lands on exactly one side (an unassigned down link would be a missed fault):
+// ambiguous x (no position / vertical) -> deterministic declared order (single link -> output/right; otherwise
+// first -> left, rest -> right). States without per-peer hints (demo/static) keep the wan/lan hints, real links only.
+function _xrayLinkSides(s) {
+  s = s || {};
+  var skip = { wan_iface: 1, lan_iface: 1, out_iface: 1 };
+  var links = [];
+  Object.keys(s).forEach(function (k) {
+    if (skip[k] || !/_iface$/.test(k)) return;
+    var ifn = s[k];
+    if (typeof ifn !== "string" || !_xrayIsLinkIf(s, ifn)) return;
+    if (links.some(function (l) { return l.iface === ifn; })) return;
+    links.push({ peer: k.replace(/_iface$/, ""), iface: ifn });
+  });
+  var right = [], left = [];
+  if (links.length === 1) {
+    // nx_link_sides_single_out: a single-link node is drawn as ONE output beam tilted toward its peer (same
+    // _xrayOvXY/positions source as the single-link tunnel angle), whichever side the peer is on -> output.
+    right.push(links[0].iface);
+  } else if (links.length) {
+    var me = _xrayNodeXY(s.target_node || s.id), amb = [];
+    links.forEach(function (l) {
+      var p = me && _xrayNodeXY(l.peer);
+      if (p && Math.abs(p.x - me.x) >= 8) (p.x > me.x ? right : left).push(l.iface);
+      else amb.push(l);
+    });
+    amb.forEach(function (l) {
+      if (links.length === 1) right.push(l.iface);
+      else if (!left.length) left.push(l.iface);
+      else right.push(l.iface);
+    });
+  } else {
+    var o = _xrayIsLinkIf(s, s.wan_iface) ? s.wan_iface : "";
+    var i = _xrayIsLinkIf(s, s.lan_iface) ? s.lan_iface : "";
+    if (o) right.push(o);
+    if (i && i !== o) left.push(i);
+  }
+  var anyDown = function (a) { return a.some(function (n) { return _xrayLinkDown(s, n); }); };
+  return {
+    outIfs: right,
+    inIfs: left,
+    outDown: anyDown(right),
+    inDown: anyDown(left) || s.sv_link_up === false
+  };
+}
 function xrayEvaluateState(s) {
   var protocol = window._xrayProtocol || "static";
   var ifaces = s.interfaces || {};
@@ -229,15 +336,30 @@ function xrayEvaluateState(s) {
   if (!state.ifUp && rr.out_iface && ifaces[rr.out_iface] && ifaces[rr.out_iface].up) {
     state.ifUp = true;
   }
-  if (!state.ifUp) return state;
-  if (protocol === "ospf") {
-    var ns = s.neighbor_state || "None";
+  // nx_link_state_only: red is link-state only; state.ifUp/inputIfUp above remain the FORWARDING gate
+  // (routeInstalled/ping/canForward), unchanged.
+  var _ls = _xrayLinkSides(s);
+  state.outLinkDown = _ls.outDown;
+  state.inLinkDown = _ls.inDown;
+  // nx_hello_discard: an incoming Hello is link-level. If the peer sends Hello on this link and the link is up,
+  // the Hello reaches this interface even when this node does not run OSPF; it is then discarded (not processed).
+  // (protocol === "ospf" keeps its own helloIn below.) Collector fills peer_sending_hello from the PEER's state.
+  // nx_hello_recv_perlink: per link — some peer sends Hello on a link that is up here.
+  var _pshL = s.peer_sending_hellos || {}, _pshK = Object.keys(_pshL);
+  var _recvAny = _pshK.length ? _pshK.some(function (p) { var ifn = s[p + "_iface"]; return !!_pshL[p] && !(ifn && _xrayLinkDown(s, ifn)); })
+                              : (!!s.peer_sending_hello && !_ls.outDown && !_ls.inDown);
+  /* nx_std_ospf_branch_live (2026-10-01): OSPF branch follows LIVE OSPF too (config protocol may be bgp) */
+  var _dpO = (typeof window !== "undefined" && typeof window.__xrayDeriveProto === "function") ? window.__xrayDeriveProto(s) : { ospf: false };
+  state.helloDiscard = protocol !== "ospf" && !_dpO.ospf && _recvAny;
+  if (state.helloDiscard) state.helloIn = true;
+  if (protocol === "ospf" || _dpO.ospf) {
+    var ns = _xrayOspfNbrState(s);  /* OSPF FSM (BGP-primary neighbor_state under --proto bgp) */
     state.helloIn = !!s.peer_sending_hello;
     state.helloOut = !!s.ospf_active_on_interface;
     var nsLower = ns.toLowerCase();
     if (!state.helloOut) {
       state.ospfPhase = "inactive";
-    } else if (ns === "Full" || s.has_full) {
+    } else if (_xrayOspfFull(s)) {  /* nx_ospf_full_helper */
       state.ospfPhase = "full";
     } else if (nsLower === "exstart" || nsLower === "exchange" || nsLower === "loading") {
       state.ospfPhase = "exchange";
@@ -245,20 +367,30 @@ function xrayEvaluateState(s) {
       state.ospfPhase = "init";
     }
     var _otb = _xrayOspfBucket(ns);
-    if (_otb === "none" && s.has_full) _otb = "full";
+    if (_otb === "none" && _xrayOspfFull(s)) _otb = "full";  /* nx_ospf_full_helper: tunnel bucket from real OSPF full */
     state.ospfTunBucket = state.helloOut ? _otb : "none";
     state.lsdbSyncing = nsLower === "exchange" || nsLower === "loading";
-    state.ospfFull = state.helloIn && state.helloOut && (ns === "Full" || !!s.has_full);
-    state._r1Hello = s.r1_hello || 10;
-    state._r2Hello = s.r2_hello || 10;
+    state.ospfFull = state.helloIn && state.helloOut && _xrayOspfFull(s);  /* nx_ospf_full_helper */
+    var _hp = _xrayOssHelloPair(s);   /* nx_hello_iface_first */
+    state._r1Hello = (_hp && _hp[0]) || s.r1_hello || 10;
+    state._r2Hello = (_hp && (_hp[1] || _hp[0])) || s.r2_hello || 10;
     state._r1Area = s.r1_area || "";
     state._r2Area = s.r2_area || "";
-  } else if (protocol === "bgp") {
+  }
+  /* nx_std_bgp_branch_independent (2026-10-01): was `else if` - with nx_std_ospf_branch_live a BGP-config node that
+     ALSO runs OSPF enters the OSPF branch and skipped this one (bgpEstablished undefined = xray-bgp-undefined). */
+  if (protocol === "bgp") {
     state.bgpEstablished = !!s.is_established;
     state.bgpPhase = state.bgpEstablished ? "established" : "idle";
     state.bgpStatus = state.bgpEstablished ? "Established" : s.bgp_state ? s.bgp_state : "NOT CONFIGURED";
     state.bgpConfigured = s.bgp_configured !== false;
   }
+  // nx_hello_ifup_moved (2026-09-25): the ifUp early-return was BEFORE the ospf/bgp block,
+  // so a node whose forwarding OUTPUT is down (e.g. pure OSPF-peering lab with no destination route)
+  // got no OSPF Hello orbs even with a Full adjacency. OSPF Hello/phase (and BGP session) are
+  // CONTROL-PLANE, independent of data-plane forwarding, so compute them first; gate only the
+  // forwarding state (route/ping/canForward) below on ifUp.
+  if (!state.ifUp) return state;
   state.routeInstalled = !!rr.resolved;
   state.pingOk = state.routeInstalled && s.ping_ok === true;
   if (protocol === "static" && typeof s.nh_reachable === "boolean") {
@@ -271,7 +403,7 @@ function xrayEvaluateState(s) {
   state.cleared = state.pingOk;
   window._lastXrayHierarchy = state;
   if (protocol === "ospf") {
-    state.ospfStatus = state.helloOut ? "ACTIVE" : s.ospf_configured ? "CONFIGURED" : "NOT RUNNING";
+    state.ospfStatus = _xrayOspfHeadWord(s);  /* nx_ospf_running_wording: Running / no interfaces / "" (no router ospf = no line) */
   }
   // BGP uses TCP keepalives, not Hello packets — the OSPF Hello orb is an OSPF-adjacency visual and
   // must NOT appear on a BGP DeepDive. The clab/BGP collector reuses OSPF-style fields
@@ -315,15 +447,19 @@ function xrayApplyHierarchy(state) {
   b.add("xray-state-ready");
   var _adv = b.contains("xray-advertiser-view");
   var _cylLeft = typeof xrayCurrentPingMode === "function" && xrayCurrentPingMode() === "cylinder-to-left";
+  // nx_link_state_only: red = link state only (fallback to the legacy fields for a state object that
+  // was not built by xrayEvaluateState).
+  var _od = state.outLinkDown !== undefined ? state.outLinkDown : !state.ifUp;
+  var _id = state.inLinkDown !== undefined ? state.inLinkDown : !state.inputIfUp;
   if (_adv) {
-    state.ifUp ? b.remove("is-input-down") : b.add("is-input-down");
+    (_od || _id) ? b.add("is-input-down") : b.remove("is-input-down");
     b.remove("is-output-down");
   } else if (_cylLeft) {
-    !state.ifUp && state.wanIf ? b.add("is-input-down") : b.remove("is-input-down");
+    (_od || _id) ? b.add("is-input-down") : b.remove("is-input-down");
     b.remove("is-output-down");
   } else {
-    state.ifUp ? b.remove("is-output-down") : b.add("is-output-down");
-    state.inputIfUp ? b.remove("is-input-down") : b.add("is-input-down");
+    _od ? b.add("is-output-down") : b.remove("is-output-down");
+    _id ? b.add("is-input-down") : b.remove("is-input-down");
   }
   b.remove("xray-state-inactive", "xray-state-init", "xray-state-exchange", "xray-state-full", "xray-bgp-idle", "xray-bgp-established", "xray-ospftun-none", "xray-ospftun-init", "xray-ospftun-2way", "xray-ospftun-exchange", "xray-ospftun-full");
   if (state.protocol === "ospf") {
@@ -342,6 +478,7 @@ function xrayApplyHierarchy(state) {
   var _ho = _useLeft ? "hello-left-out" : "hello-out";
   state.helloIn ? b.add(_hi) : b.remove(_hi);
   state.helloOut ? b.add(_ho) : b.remove(_ho);
+  b.toggle("hello-discard", !!state.helloDiscard);  /* nx_hello_discard */
   b.remove(_useLeft ? "hello-in" : "hello-left-in");
   b.remove(_useLeft ? "hello-out" : "hello-left-out");
   state.cleared ? b.add("is-cleared") : b.remove("is-cleared");
@@ -417,8 +554,9 @@ function xrayApplyHierarchy(state) {
     var rr = window._lastXrayState && window._lastXrayState.route_resolution || {};
 
     var _fwdRp = rr.protocol || "";
-    if (_fwdRp === "ospf" || _fwdRp === "bgp") {
-      var _fwdCol2 = (_fwdRp === "bgp") ? "#a855f7" : "#39ff14";
+    var _fwdSelCol = (typeof _xrayRtSelArrowCol === "function") ? _xrayRtSelArrowCol() : null;  /* nx_rtsel_arrow_color */
+    if (_fwdSelCol || _fwdRp === "ospf" || _fwdRp === "bgp") {
+      var _fwdCol2 = _fwdSelCol || ((_fwdRp === "bgp") ? "#a855f7" : "#39ff14");
       var _fwl = fwd.querySelector("line"); if (_fwl) _fwl.setAttribute("stroke", _fwdCol2);
       var _fwp = fwd.querySelector("polygon"); if (_fwp) _fwp.setAttribute("fill", _fwdCol2);
       var _fwtC = fwd.querySelector("text"); if (_fwtC) _fwtC.setAttribute("fill", _fwdCol2);
@@ -547,8 +685,13 @@ function xrayApplyHierarchy(state) {
   }
   (function() {
     var _cxCfg = window._scenarioConfig || {}, _cxSt = window._lastXrayState || {};
-    var _isCoex = !!(_cxCfg.xray && _cxCfg.xray.deep_coexist_ospf) && !!(_cxSt.ospf_configured || _cxSt.neighbor_state || _cxSt.has_full || _cxSt.ospf_active_on_interface);
+    // nx_state_driven_emit (review finding 1): gate the dual OSPF-ball styling on the EMIT RESULT (the ball
+    // actually carries de-ospf-coexist = engine decided dual) rather than config.deep_coexist_ospf (narrow,
+    // template-set) so styling stays in lockstep with emit. Same _dualBr drives the right-bottom dual tab.
+    var _dualBr = !!document.querySelector(".de-ospf.de-ospf-coexist");
+    var _isCoex = _dualBr;
     document.body.classList.toggle("de-coexist-glyph", _isCoex);
+    document.body.classList.toggle("xray-de-dualbr", _dualBr);
     var _cxCore = document.querySelector(".de-ospf-coexist .de-ospf-core");
     var _cxInner = _cxCore ? _cxCore.querySelector(".inner") : null;
     var _cxLbl = document.querySelector(".de-ospf-coexist .de-ospf-label");
@@ -839,6 +982,12 @@ function xrayApplyHierarchy(state) {
     } else {
       lines = xrayStaticDeepLines(s, opts);
     }
+    /* rcl_oss_no_target_hasgate: OSS/containerlab labs without a target show only the real state, no forwarding decision. rr.target='' or no ping_dst => _ossHasTgt=false => filter. q1 (target 8.8.8.8) is unaffected. */
+    var _ossHasTgt = !!((window._scenarioConfig && window._scenarioConfig.capture && window._scenarioConfig.capture.ping_dst) || (rr && rr.target));
+    try { document.body.classList.toggle('xray-no-target', !_ossHasTgt); } catch (_eNT) {}
+    if (lines && !_ossHasTgt) {
+      lines = lines.filter(function (_l) { var _t = ((_l && _l.text) || '').replace(/^(&gt;|>|\u30fb)\s*/, ''); return !/^(Lookup|Route:|Route to |Next-Hop|Out:|Action|RIB|Config)/.test(_t); });
+    }
     if (lines) {
       var rePanel = document.getElementById("de-re-panel");
       if (rePanel) {
@@ -994,17 +1143,13 @@ function _xrayPeerRouterLines(nodeId, nodeIfaces, s) {
     var neighborState = nodeNeighborState || s.neighbor_state || "";
     if (hasFull || neighborState === "Full") {
       lines.push({
-        text: 'OSPF: <span class="hl">FULL</span>'
+        text: 'OSPF: <span class="hl">Running</span> \u00b7 <span class="hl">Full</span>'  /* nx_ospf_running_wording */
       });
     } else if (peerHello) {
       lines.push({
-        text: 'OSPF: <span class="hl">ACTIVE</span>'
+        text: 'OSPF: <span class="hl">Running</span>'
       });
-    } else {
-      lines.push({
-        text: 'OSPF: <span class="warn">&mdash;</span>'
-      });
-    }
+    }  /* neither: no line (the peer's router ospf is unknown) */
     if (peerHello) {
       lines.push({
         text: "Hello: sending",
@@ -1185,6 +1330,8 @@ var _HELLO_TRAVEL_TIME = 1.5;
 
 var _helloKfCache = {};
 
+/* nx_hello_orange: every Hello orb keeps the normal colour; a discarded incoming Hello differs only in motion
+   (it stops at the interface and fades, see the "in-discard" keyframe positions). */
 function _xrayBuildHelloKf(name, interval, direction) {
   var key = name + "_" + interval;
   if (_helloKfCache[key]) return _helloKfCache[key];
@@ -1207,6 +1354,15 @@ function _xrayBuildHelloKf(name, interval, direction) {
     "left-in": {
       start: "12px",
       end: "calc(50% - 10px)"
+    },
+    // nx_hello_discard: stop at the interface (cylinder surface) and fade there
+    "in-discard": {
+      start: "calc(100% - 12px)",
+      end: "calc(50% + 70px)"
+    },
+    "left-in-discard": {
+      start: "12px",
+      end: "calc(50% - 70px)"
     }
   };
   var pos = positions[direction] || positions["out"];
@@ -1305,6 +1461,7 @@ function _xrayApplyHelloTiming(state) {
       if (_uh[_u].style && _uh[_u].style.setProperty) {
         _uh[_u].style.setProperty("animation", "none", "important");
         _uh[_u].style.setProperty("display", "none", "important");
+        _uh[_u]._helloSig = null;  /* nx_hello_sig_reset: Simple->Standard re-applies the Hello animation */
       }
     }
     return;
@@ -1322,7 +1479,9 @@ function _xrayApplyHelloTiming(state) {
     }
     var _orbH = document.querySelectorAll(".de-hello-orb");
     for (var _ob = 0; _ob < _orbH.length; _ob++) {
-      if (_orbH[_ob].style) { _orbH[_ob].style.removeProperty("display"); }
+      if (_orbH[_ob].style) { _orbH[_ob].style.removeProperty("display");
+        /* nx_hello_sig_reset: Simple left animation:none!important inline -> it masked the CSS (hello-out/in) Hello in Standard */
+        if (_orbH[_ob].style.getPropertyValue("animation-name") === "none") { _orbH[_ob].style.removeProperty("animation"); _orbH[_ob]._helloSig = null; } }
     }
   }
   var r1Hello = state._r1Hello || 10;
@@ -1335,7 +1494,7 @@ function _xrayApplyHelloTiming(state) {
     outOrb.style.animation = kf + " " + r1Hello + "s ease-in-out infinite";
   }
   if (!_triDeepH && inOrb && state.helloIn) {
-    var kf = _xrayBuildHelloKf("deHIn", r2Hello, "in");
+    var kf = state.helloDiscard ? _xrayBuildHelloKf("deHInDiscard", r2Hello, "in-discard") : _xrayBuildHelloKf("deHIn", r2Hello, "in");  /* nx_hello_discard */
     inOrb.style.animation = kf + " " + r2Hello + "s ease-in-out " + Math.floor(r2Hello / 2) + "s infinite";
   }
   _xrayEnsureOvHelloElements();
@@ -1369,11 +1528,12 @@ function _xrayApplyHelloTiming(state) {
     leftOut.style.animation = kfLO + " " + r1Hello + "s ease-in-out infinite";
   }
   if (!_triDeepH && leftIn) {
-    var kfLI = _xrayBuildHelloKf("deHLI", r2Hello, "left-in");
+    var kfLI = state.helloDiscard ? _xrayBuildHelloKf("deHLIDiscard", r2Hello, "left-in-discard") : _xrayBuildHelloKf("deHLI", r2Hello, "left-in");  /* nx_hello_discard */
     leftIn.style.animation = kfLI + " " + r2Hello + "s ease-in-out " + Math.floor(r2Hello / 2) + "s infinite";
   }
 }
 
+function _xrayOssHelloPair(s) { /* nx_hello_iface_first (2026-10-06 #30b) */ if (typeof window === "undefined" || !window.xrayCore || !s) return null; var f = function (o) { if (!o) return 0; for (var k in o) { if (o.hasOwnProperty(k) && o[k] > 0) return +o[k]; } return 0; }; var a = f(s.iface_hellos), b = f(s.peer_hellos); return (a || b) ? [a, b] : null; }
 function xrayIsCleared(s) {
   if (s.route_resolution && s.route_resolution.resolved !== undefined) {
     return s.route_resolution.resolved && s.ping_ok !== false;
@@ -1503,7 +1663,7 @@ window.xrayCfDraw = function() {
   var cfP = de._deFlow.querySelector(".de-fwd-cf"), cfLd = de._deFlow.querySelector(".de-cf-leader");
   var cf = window._xrayCf, side = cf && cf.side ? cf.side : null;
   var isBest = cf && cf.kind === "best", isLoser = cf && cf.kind === "loser";
-  var arw = function(cn){ var ax = C[0] + (cn[0] - C[0]) * 0.82, ay = C[1] + (cn[1] - C[1]) * 0.82; return { d: q(C, [ (C[0]+ax)/2, (C[1]+ay)/2 ], [ax, ay]), x: ax, y: ay }; };
+  var arw = function(cn){ var ax = C[0] + (cn[0] - C[0]) * 0.90, ay = C[1] + (cn[1] - C[1]) * 0.90; return { d: q(C, [ (C[0]+ax)/2, (C[1]+ay)/2 ], [ax, ay]), x: ax, y: ay }; };
 
   if (fb && window._xrayArrowClickDriven) {
     if (isBest && side) {
@@ -1531,8 +1691,83 @@ window.xrayCfDraw = function() {
   }
 };
 window.xrayCfShow = function(kind, side, badge) { window._xrayCf = { kind: kind, side: side, badge: badge, bestVia: (window._lastXrayState && window._lastXrayState.best_path_via) || "" }; window.xrayCfDraw(); };
-window.xrayCfClear = function() { window._xrayCf = null; if (window.xrayCfDraw) window.xrayCfDraw(); var _lr = document.querySelectorAll(".de-bgp-table tr.cf-on"); for (var i = 0; i < _lr.length; i++) _lr[i].classList.remove("cf-on"); };
-(function(){ if (document.getElementById("xray-cf-css")) return; var st = document.createElement("style"); st.id = "xray-cf-css"; st.textContent = ".de-bgp-panel .de-bgp-table tr.cf-on td{background:rgba(200,212,224,0.10)!important;box-shadow:inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}.de-bgp-panel .de-bgp-table tr.cf-on td:first-child{box-shadow:inset 3px 0 0 #8a97a6,inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}"; (document.head||document.documentElement).appendChild(st); })();
+// Loser-Path: click a non-best BGP row -> grey dashed arrow toward the loser peer + "why it lost" badge.
+// The loser side comes from the row's next hop (mapped to the apex peer iface the same way the live
+// arrow follow maps the winner), not from the current arrow direction. Ephemeral: cleared on re-click,
+// when the best path changes, and on DeepDive close. Not shown during TRACE.
+function _xrayCfIfaceForNh(nh) {
+  var s = window._lastXrayState;
+  if (!s || !nh) return null;
+  var ifs = s.interfaces || {}, base3 = String(nh).split(".").slice(0, 3).join("."), wif = null;
+  Object.keys(ifs).forEach(function(k) { if (k !== "lo") { var ip = (ifs[k].ip || "").split("/")[0]; if (ip && ip.split(".").slice(0, 3).join(".") === base3) wif = k; } });
+  return wif;
+}
+// Best-row click: point the purple FORWARD arrow (with its prefix label) at this prefix's winner, using the
+// same selection state as a Routing-table row click, so the two stay consistent (the last click wins).
+function _xrayBestArrowFor(pfx) {
+  var s = window._lastXrayState, grp = (window._xrayLastBgpRoutes || []).filter(function(r) { return r && r.prefix === pfx; });
+  var best = grp.filter(function(r) { return (r.status || "").indexOf(">") !== -1; })[0];
+  var oif = best && _xrayCfIfaceForNh(best.nexthop || best.next_hop);
+  // no peer-side winner (e.g. a locally originated prefix, next hop 0.0.0.0): no arrow rather than a stale one
+  if (!oif || typeof window.xraySetForwardIface !== "function") { window._xrayRtSel = null; document.body.classList.add("xray-rt-noarrow"); return false; }
+  var rtp = pfx;
+  ((s && s.routing_table) || []).some(function(r) { if (r && r.prefix && (r.prefix === pfx || r.prefix.indexOf(pfx + "/") === 0)) { rtp = r.prefix; return true; } return false; });
+  window._xrayRtSel = { prefix: rtp, iface: oif };
+  var dir = window.xraySetForwardIface(oif);
+  if (!dir) { window._xrayRtSel = null; return false; }
+  document.body.classList.remove("xray-rt-noarrow");
+  if (typeof _xrayDeAngleView === "function" && s) _xrayDeAngleView(s);
+  return true;
+}
+window._xrayBestArrowFor = _xrayBestArrowFor;
+// Hide the Best-Path Decision (and drop the selected best-row highlight) — used when the current selection
+// is not a BGP best path, so the panel never explains a different prefix than the one on screen.
+function _xrayDecisionHide() {
+  window._xrayBgpSelPrefix = null;
+  var rs = window._xrayLastBgpRoutes;
+  if (Array.isArray(rs) && typeof xrayBuildBgpView === "function") {
+    var v = xrayBuildBgpView(rs), tbl = document.querySelector(".de-bgp-panel .de-bgp-table");
+    if (tbl && tbl.parentNode) { var tmp = document.createElement("div"); tmp.innerHTML = v.table; var nt = tmp.querySelector("table"); if (nt) tbl.parentNode.replaceChild(nt, tbl); }
+  }
+  var drows = document.querySelector(".de-bgp-decision-panel .de-bgp-decision-rows"); if (drows) drows.innerHTML = "";
+  var dbox = document.getElementById("de-bgp-decision-panel"); if (dbox) dbox.style.display = "none";
+}
+window._xrayDecisionHide = _xrayDecisionHide;
+// RT-row click: the Decision follows the row when that prefix is in the BGP table, otherwise it is hidden.
+function _xrayDecisionFollow(pfx) {
+  if (!pfx || typeof window.xrayBgpShowDecision !== "function") return;
+  var bare = String(pfx).replace(/\/\d+$/, ""), rs = window._xrayLastBgpRoutes || [];
+  var hit = rs.filter(function(r) { return r && (r.prefix === pfx || r.prefix === bare); })[0];
+  if (!hit) { _xrayDecisionHide(); return; }
+  window._xrayDecOnly = true;
+  try { window.xrayBgpShowDecision(hit.prefix); } finally { window._xrayDecOnly = false; }
+}
+window._xrayDecisionFollow = _xrayDecisionFollow;
+function _xrayCfSideForNh(nh) {
+  var s = window._lastXrayState, tn = window._triNodes;
+  if (!s || !nh || !tn) return null;
+  var wif = _xrayCfIfaceForNh(nh);
+  var dbg = window._xrayDirDbg || {};
+  var lIf = s[tn.left + "_iface"] || dbg.lIf, rIf = s[tn.right + "_iface"] || dbg.rIf;
+  return wif && wif === lIf ? "left" : wif && wif === rIf ? "right" : null;
+}
+window.xrayCfToggle = function(rowEl, pfx, nh) {
+  if (document.body.classList.contains("trace-active")) return;
+  var cur = window._xrayCf;
+  if (cur && cur.kind === "loser" && cur.pfx === pfx && cur.nh === nh) { window.xrayCfClear(); return; }
+  var info = (window._xrayCfRows || {})[pfx + "|" + nh], side = _xrayCfSideForNh(nh);
+  if (!info || !side) return;
+  window.xrayCfClear();
+  // Loser shown alone: drop the purple arrow + prefix label (back to the no-arrow state) before drawing the grey one.
+  window._xrayRtSel = null; document.body.classList.add("xray-rt-noarrow");
+  window.xrayCfShow("loser", side, info.reason);
+  window._xrayCf.pfx = pfx; window._xrayCf.nh = nh; window._xrayCf.bestNh = info.bestNh;
+  if (rowEl && rowEl.classList) rowEl.classList.add("cf-on");
+  if (window._xrayDecisionHide) window._xrayDecisionHide();   // loser shown alone: no Decision, no purple arrow, no prefix label
+  document.body.classList.add("xray-cf-on");   // un-hide svg.de-flow under xray-rt-noarrow (only .de-fwd-cf shows)
+};
+window.xrayCfClear = function() { window._xrayCf = null; document.body.classList.remove("xray-cf-on"); if (window.xrayCfDraw) window.xrayCfDraw(); var _lr = document.querySelectorAll(".de-bgp-table tr.cf-on"); for (var i = 0; i < _lr.length; i++) _lr[i].classList.remove("cf-on"); };
+(function(){ if (document.getElementById("xray-cf-css")) return; var st = document.createElement("style"); st.id = "xray-cf-css"; st.textContent = "body:not(.trace-active) .de-bgp-panel .de-bgp-table tr.de-bgp-loser{cursor:pointer}body.xray-rt-noarrow.xray-cf-on .de-flow{display:block!important}body.xray-rt-noarrow.xray-cf-on .de-flow .de-fwd-dest{display:none!important}.de-bgp-panel .de-bgp-table tr.cf-on td{background:rgba(200,212,224,0.10)!important;box-shadow:inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}.de-bgp-panel .de-bgp-table tr.cf-on td:first-child{box-shadow:inset 3px 0 0 #8a97a6,inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}"; (document.head||document.documentElement).appendChild(st); })();
 
 function xrayDeepDiveClose() {
   if (window.xrayCfClear) window.xrayCfClear();
@@ -1887,7 +2122,7 @@ function xrayUpdateLsdb(s, opts) {
   var lsdbEl = document.getElementById("de-lsdb");
   if (!lsdbEl) return;
   opts = opts || {};
-  if (!s.ospf_active_on_interface && !(s.has_full || s.neighbor_state && s.neighbor_state !== "None")) {
+  if (_xrayOspfSpecific(s) ? (!s.ospf_active_on_interface && !_xrayOspfFull(s) && _xrayOspfNbrState(s) === "None") : (!s.ospf_active_on_interface && !(s.has_full || s.full_count > 0 || s.neighbor_state && s.neighbor_state !== "None"))) {  /* nx_ospf_specific_fields *//*lsdb-gate-fullcount-align-20260925: make the LSDB panel visibility gate match the RE panel's Full test (has_full || full_count>0 || neighbor_state===Full). Fixes the LSDB panel being hidden while RE shows Full when a solved state reports Full via full_count. Adds a show condition only (no regression).*/
     lsdbEl.style.display = "none";
     return;
   }
@@ -1895,8 +2130,8 @@ function xrayUpdateLsdb(s, opts) {
   var ifaces = s.interfaces || {};
   var rr = s.route_resolution || {};
   var fullCount = s.full_count !== undefined ? s.full_count : s.has_full ? 1 : 0;
-  var synced = fullCount > 0;
-  var ns = (s.neighbor_state || "").toLowerCase();
+  var synced = _xrayOspfSpecific(s) ? _xrayOspfFull(s) : fullCount > 0;  /* nx_ospf_specific_fields */
+  var ns = (_xrayOspfSpecific(s) ? _xrayOspfNbrState(s) : (s.neighbor_state || "")).toLowerCase();
   var isExchange = ns === "exchange" || ns === "loading";
   var isNeighborInit = ns === "init" || ns === "2-way" || ns === "twoway";
   var progress = synced ? 100 : isExchange ? 40 : s.ospf_active_on_interface ? 20 : 0;
@@ -2126,15 +2361,47 @@ function _xrayPaintRoutingPanel(s) {
     // don't leak and suppress ping orbs elsewhere.
     document.body.classList.remove("xray-rt-live");
     document.body.classList.remove("xray-rt-noarrow");
+    window._xrayFocusPresent = {};   /* nx_focus_route: DeepDive closed -> reopening selects the focus route again */
     return;
   }
+  /* nx_panel_front_rt_re (2026-10-09): RT <-> RE - the panel you click comes to the front.
+     Real clicks only (focus auto-select clicks rows programmatically); capture, because the row click stops propagation. */
+  try {
+    if (!document.getElementById("nx-front-css")) {
+      var _nfS = document.createElement("style"); _nfS.id = "nx-front-css";
+      _nfS.textContent = ".xray-deep-engine #de-routing-panel.nx-front,.xray-deep-engine #de-re-panel.nx-front{z-index:13!important}"
+        + ".xray-deep-engine.xray-unified-mode #de-routing-panel.nx-front,.xray-deep-engine.xray-unified-mode #de-re-panel.nx-front{z-index:62!important}";
+      document.head.appendChild(_nfS);
+    }
+    var _nfRe = document.getElementById("de-re-panel");
+    var _nfWire = function (me, otherId) {
+      if (!me || me._nxFrontWired) return;
+      me._nxFrontWired = true;
+      me.addEventListener("click", function (ev) {
+        if (ev && ev.isTrusted === false) return;
+        var o = document.getElementById(otherId);
+        if (o) o.classList.remove("nx-front");
+        me.classList.add("nx-front");
+      }, true);
+    };
+    _nfWire(el, "de-re-panel");
+    _nfWire(_nfRe, "de-routing-panel");
+  } catch (_nfE) {}
   var rt = s && s.routing_table;
   if (!rt || !rt.length) {
-    el.innerHTML = "";
-    document.body.classList.remove("xray-rt-noarrow");
+    /* nx_noroutes_panels: live lab, routing table empty (e.g. every link shut) -> keep the panel visible */
+    el.innerHTML = (typeof window !== "undefined" && window.xrayCore && s && Array.isArray(s.routing_table))
+      ? '<div class="de-rt-hd">Routing table</div><div class="de-dim" style="padding:4px 0">No routes</div>' : "";
+    /* nx_live_dest_clear (2026-10-05): a LIVE lab (routing_table present but empty, e.g. every link
+       shut) has nothing selected -> no arrow. Pages without a routing table (static previews) keep the
+       route_resolution arrow as before. */
+    if (typeof window !== "undefined" && window.xrayCore && s && Array.isArray(s.routing_table)) document.body.classList.add("xray-rt-noarrow");
+    else document.body.classList.remove("xray-rt-noarrow");
     document.body.classList.remove("xray-rt-live");
     window._xrayRtSel = null;
     window._xrayUnifiedSel = undefined;
+    /* nx_panel_stagger_noroutes (2026-10-06): the "No routes" panel (hosts inet/sv, every link shut) is stepped too */
+    if (el.innerHTML) { var _reLeft0 = (typeof _XRAY_DE !== "undefined" && _XRAY_DE.rePanelLeft != null) ? _XRAY_DE.rePanelLeft : 90; el.style.left = (_reLeft0 + 16) + "px"; el.style.right = "auto"; }
     return;
   }
   // routing_table live context (containerlab/collector): persistent class so the moving ping/packet
@@ -2147,11 +2414,10 @@ function _xrayPaintRoutingPanel(s) {
 
   // (right zone is used by neighbor / best-path panels) = zero regression.
   var _reLeft = (typeof _XRAY_DE !== "undefined" && _XRAY_DE.rePanelLeft != null) ? _XRAY_DE.rePanelLeft : 90;
-  if (!(s && (s.ospf_configured || s.bgp_configured))) {
-    el.style.left = "calc(50% + 100px)"; el.style.right = "auto"; el.style.top = "30px"; el.style.bottom = "auto";
-  } else {
-    el.style.left = _reLeft + "px"; el.style.right = "auto"; el.style.top = ""; el.style.bottom = "";
-  }
+  /* oss-rt-static-leftbottom-20260925: the routing table sits bottom-left for every lab. The old static-only branch (no OSPF/BGP) moved it inline to the top-right zone, so q2/q4/q3 showed it bottom-right. Unified with the ospf/bgp branches by removing the inline override; the base .de-routing CSS is bottom-left too. */
+  /* nx_panel_stagger (2026-10-06, q19): the Routing table sits 16px right of the Routing Engine so the two left edges
+     do not line up (stepped = where one panel ends and the other begins stays visible when they overlap). */
+  el.style.left = (_reLeft + 16) + "px"; el.style.right = "auto"; el.style.top = ""; el.style.bottom = "";
   function _esc(v) {
     return String(v == null ? "" : v).replace(/[&<>"]/g, function(c) {
       return {
@@ -2169,12 +2435,29 @@ function _xrayPaintRoutingPanel(s) {
   // if no row carries `selected` (older/other captures), fall back to showing every row.
   var rtRows = rt.filter(function(r) { return r && r.selected; });
   if (!rtRows.length) rtRows = rt;
+  /* nx_rt_candidates (2026-10-07, q11: anything `show ip route` lists is shown in the RT panel too): every RIB row, the
+     not-selected ones dimmed under the selected row of the same prefix (prefixes kept in RIB order). */
+  if (rtRows !== rt && typeof window !== "undefined" && window.xrayCore) {
+    var _order = [], _by = {};
+    rt.forEach(function (r) { if (!r) return; if (!_by[r.prefix]) { _by[r.prefix] = []; _order.push(r.prefix); } _by[r.prefix].push(r); });
+    rtRows = [];
+    _order.forEach(function (pf) {
+      _by[pf].forEach(function (r) { if (r.selected) rtRows.push(r); });
+      _by[pf].forEach(function (r) { if (!r.selected) rtRows.push(Object.assign({ _cand: true }, r)); });
+    });
+  }
+  /* nx_live_dest_clear: the selected route is no longer in the table -> clear the selection */
+  if (window._xrayRtSel && window._xrayRtSel.prefix && !rtRows.some(function(r) { return r && r.prefix === window._xrayRtSel.prefix; })) {
+    window._xrayRtSel = null;
+    if (window._xrayDecisionHide) { try { window._xrayDecisionHide(); } catch (e) {} }
+  }
   var selPfx = window._xrayRtSel && window._xrayRtSel.prefix;
   var rowsHtml = rtRows.map(function(r) {
     var pfx = r.prefix || "";
     var out = r.out_iface || r.next_hop || "—";
     var proto = r.protocol || "";
     var on = selPfx && selPfx === pfx;
+    if (r._cand) return '<tr class="de-rt-cand" style="opacity:.45;pointer-events:none" title="not selected (candidate)"><td class="de-rt-pfx">' + _esc(pfx) + '</td><td class="de-rt-out">→ ' + _esc(out) + '</td><td class="de-rt-proto">' + _esc(proto) + "</td></tr>";   /* nx_rt_candidates */
     return '<tr data-prefix="' + _esc(pfx) + '"' + (on ? ' class="de-rt-sel"' : "") + '><td class="de-rt-pfx">' + _esc(pfx) + '</td><td class="de-rt-out">→ ' + _esc(out) + '</td><td class="de-rt-proto">' + _esc(proto) + "</td></tr>";
   }).join("");
   el.innerHTML = '<div class="de-rt-hd">Routing table</div><table class="de-rt-tbl"><tbody>' + rowsHtml + "</tbody></table>";
@@ -2182,6 +2465,49 @@ function _xrayPaintRoutingPanel(s) {
   var selIf = window._xrayRtSel && window._xrayRtSel.iface;
   var suppress = !(selIf && selIf !== "lo" && !/^lo/i.test(selIf));
   document.body.classList.toggle("xray-rt-noarrow", suppress);
+  /* nx_focus_route (2026-10-05): an example lab can declare the route its problem is about
+     (window.XRAY_PROBLEM.focus = {node, prefix}, written by clab-xray-collect.js from problem.json).
+     When the DeepDive shows that node and the route APPEARS in the Routing table (on opening, or when it
+     comes back e.g. after a link is brought up again), select it once - exactly like clicking its row
+     (arrow + Best-Path Decision). Not on every refresh (no flicker), and not while the user has another
+     row selected that is still in the table (the user's choice wins). Labs without a focus: nothing. */
+  try {
+    var _fc = window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus;
+    /* nx_focus_all_routers (2026-10-08 q6): the focus prefix is picked on ANY router's DeepDive (focus.node only decides
+       which node the page opens first). A router's own connected / local route to the prefix (the destination router itself,
+       e.g. q6 r3 lo 3.3.3.3) is not picked. The "was it there before" flag is kept per node. */
+    if (_fc && _fc.prefix) {
+      var _tgt = typeof xrayDeepTargetRouter === "function" ? String(xrayDeepTargetRouter() || "").replace("topo-node-", "") : "";
+      var _fp = window._xrayFocusPresent || (window._xrayFocusPresent = {});
+      var _key = _tgt + "|" + _fc.prefix;
+      if (_tgt) {
+        var _now = rtRows.some(function(r) { return r && r.prefix === _fc.prefix && r.out_iface && !/^lo/i.test(r.out_iface) && !/^(connected|local)$/i.test(String(r.protocol || "")); });
+        var _was = !!_fp[_key];
+        _fp[_key] = _now;
+        var _us = window._xrayRtSel && window._xrayRtSel.prefix;
+        var _userOther = _us && _us !== _fc.prefix && rtRows.some(function(r) { return r && r.prefix === _us; });
+        var _selNow = window._xrayRtSel && window._xrayRtSel.prefix;
+        /* select when it appears, and keep trying on later refreshes while it is in the table but not yet
+           selected (right after a link comes back the out-iface may not resolve yet); stop once selected,
+           or when the user has another row / the Loser-Path open */
+        if (_now && (!_was || _selNow !== _fc.prefix) && !_userOther && !window._xrayCf && !document.body.classList.contains("trace-active")) {
+          /* the DeepDive may still be laying out (arrow direction not resolvable yet) -> retry the click
+             until the route is really selected (max ~5 s) */
+          (function _focusTry(n) {
+            setTimeout(function() {
+              var _sel = window._xrayRtSel && window._xrayRtSel.prefix;
+              if (_sel === _fc.prefix || n > 10) return;
+              var _uo = _sel && _sel !== _fc.prefix;   /* the user picked another row meanwhile: stop */
+              if (_uo && n > 0) return;
+              var _row = document.querySelector('#de-routing-panel tr[data-prefix="' + _fc.prefix + '"]');
+              if (_row) { try { _row.click(); } catch (e) {} }
+              _focusTry(n + 1);
+            }, n ? 500 : 0);
+          })(0);
+        }
+      }
+    }
+  } catch (_eF) {}
   if (el._xrayRtWired) return;
   el._xrayRtWired = true;
   // capture phase so the engine's stopPropagation on the deep-engine doesn't swallow the row click.
@@ -2190,6 +2516,8 @@ function _xrayPaintRoutingPanel(s) {
     if (!tr || !el.contains(tr)) return;
     ev.stopPropagation();
     var pfx = tr.getAttribute("data-prefix");
+    if (window._xrayCf && window.xrayCfClear) window.xrayCfClear();   /* purple-arrow selections end the Loser-Path */
+    if (window._xrayDecisionFollow) window._xrayDecisionFollow(pfx);
     var ls = window._lastXrayState;
     var lrt = (ls && ls.routing_table) || rt;
     // Prefer the installed (selected) row for this prefix so the arrow follows the same route the
@@ -2240,11 +2568,14 @@ function _xrayPaintRoutingPanel(s) {
 function xraySetDeepDive(selector, lines) {
   var el = document.querySelector(selector);
   if (!el) return;
+  /* rcl_re_panel_bullet_render (2026-10-08): RE panel rows lead with the same bullet as the folded builders (U+30FB), never ">".
+     Replaced at render time only, so builder-side filters that key on "> " (e.g. ^> (Neighbor|LSDB)) still work. */
+  var _reBullet = selector === "#de-re-panel";
   el.innerHTML = lines.map(function(l) {
     var tag = "<div";
     if (l.style) tag += ' style="' + l.style + '"';
     if (l.cls) tag += ' class="' + l.cls + '"';
-    tag += ">" + l.text + "</div>";
+    tag += ">" + (_reBullet && typeof l.text === "string" ? l.text.replace(/^&gt; /, "\u30fb ").replace(/^> /, "\u30fb ") : l.text) + "</div>";
     return tag;
   }).join("");
 }
@@ -2372,21 +2703,22 @@ function xrayUpdateDeepDiveIO(s) {
     if (outLabel) outLabel.textContent = "Output: " + wanIf;
     var singleIf = lanIf === wanIf;
     if (typeof xrayCurrentPingMode === "function" && xrayCurrentPingMode() === "cylinder-to-left") {
-      var leftIf = ifaces[lanIf];
-      if (leftIf && !leftIf.up) {
+      var _lsC = _xrayLinkSides(s);  /* nx_link_state_only */
+      if (_lsC.outDown || _lsC.inDown) {
         document.body.classList.add("is-input-down");
       } else {
         document.body.classList.remove("is-input-down");
       }
       document.body.classList.remove("is-output-down");
     } else {
-      var outputUp = ifaces[wanIf] && ifaces[wanIf].up;
+      var _lsO = _xrayLinkSides(s);  /* nx_link_state_only */
+      var outputUp = !_lsO.outDown;
       if (outputUp) {
         document.body.classList.remove("is-output-down");
       } else {
         document.body.classList.add("is-output-down");
       }
-      var inputUp = singleIf || ifaces[lanIf] && ifaces[lanIf].up;
+      var inputUp = !_lsO.inDown;  /* nx_link_state_only */
       if (inputUp) {
         document.body.classList.remove("is-input-down");
       } else {
@@ -2444,12 +2776,68 @@ function xrayStaticLogicLines(s, opts) {
   return lines;
 }
 
+/* nx_ospf_running_wording (2026-10-08): the OSPF heading says only whether OSPF runs on an interface.
+   "Active" is a BGP word, so it is not used. No `router ospf` -> no OSPF line / router ospf but 0 OSPF interfaces -> "no interfaces"
+   (orange) / 1+ -> "Running" (green). OSPF interface = not lo, up, listed by `show ip ospf interface` (passive counts).
+   Neighbor states use the OSPF words (Down / Init / 2-Way / ExStart / Exchange / Loading / Full) on the Neighbor line. */
+function _xrayOspfNbrSeen(s) {
+  if (_xrayOspfSpecific(s) || s.ospf_neighbor_state !== undefined) {   /* OSPF-own fields first (coexist has_full may be BGP) */
+    if (Array.isArray(s.ospf_neighbors) && s.ospf_neighbors.length) return true;
+    if (s.ospf_neighbor_full) return true;
+    return !!(s.ospf_neighbor_state && s.ospf_neighbor_state !== "None" && s.ospf_neighbor_state !== "Down");
+  }
+  if (s.has_full) return true;
+  return !!(s.neighbor_state && s.neighbor_state !== "None" && s.neighbor_state !== "Down");
+}
+/* "run" / "noif" / "none". legacyAssume: keep the old "flags missing -> running" reading (clab-paste preview states). */
+function _xrayOspfHeadKind(s, legacyAssume) {
+  if (!s) return "none";
+  if (typeof s.ospf_if_count === "number") { if (s.ospf_if_count > 0) return "run"; }
+  else if (s.ospf_active_on_interface || (s.iface_hellos && typeof s.iface_hellos === "object" && Object.keys(s.iface_hellos).length)) return "run";
+  if (_xrayOspfNbrSeen(s)) return "run";
+  if (legacyAssume && s.ospf_active_on_interface === undefined && s.ospf_configured === undefined) return "run";
+  return s.ospf_configured ? "noif" : "none";
+}
+function _xrayOspfHeadWord(s, legacyAssume) { var k = _xrayOspfHeadKind(s, legacyAssume); return k === "run" ? "Running" : (k === "noif" ? "no interfaces" : ""); }
+function _xrayOspfHeadColor(w) { return w === "Running" ? "#39ff14" : "#ff8c00"; }
+function _xrayOspfNbrWord(st) { return !st ? "?" : (st === "None" ? "Down" : st); }
+/* 2-Way is the normal resting state between two DROthers. The collector's role is the PEER's role; if we were DR/BDR we would be
+   Full with everyone, so a DROther peer stuck at 2-Way means we are DROther too = normal (green). point-to-point has no DROther -> orange. */
+function _xrayOspfNbrOk(st, role) { return st === "Full" || (st === "2-Way" && /^DROther$/i.test(role || "")); }
+function _xrayOspfNbrColor(st, role) {
+  if (_xrayOspfNbrOk(st, role)) return "#39ff14";
+  return (st === "Down" || st === "None" || st === "?") ? "#ff4444" : "#ff8c00";
+}
+function _xrayOspfNbrSpan(st, role) { return '<span style="color:' + _xrayOspfNbrColor(st, role) + '">' + st + "</span>"; }
+/* One summary line that stays visible while the neighbor list is folded (only when Running). allowEmpty: emit "Neighbor: Down"
+   for an empty list (only where the caller has no Neighbor line of its own). */
+function _xrayOspfNbrSummaryPush(lines, s, allowEmpty, legacyAssume) {
+  if (_xrayOspfHeadKind(s, legacyAssume) !== "run") return;
+  var L = Array.isArray(s.ospf_neighbors) ? s.ospf_neighbors : [];
+  if (!L.length) { if (allowEmpty) lines.push({ text: "> Neighbor: " + _xrayOspfNbrSpan("Down") }); return; }
+  var _ord = ["?", "Down", "Attempt", "Init", "2-Way", "ExStart", "Exchange", "Loading", "Full"];
+  var _ok = 0, _full = 0, _worst = null, _worstRole = "";
+  L.forEach(function (_n) {
+    var _st = _n.full ? "Full" : _xrayOspfNbrWord(_n.state);
+    if (_st === "Full") _full++;
+    if (_xrayOspfNbrOk(_st, _n.role)) _ok++;
+    var _i = _ord.indexOf(_st); if (_i < 0) _i = 0;
+    var _w = _worst === null ? 99 : _ord.indexOf(_worst); if (_w < 0) _w = 0;
+    if (_i < _w) { _worst = _st; _worstRole = _n.role || ""; }
+  });
+  var _txt;
+  if (L.length === 1) _txt = _xrayOspfNbrSpan(_worst, _worstRole);
+  else if (_ok === L.length) _txt = '<span style="color:#39ff14">' + _worst + "</span>";
+  else _txt = _xrayOspfNbrSpan(_worst, _worstRole) + ' <span style="color:#aef5b0">(' + _full + "/" + L.length + " Full)</span>";
+  lines.push({ text: "> Neighbor: " + _txt });
+}
+
 function xrayOspfLogicLines(s) {
   var lines = [];
   var h = window._lastXrayHierarchy || xrayEvaluateState(s);
-  lines.push({
-    text: "OSPF: " + (h.ospfStatus || "NOT RUNNING"),
-    cls: h.ospfFull ? "hl" : h.ospfStatus === "NOT RUNNING" ? "off" : "warn"
+  if (h.ospfStatus) lines.push({
+    text: "OSPF: " + h.ospfStatus,
+    cls: h.ospfStatus === "Running" ? "hl" : "warn"
   });
   lines.push({
     text: "Ping: " + (s.ping_ok ? "OK" : "FAIL"),
@@ -2473,6 +2861,21 @@ function xrayBgpLogicLines(s) {
 }
 
 function xrayStaticDeepLines(s, opts) {
+  /* oss_static_notarget_re_ifaceonly_20260924: in OSS (no target / containerlab live) the RE panel shows interface up/down only
+     (no forwarding-decision lines Lookup/Route/NH/Out/Action). Same gate as xrayOspfDeepLines
+     (window.xrayCore || s.routing_table). Labs with a target (no gate) keep the forwarding decision below. */
+  if ((typeof window !== "undefined" && window.xrayCore) || (s.routing_table && s.routing_table.length)) {
+    var _reL = [{ text: "[Routing Engine]", cls: "de-title" }];
+    var _reIf = s.interfaces || {};
+    Object.keys(_reIf).forEach(function(_n) {
+      var _i = _reIf[_n], _c = _i.up ? "#39ff14" : "#ff4444";
+      _reL.push({
+        text: "> " + _n + ': <span style="color:' + _c + '">' + (_i.up ? "UP" : "DOWN") + "</span>" + (_i.ip ? ' <span class="de-dim">' + _i.ip + "</span>" : ""),
+        style: _i.up ? "" : "color:#ff6b35;font-weight:700"
+      });
+    });
+    return _reL;
+  }
   var rr = s.route_resolution || {};
   var ifaces = s.interfaces || {};
   var target = rr.target || opts && opts.target || "8.8.8.8";
@@ -2571,16 +2974,17 @@ function _xrayOspfRtSummaryLines(s) {
 
   var _osFullAny = (Array.isArray(s.ospf_neighbors) && s.ospf_neighbors.some(function (_n) { return _n.full || _n.state === "Full"; })) || !!s.ospf_neighbor_full;
   if (Array.isArray(s.ospf_neighbors)) {
-    var _osState = _osFullAny ? "Full" : ((s.ospf_configured || ospfActive) ? "Active" : "Inactive");
-    lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + (_osFullAny ? "#39ff14" : (ospfActive ? "#ff8c00" : "#ff4444")) + '">' + _osState + '</span></span>' });
+    var _osState = _xrayOspfHeadWord(s, true);  /* nx_ospf_running_wording */
+    if (_osState) lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + _xrayOspfHeadColor(_osState) + '">' + _osState + '</span></span>' }); _xrayOspfNbrSummaryPush(lines, s, false, true);
   } else {
-  lines.push({
-    text: '> OSPF: <span style="color:' + (ospfActive ? "#39ff14" : "#ff4444") + '">' + (ospfActive ? "ACTIVE" : "INACTIVE") + "</span>"
+  var _osW0 = _xrayOspfHeadWord(s, true);  /* nx_ospf_running_wording */
+  if (_osW0) lines.push({
+    text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_osW0) + '">' + _osW0 + "</span>"
   });
   }
-  var nbrFull = !!(s.has_full || s.full_count > 0 || s.neighbor_state === "Full");
-  var nbrLabel = nbrFull ? "Full" : s.neighbor_state || "None";
-  var nbrColor = nbrFull ? "#39ff14" : nbrLabel !== "None" ? "#ff8c00" : "#ff4444";
+  var nbrFull = _xrayOspfSpecific(s) ? _xrayOspfFull(s) : (_xrayOspfFull(s) || s.full_count > 0);  /* nx_ospf_full_helper / nx_ospf_specific_fields */
+  var nbrLabel = nbrFull ? "Full" : _xrayOspfNbrWord(_xrayOspfNbrState(s));  /* nx_ospf_running_wording: None is shown as Down */
+  var nbrColor = nbrFull ? "#39ff14" : _xrayOspfNbrColor(nbrLabel);
   // OSS dual-apex (triangle) nodes have two adjacencies: when the two peer states DIFFER (e.g. one
   // Down/recovering while the other is Full) show them per-peer, so a single "Neighbor: Full" (taken
 
@@ -2605,14 +3009,14 @@ function _xrayOspfRtSummaryLines(s) {
     lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;neighbor</span>', cls: "re-ospf-nbr", style: _osHide });
     s.ospf_neighbors.forEach(function (_nb) {
       var _lbl = _nb.router_id || _nb.address || _nb.ip || "?";
-      var _st = _nb.state || "?";
-      var _sc = _st === "Full" ? "#39ff14" : "#ffb74d";
+      var _st = _nb.full ? "Full" : _xrayOspfNbrWord(_nb.state);
+      var _sc = _xrayOspfNbrColor(_st, _nb.role);
       lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _st + '</span>', cls: "re-ospf-nbr", style: _osHide });
     });
   } else if (_osPerPeer) {
     _osPeers.forEach(function(_pk) {
-      var _ps = s[_pk + "_neighbor_state"] || "None";
-      var _pc = _ps === "Full" ? "#39ff14" : (_ps === "Down" || _ps === "None") ? "#ff4444" : "#ff8c00";
+      var _ps = _xrayOspfNbrWord(s[_pk + "_neighbor_state"] || "None");
+      var _pc = _xrayOspfNbrColor(_ps);
       lines.push({ text: "> Neighbor " + _pk + ': <span style="color:' + _pc + '">' + _ps + "</span>" });
     });
   } else {
@@ -2628,6 +3032,8 @@ function _xrayOspfRtSummaryLines(s) {
   lines.push({
     text: '> LSDB: <span style="color:' + (lsdbSync ? "#39ff14" : "#ff8c00") + '">' + (lsdbSync ? "SYNCHRONIZED" : "SYNCING") + "</span>"
   });
+  /* nx_ospf_running_wording: Neighbor / LSDB only while OSPF is Running */
+  if (_xrayOspfHeadKind(s, true) !== "run") lines = lines.filter(function (_l) { return !(/^> (Neighbor|LSDB)\b/.test(_l.text || "") || _l.cls === "re-ospf-nbr"); });
   // fault diagnostics — surface only the failing ones so the healthy view stays the clean 3 lines.
   if (s.rid_duplicate) {
     var _tgtRid = s.target_rid || s.r1_rid || "?", _peerRid = s.peer_rid || s.r2_rid || "?";
@@ -2659,6 +3065,13 @@ function _xrayOspfRtSummaryLines(s) {
     });
   }
 
+  /* nx_ospf_re_ifaces (2026-10-07, q9): interface rows with UP/DOWN + IP, same as the BGP Routing Engine */
+  var _ifsR = s.interfaces || {};
+  Object.keys(_ifsR).forEach(function (ifn) {
+    var info = _ifsR[ifn] || {};
+    lines.push({ text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>" });
+  });
+
   lines = lines.map(function (_l) { if (_l && typeof _l.text === "string") { _l.text = _l.text.replace(/^&gt; /, "\u30fb ").replace(/^> /, "\u30fb "); } return _l; });
   return lines;
 }
@@ -2674,41 +3087,32 @@ function xrayOspfDeepLines(s, opts) {
     text: "[Routing Engine]",
     cls: "de-title"
   });
-  var ospfLabel = h.ospfStatus || "NOT RUNNING";
-  if (h.ospfFull) {
+  var ospfLabel = h.ospfStatus || "";
+  if (ospfLabel === "Running") {  /* nx_ospf_running_wording */
     lines.push({
       text: '> OSPF: <span class="de-hl">' + ospfLabel + "</span>"
     });
-  } else if (h.helloOut) {
+  } else if (ospfLabel) {
     lines.push({
       text: '> OSPF: <span style="color:#ff8c00">' + ospfLabel + "</span>"
     });
-  } else {
-    lines.push({
-      text: '> OSPF: <span style="color:#ff4444">' + ospfLabel + "</span>",
-      style: "color:#ff6b35;font-weight:700"
-    });
   }
-  var ospfRunning = h.helloOut || h.ospfFull;
+  var ospfRunning = (ospfLabel === "Running");  /* nx_ospf_running_wording */
   if (ospfRunning) {
     var ns = s.neighbor_state || "None";
-    if (ns === "Full" || s.has_full) {
+    if (_xrayOspfFull(s)) {  /* nx_ospf_full_helper: RE Neighbor builder (was ns/has_full=BGP-primary) */
       lines.push({
         text: '> Neighbor: <span class="de-hl">Full</span>'
       });
-    } else if (ns !== "None" && h.helloOut) {
+    } else {  /* nx_ospf_running_wording: None is shown as Down */
       lines.push({
-        text: '> Neighbor: <span style="color:#ff8c00">' + ns + "</span>"
-      });
-    } else {
-      lines.push({
-        text: '> Neighbor: <span style="color:#ff4444">' + ns + "</span>"
+        text: "> Neighbor: " + _xrayOspfNbrSpan(_xrayOspfNbrWord(ns))
       });
     }
   }
   if (ospfRunning) {
     var ns = s.neighbor_state || "None";
-    if (s.neighbor_state === "Full" || s.has_full) {
+    if (_xrayOspfFull(s)) {  /* nx_ospf_full_helper: RE LSDB builder (was neighbor_state/has_full=BGP-primary) */
       lines.push({
         text: '> LSDB: <span class="de-hl">SYNCHRONIZED</span>'
       });
@@ -3061,6 +3465,13 @@ function xrayBgpDeepLines(s, opts) {
     lines.push({
       text: (_nbAgg ? '<span class="re-bgp-head" style="cursor:pointer" onclick="window._xrayReBgpToggle && window._xrayReBgpToggle()"><span class="re-bgp-ind">' + (window._reBgpOpen ? "\u25bc" : "\u25b6") + '</span> BGP: ' + _nbAgg + '</span>' : '> BGP: <span style="color:#a855f7">' + "Established" + "</span>")
     });
+  } else if (_nbAgg) {
+    /* nx_bgp_nbr_fold_any_state (2026-10-06, q13): a BGP session that is NOT Established also gets
+       the foldable neighbor list (closed by default) - e.g. "BGP: Connect 1" opens to the peer IP / AS /
+       state / Up/Down / PfxRcd, so a mistyped neighbor address can be spotted from the DeepDive. */
+    lines.push({
+      text: '<span class="re-bgp-head" style="cursor:pointer" onclick="window._xrayReBgpToggle && window._xrayReBgpToggle()"><span class="re-bgp-ind">' + (window._reBgpOpen ? "\u25bc" : "\u25b6") + '</span> BGP: ' + _nbAgg + "</span>"
+    });
   } else {
     lines.push({
       text: '> BGP: <span style="color:#ff4444">' + (s.bgp_state || h.bgpStatus || "Idle") + "</span>",
@@ -3075,7 +3486,7 @@ function xrayBgpDeepLines(s, opts) {
       var _kind = _nb.ibgp ? "iBGP" : "eBGP";
       var _kc = _nb.ibgp ? "#7facc9" : "#ffb74d";
       lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.ip + '&nbsp;&nbsp;AS ' + _nb.remote_as + ' </span><span style="color:' + _kc + '">(' + _kind + ')</span>', cls: "re-bgp-nbr", style: _nbHide });
-      if (_nb.state) { var _sc = /establ/i.test(_nb.state) ? "#a855f7" : "#ffb74d"; lines.push({ text: '<span style="color:' + _sc + '">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.state + '</span>', cls: "re-bgp-nbr", style: _nbHide }); }
+      if (_nb.state) { var _sc = /establ/i.test(_nb.state) ? "#a855f7" : "#ffb74d"; var _ud = (_nb.up_down != null ? '&nbsp;&nbsp;<span style="color:#9ab">Up/Down</span> ' + _nb.up_down : '') + (_nb.pfx_rcvd != null ? '&nbsp;&nbsp;<span style="color:#9ab">PfxRcd</span> ' + _nb.pfx_rcvd : ''); /* nx_bgp_nbr_fold_any_state */ lines.push({ text: '<span style="color:' + _sc + '">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.state + '</span>', cls: "re-bgp-nbr", style: _nbHide }); if (_ud) lines.push({ text: '&nbsp;&nbsp;&nbsp;' + _ud, cls: "re-bgp-nbr", style: _nbHide }); /* nx_bgp_nbr_detail_line2 (2026-10-06): Up/Down + PfxRcd on their own indented line = no wrap to the left edge */ }
     });
   }
   if (s.pfx_rcvd !== undefined) {
@@ -3091,29 +3502,29 @@ function xrayBgpDeepLines(s, opts) {
 
     var _reNbr = _reCxSt.ospf_neighbor_state || (_reCxSt.ospf_neighbor_full ? "Full" : "None");
     var _reFull = !!(_reCxSt.ospf_neighbor_full || _reCxSt.ospf_neighbor_state === "Full");
-    var _reStat = _reFull ? "Full" : (_reCxSt.ospf_active_on_interface ? "ACTIVE" : (_reCxSt.ospf_configured ? "CONFIGURED" : "INACTIVE"));
+    var _reStat = _xrayOspfHeadWord(_reCxSt);  /* nx_ospf_running_wording */
     var _reCol = _reFull ? "#39ff14" : (_reCxSt.ospf_active_on_interface ? "#ff8c00" : "#888");
     if (Array.isArray(_reCxSt.ospf_neighbors)) {
 
       var _cxFullAny = _reCxSt.ospf_neighbors.some(function (_n) { return _n.full || _n.state === "Full"; }) || _reFull;
       var _cxOsUp = !!(_reCxSt.ospf_configured || _reCxSt.ospf_active_on_interface);
-      var _cxOsState = _cxFullAny ? "Full" : (_cxOsUp ? "Active" : "Inactive");
-      lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + (_cxFullAny ? "#39ff14" : (_cxOsUp ? "#ff8c00" : "#ff4444")) + '">' + _cxOsState + '</span></span>' });
+      var _cxOsState = _reStat;
+      if (_cxOsState) lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + _xrayOspfHeadColor(_cxOsState) + '">' + _cxOsState + '</span></span>' }); _xrayOspfNbrSummaryPush(lines, _reCxSt, true);
       if (_reCxSt.ospf_neighbors.length) {
         var _cxHide = window._reOspfOpen ? "" : "display:none";
         lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;neighbor</span>', cls: "re-ospf-nbr", style: _cxHide });
         _reCxSt.ospf_neighbors.forEach(function (_nb) {
           var _lbl = _nb.router_id || _nb.address || _nb.ip || "?";
-          var _st = _nb.state || "?";
-          var _sc = _st === "Full" ? "#39ff14" : "#ffb74d";
+          var _st = _nb.full ? "Full" : _xrayOspfNbrWord(_nb.state);
+          var _sc = _xrayOspfNbrColor(_st, _nb.role);
           lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _st + '</span>', cls: "re-ospf-nbr", style: _cxHide });
         });
       }
     } else {
-    lines.push({text: '> OSPF: <span style="color:' + _reCol + '">' + _reStat + '</span>'});
-    lines.push({text: '> Neighbor: <span style="color:' + _reCol + '">' + _reNbr + '</span>'});
+    if (_reStat) lines.push({text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_reStat) + '">' + _reStat + '</span>'});
+    if (_reStat === "Running") lines.push({text: '> Neighbor: ' + (_reFull ? '<span style="color:#39ff14">Full</span>' : _xrayOspfNbrSpan(_xrayOspfNbrWord(_reNbr)))});
     }
-    lines.push({text: '> LSDB: <span style="color:' + (_reFull ? "#39ff14" : "#888") + '">' + (_reFull ? "SYNCHRONIZED" : (_reCxSt.ospf_active_on_interface ? "SYNCING" : "\u2014")) + '</span>'});
+    if (_reStat === "Running") lines.push({text: '> LSDB: <span style="color:' + (_reFull ? "#39ff14" : "#888") + '">' + (_reFull ? "SYNCHRONIZED" : (_reCxSt.ospf_active_on_interface ? "SYNCING" : "\u2014")) + '</span>'});
   }
   Object.keys(ifaces).forEach(function(name) {
     var info = ifaces[name];
@@ -3291,7 +3702,12 @@ function _xrayPositionFbBadge() {
     var badge = document.querySelector(".rcl-fb-badge");
     var de = document.querySelector(".xray-deep-engine");
     if (!badge || !de || !de.offsetHeight) return;
-    badge.style.top = (de.offsetTop + de.offsetHeight + 14) + "px";
+    var _bpar = badge.parentElement;  /* nx_fb_badge_rect: rendered rects (offsetHeight ignores transform) */
+    if (_bpar && de.getBoundingClientRect && _bpar.getBoundingClientRect) {
+      badge.style.top = Math.round(de.getBoundingClientRect().bottom - _bpar.getBoundingClientRect().top - (_bpar.clientTop || 0) + 14) + "px";
+    } else {
+      badge.style.top = (de.offsetTop + de.offsetHeight + 14) + "px";
+    }
     badge.style.bottom = "auto";
   } catch (e) {}
 }
@@ -4056,7 +4472,7 @@ function _xrayDeAngleInjectCss() {
   if (document.getElementById("xray-de-angle-style")) return;
   var st = document.createElement("style");
   st.id = "xray-de-angle-style";
-  st.textContent = ".de-side-wrap{position:absolute;inset:0;transform-origin:50% 50%;pointer-events:none}" + ".xray-deep-engine.de-angle-single-tilt .de-tunnel-label,.xray-deep-engine.de-angle-single-tilt .de-label,.xray-deep-engine.de-angle-single-tilt .de-conn-ball,.xray-deep-engine.de-angle-single-tilt .de-ping-ball,.xray-deep-engine.de-angle-single-tilt .de-if-marker,.xray-deep-engine.de-angle-single-tilt .de-ping-orb,.xray-deep-engine.de-angle-single-tilt .de-packet{display:none!important}" + "body.de-angle-active .xray-deep-engine{overflow:visible}" + "body.de-angle-active .topology{overflow:hidden!important}" + "body.de-angle-active #de-tunnel-left,body.de-angle-active #de-tunnel-right{transition:none!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-full > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-exchange > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-2way > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-init > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.42) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.28) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp-idle > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.12) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 100%)!important}" + ".de-angle-on #de-cyl-fwd-arrow,.de-angle-on .de-ping-orb,.de-angle-on .de-packet{display:none!important}" + ".de-angle-on .de-r1-name{display:inline-block;vertical-align:baseline;margin-right:12px}" + ".de-angle-on .de-r1-sub{display:inline-block;vertical-align:baseline}" + "[data-topo-triangle].is-xray-deep.hello-out .de-angle-on .de-hello-orb.out{display:block!important}" + "[data-topo-triangle].is-xray-deep.hello-in .de-angle-on .de-hello-orb.in{display:block!important}" + ".de-ping-ball{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;" + "background:radial-gradient(circle,#fff,rgba(0,229,255,0.95));box-shadow:0 0 14px rgba(0,229,255,0.9);" + "z-index:9;pointer-events:none;offset-anchor:center;offset-rotate:0deg;" + "animation:demove 1.8s ease-in-out infinite alternate;display:none}" + "@keyframes demove{from{offset-distance:0%}to{offset-distance:100%}}";
+  st.textContent = ".de-side-wrap{position:absolute;inset:0;transform-origin:50% 50%;pointer-events:none}" + ".xray-deep-engine.de-angle-single-tilt .de-tunnel-label,.xray-deep-engine.de-angle-single-tilt .de-label,.xray-deep-engine.de-angle-single-tilt .de-conn-ball,.xray-deep-engine.de-angle-single-tilt .de-ping-ball,.xray-deep-engine.de-angle-single-tilt .de-if-marker,.xray-deep-engine.de-angle-single-tilt .de-ping-orb,.xray-deep-engine.de-angle-single-tilt .de-packet{display:none!important}" + "body.de-angle-active .xray-deep-engine{overflow:visible}" + ".xray-deep-engine.de-sl-ovf{overflow:visible!important}.topology:has(.de-sl-ovf){overflow:hidden!important}" + "body.de-angle-active .topology{overflow:hidden!important}" + "body.de-angle-active #de-tunnel-left,body.de-angle-active #de-tunnel-right{transition:none!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-full > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-exchange > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 0%,rgba(var(--xto-ospf-rgb,57,255,20),0.28) 50%,rgba(var(--xto-ospf-rgb,57,255,20),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-ospf-2way > .de-tunnel-fill,body.de-angle-active .de-tunnel.de-side-ospf-init > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-idle-rgb,255,140,0),0.42) 0%,rgba(var(--xto-idle-rgb,255,140,0),0.28) 50%,rgba(var(--xto-idle-rgb,255,140,0),0.42) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.34) 100%)!important}" + "body.de-angle-active .de-tunnel.de-side-bgp-idle > .de-tunnel-fill{opacity:1!important;background:linear-gradient(180deg,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 0%,rgba(var(--xto-bgp-rgb,168,85,247),0.12) 50%,rgba(var(--xto-bgp-rgb,168,85,247),0.20) 100%)!important}" + ".de-angle-on #de-cyl-fwd-arrow,.de-angle-on .de-ping-orb,.de-angle-on .de-packet{display:none!important}" + ".de-angle-on .de-r1-name{display:inline-block;vertical-align:baseline;margin-right:12px}" + ".de-angle-on .de-r1-sub{display:inline-block;vertical-align:baseline}" + "[data-topo-triangle].is-xray-deep.hello-out .de-angle-on .de-hello-orb.out{display:block!important}" + "[data-topo-triangle].is-xray-deep.hello-in .de-angle-on .de-hello-orb.in{display:block!important}" + ".de-ping-ball{position:absolute;left:0;top:0;width:13px;height:13px;border-radius:50%;" + "background:radial-gradient(circle,#fff,rgba(0,229,255,0.95));box-shadow:0 0 14px rgba(0,229,255,0.9);" + "z-index:9;pointer-events:none;offset-anchor:center;offset-rotate:0deg;" + "animation:demove 1.8s ease-in-out infinite alternate;display:none}" + "@keyframes demove{from{offset-distance:0%}to{offset-distance:100%}}";
   (document.head || document.body).appendChild(st);
 }
 
@@ -4089,6 +4505,8 @@ function _xrayDeAngleTeardown(de) {
   if (!de || !de.classList.contains("de-angle-on")) return;
   de.classList.remove("de-angle-on");
   document.body.classList.remove("de-angle-active");
+  de.querySelectorAll(".de-sl-label, .de-sl-marker").forEach(function(e) { e.remove(); });  /* nx_single_tilt_label */
+  de.classList.remove("de-sl-ovf");
   var _topoT = de.closest(".topology");
   if (_topoT && !(typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {}))) {
     _topoT.style.removeProperty("padding-bottom");
@@ -4121,7 +4539,63 @@ function _xrayDeAngleTeardown(de) {
   de._helloFarR = de._helloFarL = de._helloGeomKey = null;
 }
 
+/* nx_edge_label_outside (2026-10-02, CML2 labs: the label stays on its own exit marker):
+   link leaves through the TOP / BOTTOM edge -> label centred on its exit marker, just OUTSIDE the frame
+   (below the marker for the bottom edge = the pre-fix look, above it for the top edge). Overlapping the beam
+   band is accepted. Only shifted sideways when it would be cut at the screen edge or hit the
+   "Powered by RCL" badge. Side exits (q15 flat links) keep the label below the marker, clamped inside.
+   deg/side are accepted for call compatibility (unused). */
+function _xrayDePlaceEdgeLabel(l, pt, W, Hh, deg, side) {
+  var lw = l.offsetWidth || 0, lh = l.offsetHeight || 0, m = 6, x = pt[0] - lw / 2, y;
+  var edge = pt[1] <= Hh * 0.06 ? "top" : pt[1] >= Hh * 0.94 ? "bottom" : "side";
+  if (edge === "top") y = pt[1] - lh - 4;
+  else {
+    y = pt[1] + _XRAY_DE.labelBelowOffsetPx;
+    if (edge === "side" && lh && y + lh > Hh - m) y = Hh - m - lh;
+  }
+  if (x < m) x = m; else if (x + lw > W - m) x = W - m - lw;
+  try {
+    var de = l.parentElement, bd = de && de.querySelector(".rcl-fb-badge");
+    if (bd && bd.offsetWidth) {
+      var dr = de.getBoundingClientRect(), br = bd.getBoundingClientRect();
+      var bl = br.left - dr.left, bt = br.top - dr.top, bb = br.bottom - dr.top, brt = br.right - dr.left;
+      if (y < bb && y + lh > bt && x < brt && x + lw > bl) x = Math.max(m, bl - m - lw);
+    }
+  } catch (_eB) {}
+  l.style.transform = "none";
+  l.style.left = x.toFixed(1) + "px";
+  l.style.top = y.toFixed(1) + "px";
+  /* nx_panel_over_label (2026-10-05: the label is a bonus, the panel info matters): when the
+     link-end label overlaps a panel (Routing Engine / Routing table / LSDB / BGP Table / Decision),
+     the panel stays in front - put this label just below that panel. Position is not changed. */
+  _xrayDeLabelZ(l);   /* nx_label_z_resync: same calculation, now also re-run after a Standard <-> Simple switch */
+}
+
+/* nx_label_z_resync (2026-10-09): the edge label sits just below the panel it overlaps (nx_panel_over_label). Kept in a function so
+   _nxBgpResync can re-run it after a mode switch (the label is placed while the panels still have the old mode's z). */
+function _xrayDeLabelZ(l) {
+  try {
+    var de2 = l.parentElement, lr = l.getBoundingClientRect(), zMin = null;
+    ["#de-re-panel", "#de-routing-panel", "#de-lsdb", "#de-bgp-panel", "#de-bgp-decision-panel"].forEach(function(sel) {
+      var pn = de2 && de2.querySelector(sel);
+      if (!pn || !pn.offsetWidth || getComputedStyle(pn).display === "none") return;
+      var pr = pn.getBoundingClientRect();
+      if (Math.min(lr.right, pr.right) - Math.max(lr.left, pr.left) > 0 && Math.min(lr.bottom, pr.bottom) - Math.max(lr.top, pr.top) > 0) {
+        var z = parseInt(getComputedStyle(pn).zIndex, 10);
+        if (!isNaN(z) && (zMin === null || z < zMin)) zMin = z;
+      }
+    });
+    l.style.zIndex = zMin !== null ? String(Math.max(1, zMin - 1)) : "12";
+  } catch (_eZ) {}
+  try {
+    var _ls = window._nxEdgeLabels = (window._nxEdgeLabels || []).filter(function (x) { return x && x.isConnected; });
+    if (_ls.indexOf(l) < 0) _ls.push(l);
+  } catch (_eL) {}
+}
+window._nxRelabelZ = function () { (window._nxEdgeLabels || []).slice().forEach(function (x) { if (x && x.isConnected && getComputedStyle(x).display !== "none") _xrayDeLabelZ(x); }); };
+
 function _xrayDeAngleView(s) {
+  try { if (typeof _xrayPositionFbBadge === "function" && typeof requestAnimationFrame === "function") requestAnimationFrame(function () { _xrayPositionFbBadge(); }); } catch (_bp) {}  /* nx_fb_badge_angle */
   try {
     var de = document.querySelector(".xray-deep-engine");
     if (!de) return;
@@ -4129,7 +4603,7 @@ function _xrayDeAngleView(s) {
     // FORWARD arrow / flow colour follows the scenario protocol (data-driven): BGP purple, else OSPF green.
     // Keeps the arrow coherent with the BGP orb/tunnel (was fixed green, reading as OSPF in BGP scenarios).
     var _isBgpFwd = cfg.xray && cfg.xray.protocol === "bgp" || !!(s && (s.bgp_configured || s.is_established === true || s.bgp_state || s.bgp_routes && s.bgp_routes.length));
-    if (typeof _XRAY_DE !== "undefined") _XRAY_DE.fwdArrowCol = (function(){var _sel=window._xrayRtSel;if(_sel&&_sel.prefix){var _slrt=(window._lastXrayState&&window._lastXrayState.routing_table)||[];for(var _sri=0;_sri<_slrt.length;_sri++){if((_slrt[_sri].prefix||"")===_sel.prefix&&_slrt[_sri].protocol){if(_slrt[_sri].protocol==="ospf")return "#39ff14";if(_slrt[_sri].protocol==="bgp")return "#a855f7";break;}}}var _rp=(window._lastXrayState&&window._lastXrayState.route_resolution&&window._lastXrayState.route_resolution.protocol)||"";return _rp==="ospf"?"#39ff14":_rp==="bgp"?"#a855f7":(_isBgpFwd?"#a855f7":"#39ff14");})()/*oss-coexist-bc*/;
+    if (typeof _XRAY_DE !== "undefined") _XRAY_DE.fwdArrowCol = (function(){var _hcS=(typeof _xrayRtSelArrowCol==="function")?_xrayRtSelArrowCol():null;if(_hcS)return _hcS;/*nx_rtsel_arrow_color*/var _sel=window._xrayRtSel;if(_sel&&_sel.prefix){var _slrt=(window._lastXrayState&&window._lastXrayState.routing_table)||[];for(var _sri=0;_sri<_slrt.length;_sri++){if((_slrt[_sri].prefix||"")===_sel.prefix&&_slrt[_sri].protocol){if(_slrt[_sri].protocol==="ospf")return "#39ff14";if(_slrt[_sri].protocol==="bgp")return "#a855f7";break;}}}var _rp=(window._lastXrayState&&window._lastXrayState.route_resolution&&window._lastXrayState.route_resolution.protocol)||"";return _rp==="ospf"?"#39ff14":_rp==="bgp"?"#a855f7":(_isBgpFwd?"#a855f7":"#39ff14");})()/*oss-coexist-bc*/;
     var off = typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(cfg) || !document.body.classList.contains("is-xray-deep");
     if (off) {
       _xrayDeAngleTeardown(de);
@@ -4318,6 +4792,12 @@ function _xrayDeAngleView(s) {
       return [ W / 2 + dx * reach, Hh / 2 + dy * reach ];
     };
     var _visEndDist = Math.round(Math.hypot(visFar(ang.r, 1)[0] - C[0], visFar(ang.r, 1)[1] - C[1]));
+    /* nx_hello_far_cap (2026-10-01, Q15 r2 Hello looked too fast): visFar uses only the bottom bound when dy != 0,
+       so a NEARLY horizontal tilted link (q15 r2, small dy) got a reach of ~3600px and the dual-link Hello orb
+       travelled far off-screen = looked extremely fast. Cap at the horizontal bound (the dy == 0 value).
+       Hello distance only; visFar (packet paths) unchanged. */
+    var _visEndCap = Math.round(W * _XRAY_DE.beamReachMxFrac / Math.max(Math.abs(Math.cos(ang.r * Math.PI / 180)), 0.01));
+    if (_visEndDist > _visEndCap) _visEndDist = _visEndCap;
     var L = connPt(ang.l, -1), R = connPt(ang.r, 1);
     de._deCbL.style.left = L[0] + "px";
     de._deCbL.style.top = L[1] + "px";
@@ -4386,7 +4866,8 @@ function _xrayDeAngleView(s) {
     if (_destEl) {
 
       var _selRtPfx = window._xrayRtSel && window._xrayRtSel.prefix;
-      var _destVal = _selRtPfx || (_rr && (_rr.matched_prefix || _rr.target)) || "";
+      var _liveRt = (typeof window !== "undefined" && window.xrayCore && s && Array.isArray(s.routing_table));   /* nx_live_dest_clear */
+      var _destVal = _selRtPfx || (_liveRt ? "" : (_rr && (_rr.matched_prefix || _rr.target))) || "";
       if (_destVal) _destVal = _destVal.replace(/\/32$/, "");
       _destEl.setAttribute("x", ((C[0] + mOut[0]) / 2).toFixed(1));
       _destEl.setAttribute("y", ((C[1] + mOut[1]) / 2 - 10).toFixed(1));
@@ -4463,7 +4944,14 @@ function _xrayDeAngleView(s) {
     var lsdb = de.querySelector("#de-lsdb");
     if (lsdb) {
       var _lg = window._xrayLsaGather;
-      if (_lg && _lg.left && !_lg.right) {
+      /* nx_lsdb_mid_b (2026-10-07, option B): OSS - the left edge midway between the cylinder and the green frame */
+      if (typeof window !== "undefined" && window.xrayCore) {
+        var _midPos = "min(calc(75% + 23px), calc(100% - 26px - " + (lsdb.offsetWidth || 180) + "px))";
+        var _mir = !!(_lg && _lg.left && !_lg.right);
+        lsdb.style.setProperty("left", _mir ? "auto" : _midPos, "important");
+        lsdb.style.setProperty("right", _mir ? _midPos : "auto", "important");
+        lsdb.style.setProperty("transform", "none", "important");
+      } else if (_lg && _lg.left && !_lg.right) {
         lsdb.style.right = "auto";
         lsdb.style.left = _XRAY_DE.lsdbRight;
         lsdb.style.transform = "none";
@@ -4493,7 +4981,7 @@ function _xrayDeAngleView(s) {
           m.style.borderColor = col;
         }
       };
-      var placeLabel = function(selL, pt, txt, col) {
+      var placeLabel = function(selL, pt, txt, col, deg, side) {
         var l = de.querySelector(selL);
         if (l) {
           if (l.parentElement !== de) de.appendChild(l);
@@ -4511,13 +4999,29 @@ function _xrayDeAngleView(s) {
           l.style.padding = "1px 7px";
           l.style.borderRadius = "4px";
           l.style.zIndex = "12";
+          try { _xrayDePlaceEdgeLabel(l, pt, W, Hh, deg, side); } catch (_eLc) {}  /* nx_std_label_clamp -> nx_edge_label_outside */
         }
       };
       var Lp = reachPt(ang.l, -1), Rp = reachPt(ang.r, 1);
       placeMarker(".de-if-marker.left", Lp, lCol);
       placeMarker(".de-if-marker.right", Rp, rCol);
-      placeLabel(".de-label.in", Lp, lIf + " - " + lId, lCol);
-      placeLabel(".de-label.out", Rp, rIf + " - " + rId, rCol);
+      placeLabel(".de-label.in", Lp, lIf + " - " + lId, lCol, ang.l, -1);
+      placeLabel(".de-label.out", Rp, rIf + " - " + rId, rCol, ang.r, 1);
+      try {  /* nx_edge_label_pair: the two link labels overlap -> push them apart sideways (each keeps to its marker) */
+        var _li = de.querySelector(".de-label.in"), _lo = de.querySelector(".de-label.out");
+        if (_li && _lo) {
+          var _ri = _li.getBoundingClientRect(), _ro = _lo.getBoundingClientRect();
+          if (_ri.width && _ro.width && !(_ro.top > _ri.bottom || _ro.bottom < _ri.top)) {
+            var _iL = _ri.left <= _ro.left, _a = _iL ? _ri : _ro, _b = _iL ? _ro : _ri, _ov = _a.right + 8 - _b.left;
+            if (_ov > 0) {
+              var _ea = _iL ? _li : _lo, _eb = _iL ? _lo : _li;
+              var _na = Math.max(6, parseFloat(_ea.style.left) - _ov / 2), _nb = Math.min(W - 6 - _b.width, parseFloat(_eb.style.left) + _ov / 2);
+              _ea.style.left = _na.toFixed(1) + "px";
+              _eb.style.left = _nb.toFixed(1) + "px";
+            }
+          }
+        }
+      } catch (_eSt) {}
       var _rgb = function(col) {
         return col === downCol ? "239,83,80" : "0,229,255";
       };
@@ -4532,11 +5036,84 @@ function _xrayDeAngleView(s) {
         de._deCbR.style.background = ballBg(rCol);
         de._deCbR.style.boxShadow = "0 0 12px rgba(" + _rgb(rCol) + ",0.9)";
       }
+    } else {
+      /* nx_single_tilt_label (OSS q15 r1): a tilted single link hid its link-end label (de-angle-single-tilt CSS).
+         Show "<iface> - <peer>" + marker at the beam end with DEDICATED elements (.de-sl-label/.de-sl-marker:
+         the shared .de-label.out is rewritten to "Output: ..." by other renders), clamped inside the frame.
+         Removed when not tilted / on teardown. */
+      var _slPeer = s && s.peer_node;
+      if (_slTilt && window.xrayCore && _slPeer) {
+        var _slLb = de.querySelector(".de-sl-label"), _slMk = de.querySelector(".de-sl-marker");
+        if (!_slLb) { _slLb = document.createElement("div"); _slLb.className = "de-label de-sl-label"; de.appendChild(_slLb); }
+        if (!_slMk) { _slMk = document.createElement("div"); _slMk.className = "de-if-marker de-sl-marker"; de.appendChild(_slMk); }
+        var _slIf = s[_slPeer + "_iface"] || s.wan_iface || "";
+        var _slUp = !(s.interfaces && s.interfaces[_slIf] && s.interfaces[_slIf].up === false);
+        var _slCol = _slUp ? "var(--xto-link,#00e5ff)" : "#ef5350";
+        var _slP = reachPt(ang.r, 1);
+        _slLb.textContent = (_slIf ? _slIf + " - " : "") + _slPeer;
+        _slLb.style.setProperty("display", "block", "important");
+        _slLb.style.position = "absolute";
+        _slLb.style.right = "auto";
+        _slLb.style.transform = "translate(-50%,0)";
+        _slLb.style.textAlign = "center";
+        _slLb.style.whiteSpace = "nowrap";
+        _slLb.style.setProperty("color", _slCol, "important");
+        _slLb.style.setProperty("text-shadow", "0 0 6px rgba(" + (_slUp ? "0,229,255" : "239,83,80") + ",0.55)", "important");
+        _slLb.style.background = _XRAY_DE.deLabelChipBg || "rgba(6,16,26,0.85)";
+        _slLb.style.padding = "1px 7px";
+        _slLb.style.borderRadius = "4px";
+        _slLb.style.zIndex = "12";
+        _xrayDePlaceEdgeLabel(_slLb, _slP, W, Hh, ang.r, 1);  /* nx_edge_label_outside */
+        de.classList.add("de-sl-ovf");  /* the outside label lives above/below the engine box: show it like the dual-link case (clip at .topology) */
+        _slMk.style.setProperty("display", "block", "important");
+        _slMk.style.position = "absolute";
+        _slMk.style.left = _slP[0].toFixed(1) + "px";
+        _slMk.style.right = "auto";
+        _slMk.style.top = _slP[1].toFixed(1) + "px";
+        _slMk.style.transform = "translate(-50%,-50%)";
+        _slMk.style.borderColor = _slCol;
+      } else {
+        de.querySelectorAll(".de-sl-label, .de-sl-marker").forEach(function(e) { e.remove(); });
+        de.classList.remove("de-sl-ovf");
+      }
     }
   } catch (_e) {}
 }
 
+// nx_state_driven_tab: right-bottom [Best-Path|LSDB] tab toggle (dual-stack). Body-class driven so the
+// lazily-created #de-bgp-decision-panel is handled transparently by CSS.
+// nx_state_driven_helper: single SoT for protocol-active flags. Engine emit AND template refresh detection
+// both call this -> no emit/detect drift (root cause of Finding 1 & 3). Protocol-specific fields only
+// (has_full/neighbor_state are generic = set by BGP too, so excluded).
+window.__xrayDeriveProto = function(s){ s = s || {}; return {
+  ospf: !!(s.ospf_configured || s.ospf_active_on_interface || s.ospf_neighbor_full || (s.ospf_neighbors && s.ospf_neighbors.length)),
+  bgp:  !!(s.bgp_configured || (s.bgp_neighbors && s.bgp_neighbors.length) || (s.bgp_routes && s.bgp_routes.length))
+}; };
+window.__xrayBrTab = function(which){
+  document.body.classList.toggle('show-bestpath', which === 'bestpath');
+  var tabs = document.querySelectorAll('.de-br-tab');
+  for (var i=0;i<tabs.length;i++){ tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab')===which); }
+};
+/* nx_noroutes_panels (2026-10-05, q21 with every link shut): with no BGP route the FRR best-path
+   order legend (and its highlight of the last deciding step) must not stay under "No routes".
+   The legend comes back with the next full table paint when routes return. */
+function _xrayBgpDropLegend(rows) {
+  try {
+    var host = rows && rows.closest ? rows.closest('.de-bgp-panel, #de-bgp-panel') : null;
+    var lg = host && host.querySelector('.de-bgp-legend-host');
+    if (lg) lg.style.display = "none";
+  } catch (e) {}
+}
+function _xrayBgpShowLegend(rows) {
+  try {
+    var host = rows && rows.closest ? rows.closest('.de-bgp-panel, #de-bgp-panel') : null;
+    var lg = host && host.querySelector('.de-bgp-legend-host');
+    if (lg) lg.style.display = "";
+  } catch (e) {}
+}
+
 function xrayRenderDeepEngine(config, activeTargetId) {
+  window._xrayFocusPresent = {};   /* nx_focus_route: the DeepDive is (re)built -> the focus route is selected again once it is in the table */
   var nodes = config.nodes || [];
   var targetNode;
   if (activeTargetId) {
@@ -4568,10 +5145,17 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   }
   var nodeId = targetNode.id;
   var xray = config.xray || {};
-  var protocol = xray.protocol || "static";
-  var isOspf = protocol === "ospf";
-  var isBgp = protocol === "bgp";
-  if (typeof _XRAY_DE !== "undefined") _XRAY_DE.fwdArrowCol = (function(){var _sel=window._xrayRtSel;if(_sel&&_sel.prefix){var _slrt=(window._lastXrayState&&window._lastXrayState.routing_table)||[];for(var _sri=0;_sri<_slrt.length;_sri++){if((_slrt[_sri].prefix||"")===_sel.prefix&&_slrt[_sri].protocol){if(_slrt[_sri].protocol==="ospf")return "#39ff14";if(_slrt[_sri].protocol==="bgp")return "#a855f7";break;}}}var _rp=(window._lastXrayState&&window._lastXrayState.route_resolution&&window._lastXrayState.route_resolution.protocol)||"";return _rp==="ospf"?"#39ff14":_rp==="bgp"?"#a855f7":(isBgp?"#a855f7":"#39ff14");})()/*oss-coexist-bc*/;
+  var protocol = xray.protocol || "static";  // retained for downstream labels / fallback only
+  // nx_state_driven_emit (2026-09-25): derive protocol STRUCTURE from LIVE state, not the
+  // config-baked enum, so the DeepDive follows what is actually running (state-driven, generic).
+  // Independent OSPF/BGP flags (both may be true = dual-stack). _lastXrayState is available here (same as
+  // the existing fwdArrowCol read below). Empty state (pre first poll) -> both false -> static; the
+  // template case-B refresh rebuilds on protocol-intent transition.
+  var _deSt = window._lastXrayState || {};
+  var _debgPf = window.__xrayDeriveProto(_deSt);  // single SoT (emit/detect drift-proof)
+  var isOspf = _debgPf.ospf;
+  var isBgp = _debgPf.bgp;
+  if (typeof _XRAY_DE !== "undefined") _XRAY_DE.fwdArrowCol = (function(){var _hcS=(typeof _xrayRtSelArrowCol==="function")?_xrayRtSelArrowCol():null;if(_hcS)return _hcS;/*nx_rtsel_arrow_color*/var _sel=window._xrayRtSel;if(_sel&&_sel.prefix){var _slrt=(window._lastXrayState&&window._lastXrayState.routing_table)||[];for(var _sri=0;_sri<_slrt.length;_sri++){if((_slrt[_sri].prefix||"")===_sel.prefix&&_slrt[_sri].protocol){if(_slrt[_sri].protocol==="ospf")return "#39ff14";if(_slrt[_sri].protocol==="bgp")return "#a855f7";break;}}}var _rp=(window._lastXrayState&&window._lastXrayState.route_resolution&&window._lastXrayState.route_resolution.protocol)||"";return _rp==="ospf"?"#39ff14":_rp==="bgp"?"#a855f7":(isBgp?"#a855f7":"#39ff14");})()/*oss-coexist-bc*/;
   var otherNodes = nodes.filter(function(n) {
     return n.id !== nodeId;
   });
@@ -4629,7 +5213,7 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += '<div class="de-packet"></div><div class="de-packet p2"></div>';
   html += '<div class="de-ping-orb" id="de-ping-req"></div><div class="de-ping-orb reply" id="de-ping-rep"></div>';
   html += '<div class="de-ping-orb left-req"></div><div class="de-ping-orb left-rep"></div>';
-  if (isOspf || isBgp) {
+  if (isOspf || isBgp || !!_deSt.peer_sending_hello) {  /* nx_hello_discard */
     html += '<div class="de-hello-orb out"></div><div class="de-hello-orb in"></div>';
     html += '<div class="de-hello-orb left-out"></div><div class="de-hello-orb left-in"></div>';
   }
@@ -4644,27 +5228,25 @@ function xrayRenderDeepEngine(config, activeTargetId) {
     }
   }
   html += _xrayDeCylSvg(_XRAY_DE.cylHeightFrac, _fwdDir0);
+  // nx_state_driven_emit: independent protocol emit (else-if -> if) so OSPF + BGP structures coexist
+  // naturally when both are active (dual-stack). The de-ospf-coexist bolt-on is RETIRED — the OSPF `if`
+  // below now emits de-ospf + de-lsdb even when BGP is also active (single de-lsdb emit path, no dup).
   if (isOspf) {
-    html += '<div class="de-ospf"><div class="de-ospf-core"><div class="inner"></div></div><div class="de-ospf-label">OSPF</div></div>';
+    html += '<div class="de-ospf' + (isBgp ? ' de-ospf-coexist' : '') + '"><div class="de-ospf-core"><div class="inner"></div></div><div class="de-ospf-label">OSPF</div></div>';  // nx_state_driven_emit: dual-stack -> OSPF ball to bottom (coexist pos) so it clears the BGP ball at top:16%
     html += '<div class="de-lsdb" id="de-lsdb"><div class="lsdb-hd">LSDB</div><div class="lsdb-bar"><div class="lsdb-bar-fill" id="de-lsdb-fill"></div></div></div>';
     html += '<div class="de-lsa-container" id="de-lsa-container"></div>';
-    // Routing Table panel (bottom-left). Populated only when the state carries s.routing_table
-    // (containerlab live). CSS `.de-routing:empty{display:none}` keeps it invisible for RCL OSPF Q
-    // states that have no routing_table = zero regression. Fresh open starts with no row selected.
-    html += '<div class="de-routing" id="de-routing-panel"></div>';
-    window._xrayRtSel = null;
-  } else if (isBgp) {
-    html += '<div class="de-bgp-proc"><div class="de-bgp-proc-core"><div class="inner"></div></div><div class="de-bgp-proc-label">BGP</div></div>';
-
-    html += '<div class="de-routing" id="de-routing-panel"></div>';
-    window._xrayRtSel = null;
-  } else {
-
-    html += '<div class="de-routing" id="de-routing-panel"></div>';
-    window._xrayRtSel = null;
   }
-  if (xray.deep_coexist_ospf) {
-    html += '<div class="de-ospf de-ospf-coexist"><div class="de-ospf-core"><div class="inner"></div></div><div class="de-ospf-label">OSPF</div></div>';
+  if (isBgp) {
+    html += '<div class="de-bgp-proc"><div class="de-bgp-proc-core"><div class="inner"></div></div><div class="de-bgp-proc-label">BGP</div></div>';
+  }
+  // Routing Table panel (bottom-left), emitted ONCE (id-unique across all protocol combinations).
+  // CSS `.de-routing:empty{display:none}` keeps it invisible when the state carries no routing_table.
+  html += '<div class="de-routing" id="de-routing-panel"></div>';
+  window._xrayRtSel = null;
+  // nx_state_driven_tab: dual-stack -> right-bottom [Best-Path|LSDB] tab (BGP/Best-Path default front).
+  // CSS gates visibility on body.xray-de-dualbr (set by applyXrayState). &#39; = ' + "'" + ' (avoids JS-string quote clash).
+  if (isOspf && isBgp) {
+    html += '<div class="de-br-tabs"><button class="de-br-tab" data-tab="bestpath" onclick="window.__xrayBrTab && window.__xrayBrTab(&#39;bestpath&#39;)">Best-Path</button><button class="de-br-tab on" data-tab="lsdb" onclick="window.__xrayBrTab && window.__xrayBrTab(&#39;lsdb&#39;)">LSDB</button></div>';
   }
   html += '<div class="de-panel" id="de-re-panel"></div>';
   // Skin preset affordance (OSS gallery / drop-in only). Container is always emitted; it is populated
@@ -5677,6 +6259,19 @@ function xrayBuildApplyState(config) {
         var _rFull = s[_rId + "_has_full"] !== undefined ? !!s[_rId + "_has_full"] : false;
         var _lNbr = s[_lId + "_neighbor_state"] || "None";
         var _rNbr = s[_rId + "_neighbor_state"] || "None";
+        /* nx_ospf_specific_fields: per-peer OSPF truth when the collector carries it (under --proto bgp the
+           <peer>_has_full / _neighbor_state above are the BGP session). "Down" on a link whose local iface is
+           not OSPF-enabled (absent from iface_hellos) = no OSPF on that link. */
+        var _ospfPeerSt = function(id, fullDef, nbrDef) {
+          if (s[id + "_ospf_state"] === undefined && s[id + "_ospf_full"] === undefined) return [fullDef, nbrDef];
+          var _f = !!(s[id + "_ospf_full"] === true || s[id + "_ospf_state"] === "Full");
+          var _n = _f ? "Full" : (s[id + "_ospf_state"] || "None");
+          var _pif = s[id + "_iface"];
+          if (_n === "Down" && s.iface_hellos && _pif && !Object.prototype.hasOwnProperty.call(s.iface_hellos, _pif)) _n = "None";
+          return [_f, _n];
+        };
+        var _lO = _ospfPeerSt(_lId, _lFull, _lNbr), _rO = _ospfPeerSt(_rId, _rFull, _rNbr);
+        _lFull = _lO[0]; _lNbr = _lO[1]; _rFull = _rO[0]; _rNbr = _rO[1];
         var _hasStatic = !!(s.has_static || s.has_floating_static);
         var _lHasOspfActivity = _lFull || _lNbr !== "None";
         var _rHasOspfActivity = _rFull || _rNbr !== "None";
@@ -5757,6 +6352,7 @@ function xrayBuildApplyState(config) {
       _xrayApplyDualLinkDirection(s, _triNodes);
       document.body.classList.toggle("is-input-down", _liDown);
       document.body.classList.toggle("is-output-down", _riDown);
+      if (!(pattern === "ospf_triangle" || protocol === "ospf") && s.peer_sending_hello) _xrayApplyDualLinkHello(s, _leftLink.ifName, _rightLink.ifName, _lId, _rId);  /* nx_hello_recv_all */
       if (pattern === "ospf_triangle" || protocol === "ospf") {
         var _ifaces = s.interfaces || {};
         var _lIfDown = s[_lId + "_iface"] && _ifaces[s[_lId + "_iface"]] && !_ifaces[s[_lId + "_iface"]].up;
@@ -5866,7 +6462,10 @@ function xrayBuildApplyState(config) {
       var _dtCfg = window._scenarioConfig || {};
       var _dtTgt = (window._xrayTargetNode ? String(window._xrayTargetNode).replace("topo-node-", "") : "") || targetId;
       var _coexistQ = !!(_dtCfg.xray && _dtCfg.xray.deep_coexist_ospf);
-      var _crossSide = !!(s.lan_iface && s.wan_iface && s.lan_iface !== s.wan_iface);
+      // nx_coexist_side_links: both bands only when the node really has links on both sides (topology+layout,
+      // _xrayLinkSides). The route-derived wan_iface (mgmt on a route-less end node) made a single link look like two.
+      var _lsCx = _xrayLinkSides(s);
+      var _crossSide = !!(_lsCx.outIfs.length && _lsCx.inIfs.length);
       function _sideCoexist(el, iface, isEgress) {
         if (!el) return;
         var _pxBeam = window._lastXrayState || s || {};
@@ -5893,9 +6492,15 @@ function xrayBuildApplyState(config) {
         if (hasBgp && ospf && _ospfBeamUp) el.classList.add("de-coexist", "de-coexist-" + _xrayOspfBucket(ospf));
         if (_crossSide || isEgress) el.classList.add("de-side-show");
       }
-      _sideCoexist(_leftDt, s.lan_iface, false);
-      _sideCoexist(_rightDt, s.wan_iface, true);
+      _sideCoexist(_leftDt, _lsCx.inIfs[0] || "", false);                  /* nx_coexist_side_links */
+      _sideCoexist(_rightDt, _lsCx.outIfs[0] || s.wan_iface, true);
     })();
+    /* rcl_oss_no_target_applystate (applyState): the OSS live path also filters the forwarding decision (separate from dispatch / xrayBuildApplyState). rr.target='' => filter; q1 (8.8.8.8) => kept. */
+    var _ossHasTgt2 = !!((window._scenarioConfig && window._scenarioConfig.capture && window._scenarioConfig.capture.ping_dst) || (s && s.route_resolution && s.route_resolution.target));
+    try { document.body.classList.toggle('xray-no-target', !_ossHasTgt2); } catch (_eNT2) {}
+    if (deepLines && !_ossHasTgt2) {
+      deepLines = deepLines.filter(function (_l) { var _t = ((_l && _l.text) || '').replace(/^(&gt;|>|\u30fb)\s*/, ''); return !/^(Lookup|Route:|Route to |Next-Hop|Out:|Action|RIB|Config)/.test(_t); });
+    }
     xraySetDeepDive("#de-re-panel", deepLines);
     _xrayPaintRoutingPanel(s);
     _xrayPaintSkinPanel();
@@ -5977,7 +6582,8 @@ window.traceH = {
     return '<div class="de-title">[OSPF Process]</div><div>&gt; Destination: ' + target + "</div>";
   },
   ospfState: function(state) {
-    var c = state === "Full" ? "#39ff14" : state === "None" ? "#ff4444" : "#ff8c00";
+    if (state === "None") state = "Down";  /* nx_ospf_running_wording: OSPF word */
+    var c = state === "Full" ? "#39ff14" : state === "Down" ? "#ff4444" : "#ff8c00";
     return '<div>&gt; Neighbor: <span style="color:' + c + '">' + state + "</span></div>";
   },
   ospfHello: function(sent, received) {
@@ -6215,7 +6821,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: NOT RUNNING") + h.ospfState("None") + h.ospfRoute(s._target, false) + h.action("DROP");
+          return h.ospfTitle(s._target) + h.ospfRoute(s._target, false) + h.action("DROP");
         }
       }, {
         label: "② Hello 送信開始",
@@ -6226,7 +6832,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: STARTING") + h.ospfHello(true, false) + h.ospfState("Init") + h.ospfRoute(s._target, false);
+          return h.ospfTitle(s._target) + h.dim("OSPF: Running") + h.ospfHello(true, false) + h.ospfState("Init") + h.ospfRoute(s._target, false);
         }
       }, {
         label: "③ Hello 交換",
@@ -6307,7 +6913,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: NOT RUNNING") + h.ospfState("None") + h.dim("neighbor 関係消失...");
+          return h.ospfTitle(s._target) + h.dim("neighbor 関係消失...");
         }
       }, {
         label: "③ ルート撤回",
@@ -6318,7 +6924,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: NOT RUNNING") + h.ospfState("None") + h.ospfRoute(s._target, false) + h.action("DROP");
+          return h.ospfTitle(s._target) + h.ospfRoute(s._target, false) + h.action("DROP");
         }
       }, {
         label: "④ 通信断",
@@ -6329,7 +6935,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: NOT RUNNING") + h.ospfRoute(s._target, false) + h.action("DROP") + h.ping("100% loss");
+          return h.ospfTitle(s._target) + h.ospfRoute(s._target, false) + h.action("DROP") + h.ping("100% loss");
         }
       } ]
     },
@@ -6768,7 +7374,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: passive-interface") + h.dim("Hello 送信停止") + h.ospfState("None") + h.action("DROP");
+          return h.ospfTitle(s._target) + h.dim("OSPF: Running") + h.dim("passive-interface") + h.dim("Hello 送信停止") + h.ospfState("None") + h.action("DROP");
         }
       }, {
         label: "② Hello 送信開始",
@@ -6779,7 +7385,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: ACTIVE") + h.ospfHello(true, false) + h.ospfState("Init");
+          return h.ospfTitle(s._target) + h.dim("OSPF: Running") + h.ospfHello(true, false) + h.ospfState("Init");
         }
       }, {
         label: "③ Hello 交換",
@@ -6860,7 +7466,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: true,
         ping: true,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: passive-interface") + h.dim("Hello 送信停止") + h.ospfState("Full") + h.ospfRoute(s._target, true) + h.action("FORWARD") + h.dim("Dead Timer カウント中...");
+          return h.ospfTitle(s._target) + h.dim("OSPF: Running") + h.dim("passive-interface") + h.dim("Hello 送信停止") + h.ospfState("Full") + h.ospfRoute(s._target, true) + h.action("FORWARD") + h.dim("Dead Timer カウント中...");
         }
       }, {
         label: "③ Neighbor 消失",
@@ -6871,7 +7477,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: false,
         ping: false,
         panel: function(s) {
-          return h.ospfTitle(s._target) + h.dim("OSPF: passive-interface") + h.ospfState("None") + h.ospfRoute(s._target, false) + h.action("DROP") + h.ping("100% loss");
+          return h.ospfTitle(s._target) + h.dim("OSPF: Running") + h.dim("passive-interface") + h.ospfState("None") + h.ospfRoute(s._target, false) + h.action("DROP") + h.ping("100% loss");
         }
       } ]
     },
@@ -8702,8 +9308,9 @@ window.xrayPrepareTraceState = function(state) {
   s._rr = s.route_resolution || {};
   var _capPingDst = window._scenarioConfig && window._scenarioConfig.capture && window._scenarioConfig.capture.ping_dst || "";
   s._target = _capPingDst || s._rr && s._rr.target || "8.8.8.8";
-  s._r1Hello = s.r1_hello || 10;
-  s._r2Hello = s.r2_hello || 10;
+  var _hp2 = _xrayOssHelloPair(s);   /* nx_hello_iface_first */
+  s._r1Hello = (_hp2 && _hp2[0]) || s.r1_hello || 10;
+  s._r2Hello = (_hp2 && (_hp2[1] || _hp2[0])) || s.r2_hello || 10;
   s._r1Area = s.r1_area || "";
   s._r2Area = s.r2_area || "";
   var _trProto = window._scenarioConfig && window._scenarioConfig.xray && window._scenarioConfig.xray.protocol;
@@ -8833,6 +9440,7 @@ window.xrayBuildFaultState = function(state, tracePattern) {
     fs.iface_up = true;
     fs.ospf_configured = false;
     fs.ospf_active_on_interface = false;
+    fs.ospf_if_count = 0;  /* nx_ospf_running_wording */
     fs.neighbor_state = "None";
     fs.has_full = false;
     fs.has_ospf_route = false;
@@ -8879,6 +9487,7 @@ window.xrayBuildFaultState = function(state, tracePattern) {
     fs.iface_up = true;
     fs.ospf_configured = true;
     fs.ospf_active_on_interface = false;
+    fs.ospf_if_count = 1;  /* nx_ospf_running_wording: passive counts as an OSPF interface (heading Running) */
     fs.neighbor_state = "None";
     fs.has_full = false;
     fs.has_ospf_route = false;
@@ -9085,6 +9694,7 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
       if (_duh[_du].style && _duh[_du].style.setProperty) {
         _duh[_du].style.setProperty("animation", "none", "important");
         _duh[_du].style.setProperty("display", "none", "important");
+        _duh[_du]._helloSig = null;  /* nx_hello_sig_reset: Simple->Standard re-applies the Hello animation */
       }
     }
     return;
@@ -9149,7 +9759,9 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
       var _fromC = _isLeftB ? "calc(50% - 10px)" : "calc(50% + 10px)";
       var _endStr = _isLeftB ? "calc(50% - " + _far + "px)" : "calc(50% + " + _far + "px)";
       _kfParts.push(_mkKf(kfOut + "P", _fromC, _endStr, outH));
-      _kfParts.push(_mkKf(kfIn + "P", _endStr, _fromC, inH));
+      var _selfNoOspf = !(window.__xrayDeriveProto && window.__xrayDeriveProto(s).ospf);  /* nx_hello_recv_all */
+      var _inTo = _selfNoOspf ? (_isLeftB ? "calc(50% - 70px)" : "calc(50% + 70px)") : _fromC;
+      _kfParts.push(_mkKf(kfIn + "P", _endStr, _inTo, inH));
     }
     var _oAnim = kfOut + "P " + outH + "s linear " + (-(outH * _phF)).toFixed(2) + "s infinite";
     var _iAnim = kfIn + "P " + inH + "s linear " + _inDelay.toFixed(2) + "s infinite";
@@ -9411,6 +10023,16 @@ function _xrayDeepDeconflict() {
         var _lblIn = fullFrame && lp ? -1 : 1;
         var lx = (base[0] + _co * 8 * _lblIn).toFixed(1), by = base[1];
         var anc = fullFrame && lp ? _co > .35 ? "end" : _co < -.35 ? "start" : "middle" : _co > .35 ? "start" : _co < -.35 ? "end" : "middle";
+        /* nx_simple_edge_label_outside (2026-10-02): link leaves the Simple frame through the TOP / BOTTOM
+           edge -> label centred on its exit marker, just outside the frame (same rule as Standard). */
+        var _sbe = bodyEdge(a), _sEdge = fullFrame && shape === "rect" ? (_sbe[1] <= CY - HH + 1 ? "top" : _sbe[1] >= CY + HH - 1 ? "bottom" : "") : "";
+        if (_sEdge) { lx = _sbe[0].toFixed(1); anc = "middle"; }
+        (function() {  /* nx_simple_label_clamp: keep the link-end label inside the Simple frame (0..W) */
+          var _txt = String(L.iface || "") + (L.peer ? " - " + L.peer : ""), _tw = _txt.length * 7.3, _lx = +lx, _m = 6;
+          if (anc === "start" && _lx + _tw > W - _m) { anc = "end"; lx = (W - _m).toFixed(1); }
+          else if (anc === "end" && _lx - _tw < _m) { anc = "start"; lx = _m.toFixed(1); }
+          else if (anc === "middle") { if (_lx + _tw / 2 > W - _m) lx = (W - _m - _tw / 2).toFixed(1); else if (_lx - _tw / 2 < _m) lx = (_m + _tw / 2).toFixed(1); }
+        })();
         var col = "var(--xto-link,#00e5ff)";
         var l2 = L.peer ? "- " + L.peer : "";
         var _nr = (L.link.protocols || []).filter(function(p) {
@@ -9420,7 +10042,7 @@ function _xrayDeepDeconflict() {
         var _ly1 = by + _outer + 15, _ly2 = _ly1 + 14;
         if (!(fullFrame && lp)) {
           var _one = L.iface + (L.peer ? " - " + L.peer : "");
-          var _lyR = _ly1; /* simple_single_link_label_terminus: single-link label follows the link terminus (like the multi-link path) not a fixed bottom slot */
+          var _lyR = _sEdge === "top" ? _sbe[1] - 8 : _sEdge === "bottom" ? _sbe[1] + 18 : _ly1; /* nx_simple_edge_label_outside */ /* simple_single_link_label_terminus: single-link label follows the link terminus (like the multi-link path) not a fixed bottom slot */
           s += '<text x="' + lx + '" y="' + _lyR.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + _one + "</text>";
           return;
         }
@@ -9516,8 +10138,9 @@ function _xrayDeepDeconflict() {
         from = pt(oa, (shape === "rect" ? Math.min(HW, HH) : RER) * .2);
       }
       if (_canTr) from = imm ? cylEdge(_inLtr.angle) : bodyEdge(_inLtr.angle);
-      var acol = ax.arrowMode === "proto" ? protoCol((linkLayers(selL.link)[0] || {}).proto) : "var(--xto-ok,#39ff14)";
+      var acol = node._uArrowCol || (ax.arrowMode === "proto" ? protoCol((linkLayers(selL.link)[0] || {}).proto) : "var(--xto-ok,#39ff14)");  /* nx_simple_rtsel_arrow_color */
       s += ln(from, ti, acol, 3.5, false);
+      if (node._uDest) s += '<text class="xu-fwd-dest" x="' + ((from[0] + ti[0]) / 2).toFixed(1) + '" y="' + ((from[1] + ti[1]) / 2 - 10).toFixed(1) + '" text-anchor="middle" style="font:600 15px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#4dd0e1;paint-order:stroke;stroke:rgba(0,12,18,0.85);stroke-width:3px;stroke-linejoin:round;letter-spacing:0.5px">' + String(node._uDest).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }) + '</text>';  /* nx_simple_fwd_dest */
       s += '<polygon fill="' + acol + '" points="' + ti[0].toFixed(1) + "," + ti[1].toFixed(1) + " " + (ti[0] - Math.cos(oa - .5) * hs).toFixed(1) + "," + (ti[1] - Math.sin(oa - .5) * hs).toFixed(1) + " " + (ti[0] - Math.cos(oa + .5) * hs).toFixed(1) + "," + (ti[1] - Math.sin(oa + .5) * hs).toFixed(1) + '"/>';
     }
     var spd = axes && +axes.animSpeed || 1;
@@ -9576,7 +10199,7 @@ function _xrayDeepDeconflict() {
           var interval = intervalSec ? intervalSec / spd : travel;
           var hasInt = !!intervalSec && interval > travel * 1.05;
           var tf = hasInt ? Math.min(.9, travel / interval) : 1, tf2 = Math.min(.98, tf + .03);
-          var head = '<circle cx="' + cxy[0].toFixed(1) + '" cy="' + cxy[1].toFixed(1) + '" r="2.6" fill="' + hc + '" opacity="0.9">';
+          var head = '<circle class="xu-hello" cx="' + cxy[0].toFixed(1) + '" cy="' + cxy[1].toFixed(1) + '" r="2.6" fill="' + hc + '" opacity="0.9">';  /* nx_simple_hello_visible */
           var mot = '<animateMotion dur="' + interval.toFixed(2) + 's" repeatCount="indefinite"' + (hasInt ? ' calcMode="linear" keyPoints="0;1;1" keyTimes="0;' + tf.toFixed(3) + ';1"' : "") + ' path="M 0 0 L ' + dxy[0].toFixed(1) + " " + dxy[1].toFixed(1) + '"/>';
           var op = hasInt ? '<animate attributeName="opacity" dur="' + interval.toFixed(2) + 's" repeatCount="indefinite" keyTimes="0;' + tf.toFixed(3) + ";" + tf2.toFixed(3) + ';1" values="0.9;0.9;0;0"/>' : "";
           return head + mot + op + "</circle>";
@@ -9721,7 +10344,7 @@ function _xrayOspfBucket(fsm) {
 }
 
 function _xrayOspfFsmForIface(s, iface, ifKeys) {
-  var ns = String(s && s.neighbor_state || "");
+  var ns = String(s && (typeof _xrayOspfSpecific === "function" && _xrayOspfSpecific(s) ? _xrayOspfNbrState(s) : s.neighbor_state) || "");  /* nx_ospf_specific_fields: OSPF FSM, not the BGP-primary neighbor_state */
   if (!ns || ns === "None" || ns === "none") return "";
   if (s && s.ospf_configured === false) return "";
   var hellos = s.iface_hellos || null;
@@ -9768,9 +10391,17 @@ function _xrayProtocolsForIface(config, targetId, s, iface, ifKeys) {
   if (!net) return null;
   var protos = [];
   var bup = _xrayBgpUpForNet(s, net.name);
+  /* nx_ospf_specific_fields (single-link BGP): clab-collect has no bgp_links -> bup stayed undefined and the
+     Simple single-peer link never drew BGP (q15 r1 Established = no purple). When the collector is BGP-primary
+     (s.protocol === "bgp") the per-peer <peer>_has_full / _neighbor_state ARE the BGP session -> use them. */
+  if (bup === undefined && s && s.protocol === "bgp" && s.bgp_configured !== false) {
+    var _bpeer = _xrayPeerOfNet(net, targetId);
+    if (_bpeer && (s[_bpeer + "_has_full"] !== undefined || s[_bpeer + "_neighbor_state"] !== undefined || s[_bpeer + "_established"] !== undefined))
+      bup = !!(s[_bpeer + "_established"] || s[_bpeer + "_has_full"] || s[_bpeer + "_neighbor_state"] === "Established" || s[_bpeer + "_neighbor_state"] === "Full");
+  }
   var ofsm = _xrayOspfFsmForIface(s, iface, ifKeys);
   var _coex = !!(config && config.xray && config.xray.deep_coexist_ospf);
-  if (bup !== undefined && !(_coex && bup === false && ofsm)) protos.push({
+  if (bup !== undefined && !(_coex && bup === false && ofsm && !(s && s.bgp_configured === true))) protos.push({  /* nx_simple_single_bgp_idle: configured-but-down BGP stays (dashed), like Standard */
     proto: "bgp",
     up: bup
   });
@@ -9789,7 +10420,10 @@ function _xrayProtocolsForIface(config, targetId, s, iface, ifKeys) {
 function _xrayUnifiedNodeFromLive(config, s) {
   s = s || {};
   var xray = config && config.xray || {};
-  var protoRaw = xray.protocol || "ospf";
+  /* nx_simple_no_proto_static (2026-10-08): OSS live node with neither OSPF nor BGP configured (page removed xray.protocol)
+     -> no protocol, like Standard. Do not default to "ospf" (that drew a grey "OSPF" process glyph on static-only labs). */
+  var _noProtoU = typeof window !== "undefined" && !!window.xrayCore && !xray.protocol && s && s.ospf_configured === false && s.bgp_configured === false;
+  var protoRaw = _noProtoU ? "" : (xray.protocol || "ospf");
   var proto = protoRaw === "bgp" ? "bgp" : "ospf";
   var nodes = config && config.nodes || [];
   var targetId = (window._xrayTargetNode ? String(window._xrayTargetNode).replace("topo-node-", "") : "") || (nodes.find(function(n) {
@@ -9810,16 +10444,19 @@ function _xrayUnifiedNodeFromLive(config, s) {
   function ifUp(n) {
     return !ifs[n] || ifs[n].up !== false;
   }
-  var adjUp = proto === "bgp" ? !!(s.is_established || s.bgp_state === "Established") : !!(s.has_full || s.neighbor_state === "Full");
+  var adjUp = proto === "bgp" ? !!(s.is_established || s.bgp_state === "Established") : _xrayOspfFull(s);  /* nx_ospf_full_helper: holo adjUp OSPF branch (was has_full/neighbor_state=BGP-primary under bgp collect) */
   var peerId = (nodes.filter(function(n) {
     return n.id !== targetId;
   })[0] || {}).id || "";
   var hasProto = protoRaw === "ospf" || protoRaw === "bgp";
   var bgpProcRunning = s.bgp_configured !== false;
   var isOspf = protoRaw === "ospf";
-  var ospfFull = !!(s.has_full || s.neighbor_state === "Full");
-  var helloSend = isOspf && !!(ospfFull || s.ospf_active_on_interface);
-  var helloRecv = isOspf;
+  var ospfFull = _xrayOspfFull(s);  /* nx_ospf_full_helper */
+  /* nx_ospf_specific_fields: Hello OUT follows LIVE OSPF (BGP-config q15 r1 running OSPF showed recv only) */
+  var _drvS = (typeof window !== "undefined" && typeof window.__xrayDeriveProto === "function") ? window.__xrayDeriveProto(s) : { ospf: false };
+  var _ospfOnS = isOspf || !!_drvS.ospf;
+  var helloSend = _ospfOnS && !!(ospfFull || s.ospf_active_on_interface);
+  var helloRecv = (s.peer_sending_hellos && Object.keys(s.peer_sending_hellos).length) ? !!s.peer_sending_hello : isOspf;  /* nx_hello_recv_all */
   var peers = nodes.filter(function(n) {
     return n.id !== targetId;
   });
@@ -9833,31 +10470,42 @@ function _xrayUnifiedNodeFromLive(config, s) {
     var bpv = s.best_path_via || "";
     var _ifHellos = s.iface_hellos || {};
     var _psh = s.peer_sending_hellos || {};
+    /* nx_simple_coexist_state_driven (2026-10-01): OSPF on a link follows LIVE state like Standard
+       (__xrayDeriveProto), not only config xray.protocol (q15 = "bgp" + OSPF Full showed BGP only). */
+    var _drvU = (typeof window !== "undefined" && typeof window.__xrayDeriveProto === "function") ? window.__xrayDeriveProto(s) : { ospf: false, bgp: false };
+    var _ospfOnU = isOspf || !!_drvU.ospf;
     var mlinks = peers.map(function(p) {
       var pid = p.id, iface = s[pid + "_iface"] || "";
       var est = protoRaw === "bgp" ? !!(s[pid + "_established"] || s[pid + "_has_full"] || s[pid + "_neighbor_state"] === "Established" || s[pid + "_neighbor_state"] === "Full") : !!(s[pid + "_has_full"] || s[pid + "_neighbor_state"] === "Full");
       var _egIf = rr && rr.out_iface || outIf;
       var isBest = bpv === pid || !!_egIf && !!iface && _egIf === iface;
       var ph = null, _linkOspf = false;
-      if (isOspf) {
+      var _oFullU = !!(s[pid + "_ospf_full"] || s[pid + "_ospf_state"] === "Full");
+      var _oFsmU = s[pid + "_ospf_state"] && s[pid + "_ospf_state"] !== "None" ? s[pid + "_ospf_state"] : (s[pid + "_ospf_full"] ? "Full" : "");
+      if (_ospfOnU) {
+        /* under a BGP-config question est/_neighbor_state are BGP-oriented -> use the per-peer OSPF FSM */
+        var _oEstU = isOspf ? est : _oFullU;
         var _selfHello = !!(iface && Object.prototype.hasOwnProperty.call(_ifHellos, iface));
-        var _nbrActive = !!(s[pid + "_neighbor_state"] && s[pid + "_neighbor_state"] !== "None");
+        var _nbrActive = isOspf ? !!(s[pid + "_neighbor_state"] && s[pid + "_neighbor_state"] !== "None") : !!_oFsmU;
         var _peerKnown = Object.prototype.hasOwnProperty.call(_psh, pid);
-        var _peerHello = _peerKnown ? !!_psh[pid] : _selfHello || est || _nbrActive;
-        _linkOspf = _selfHello || est || _nbrActive || _peerKnown && _peerHello;
+        var _peerHello = _peerKnown ? !!_psh[pid] : _selfHello || _oEstU || _nbrActive;
+        _linkOspf = _selfHello || _oEstU || _nbrActive || _peerKnown && _peerHello;
         if (_linkOspf) ph = {
-          send: !!(_selfHello || est),
+          send: !!(_selfHello || _oEstU),
           recv: !!_peerHello
         };
+      } else if (iface && _psh[pid] && ifUp(iface)) {
+        ph = { send: false, recv: true };  /* nx_hello_recv_all: peer sends on this link; we don't run OSPF */
       }
       return {
         iface: iface || pid,
         peer: pid,
-        protocols: hasProto && (proto === "bgp" || _linkOspf) ? [ {
-          proto: proto,
-          up: est,
-          fsm: proto === "ospf" ? s[pid + "_neighbor_state"] || (est ? "Full" : "") : ""
-        } ] : [],
+        protocols: (function() {  /* nx_simple_coexist_state_driven: [bgp, ospf] like _xrayProtocolsForIface */
+          var _pl = [];
+          if (hasProto && proto === "bgp") _pl.push({ proto: "bgp", up: est, fsm: "" });
+          if (_linkOspf && (hasProto || _drvU.ospf)) _pl.push({ proto: "ospf", up: _oFullU, fsm: _oFsmU });
+          return _pl;
+        })(),
         ospfHello: ph,
         selected: isBest,
         up: iface ? ifUp(iface) : true
@@ -9871,7 +10519,7 @@ function _xrayUnifiedNodeFromLive(config, s) {
       links: mlinks,
       ospfProcRunning: ospfProcRunning,
       bgpProcRunning: bgpProcRunning,
-      deepCoexistOspf: !!xray.deep_coexist_ospf
+      deepCoexistOspf: !!xray.deep_coexist_ospf || !!(_drvU.ospf && proto === "bgp")  /* nx_simple_coexist_state_driven */
     };
   }
   var links = ifKeys.map(function(ifn) {
@@ -9882,12 +10530,12 @@ function _xrayUnifiedNodeFromLive(config, s) {
         iface: ifn,
         peer: pl.peer || (isOut ? peerId || s.peer_node || "" : ""),
         protocols: pl.protocols,
-        ospfHello: isOspf && (isOut || pl.protocols.some(function(x) {
+        ospfHello: (isOspf && isOut || _ospfOnS && pl.protocols.some(function(x) {
           return x.proto === "ospf";
-        })) ? {
+        })) ? {  /* nx_ospf_specific_fields */
           send: helloSend,
           recv: helloRecv
-        } : null,
+        } : (!isOspf && isOut && s.peer_sending_hello && ifUp(ifn) ? { send: false, recv: true } : null),  /* nx_hello_recv_all */
         selected: isOut,
         up: ifUp(ifn)
       };
@@ -9898,12 +10546,12 @@ function _xrayUnifiedNodeFromLive(config, s) {
       protocols: hasProto && isOut ? [ {
         proto: proto,
         up: adjUp,
-        fsm: proto === "ospf" ? s.neighbor_state || (adjUp ? "Full" : "") : ""
+        fsm: proto === "ospf" ? (s.ospf_neighbor_state && s.ospf_neighbor_state !== "None" ? s.ospf_neighbor_state : (_xrayOspfFull(s) ? "Full" : "")) : ""  /* nx_ospf_fsm: real OSPF FSM (ospf_neighbor_state) not BGP-primary neighbor_state */
       } ] : [],
       ospfHello: isOut && isOspf ? {
         send: helloSend,
         recv: helloRecv
-      } : null,
+      } : (isOut && !isOspf && s.peer_sending_hello && ifUp(ifn) ? { send: false, recv: true } : null),  /* nx_hello_recv_all */
       selected: isOut,
       up: ifUp(ifn)
     };
@@ -10013,6 +10661,23 @@ function _xrayRenderUnifiedLive(s) {
   // maps to a drawn link falls back to the default (route_resolution) selection — no arrow loss.
   // The override mutates node.selected/_uArrow, which are part of the sig below, so re-render fires.
   var _uSel = window._xrayUnifiedSel;
+  /* nx_simple_sel_from_std (2026-10-08, q2): OSS live -> the Simple selection comes from the SAME source as Standard
+     (window._xrayRtSel: row click or the problem focus auto-click), so Standard -> Simple keeps the arrow; a selection that
+     left the table (_xrayRtSel = null) clears it too. RCL (no facade) keeps _xrayUnifiedSel. */
+  if (typeof window !== "undefined" && window.xrayCore && st && st.routing_table && st.routing_table.length) {
+    var _rsU = window._xrayRtSel;
+    /* nx_simple_sel_follow_table (2026-10-08 q6): the out-iface comes from THIS state's table (selected row of the picked prefix,
+       else its first row), like Standard's _rtSelIf - so the arrow follows a route that moved (e.g. q6 r2: eth1 -> eth2).
+       No row for the prefix = no selection (keeps nx_simple_sel_in_table). */
+    var _rowsU = _rsU ? st.routing_table.filter(function (r) { return r && r.prefix === _rsU.prefix; }) : [];
+    var _rowU = _rowsU.filter(function (r) { return r.selected; })[0] || _rowsU[0];
+    var _ifU = _rowU && _rowU.out_iface;
+    _uSel = (_ifU && _ifU !== "lo" && !/^lo/i.test(_ifU)) ? { iface: _ifU } : undefined;
+  }
+  /* nx_simple_coexist_state_driven: OSS live (routing_table) shows the FORWARD arrow only after an RT row
+     click, like Standard (body.xray-rt-noarrow: "Initial state = no row selected = no arrow"). RCL (no facade) unchanged. */
+  if ((typeof window !== "undefined" && !!window.xrayCore) && st && st.routing_table && st.routing_table.length && !(_uSel && _uSel.iface)) node._uArrow = false;
+  try { var _uac = (typeof _xrayRtSelArrowCol === "function") ? _xrayRtSelArrowCol() : null; if (_uac) node._uArrowCol = _uac; } catch (_e) {}  /* nx_simple_rtsel_arrow_color */
   if (_uSel && node.links && node.links.length) {
     if (_uSel.iface) {
       var _uHit = node.links.some(function(L) { return L.iface === _uSel.iface; });
@@ -10020,6 +10685,14 @@ function _xrayRenderUnifiedLive(s) {
     } else {
       node._uArrow = false;
     }
+  }
+  /* nx_simple_fwd_dest (2026-10-08, q2): the destination prefix written inside the cylinder in Standard
+     (.de-fwd-dest = selected RT row, else route_resolution on pages without a live routing table; /32 shown bare).
+     OSS only (window.xrayCore) -> RCL node unchanged. Hidden in the BGP Loser-Path mode like Standard. */
+  if (typeof window !== "undefined" && window.xrayCore && node._uArrow !== false && !window._xrayArrowClickDriven) {
+    var _udRr = st.route_resolution || {}, _udLive = Array.isArray(st.routing_table);
+    var _udVal = (window._xrayRtSel && window._xrayRtSel.prefix) || (_udLive ? "" : (_udRr.matched_prefix || _udRr.target)) || "";
+    if (_udVal) node._uDest = String(_udVal).replace(/\/32$/, "");
   }
   var _vw = Math.round(host && host.clientWidth || deEng && deEng.clientWidth || 0);
   var _vh = Math.round(host && host.clientHeight || deEng && deEng.clientHeight || 0);
@@ -10090,6 +10763,8 @@ function _xrayRenderUnifiedLive(s) {
     return;
   }
   var fwd = !!(st.route_resolution && st.route_resolution.resolved);
+  /* nx_rtsel_no_target (2026-10-08, q12): an RT row the user picked draws the arrow even when route_resolution is unresolved (no target). */
+  if (!fwd && window.xrayCore && st.routing_table && st.routing_table.length && _uSel && _uSel.iface && window._xrayRtSel && st.routing_table.some(function (r) { return r && r.prefix === window._xrayRtSel.prefix; })) fwd = true;   /* rev2: the picked prefix must still be in the table (Standard _rtSelGone parity) */
   var reachable = xrayCanForward(st);
   var helloSendSec = +st.r1_hello || 10;
   var helloRecvSec = +st.r2_hello || 10;
@@ -10108,7 +10783,7 @@ function _xrayRenderUnifiedLive(s) {
   }
   var glyphPos = "inner";
   var sig = JSON.stringify(node) + "|" + fwd + "|" + reachable + "|" + helloSendSec + "|" + helloRecvSec + "|" + glyphPos + "|" + _vw + "|" + _vh + "|" + (window._xrayPingMode || "");
-  if (host.firstChild && sig === window._xrayUnifiedLastSig) return;
+  if (host.firstChild && sig === window._xrayUnifiedLastSig) { _xrayUnifiedReClearHost(host); return; }
   window._xrayUnifiedLastSig = sig;
   host.innerHTML = window.XrayUnified.renderSvg(node, {
     preset: "cinema",
@@ -10126,10 +10801,26 @@ function _xrayRenderUnifiedLive(s) {
     viewH: _vh,
     pingMode: window._xrayPingMode || "from-r1"
   });
+  _xrayUnifiedReClearHost(host);  /* nx_simple_re_clear_host */
   if (document.body.classList.contains("de-loading")) {
     document.body.classList.remove("de-loading");
     document.body.classList.add("de-applied");
   }
+}
+
+/* nx_simple_re_clear_host (2026-10-02 CML2 long hostnames): in Simple the Routing Engine panel can sit on the
+   SVG hostname (e.g. after switching router in Simple its inline top is gone -> CSS default). Only when the panel
+   really overlaps the hostname, push it just below the name; otherwise leave the position untouched (FRR r1..r3). */
+function _xrayUnifiedReClearHost(host) {
+  try {
+    var re = document.getElementById("de-re-panel"), sv = host && host.querySelector("svg"), de = re && re.parentElement;
+    if (!re || !sv || !de) return;
+    var ts = sv.querySelectorAll("text"), hn = ts.length ? ts[ts.length - 1] : null;
+    if (!hn) return;
+    var hr = hn.getBoundingClientRect(), rr = re.getBoundingClientRect(), dr = de.getBoundingClientRect();
+    if (!hr.width || !rr.width) return;
+    if (Math.min(rr.right, hr.right) - Math.max(rr.left, hr.left) > 6 && rr.top < hr.bottom && rr.bottom > hr.top) re.style.top = Math.ceil(hr.bottom - dr.top + 6) + "px";
+  } catch (_e) {}
 }
 
 function _xrayUnifiedUnhideLegacy(deEng) {
@@ -10138,6 +10829,7 @@ function _xrayUnifiedUnhideLegacy(deEng) {
       for (var i = 0; i < deEng.children.length; i++) {
         var el = deEng.children[i];
         if (!el || !el.classList || !el.style || !el.style.removeProperty) continue;
+        if (el.classList.contains("de-sl-label") || el.classList.contains("de-sl-marker")) continue;  /* nx_single_tilt_label: own display */
         for (var g = 0; g < _XU_GEOM.length; g++) {
           if (el.classList.contains(_XU_GEOM[g])) {
             el.style.removeProperty("display");
@@ -10164,7 +10856,7 @@ function _xrayUnifiedMount(config) {
   if (!document.getElementById("xray-unified-style")) {
     var st = document.createElement("style");
     st.id = "xray-unified-style";
-    st.textContent = ".xray-deep-engine.xray-unified-mode .de-box-svg," + ".xray-deep-engine.xray-unified-mode .de-cyl-svg," + ".xray-deep-engine.xray-unified-mode .de-beam," + ".xray-deep-engine.xray-unified-mode .de-tunnel," + ".xray-deep-engine.xray-unified-mode .de-energy," + ".xray-deep-engine.xray-unified-mode .de-label," + ".xray-deep-engine.xray-unified-mode .de-packet," + ".xray-deep-engine.xray-unified-mode .de-ping-orb," + ".xray-deep-engine.xray-unified-mode .de-hello-orb," + ".xray-deep-engine.xray-unified-mode .de-lsa-container," + ".xray-deep-engine.xray-unified-mode .de-r1-label{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.out{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-if-marker,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-left,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-right,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.out,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.left-side,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.right-side{display:none!important}" + "#xray-deep-unified{position:absolute;inset:0;z-index:60;pointer-events:none}" + "#xray-deep-unified svg{position:absolute;inset:0;width:100%;height:100%}" + ".xray-deep-engine.xray-unified-mode{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified svg{overflow:visible}" + "body.xray-unified-active .xray-hello-container,body.xray-unified-active .xray-fib-entry{display:none!important}" + ".xray-deep-engine.xray-unified-mode #de-re-panel,.xray-deep-engine.xray-unified-mode #de-lsdb,.xray-deep-engine.xray-unified-mode #de-routing-panel," + ".xray-deep-engine.xray-unified-mode .de-bgp-panel,.xray-deep-engine.xray-unified-mode .de-bgp-decision-panel{z-index:61}" + ".xray-deep-engine.xray-unified-mode #de-lsdb{left:auto;right:2.5%;transform:none}" + ".xray-deep-engine.xray-unified-mode .xray-focus-close{z-index:71}" + ".xray-deep-mode-toggle{position:absolute;top:6px;left:6px;z-index:70;pointer-events:auto;font:11px monospace;background:rgba(0,20,30,0.85);color:#7fd;border:1px solid #2b5;border-radius:4px;padding:3px 8px;cursor:pointer}" + "body.xray-oss-deep .xray-deep-engine.xray-unified-mode #xray-deep-unified svg circle:has(animateMotion){display:none!important}";
+    st.textContent = ".xray-deep-engine.xray-unified-mode .de-box-svg," + ".xray-deep-engine.xray-unified-mode .de-cyl-svg," + ".xray-deep-engine.xray-unified-mode .de-beam," + ".xray-deep-engine.xray-unified-mode .de-tunnel," + ".xray-deep-engine.xray-unified-mode .de-energy," + ".xray-deep-engine.xray-unified-mode .de-label," + ".xray-deep-engine.xray-unified-mode .de-packet," + ".xray-deep-engine.xray-unified-mode .de-ping-orb," + ".xray-deep-engine.xray-unified-mode .de-hello-orb," + ".xray-deep-engine.xray-unified-mode .de-lsa-container," + ".xray-deep-engine.xray-unified-mode .de-r1-label{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-label.out{display:none!important}" + ".is-xray-deep .xray-deep-engine.xray-unified-mode .de-if-marker,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-left,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-side-right,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.in,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-beam.out,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.left-side,.is-xray-deep .xray-deep-engine.xray-unified-mode .de-tunnel.right-side{display:none!important}" + "#xray-deep-unified{position:absolute;inset:0;z-index:60;pointer-events:none}" + "#xray-deep-unified svg{position:absolute;inset:0;width:100%;height:100%}" + ".xray-deep-engine.xray-unified-mode{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified{overflow:visible}" + ".xray-deep-engine.xray-unified-mode #xray-deep-unified svg{overflow:visible}" + "body.xray-unified-active .xray-hello-container,body.xray-unified-active .xray-fib-entry{display:none!important}" + ".xray-deep-engine.xray-unified-mode #de-re-panel,.xray-deep-engine.xray-unified-mode #de-lsdb,.xray-deep-engine.xray-unified-mode #de-routing-panel," + ".xray-deep-engine.xray-unified-mode .de-bgp-panel,.xray-deep-engine.xray-unified-mode .de-bgp-decision-panel{z-index:61}" + ".xray-deep-engine.xray-unified-mode #de-lsdb{left:auto;right:2.5%;transform:none}" + ".xray-deep-engine.xray-unified-mode .xray-focus-close{z-index:71}" + ".xray-deep-mode-toggle{position:absolute;top:6px;left:6px;z-index:70;pointer-events:auto;font:11px monospace;background:rgba(0,20,30,0.85);color:#7fd;border:1px solid #2b5;border-radius:4px;padding:3px 8px;cursor:pointer}" + "body.xray-oss-deep .xray-deep-engine.xray-unified-mode #xray-deep-unified svg circle:has(animateMotion):not(.xu-hello){display:none!important}/*nx_simple_hello_visible*/";
     document.head.appendChild(st);
   }
   if (deEng && !document.getElementById("xray-deep-mode-toggle")) {
@@ -10185,6 +10877,8 @@ function _xrayUnifiedMount(config) {
           window.applyXrayState(window._lastXrayState);
         } catch (e) {}
       }
+      if (window._nxBgpResync) { try { window._nxBgpResync(); } catch (e) {} }   /* nx_simple_bgp_resync */
+      if (window._nxRelabelZ) { try { window._nxRelabelZ(); requestAnimationFrame(function () { window._nxRelabelZ(); }); } catch (e) {} }   /* nx_label_z_resync */
     };
     deEng.appendChild(tg);
   }
@@ -10369,7 +11063,7 @@ function xrayRenderBgpTableReplay() {
   var _liveRoutes = (!_isTrace && !_replayCtx && Array.isArray((window._lastXrayState||{}).bgp_routes) && (window._lastXrayState||{}).bgp_routes.length) ? window._lastXrayState.bgp_routes : null;
   if (!_isTrace && !_replayCtx && !_liveRoutes && window._lastXrayState && window._lastXrayState.bgp_configured) {
 
-    rows.innerHTML = '<div class="de-dim">No routes<br>(BGP session not established)</div>';
+    _xrayBgpDropLegend(rows); /* nx_noroutes_panels */ rows.innerHTML = '<div class="de-dim">No routes<br>(BGP session not established)</div>';
     showDecision("");
     return;
   }
@@ -10396,7 +11090,7 @@ function xrayRenderBgpTableReplay() {
   var s = window._lastXrayState || {};
   var rr = s.route_resolution || {};
   if (_perStep === null && !_recoveredRoutes && !_faultRoutes && !_liveRoutes && s.is_established === false) {
-    rows.innerHTML = '<div class="de-dim">No routes<br>(BGP session not established)</div>';
+    _xrayBgpDropLegend(rows); /* nx_noroutes_panels */ rows.innerHTML = '<div class="de-dim">No routes<br>(BGP session not established)</div>';
     showDecision("");
     return;
   }
@@ -10408,10 +11102,11 @@ function xrayRenderBgpTableReplay() {
     });
   }
   if (!routes.length) {
-    rows.innerHTML = '<div class="de-dim">No routes<br>(advertised route not received)</div>';
+    _xrayBgpDropLegend(rows); /* nx_noroutes_panels */ rows.innerHTML = '<div class="de-dim">No routes<br>(advertised route not received)</div>';
     showDecision("");
     return;
   }
+  _xrayBgpShowLegend(rows);   /* nx_noroutes_panels: routes are back -> the best-path order legend again */
   if (_replayRoutes && !_recoveredRoutes && rr.next_hop && document.body.classList.contains("is-cleared")) {
     var _recNH = rr.next_hop;
     var _recVia = s.best_path_via;
@@ -10628,7 +11323,7 @@ function xrayBgpChainHtml(chain) {
 
 function xrayBgpBracketEnabled() {
   var cfg = window._scenarioConfig || {};
-  return !!(cfg.xray && cfg.xray.bgp_decision_bracket);
+  return !!(cfg.xray && cfg.xray.bgp_decision_bracket) || !!(typeof window !== "undefined" && window.xrayCore);   /* nx_bgp_see_all: always on in the OSS pages */
 }
 
 function xrayBgpTier3Href(prefix, grp) {
@@ -10659,9 +11354,13 @@ function xrayBgpTier3Href(prefix, grp) {
     });
     var b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, "-").replace(/\//g, "_");
     var lang = window._xrayLang === "en" ? "en" : "ja";
+    if (window.xrayCore) {   /* nx_bgp_see_all: OSS = the page language + a path next to this engine file (_nxEngineBase) */
+      lang = (document.documentElement.getAttribute("lang") || "en") === "ja" ? "ja" : "en";
+      return _nxEngineBase + "decision-bracket.html?d=" + b64 + "&lang=" + lang;
+    }
     return "/static/decision-bracket.html?d=" + b64 + "&lang=" + lang;
   } catch (e) {
-    return "/static/decision-bracket.html";
+    return window.xrayCore ? (_nxEngineBase + "decision-bracket.html") : "/static/decision-bracket.html";   /* nx_bgp_see_all */
   }
 }
 
@@ -10718,6 +11417,17 @@ function xrayBgpBracketKey(e) {
   }
 }
 
+/* nx_frr_reason_small (2026-10-09): FRR's own selectionReason for the best path (bgp_routes[].reason from the collector),
+   used only when the visible attributes do not single out a decider. '' when absent or uninformative. */
+function xrayBgpFrrReason(dec, grp) {
+  var b = (dec && dec.best) || (grp || []).filter(function(r) { return r && String(r.status || "").indexOf(">") !== -1; })[0];
+  var r = b && (b.reason || b.sel_reason);
+  if (!r || typeof r !== "string") return "";
+  r = r.replace(/[<>&"']/g, "").trim();
+  if (!r || /^first path received$/i.test(r)) return "";
+  return r;
+}
+
 function xrayBgpReasonHtml(p, dec, grp) {
   if (!dec) return "";
   if (dec.kind === "nobest") return '<div class="bgp-reason bgp-reason-note">◦ ' + p + " → no valid path</div>";
@@ -10730,9 +11440,21 @@ function xrayBgpReasonHtml(p, dec, grp) {
     if (xrayBgpBracketEnabled()) {
       var _href = xrayBgpTier3Href(p, grp);
       var _btn = '<span class="bgp-crit-btn" role="button" tabindex="0" onclick="xrayBgpToggleBracketPop(event)" onkeydown="xrayBgpBracketKey(event)">' + dec.criterion.label + "</span>";
-      return '<div class="bgp-reason">★ ' + p + " → best path by " + _btn + cmp + "</div>" + chainHtml + xrayBgpBracketPopHtml(dec, _href);
+      /* nx_bgp_see_all: OSS also shows the always-visible "See all decision steps" link under the decider (RCL (iii)) */
+      var _seeAll = "";
+      if (window.xrayCore) {
+        var _saJa = (document.documentElement.getAttribute("lang") || "en") === "ja";
+        _seeAll = '<a class="bp-more" href="' + _href + '" target="_blank" rel="noopener" onclick="event.preventDefault();event.stopPropagation();window.open(this.href,\'_blank\',\'noopener\');">' + (_saJa ? "判定の全ステップを見る" : "See all decision steps") + " ⧉</a>";
+      }
+      return '<div class="bgp-reason">★ ' + p + " → best path by " + _btn + cmp + "</div>" + chainHtml + _seeAll + xrayBgpBracketPopHtml(dec, _href);
     }
     return '<div class="bgp-reason">★ ' + p + " → best path by <b>" + dec.criterion.label + "</b>" + cmp + "</div>" + chainHtml;
+  }
+  var _fr = xrayBgpFrrReason(dec, grp);   /* nx_frr_reason_small */
+  if (_fr) {
+    if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>MED not compared</b> (different neighbor AS) — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
+    if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → all visible attributes equal — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
+    return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
   }
   if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>" + chainHtml;
   if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → all attributes equal — <b>tiebreak by Router ID</b></div>" + chainHtml;
@@ -10741,16 +11463,34 @@ function xrayBgpReasonHtml(p, dec, grp) {
 
 /* click-reveal: clicking a best (*>) row brings that prefix's Best-Path Decision to front. */
 /* Mutual bring-to-front between the BGP Table and Best-Path Decision panels (a click swaps z-order). Uses setProperty(...,'important') to win over the decision panel's z-index:40!important rule. */
+/* nx_simple_bgp_resync (2026-10-09): after a Standard <-> Simple switch, re-apply the BGP Table / Best-Path Decision z-order for the current mode
+   (the values set while in Standard - e.g. by the focus auto-select - otherwise leave both panels under the Simple layer). */
+window._nxBgpResync = function () {
+  var f = window._nxBgpFront; if (!f) return;
+  var bp = document.getElementById('de-bgp-panel'), dp = document.getElementById('de-bgp-decision-panel');
+  var win = f === 'decision' ? dp : bp, lose = f === 'decision' ? bp : dp;
+  var u = !!document.querySelector('.xray-deep-engine.xray-unified-mode');
+  if (u) { if (win) win.style.setProperty('z-index', '63', 'important'); if (lose) lose.style.setProperty('z-index', '62', 'important'); }
+  else if (f === 'decision') { if (win) win.style.zIndex = '60'; if (lose) lose.style.zIndex = '5'; }
+  else { if (win) win.style.setProperty('z-index', '60', 'important'); if (lose) lose.style.setProperty('z-index', '5', 'important'); }
+};
 window.xrayBgpEnsureRaise = function() {
   var bp = document.getElementById('de-bgp-panel');
   var dp = document.getElementById('de-bgp-decision-panel');
-  function _deRaise(win, lose){ if (win) win.style.setProperty('z-index','60','important'); if (lose) lose.style.setProperty('z-index','5','important'); }
+  function _deRaise(win, lose){ window._nxBgpFront = (win && win.id === 'de-bgp-decision-panel') ? 'decision' : 'table'; /* nx_simple_bgp_resync */ var _u = !!document.querySelector('.xray-deep-engine.xray-unified-mode'); /* nx_simple_bgp_zorder */ if (win) win.style.setProperty('z-index',_u?'63':'60','important'); if (lose) lose.style.setProperty('z-index',_u?'62':'5','important'); }
   if (bp && !bp._deBgpRaise) { bp._deBgpRaise = true; bp.onclick = function(){ _deRaise(bp, dp); }; }
   if (dp && !dp._deDecRaise) { dp._deDecRaise = true; dp.onclick = function(){ _deRaise(dp, bp); }; }
 };
 window.xrayBgpShowDecision = function(pfx){
   if(!pfx) return;
+  if (!window._xrayDecOnly) {   /* _xrayDecOnly = just retarget the Decision (loser / RT-row clicks) */
+    if (window._xrayCf && window.xrayCfClear) window.xrayCfClear();   /* Loser-Path is ephemeral: a best-row click shows the Decision instead */
+    if (!document.body.classList.contains("trace-active") && window._xrayBestArrowFor) window._xrayBestArrowFor(pfx);   /* purple arrow + prefix toward this prefix's winner */
+  }
   window._xrayBgpSelPrefix = pfx;
+  // nx_state_driven_tab: a prefix click means the user wants the Best-Path Decision -> switch the dual
+  // right-bottom tab to Best-Path (default tab is LSDB; Best-Path is click-triggered). No-op if not dual.
+  if (document.body.classList.contains('xray-de-dualbr') && typeof window.__xrayBrTab === 'function') window.__xrayBrTab('bestpath');
   var rs = window._xrayLastBgpRoutes;
   if(!Array.isArray(rs) || typeof xrayBuildBgpView!=='function') return;
   var v = xrayBuildBgpView(rs);
@@ -10758,13 +11498,15 @@ window.xrayBgpShowDecision = function(pfx){
   if(tbl&&tbl.parentNode){var tmp=document.createElement('div');tmp.innerHTML=v.table;var nt=tmp.querySelector('table');if(nt)tbl.parentNode.replaceChild(nt,tbl);}
   var drows=document.querySelector('.de-bgp-decision-panel .de-bgp-decision-rows'); if(drows) drows.innerHTML=v.decision||'';
   var dbox=document.getElementById('de-bgp-decision-panel');
-  if(dbox&&v.decision){ dbox.style.display=''; dbox.style.zIndex='60'; var bp=document.getElementById('de-bgp-panel'); if(bp) bp.style.zIndex='5'; /* No scrollIntoView on reveal: the Decision panel is absolute within the engine, so revealing it must not scroll the page (which clipped the top). */ }
+  if(dbox&&v.decision){ window._nxBgpFront='decision'; /* nx_simple_bgp_resync */ var _uZ=!!document.querySelector('.xray-deep-engine.xray-unified-mode'); /* nx_simple_bgp_zorder */ dbox.style.display=''; var bp=document.getElementById('de-bgp-panel'); if(_uZ){ dbox.style.setProperty('z-index','63','important'); if(bp) bp.style.setProperty('z-index','62','important'); } else { dbox.style.zIndex='60'; if(bp) bp.style.zIndex='5'; } /* nx_simple_decision_z */ /* No scrollIntoView on reveal: the Decision panel is absolute within the engine, so revealing it must not scroll the page (which clipped the top). */ }
   else if(dbox){ dbox.style.display='none'; }
   if (typeof window.xrayBgpEnsureRaise === 'function') window.xrayBgpEnsureRaise();   /* mutual bring-to-front */
 };
 function xrayBuildBgpView(routes) {
   /* LocPrf field parity: accept local_pref when locprf is empty, so non-best paths render their real LocPrf. */
   if (Array.isArray(routes)) routes.forEach(function(r){ if (r && (r.locprf === undefined || r.locprf === null || r.locprf === '') && r.local_pref !== undefined && r.local_pref !== null && r.local_pref !== '') r.locprf = String(r.local_pref); });
+  /* Next-Hop field parity: the live collector emits next_hop; accept it when nexthop is empty (the column was blank). */
+  if (Array.isArray(routes)) routes.forEach(function(r){ if (r && !r.nexthop && r.next_hop) r.nexthop = r.next_hop; });
   window._xrayLastBgpRoutes = routes;   /* keep the last routes so click-reveal can rebuild the view */
   var order = [], groups = {};
   routes.forEach(function(r) {
@@ -10780,6 +11522,9 @@ function xrayBuildBgpView(routes) {
   order.forEach(function(p) {
     var grp = groups[p];
     var dec = xrayBgpDecision(grp);
+    var _cfBest = grp.filter(function(r) { return (r.status || "").indexOf(">") !== -1; })[0], _cfBestNh = _cfBest ? (_cfBest.nexthop || "") : "";
+    window._xrayCfRows = window._xrayCfRows || {};
+    if (window._xrayCf && window._xrayCf.kind === "loser" && window._xrayCf.pfx === p && window._xrayCf.bestNh !== _cfBestNh) setTimeout(function() { if (window.xrayCfClear) window.xrayCfClear(); }, 0);
     var decCol = dec && dec.kind === "decided" ? dec.col : null;
     grp.forEach(function(rt) {
       var st = rt.status || "";
@@ -10790,7 +11535,13 @@ function xrayBuildBgpView(routes) {
       function cell(colName, val) {
         return "<td" + (isBest && decCol === colName ? ' class="bgp-decider"' : "") + ">" + val + "</td>";
       }
-      html += "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"' : "") + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + (rt.prefix || "") + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";
+      var _cfTr = "";
+      if (!isBest && dec && dec.kind === "decided" && dec.criterion && rt.nexthop) {
+        window._xrayCfRows[p + "|" + rt.nexthop] = { reason: dec.criterion.label + " " + dec.cmpVal + " " + (dec.criterion.dir > 0 ? "<" : ">") + " " + dec.bestVal + " \u2715", bestNh: _cfBestNh };
+        var _cfOn = window._xrayCf && window._xrayCf.kind === "loser" && window._xrayCf.pfx === p && window._xrayCf.nh === rt.nexthop;
+        _cfTr = ' class="de-bgp-loser' + (_cfOn ? ' cf-on' : '') + '" onclick="event.stopPropagation();if(window.xrayCfToggle)window.xrayCfToggle(this,\'' + p + '\',\'' + rt.nexthop + '\')"';
+      }
+      html += "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"' : _cfTr) + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + (rt.prefix || "") + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";
     });
     if (p === window._xrayBgpSelPrefix) reasons += xrayBgpReasonHtml(p, dec, grp);   /* decision only for the currently selected prefix (hidden by default) */
   });

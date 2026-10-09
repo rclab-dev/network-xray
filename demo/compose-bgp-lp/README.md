@@ -1,4 +1,4 @@
-# nx-bgp-lp — X-Ray live lab
+# compose-bgp-lp — X-Ray live lab
 
 ```
 docker compose up --build

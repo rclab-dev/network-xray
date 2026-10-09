@@ -14,6 +14,9 @@
 (function () {
   'use strict';
 
+  /* nx_api_bracket_base: the folder this file was loaded from ("static/" under containerlab graph, "" on the gallery / GitHub Pages).
+     decision-bracket.html ships next to it, so the Best-Path link is built from here, not from the page URL. */
+  var _apiBase = (function () { try { var _s = (document.currentScript && document.currentScript.getAttribute('src')) || ''; _s = _s.split('?')[0]; return _s.slice(0, _s.lastIndexOf('/') + 1); } catch (e) { return ''; } })();
   var _pollTimer = null;
   var _bgpSrc = null;     // Seam C source (rows array or function(state) -> rows)
   var _lastState = null;  // last applied snapshot (so the BGP table can reflect it)
@@ -141,9 +144,20 @@
     //   path can't be derived from a `show ip bgp` snapshot (no receive timestamp), so we name the
     //   FRR rule rather than assert a specific winner. (A backend that supplies selectionReason would
     //   state the exact reason.)
+    // nx_frr_reason_small (2026-10-09): when the state carries FRR's own selectionReason for the best path
+    //   (bgp_routes[].reason), name it instead of the generic tie-break rule. 'First path received' is not a decider.
+    var _frB = dec.best || {}, _fr = (typeof _frB.reason === 'string' ? _frB.reason : (typeof _frB.sel_reason === 'string' ? _frB.sel_reason : '')).replace(/[<>&"']/g, '').trim();
+    if (_fr && !/^first path received$/i.test(_fr)) {
+      if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
+      if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all visible attributes equal — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
+      return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
+    }
     var _rfc5004 = ' (<a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; Router ID only with compare-routerid)';
-    if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — FRR breaks the tie by <b>Older Path</b>' + _rfc5004 + '</div>' + ch;
-    if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all visible attributes equal — FRR breaks the tie by <b>Older Path</b>' + _rfc5004 + '</div>' + ch;
+    // nos_wording (2026-10-06): an IOS-XE node (state.nos = 'ios-xe', set by the IOS-XE collector) names
+    //   IOS-XE, whose Older Path step applies only between eBGP paths (iBGP ties go to Router ID). FRR text unchanged.
+    var _tieBy = _bgpIsIos() ? 'IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)' : 'FRR breaks the tie by <b>Older Path</b>';
+    if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — ' + _tieBy + _rfc5004 + '</div>' + ch;
+    if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all visible attributes equal — ' + _tieBy + _rfc5004 + '</div>' + ch;
     return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>no single decider</b> — lower-level tiebreak (Older Path / Router ID)</div>' + ch;
   }
   // --- Interactive decider: Tier2 popover (all decision steps) + Tier3 full-bracket link. ---
@@ -169,8 +183,8 @@
       });
       var json = JSON.stringify({ prefix: prefix, routes: routes });
       var b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_');
-      return 'decision-bracket.html?d=' + b64 + '&lang=' + _bgpLang();
-    } catch (e) { return 'decision-bracket.html?lang=' + _bgpLang(); }
+      return _apiBase + 'decision-bracket.html?d=' + b64 + '&lang=' + _bgpLang();   /* nx_api_bracket_base */
+    } catch (e) { return _apiBase + 'decision-bracket.html?lang=' + _bgpLang(); }
   }
   // Tier2 popover markup — each decision step (win / tie / skipped) + a link to the Tier3 bracket.
   function _bgpBracketPop(dec, tier3Href) {
@@ -236,15 +250,25 @@
   //   tie-breaker before Router ID (which only applies with `bgp bestpath compare-routerid`). The
   //   deciding step (derived here; FRR's selectionReason when a backend supplies one) is highlighted.
   var _BGP_FRR_ORDER = ['Weight', 'LocPrf', 'AS-Path', 'Origin', 'MED', 'eBGP&gt;iBGP', 'IGP metric', 'Older Path', 'Router ID*', 'Neighbor IP'];
+  // nos_wording (2026-10-06): Cisco IOS-XE best-path order (Weight → Local Pref → locally originated →
+  //   AIGP → AS_PATH → Origin → MED → eBGP over iBGP → IGP metric → oldest eBGP path → Router ID → cluster list →
+  //   neighbor address). Used only when the node's state says nos = 'ios-xe'; FRR nodes keep the FRR legend as-is.
+  var _BGP_IOS_ORDER = ['Weight', 'LocPrf', 'Local origin', 'AIGP', 'AS-Path', 'Origin', 'MED', 'eBGP&gt;iBGP', 'IGP metric', 'Older Path*', 'Router ID', 'Cluster list', 'Neighbor IP'];
+  function _bgpIsIos() { return !!(_lastState && /^ios/i.test(String(_lastState.nos || ''))); }
   function _bgpOrderLegend(primaryLabel) {
-    var parts = _BGP_FRR_ORDER.map(function (lbl) {
+    var ios = _bgpIsIos();
+    var parts = (ios ? _BGP_IOS_ORDER : _BGP_FRR_ORDER).map(function (lbl) {
       return (primaryLabel && lbl === primaryLabel) ? '<span style="color:#ffd54f;font-weight:700">' + lbl + '</span>' : lbl;
     });
-    var note = (_bgpLang() === 'ja')
-      ? '* Router ID は compare-routerid 設定時のみ（既定は Older Path が先）'
-      : '* Router ID only with `bgp bestpath compare-routerid` (default prefers Older Path)';
+    var note = ios
+      ? ((_bgpLang() === 'ja')
+        ? '* Older Path は eBGP の経路どうしのみ（`bgp bestpath compare-routerid` 設定時は省いて Router ID）'
+        : '* Older Path only between eBGP paths (skipped with `bgp bestpath compare-routerid`)')
+      : ((_bgpLang() === 'ja')
+        ? '* Router ID は compare-routerid 設定時のみ（既定は Older Path が先）'
+        : '* Router ID only with `bgp bestpath compare-routerid` (default prefers Older Path)');
     var rfc = ' <a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc4271#section-9.1.2.2" target="_blank" rel="noopener">[RFC 4271 §9.1.2.2]</a>';
-    return '<div class="bgp-legend" style="overflow-wrap:anywhere">Best-path order (FRR default): ' + parts.join(' &rarr; ') + rfc
+    return '<div class="bgp-legend" style="overflow-wrap:anywhere">Best-path order (' + (ios ? 'IOS-XE' : 'FRR') + ' default): ' + parts.join(' &rarr; ') + rfc
       + '<br><span style="opacity:.7">' + note + '</span></div>';
   }
   // Default prefix for the per-prefix accordion. Priority: a sticky user/prior selection → the
@@ -313,7 +337,7 @@
       + '.de-bgp-decision-panel .bgp-rfc-link,.de-bgp-decision-panel .bgp-legend a{color:#22d3ee!important;text-decoration:underline;pointer-events:auto!important;cursor:pointer!important}'
       // (iii)/#3 compact the decision panel so the tall full-FRR-order legend does not push its top up
       //   over the BGP Table's key 8.8.8.0 (LocPref 100 vs 50) row. Older Path/RFC stay INLINE (no
-      //   hide-toggle) — just tighter type + spacing to reclaim vertical height (owner-chosen (A)).
+      //   hide-toggle) — just tighter type + spacing to reclaim vertical height (option A).
       + '.de-bgp-decision-panel .bgp-legend{font-size:calc(9px * var(--xbgp-fs,1));line-height:1.3;margin-top:4px}'
       + '.de-bgp-decision-panel .bgp-legend span{font-size:calc(8.5px * var(--xbgp-fs,1))}'
       + '.de-bgp-decision-panel .bgp-reason{margin:2px 0}'
@@ -321,7 +345,7 @@
       // Decision panel position: keep it clear of the BGP Table box (both default to
       // left:calc(50%+100px); table top-anchored, decision bottom-anchored).
       // !important so it wins over the engine default AND the older JS measurement below (now inert).
-      + '.xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto!important;bottom:64px!important;z-index:40!important;left:calc(50% + 100px);right:auto}'
+      + '.xray-deep-engine .de-bgp-decision-panel,.dd-engine .de-bgp-decision-panel{top:auto!important;bottom:64px!important;z-index:40!important;left:calc(50% + 110px);right:auto}'
       // When the BGP Table is tall (>=5 routes, e.g. the best-path hero) the bottom-anchored decision
       // panel would ride up into the table's last row. Drop it lower so the two panels stay clear.
       // Scoped to >=5 rows via :has() so the common 2-4 route demos are untouched. !important to win
@@ -423,10 +447,29 @@
   // DeepDive — the "inside the router" cylinder view (forwarding plane, OSPF/BGP
   // processor, hello/ping beams). The engine renders it from the same config; it stays
   // hidden until deep mode is on, and applyState() drives it just like the overview.
+  /* nx_facade_deep_rebuild (2026-10-09): the engine builds the cylinder from the CURRENT state's protocols
+     (__xrayDeriveProto(window._lastXrayState)). renderTopology() builds it before any state arrives, so it came
+     out protocol-less (no OSPF/BGP tunnel, processor or LSDB). Remember what it was built with; applyState()
+     rebuilds it once when the state's protocols differ. */
+  var _deepBuilt = null;   // { config, targetId, sig }
+  function _protoSig(st) {
+    try { return typeof window.__xrayDeriveProto === 'function' ? JSON.stringify(window.__xrayDeriveProto(st || {})) : ''; } catch (e) { return ''; }
+  }
   function _renderDeepEngine(config, targetId) {
     if (typeof window.xrayRenderDeepEngine !== 'function') return;
     var de = document.querySelector('.xray-deep-engine');
     if (de) de.innerHTML = window.xrayRenderDeepEngine(config, targetId);
+    _deepBuilt = de ? { config: config, targetId: targetId, sig: _protoSig(window._lastXrayState) } : null;
+  }
+  function _rebuildDeepFor(state) {
+    if (!_deepBuilt) return;
+    var sig = _protoSig(state);
+    if (!sig || sig === _deepBuilt.sig) return;
+    var prev = window._lastXrayState;
+    window._lastXrayState = state;           // the builder reads the protocols from here
+    try { _renderDeepEngine(_deepBuilt.config, _deepBuilt.targetId); } finally { window._lastXrayState = prev; }
+    _relabelClose();
+    if (document.body.classList.contains('is-xray-deep')) _driveUnified();   // keep the radial overlay when already open
   }
   // Zoom from the topology overview into the target router's cylinder.
   // Notify host pages (e.g. to sync a toggle button) however the DeepDive was opened/closed
@@ -554,6 +597,7 @@
     if (typeof window.applyXrayState !== 'function') {
       throw new Error('xrayCore: call renderTopology() before applyState()');
     }
+    _rebuildDeepFor(state);   /* nx_facade_deep_rebuild */
     window.applyXrayState(state);
     _lastState = state;
     _paintBgpTable();   // Seam C: keep the BGP table in sync with the snapshot

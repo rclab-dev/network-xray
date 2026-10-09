@@ -1,0 +1,64 @@
+{
+  "format": "network-xray-lab/0",
+  "id": "rclab-dev/network-xray/q13-bgp-static",
+  "q_number": "Q13",
+  "title_en": "Problem 13 — \"The BGP neighbor won't come up\"",
+  "title_ja": "第13問「BGPネイバーが張れない」",
+  "problem_en": "A ping from r1 to r2's loopback (<code>2.2.2.2</code>) fails.<br>eBGP is configured between r1 and r2, but the BGP session won't establish.<br>Look into r1's BGP configuration and fix it so that a ping from r1 to <code>2.2.2.2</code> succeeds.<br>After fixing it, confirm on r1 that the State/PfxRcd column for r2 in <code>show bgp summary</code> shows the number of received routes,<br>and that <code>ping 2.2.2.2</code> gets a reply.",
+  "problem_ja": "r1 から r2 のループバック (<code>2.2.2.2</code>) に ping が通りません。<br>r1 と r2 の間には eBGP を設定していますが、BGP のセッションが確立しません。<br>r1 の BGP の設定を調べて直し、r1 から <code>2.2.2.2</code> に ping が通るようにしてください。<br>直したら、r1 で <code>show bgp summary</code> の r2 の行の State/PfxRcd に受け取った経路の数が表示され、<br><code>ping 2.2.2.2</code> が応答することを確認してください。",
+  "rcl_qid": "q13",
+  "rcl_mode": "tl",
+  "ref": "oss-clab",
+  "version": "1",
+  "author": "RouteCrush Lab",
+  "license": "MIT",
+  "focus": {
+    "node": "r1",
+    "prefix": "2.2.2.0/24"
+  },
+  "check": {
+    "all": [
+      [
+        "r1",
+        "bgp_neighbors",
+        "some",
+        [
+          [
+            "ip",
+            "eq",
+            "10.10.0.20"
+          ],
+          [
+            "state",
+            "eq",
+            "Established"
+          ]
+        ]
+      ],
+      [
+        "r1",
+        "routing_table",
+        "some",
+        [
+          [
+            "prefix",
+            "eq",
+            "2.2.2.0/24"
+          ],
+          [
+            "out_iface",
+            "eq",
+            "eth1"
+          ],
+          [
+            "selected",
+            "eq",
+            true
+          ]
+        ]
+      ]
+    ]
+  },
+  "check_note_en": "Also try: ping 2.2.2.2 from r1 succeeds.",
+  "check_note_ja": "手で確かめる: r1 から ping 2.2.2.2 が通ること。"
+}

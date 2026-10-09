@@ -58,8 +58,8 @@
     <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
   </div>
   <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small data-i18n="subtitle">(containerlab × X-Ray DeepDive)</small></h1>
-  <p class="sub" data-i18n="intro">Overview = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
-    OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.</p>
+  <p class="sub" data-i18n="intro">The topology view = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
+    OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.</p>
   <div class="ov" id="ov"></div>
   <div id="peers"></div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
@@ -76,12 +76,12 @@
   var I18N = {
     en: {
       subtitle: '(containerlab × X-Ray DeepDive)',
-      intro: 'Overview = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision. The overview layout is commodity; X-Ray adds the per-node DeepDive.',
+      intro: 'The topology view = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.',
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
     ja: {
-      subtitle: '(containerlab × X-Ray ディープダイブ)',
-      intro: 'オーバービューはあなたの containerlab トポロジ（サイズ自由）。<b>ノードをクリック</b>すると、その<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。オーバービューのレイアウトはありふれたもの、X-Ray がノード単位の DeepDive を足します。',
+      subtitle: '(containerlab × X-Ray DeepDive)',
+      intro: '全体図はあなたの containerlab トポロジ（サイズ自由）。<b>ノードをクリック</b>すると、その<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。全体図のレイアウトはありふれたもの、X-Ray がノード単位の DeepDive を足します。',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
   };
@@ -351,7 +351,7 @@ window.__xrayGraphBoot = function () {
   // #4dd0e1; OSPF green / BGP purple unchanged). Honors a stored user choice if present; otherwise
   // applies signature WITHOUT persisting it (a default view, not a user selection). Also points the
   // DeepDive Skin popover's "Open full editor" at skin.html on the resolved base. containerlab remains
-  // selectable in the Skin picker. (Owner 2026-08-18: default reverted from containerlab to signature.)
+  // selectable in the Skin picker. (2026-08-18: default reverted from containerlab to signature.)
   function initSkin(base){
     // (chrome accent --rc-accent is forced to X-Ray teal via the :root !important rule above,
     //  which survives the engine theme re-applying it inline.)
