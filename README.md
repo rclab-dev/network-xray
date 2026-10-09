@@ -224,7 +224,7 @@ containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --stati
 
 Same DeepDive engine (skin, routing table, Best-Path Decision) — only the topology view differs. The
 variant bundles the NeXt UI Toolkit (**EPL-1.0**, kept in `js/` `css/` `fonts/` and attributed in
-`LICENSE`); the default `xray-graph.html` stays pure MIT.
+`THIRD_PARTY_NOTICES.md`); the default `xray-graph.html` stays pure MIT.
 
 Want it as a panel inside your own GUI instead of a standalone graph? → see
 [Embed the DeepDive in your own tool](#embed-the-deepdive-in-your-own-tool).
@@ -471,6 +471,8 @@ topology view; it doesn't replace it.
 
 [MIT](./LICENSE) — Copyright (c) 2026 RouteCrushLab (@routecrushlab).
 
+Third-party: the opt-in NeXt UI variant bundles the NeXt UI Toolkit (EPL-1.0) — see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+
 The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You're free to remove it (MIT): add `.rcl-fb-badge { display: none !important; }` to your page's CSS, or delete the `_xrayEnsureFbBadge()` call in `xray-core.js`.
 
 ---
@@ -655,7 +657,7 @@ containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --stati
 ![NeXt UI インタラクティブグラフ — ノードをドラッグすると開いた DeepDive のトンネルがライブで角度追随・ノードクリックでルータの中を見る。](docs/nextui-deepdive.gif)
 
 DeepDive エンジン(skin・routing table・Best-Path Decision)は共通で、違いは全体図だけ。変種は
-NeXt UI Toolkit(**EPL-1.0**・`js/` `css/` `fonts/` に同梱し `LICENSE` に帰属明記)を bundle します。
+NeXt UI Toolkit(**EPL-1.0**・`js/` `css/` `fonts/` に同梱し `THIRD_PARTY_NOTICES.md` に帰属明記)を bundle します。
 既定の `xray-graph.html` は純 MIT のままです。
 
 **live state(任意):** `clab-collect.js` は、稼働中ラボの1ノードの実 FRR 状態を読み
@@ -723,5 +725,7 @@ ping/パケットのアニメはこれらのデモでは非表示(通信内容�
 ## ライセンス
 
 [MIT](./LICENSE) — Copyright (c) 2026 RouteCrushLab (@routecrushlab)。
+
+第三者のライセンス: NeXt UI 版(任意)は NeXt UI Toolkit(EPL-1.0)を同梱しています — [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) を参照。
 
 DeepDive の右下に、小さな「Powered by RCL」のリンクが出ます。外してもかまいません(MIT)。ページの CSS に `.rcl-fb-badge { display: none !important; }` を足すか、`xray-core.js` の `_xrayEnsureFbBadge()` を呼ぶ行を消してください。
