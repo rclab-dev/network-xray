@@ -3,7 +3,7 @@ name: q1-static
 # Lab for RouteCrushLab q1 (https://routecrushlab.com)
 topology:
   nodes:
-    r1: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf], exec: ["sh -c 'ip route del default 2>/dev/null || true'", "sh -c 'grep -q \"^router bgp\" /etc/frr/frr.conf || exit 0; for i in $(seq 1 30); do vtysh -c \"show running-config\" 2>/dev/null | grep -q \"^router bgp\" && exit 0; sleep 2; vtysh -f /etc/frr/frr.conf >/dev/null 2>&1; done'"] }  # nx_bgp_reapply
+    r1: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf, r1/vtysh.conf:/etc/frr/vtysh.conf], exec: ["sh -c 'ip route del default 2>/dev/null || true'", "sh -c 'grep -q \"^router bgp\" /etc/frr/frr.conf || exit 0; for i in $(seq 1 30); do vtysh -c \"show running-config\" 2>/dev/null | grep -q \"^router bgp\" && exit 0; sleep 2; vtysh -f /etc/frr/frr.conf >/dev/null 2>&1; done'"] }  # nx_bgp_reapply
     inet: { kind: linux, image: alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b, exec: ["ip link set eth1 up", "ip addr add 10.10.0.1/24 dev eth1", "ip route add 10.11.0.0/24 via 10.10.0.10", "sh -c 'ip route del default 2>/dev/null || true'", "ip addr add 8.8.8.8/32 dev lo"] }
     sv: { kind: linux, image: alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b, exec: ["ip link set eth1 up", "ip addr add 10.11.0.240/24 dev eth1", "sh -c 'ip route del default 2>/dev/null || true'", "ip route replace default via 10.11.0.10 dev eth1"] }
   links:
