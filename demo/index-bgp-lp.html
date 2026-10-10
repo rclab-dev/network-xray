@@ -288,8 +288,8 @@ window.__xrayGraphBoot = function () {
   // This demo lives in /demo/ and reuses the published OSS engine one level up (no duplicated
   // engine, no backend) — load from '../' first, fall back to the page-relative base just in case.
   loadSeq('../', function(){
-    if (ready()) withStates('../', function(){ boot(); startLivePoll('../'); });
-    else loadSeq('', function(){ withStates('', function(){ boot(); startLivePoll(''); }); });
+    if (ready()) { window._xraySkinEditorUrl = '../skin.html'; withStates('../', function(){ boot(); startLivePoll('../'); }); }
+    else loadSeq('', function(){ window._xraySkinEditorUrl = 'skin.html'; withStates('', function(){ boot(); startLivePoll(''); }); });
   });
 })();
 </script>
