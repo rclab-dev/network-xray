@@ -1754,19 +1754,33 @@ function _xrayCfSideForNh(nh) {
 window.xrayCfToggle = function(rowEl, pfx, nh) {
   if (document.body.classList.contains("trace-active")) return;
   var cur = window._xrayCf;
-  if (cur && cur.kind === "loser" && cur.pfx === pfx && cur.nh === nh) { window.xrayCfClear(); return; }
+  if (cur && cur.kind === "loser" && cur.pfx === pfx && cur.nh === nh) { window.xrayCfClear(); if (window._xrayCfRestoreBest) window._xrayCfRestoreBest(pfx); return; }   /* nx_simple_loser_arrow: second click = back to the best path */
   var info = (window._xrayCfRows || {})[pfx + "|" + nh], side = _xrayCfSideForNh(nh);
-  if (!info || !side) return;
-  window.xrayCfClear();
+  /* nx_simple_loser_arrow: in Simple the left/right side may be unknown - the out-interface of the loser's next hop is enough there */
+  var _cfIfT = _xrayCfIfaceForNh(nh), _uniT = document.body.classList.contains("xray-unified-active");
+  if (!info || (!side && !(_uniT && _cfIfT))) return;
+  window._xrayCfQuiet = true; try { window.xrayCfClear(); } finally { window._xrayCfQuiet = false; }
   // Loser shown alone: drop the purple arrow + prefix label (back to the no-arrow state) before drawing the grey one.
   window._xrayRtSel = null; document.body.classList.add("xray-rt-noarrow");
   window.xrayCfShow("loser", side, info.reason);
-  window._xrayCf.pfx = pfx; window._xrayCf.nh = nh; window._xrayCf.bestNh = info.bestNh;
+  window._xrayCf.pfx = pfx; window._xrayCf.nh = nh; window._xrayCf.bestNh = info.bestNh; window._xrayCf.iface = _cfIfT;   /* nx_simple_loser_arrow */
   if (rowEl && rowEl.classList) rowEl.classList.add("cf-on");
   if (window._xrayDecisionHide) window._xrayDecisionHide();   // loser shown alone: no Decision, no purple arrow, no prefix label
   document.body.classList.add("xray-cf-on");   // un-hide svg.de-flow under xray-rt-noarrow (only .de-fwd-cf shows)
+  if (window._xrayCfSimpleRedraw) window._xrayCfSimpleRedraw();   /* nx_simple_loser_arrow */
 };
-window.xrayCfClear = function() { window._xrayCf = null; document.body.classList.remove("xray-cf-on"); if (window.xrayCfDraw) window.xrayCfDraw(); var _lr = document.querySelectorAll(".de-bgp-table tr.cf-on"); for (var i = 0; i < _lr.length; i++) _lr[i].classList.remove("cf-on"); };
+window.xrayCfClear = function() { window._xrayCf = null; document.body.classList.remove("xray-cf-on"); if (window.xrayCfDraw) window.xrayCfDraw(); var _lr = document.querySelectorAll(".de-bgp-table tr.cf-on"); for (var i = 0; i < _lr.length; i++) _lr[i].classList.remove("cf-on"); if (!window._xrayCfQuiet && window._xrayCfSimpleRedraw) window._xrayCfSimpleRedraw(); };   /* nx_simple_loser_arrow */
+/* nx_simple_loser_arrow: Simple only redraws when its data changes -> redraw it when the Loser-Path is shown / cleared */
+window._xrayCfSimpleRedraw = function() {
+  if (!document.body.classList.contains("xray-unified-active") || typeof _xrayRenderUnifiedLive !== "function") return;
+  try { _xrayRenderUnifiedLive(window._lastXrayState); } catch (e) {}
+};
+/* nx_simple_loser_arrow: clicking the shown loser again -> the prefix's best path again (same as clicking its best row: arrow + Decision) */
+window._xrayCfRestoreBest = function(pfx) {
+  if (!pfx || document.body.classList.contains("trace-active") || typeof window.xrayBgpShowDecision !== "function") return;
+  try { window.xrayBgpShowDecision(pfx); } catch (e) {}
+  if (window._xrayCfSimpleRedraw) window._xrayCfSimpleRedraw();
+};
 (function(){ if (document.getElementById("xray-cf-css")) return; var st = document.createElement("style"); st.id = "xray-cf-css"; st.textContent = "body:not(.trace-active) .de-bgp-panel .de-bgp-table tr.de-bgp-loser{cursor:pointer}body.xray-rt-noarrow.xray-cf-on .de-flow{display:block!important}body.xray-rt-noarrow.xray-cf-on .de-flow .de-fwd-dest{display:none!important}.de-bgp-panel .de-bgp-table tr.cf-on td{background:rgba(200,212,224,0.10)!important;box-shadow:inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}.de-bgp-panel .de-bgp-table tr.cf-on td:first-child{box-shadow:inset 3px 0 0 #8a97a6,inset 0 1px 0 rgba(200,212,224,0.55),inset 0 -1px 0 rgba(200,212,224,0.55)}"; (document.head||document.documentElement).appendChild(st); })();
 
 function xrayDeepDiveClose() {
@@ -3069,7 +3083,7 @@ function _xrayOspfRtSummaryLines(s) {
   var _ifsR = s.interfaces || {};
   Object.keys(_ifsR).forEach(function (ifn) {
     var info = _ifsR[ifn] || {};
-    lines.push({ text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>" });
+    lines.push({ text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + "</span>" });
   });
 
   lines = lines.map(function (_l) { if (_l && typeof _l.text === "string") { _l.text = _l.text.replace(/^&gt; /, "\u30fb ").replace(/^> /, "\u30fb "); } return _l; });
@@ -3399,7 +3413,7 @@ function xrayTriDeepLines(s, opts) {
   Object.keys(ifaces).forEach(function(ifn) {
     var info = ifaces[ifn];
     lines.push({
-      text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>"
+      text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + "</span>"
     });
   });
   if (rr.resolved) {
@@ -3530,7 +3544,7 @@ function xrayBgpDeepLines(s, opts) {
     var info = ifaces[name];
     if (!info.up && !info.ip) return;
     lines.push({
-      text: "> " + name + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>"
+      text: "> " + name + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + "</span>"
     });
   });
   var init = window._xrayInitialState || s;
@@ -10143,6 +10157,25 @@ function _xrayDeepDeconflict() {
       if (node._uDest) s += '<text class="xu-fwd-dest" x="' + ((from[0] + ti[0]) / 2).toFixed(1) + '" y="' + ((from[1] + ti[1]) / 2 - 10).toFixed(1) + '" text-anchor="middle" style="font:600 15px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#4dd0e1;paint-order:stroke;stroke:rgba(0,12,18,0.85);stroke-width:3px;stroke-linejoin:round;letter-spacing:0.5px">' + String(node._uDest).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }) + '</text>';  /* nx_simple_fwd_dest */
       s += '<polygon fill="' + acol + '" points="' + ti[0].toFixed(1) + "," + ti[1].toFixed(1) + " " + (ti[0] - Math.cos(oa - .5) * hs).toFixed(1) + "," + (ti[1] - Math.sin(oa - .5) * hs).toFixed(1) + " " + (ti[0] - Math.cos(oa + .5) * hs).toFixed(1) + "," + (ti[1] - Math.sin(oa + .5) * hs).toFixed(1) + '"/>';
     }
+    if (node._uCf) {   /* nx_simple_loser_arrow */
+      var cfL = links.filter(function(L) { return L.link && L.link.iface === node._uCf.iface; })[0];
+      if (cfL) {
+        var ca = cfL.angle, chs = imm ? 14 : 9, cto, cfrom;
+        if (imm) { cfrom = [ CX, CY ]; var _cce = cylEdge(ca); cto = [ _cce[0] - Math.cos(ca) * 6, _cce[1] - Math.sin(ca) * 6 ]; }
+        else { var _cbe = bodyEdge(ca); cto = [ _cbe[0] - Math.cos(ca) * 9, _cbe[1] - Math.sin(ca) * 9 ]; cfrom = pt(ca, (shape === "rect" ? Math.min(HW, HH) : RER) * .2); }
+        var ccol = "#8a97a6";
+        s += ln(cfrom, cto, ccol, 3, false, true, .95);
+        s += '<polygon class="xu-cf-head" fill="' + ccol + '" points="' + cto[0].toFixed(1) + "," + cto[1].toFixed(1) + " " + (cto[0] - Math.cos(ca - .5) * chs).toFixed(1) + "," + (cto[1] - Math.sin(ca - .5) * chs).toFixed(1) + " " + (cto[0] - Math.cos(ca + .5) * chs).toFixed(1) + "," + (cto[1] - Math.sin(ca + .5) * chs).toFixed(1) + '"/>';
+        if (node._uCf.badge) {
+          var cbt = node._uCf.badge, cbw = 18, cbi;
+          for (cbi = 0; cbi < cbt.length; cbi++) cbw += cbt.charCodeAt(cbi) > 0x2e80 ? 12.5 : 7.3;
+          var cbBot = Math.max(28, cto[1] - 30), cbTop = cbBot - 22;
+          s += '<line class="xu-cf-leader" x1="' + cto[0].toFixed(1) + '" y1="' + cto[1].toFixed(1) + '" x2="' + cto[0].toFixed(1) + '" y2="' + cbBot.toFixed(1) + '" stroke="#8a97a6" stroke-width="1" opacity="0.7"/>';
+          s += '<rect class="xu-cf-badge-box" x="' + (cto[0] - cbw / 2).toFixed(1) + '" y="' + cbTop.toFixed(1) + '" width="' + cbw.toFixed(1) + '" height="22" rx="5" fill="rgba(20,26,33,0.94)" stroke="rgba(138,151,166,0.6)" stroke-width="1"/>';
+          s += '<text class="xu-cf-badge" x="' + cto[0].toFixed(1) + '" y="' + (cbTop + 15.5).toFixed(1) + '" text-anchor="middle" style="font:700 12px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#c3ccd6">' + cbt.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }) + '</text>';
+        }
+      }
+    }
     var spd = axes && +axes.animSpeed || 1;
     if (axes && axes.animMode === "on") {
       var _pm = axes && axes.pingMode || "from-r1";
@@ -10693,6 +10726,12 @@ function _xrayRenderUnifiedLive(s) {
     var _udRr = st.route_resolution || {}, _udLive = Array.isArray(st.routing_table);
     var _udVal = (window._xrayRtSel && window._xrayRtSel.prefix) || (_udLive ? "" : (_udRr.matched_prefix || _udRr.target)) || "";
     if (_udVal) node._uDest = String(_udVal).replace(/\/32$/, "");
+  }
+  /* nx_simple_loser_arrow: Loser-Path in Simple = grey dashed arrow toward the loser's out-interface + why it lost (OSS only) */
+  var _cfU = window._xrayCf;
+  if (typeof window !== "undefined" && window.xrayCore && _cfU && _cfU.kind === "loser" && !document.body.classList.contains("trace-active")) {
+    var _cfIfU = _cfU.iface || (typeof _xrayCfIfaceForNh === "function" ? _xrayCfIfaceForNh(_cfU.nh) : null);
+    if (_cfIfU) node._uCf = { iface: _cfIfU, badge: String(_cfU.badge || "") };
   }
   var _vw = Math.round(host && host.clientWidth || deEng && deEng.clientWidth || 0);
   var _vh = Math.round(host && host.clientHeight || deEng && deEng.clientHeight || 0);
@@ -11477,7 +11516,7 @@ window._nxBgpResync = function () {
 window.xrayBgpEnsureRaise = function() {
   var bp = document.getElementById('de-bgp-panel');
   var dp = document.getElementById('de-bgp-decision-panel');
-  function _deRaise(win, lose){ window._nxBgpFront = (win && win.id === 'de-bgp-decision-panel') ? 'decision' : 'table'; /* nx_simple_bgp_resync */ var _u = !!document.querySelector('.xray-deep-engine.xray-unified-mode'); /* nx_simple_bgp_zorder */ if (win) win.style.setProperty('z-index',_u?'63':'60','important'); if (lose) lose.style.setProperty('z-index',_u?'62':'5','important'); }
+  function _deRaise(win, lose){ window._nxBgpFront = (win && win.id === 'de-bgp-decision-panel') ? 'decision' : 'table'; /* nx_simple_bgp_resync */ var _u = !!document.querySelector('.xray-deep-engine.xray-unified-mode'); /* nx_simple_bgp_zorder */ if (win) win.style.setProperty('z-index',_u?'63':'60','important'); if (lose) lose.style.setProperty('z-index',_u?'62':'5','important'); if (window._nxRelabelZ) { try { window._nxRelabelZ(); } catch (_eRz) {} } /* nx_label_z_on_raise */ }
   if (bp && !bp._deBgpRaise) { bp._deBgpRaise = true; bp.onclick = function(){ _deRaise(bp, dp); }; }
   if (dp && !dp._deDecRaise) { dp._deDecRaise = true; dp.onclick = function(){ _deRaise(dp, bp); }; }
 };
@@ -11498,7 +11537,7 @@ window.xrayBgpShowDecision = function(pfx){
   if(tbl&&tbl.parentNode){var tmp=document.createElement('div');tmp.innerHTML=v.table;var nt=tmp.querySelector('table');if(nt)tbl.parentNode.replaceChild(nt,tbl);}
   var drows=document.querySelector('.de-bgp-decision-panel .de-bgp-decision-rows'); if(drows) drows.innerHTML=v.decision||'';
   var dbox=document.getElementById('de-bgp-decision-panel');
-  if(dbox&&v.decision){ window._nxBgpFront='decision'; /* nx_simple_bgp_resync */ var _uZ=!!document.querySelector('.xray-deep-engine.xray-unified-mode'); /* nx_simple_bgp_zorder */ dbox.style.display=''; var bp=document.getElementById('de-bgp-panel'); if(_uZ){ dbox.style.setProperty('z-index','63','important'); if(bp) bp.style.setProperty('z-index','62','important'); } else { dbox.style.zIndex='60'; if(bp) bp.style.zIndex='5'; } /* nx_simple_decision_z */ /* No scrollIntoView on reveal: the Decision panel is absolute within the engine, so revealing it must not scroll the page (which clipped the top). */ }
+  if(dbox&&v.decision){ window._nxBgpFront='decision'; /* nx_simple_bgp_resync */ var _uZ=!!document.querySelector('.xray-deep-engine.xray-unified-mode'); /* nx_simple_bgp_zorder */ dbox.style.display=''; var bp=document.getElementById('de-bgp-panel'); if(_uZ){ dbox.style.setProperty('z-index','63','important'); if(bp) bp.style.setProperty('z-index','62','important'); } else { dbox.style.zIndex='60'; if(bp) bp.style.zIndex='5'; } /* nx_simple_decision_z */ if (window._nxRelabelZ) { try { window._nxRelabelZ(); } catch (_eRz2) {} } /* nx_label_z_on_raise */ /* No scrollIntoView on reveal: the Decision panel is absolute within the engine, so revealing it must not scroll the page (which clipped the top). */ }
   else if(dbox){ dbox.style.display='none'; }
   if (typeof window.xrayBgpEnsureRaise === 'function') window.xrayBgpEnsureRaise();   /* mutual bring-to-front */
 };

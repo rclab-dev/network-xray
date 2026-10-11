@@ -1,5 +1,7 @@
 # bgp-bestpath-multiprefix (advanced example — NOT RCL Q21)
 
+> **A showcase, laid out differently from the 21 problems** (no problem text, no ✓ Solved check). This `-solved` copy sets r2's route to **LocalPref 150** — the state described below; `../bgp-bestpath-multiprefix/` starts at **LocalPref 50**, where r1 prefers r3 for `8.8.8.0/24` too.
+
 Two prefixes with a **different best-path winner per prefix**:
 
 - `8.8.8.0/24` — r1 prefers **r2** by **Local Preference** (r1 sets LocalPref 150 on r2's route).

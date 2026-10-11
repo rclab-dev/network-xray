@@ -29,6 +29,14 @@ LABDIR="$(dirname "$YML")"
 LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$YML" | head -1)"
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $YML"; exit 1; }
 
+# nx_port_free_check: the graph port must be free, otherwise `containerlab graph` stops right after "==> open"
+# (checked before deploy, so nothing is left running). Same check as .devcontainer/start-demo.sh.
+if timeout 2 bash -c "exec 3<>/dev/tcp/127.0.0.1/${PORT}" 2>/dev/null; then
+  echo "port ${PORT} is already in use (another graph is running there?)."
+  echo "  add a port:  ./demo.sh ${1:-examples/q21-bgp-lp/q21.clab.yml} $((PORT + 1))   - or stop the other one."
+  exit 1
+fi
+
 # which protocol to collect: BGP if any router runs BGP, else OSPF if any runs OSPF, else static
 PROTO=static
 if grep -qsE '^router bgp' "$LABDIR"/*/frr.conf; then PROTO=bgp

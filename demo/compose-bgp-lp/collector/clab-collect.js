@@ -106,7 +106,9 @@ function parseInterfaces(j) {
       if (typeof a0 === 'string' && a0.indexOf('/') >= 0) { addr = a0.split('/')[0]; pfx = +a0.split('/')[1] || 24; }
       else addr = a0;
     }
-    out[ifn] = { up: up, ip: addr, prefix: pfx };
+    // nx_collect_unnumbered: FRR marks an unnumbered iface (borrowing a loopback /32) with ipAddresses[0].unnumbered
+    var unn = !!(Array.isArray(d.ipAddresses) && d.ipAddresses[0] && d.ipAddresses[0].unnumbered);
+    out[ifn] = unn ? { up: up, ip: addr, prefix: pfx, unnumbered: true } : { up: up, ip: addr, prefix: pfx };
   });
   return out;
 }
@@ -291,6 +293,10 @@ function buildState(opts) {
       var _pd = ifs[p.iface] || ifFallback[p.iface] || {};
       interfaces[p.iface] = { up: _pd.up !== false, ip: _ifIpStr(p.iface) };
     }
+  });
+  // nx_collect_unnumbered: keep ip as is ("10.0.0.3/32") and flag the iface, so the page can say "(unnumbered)"
+  Object.keys(interfaces).forEach(function (ifn) {
+    if ((ifFallback[ifn] || {}).unnumbered && interfaces[ifn].ip) interfaces[ifn].unnumbered = true;
   });
 
   // Recursive out-iface resolver: a BGP route's immediate next-hop is often a remote loopback with

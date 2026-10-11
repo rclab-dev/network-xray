@@ -153,7 +153,7 @@
   //   // views[i] = { label, peers:[a,b], scene:{config,topo,states} }
   //   var v = views[0]; var view = xrayCore.renderTopology('#topo', v.scene.config, {topology:v.scene.topo});
   //   view.openDeepDiveFor('r1', v.scene.states.normal);
-  function deepViews(cfg, nodeId) {
+  function deepViews(cfg, nodeId, opts) {   /* nx_default_pair: opts = { state, focusPrefix } (optional) */
     var nets = cfg.networks || [];
     // collect the node's neighbors (peer, net)
     var adj = [];
@@ -200,12 +200,25 @@
     }
     // 3+ neighbors: enumerate unique peer pairs
     var views = [];
+    /* nx_default_pair (v1.1): with the node's live state, put first the pairs that contain the selected route's out-interface
+       (the focus prefix's selected route, else route_resolution) and links whose interface has an IP - so the DeepDive opens on
+       a pair that can show the forwarding arrow. Stable: equal scores keep the old order. No state -> the old order. */
+    var _st = opts && opts.state, _score = null;
+    if (_st && typeof _st === "object") {
+      var _rIf = "", _fp = opts.focusPrefix;
+      if (_fp) { (_st.routing_table || []).some(function (r) { if (r && r.prefix === _fp && r.selected && r.out_iface) { _rIf = r.out_iface; return true; } return false; }); }
+      if (!_rIf && _st.route_resolution && _st.route_resolution.out_iface) _rIf = _st.route_resolution.out_iface;
+      var _ifOf = function (p) { return _st[p + "_iface"] || ""; };
+      var _hasIp = function (p) { var f = _ifOf(p), it = f && !/^lo/i.test(f) && _st.interfaces && _st.interfaces[f]; return !!(it && String(it.ip || "").split("/")[0]); };   /* a peer reached over the loopback (iBGP) is not a link with an IP */
+      _score = function (pr) { var sc = 0; if (_rIf && pr.some(function (p) { return _ifOf(p) === _rIf; })) sc += 4; pr.forEach(function (p) { if (_hasIp(p)) sc += 1; }); return sc; };
+    }
     for (var i = 0; i < adj.length; i++) {
       for (var j = i + 1; j < adj.length; j++) {
         var pr = [adj[i].peer, adj[j].peer];
         views.push({ label: pr[0] + ' ↔ ' + nodeId + ' ↔ ' + pr[1], peers: pr, scene: subScene(pr) });
       }
     }
+    if (_score) { views = views.map(function (v, i) { return { v: v, i: i, s: _score(v.peers) }; }).sort(function (a, b) { return b.s - a.s || a.i - b.i; }).map(function (x) { return x.v; }); }   /* nx_default_pair */
     return views;
   }
 

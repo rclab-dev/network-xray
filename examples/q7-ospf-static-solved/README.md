@@ -47,11 +47,11 @@ sudo containerlab destroy -t examples/q7-ospf-static-solved/q7.clab.yml --cleanu
 ## Troubleshooting
 | Symptom | Fix |
 |---|---|
-| `address already in use` | another graph is on the port: add a port (`./demo.sh <lab.clab.yml> 8081`; release package: `PORT=50081 ./run.sh`) or stop it |
-| deploy says the lab `already exists` | `./stop.sh` (or `containerlab destroy -t *.clab.yml --cleanup`) |
+| `address already in use` / `port … is already in use` | another graph is on the port: add a port (`./demo.sh <lab.clab.yml> 8081`; release package: `PORT=50081 ./run.sh`) or stop it |
+| deploy says the lab `already exists` | from the repository: `sudo containerlab destroy -t examples/q7-ospf-static-solved/q7.clab.yml --cleanup` · release package: `./stop.sh` |
 | `http://…:8080/xray-core.js` returns HTML | normal — containerlab graph serves files under `/static/` |
 | `permission denied` from docker | add your user to the `docker` group, log in again |
-| a collector is left after stopping | `pkill -f clab-xray-collect.js`, then `./stop.sh` |
+| a collector is left after stopping | `pkill -f clab-xray-collect.js`, then remove the lab (from the repository: `sudo containerlab destroy -t examples/q7-ospf-static-solved/q7.clab.yml --cleanup` · release package: `./stop.sh`) |
 
 ## Answer and explanation
 This package gives you the solved lab and the X-Ray view. **Hints and the explanation are on RouteCrushLab** — use the "Solve it on RouteCrushLab (guest)" button (no account needed).
@@ -107,11 +107,11 @@ sudo containerlab destroy -t examples/q7-ospf-static-solved/q7.clab.yml --cleanu
 ## 困ったとき
 | 症状 | 対処 |
 |---|---|
-| `address already in use` | 別の graph がそのポートを使っている: 末尾にポートを付ける (`./demo.sh <lab.clab.yml> 8081`・リリースのパッケージなら `PORT=50081 ./run.sh`) か、それを止める |
-| deploy で `already exists` | `./stop.sh`(だめなら `containerlab destroy -t *.clab.yml --cleanup`) |
+| `address already in use` / `port … is already in use` | 別の graph がそのポートを使っている: 末尾にポートを付ける (`./demo.sh <lab.clab.yml> 8081`・リリースのパッケージなら `PORT=50081 ./run.sh`) か、それを止める |
+| deploy で `already exists` | リポジトリなら: `sudo containerlab destroy -t examples/q7-ospf-static-solved/q7.clab.yml --cleanup`・リリースのパッケージなら: `./stop.sh` |
 | `http://…:8080/xray-core.js` が HTML になる | 正常。containerlab graph は部品を `/static/` の下で配る |
 | docker で `permission denied` | ユーザを `docker` グループに入れてログインし直す |
-| 止めた後に収集プロセスが残る | `pkill -f clab-xray-collect.js` → `./stop.sh` |
+| 止めた後に収集プロセスが残る | `pkill -f clab-xray-collect.js` のあとラボを消す(リポジトリなら: `sudo containerlab destroy -t examples/q7-ospf-static-solved/q7.clab.yml --cleanup`・リリースのパッケージなら: `./stop.sh`) |
 
 ## 答えと解説
 このパッケージは「直したラボ」と X-Ray の画面です。**ヒントと解説は RouteCrushLab にあります** — 問題カードの「RouteCrushLab で解く (guest)」から(アカウント不要)。

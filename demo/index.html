@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBmMTMxOCIvPgogIDxlbGxpcHNlIGN4PSIxNiIgY3k9IjguNSIgcng9IjcuNSIgcnk9IjIuOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxsaW5lIHgxPSI4LjUiIHkxPSI4LjUiIHgyPSI4LjUiIHkyPSIyMy41IiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGxpbmUgeDE9IjIzLjUiIHkxPSI4LjUiIHgyPSIyMy41IiB5Mj0iMjMuNSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxwYXRoIGQ9Ik04LjUgMjMuNSBhNy41IDIuOCAwIDAgMCAxNSAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMy40IiBmaWxsPSIjMzlmZjE0Ii8+Cjwvc3ZnPgo=">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <!--
   xray-graph.html — a drop-in containerlab graph template.
@@ -254,10 +255,10 @@ window.__xrayGraphBoot = function () {
   // (window.LIVE_STATES) next to the assets. Load it from the working base, ignore if absent
   // (the graph then uses the topology-derived synthetic scaffold).
   function withStates(base, done){
-    var s = document.createElement('script');
-    s.src = base + 'xray-states.js';
-    s.onload = done; s.onerror = done;   // optional; 404/HTML is fine
-    document.head.appendChild(s);
+    // nx_demo_no_states_fetch: this is a RECORDED replay — the driver at the bottom seeds window.LIVE_STATES
+    // from the baked-in FRAMES, so a live xray-states.js is never needed here. Skip loading it (no console 404
+    // on Pages, and a stray xray-states.js next to the page can't override the recording). Same as index-bgp-lp.html.
+    done();
   }
   function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
   // Live mode (opt-in): only when the collector ran with --watch (it sets window.LIVE_WATCH) do we

@@ -3069,7 +3069,7 @@ function _xrayOspfRtSummaryLines(s) {
   var _ifsR = s.interfaces || {};
   Object.keys(_ifsR).forEach(function (ifn) {
     var info = _ifsR[ifn] || {};
-    lines.push({ text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>" });
+    lines.push({ text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + "</span>" });
   });
 
   lines = lines.map(function (_l) { if (_l && typeof _l.text === "string") { _l.text = _l.text.replace(/^&gt; /, "\u30fb ").replace(/^> /, "\u30fb "); } return _l; });
@@ -3399,7 +3399,7 @@ function xrayTriDeepLines(s, opts) {
   Object.keys(ifaces).forEach(function(ifn) {
     var info = ifaces[ifn];
     lines.push({
-      text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>"
+      text: "> " + ifn + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + "</span>"
     });
   });
   if (rr.resolved) {
@@ -3530,7 +3530,7 @@ function xrayBgpDeepLines(s, opts) {
     var info = ifaces[name];
     if (!info.up && !info.ip) return;
     lines.push({
-      text: "> " + name + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + "</span>"
+      text: "> " + name + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + "</span>"
     });
   });
   var init = window._xrayInitialState || s;

@@ -199,7 +199,7 @@ scenario needs; everything is optional and defaults sensibly.
 
 | Field | Type | Meaning / 意味 |
 |---|---|---|
-| `interfaces` | object | `{ "eth0": { up: true, ip: "10.202.0.20/24" }, … }`. Per-interface link state + address. IF ごとのリンク状態 + アドレス。 |
+| `interfaces` | object | `{ "eth0": { up: true, ip: "10.202.0.20/24" }, … }`. Per-interface link state + address (`ip: ""` when the interface has no address; an unnumbered interface that borrows a loopback /32 also has `unnumbered: true`). IF ごとのリンク状態 + アドレス (アドレスの無い IF は `ip: ""`・ループバックの /32 を借りる unnumbered の IF は `unnumbered: true` も付く)。 |
 | `wan_iface` | string | Name of the uplink/WAN interface. 上流(WAN)IF 名。 |
 | `lan_iface` | string | Name of the downlink/LAN interface. 下流(LAN)IF 名。 |
 | `sv_link_up` | boolean | Source/server-side link up (for server-origin pings). 送信元(サーバ)側リンクの up。 |

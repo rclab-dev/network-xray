@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBmMTMxOCIvPgogIDxlbGxpcHNlIGN4PSIxNiIgY3k9IjguNSIgcng9IjcuNSIgcnk9IjIuOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxsaW5lIHgxPSI4LjUiIHkxPSI4LjUiIHgyPSI4LjUiIHkyPSIyMy41IiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGxpbmUgeDE9IjIzLjUiIHkxPSI4LjUiIHgyPSIyMy41IiB5Mj0iMjMuNSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxwYXRoIGQ9Ik04LjUgMjMuNSBhNy41IDIuOCAwIDAgMCAxNSAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMy40IiBmaWxsPSIjMzlmZjE0Ii8+Cjwvc3ZnPgo=">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <!--
   xray-graph.html — a drop-in containerlab graph template.
@@ -301,6 +302,23 @@ window.__xrayGraphBoot = function () {
     s.onload = done; s.onerror = done;   // optional; 404/HTML is fine
     document.head.appendChild(s);
   }
+  // nx_compose_wait_states: no collected state yet (e.g. the page opened on GitHub Pages, or before the collector
+  // wrote its first xray-states.js) -> don't fall back to the built-in sample; say how to start the demo, keep
+  // checking every 3 s and reload once real state arrives.
+  function noStates(){ return !window.LIVE_STATES || Object.keys(window.LIVE_STATES).length === 0; }
+  function waitForStates(base){
+    var e = document.getElementById('err'); e.style.display = 'block';
+    e.innerHTML = 'No live state yet — this page belongs to the <b>docker compose demo</b>. Run <code>docker compose up</code> in '
+      + '<code>demo/compose-bgp-lp/</code> and open <code>http://localhost:8080/</code>; the picture appears by itself once the collector writes the state.'
+      + '<br>まだ状態がありません — このページは docker compose のデモです。<code>demo/compose-bgp-lp/</code> で <code>docker compose up</code> を実行して '
+      + '<code>http://localhost:8080/</code> を開いてください (状態が書かれると自動で表示されます)。';
+    if (/\.github\.io$/.test(location.hostname)) return;   // GitHub Pages: no collector there -> show the note only, don't poll
+    setInterval(function(){
+      var s = document.createElement('script'); s.src = base + 'xray-states.js?t=' + (+new Date());
+      s.onload = function(){ s.remove(); if (!noStates()) location.reload(); }; s.onerror = function(){ s.remove(); };
+      document.head.appendChild(s);
+    }, 3000);
+  }
   function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
   // Live mode (opt-in): only when the collector ran with --watch (it sets window.LIVE_WATCH) do we
   // poll xray-states.js from the resolved base. Change-detection skips a redraw when nothing moved
@@ -365,8 +383,8 @@ window.__xrayGraphBoot = function () {
   // try the clab-graph base (/static/) first, then fall back to the page-relative base (Pages);
   // once the deps resolve on a base, load the optional live states from that same base, boot, poll.
   loadSeq('static/', function(){
-    if (ready()) { initSkin('static/'); withStates('static/', function(){ boot(); startLivePoll('static/'); }); }
-    else loadSeq('', function(){ initSkin(''); withStates('', function(){ boot(); startLivePoll(''); }); });
+    if (ready()) { initSkin('static/'); withStates('static/', function(){ if (noStates()) return waitForStates('static/'); boot(); startLivePoll('static/'); }); }
+    else loadSeq('', function(){ initSkin(''); withStates('', function(){ if (noStates()) return waitForStates(''); boot(); startLivePoll(''); }); });
   });
 })();
 </script>

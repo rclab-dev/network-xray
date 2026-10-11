@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBmMTMxOCIvPgogIDxlbGxpcHNlIGN4PSIxNiIgY3k9IjguNSIgcng9IjcuNSIgcnk9IjIuOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxsaW5lIHgxPSI4LjUiIHkxPSI4LjUiIHgyPSI4LjUiIHkyPSIyMy41IiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGxpbmUgeDE9IjIzLjUiIHkxPSI4LjUiIHgyPSIyMy41IiB5Mj0iMjMuNSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxwYXRoIGQ9Ik04LjUgMjMuNSBhNy41IDIuOCAwIDAgMCAxNSAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMy40IiBmaWxsPSIjMzlmZjE0Ii8+Cjwvc3ZnPgo=">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <!--
   xray-graph.html — a drop-in containerlab graph template.
@@ -40,6 +41,7 @@
   #topo{display:none}.xray-deep-engine{min-height:420px}
   .err{display:none;margin:10px 0;padding:10px 12px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px}
 </style>
+<style>/* nx_demo_signature_default: chrome accent = X-Ray teal, same as demo/index.html */ :root{--rc-accent:#4dd0e1 !important}</style>
 </head>
 <body class="is-xray-mode">
 <style>#nx-mnote{display:none}@media(max-width:760px){body{overflow-x:auto}#nx-mnote{display:block;position:fixed;left:8px;right:8px;bottom:8px;z-index:10000;background:#10202c;border:1px solid #26c6da;border-radius:6px;color:#cfe8ee;font:11.5px/1.35 -apple-system,Segoe UI,Roboto,sans-serif;padding:6px 10px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.5)}}</style><div id="nx-mnote">📱 Wide DeepDive — scroll sideways, or open on a desktop for the full side-by-side view.</div>
@@ -287,9 +289,19 @@ window.__xrayGraphBoot = function () {
   }
   // This demo lives in /demo/ and reuses the published OSS engine one level up (no duplicated
   // engine, no backend) — load from '../' first, fall back to the page-relative base just in case.
+  // nx_demo_signature_default: same as demo/index.html — default to the "signature" skin unless the viewer
+  // chose one (stored), without persisting it; also points "Open full editor" at skin.html on the resolved base.
+  function initSkin(base){
+    if (!window.XraySkin) return;
+    window._xraySkinEditorUrl = base + 'skin.html';
+    try {
+      var stored = window.localStorage && window.localStorage.getItem(window.XraySkin.STORAGE_KEY);
+      if (!stored) window.XraySkin.apply(window.XraySkin.presetById('signature'));
+    } catch(e){ try { window.XraySkin.apply(window.XraySkin.presetById('signature')); } catch(_){} }
+  }
   loadSeq('../', function(){
-    if (ready()) { window._xraySkinEditorUrl = '../skin.html'; withStates('../', function(){ boot(); startLivePoll('../'); }); }
-    else loadSeq('', function(){ window._xraySkinEditorUrl = 'skin.html'; withStates('', function(){ boot(); startLivePoll(''); }); });
+    if (ready()) { initSkin('../'); withStates('../', function(){ boot(); startLivePoll('../'); }); }
+    else loadSeq('', function(){ initSkin(''); withStates('', function(){ boot(); startLivePoll(''); }); });
   });
 })();
 </script>

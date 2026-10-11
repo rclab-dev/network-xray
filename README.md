@@ -6,7 +6,7 @@
 - Uses your own Codespaces quota (personal accounts: 120 core-hours/month free; this demo asks for a 4-core machine). **Delete the codespace when you are done.**
 - Container-based nodes only (FRR etc.) — Codespaces has no nested virtualization.
 
-**See *why* a router chose its path.** `network-xray` turns a router's live state (`show` / JSON) into a picture of the forwarding decision — which route won, which lost, and why. Zero-install, browser-only.
+**See *why* a router chose its path.** `network-xray` turns a router's live state (`show` / JSON) into a picture of the forwarding decision — which route won, which lost, and why. The gallery pages (below) are zero-install, browser-only.
 
 *English | [日本語](#日本語)*
 
@@ -119,7 +119,7 @@ Use `ospf` instead of `bgp` for an OSPF-only lab. `--exclude-mgmt` takes the man
 |---|---|
 | `containerlab: command not found` | Install it: <https://containerlab.dev/install/> (one line: `bash -c "$(curl -sL https://get.containerlab.dev)"`). |
 | `permission denied` / asks for a password | containerlab needs root: `demo.sh` runs it with `sudo`. If your user is in the `clab_admins` and `docker` groups, run `SUDO= ./demo.sh …`. |
-| `address already in use` | Another graph is on 8080. Add a port: `./demo.sh <lab.clab.yml> 8081`, or stop the other one. |
+| `address already in use` / `port 8080 is already in use` | Another graph is on 8080. Add a port: `./demo.sh <lab.clab.yml> 8081`, or stop the other one. |
 | The page does not open from another PC | Use the machine's IP (`http://<host-ip>:8080/`), and allow the port in its firewall. On WSL2, open `http://localhost:8080/` from Windows. |
 | The first start is slow | It pulls the FRR image once — **FRR 8.4** from Docker Hub `frrouting/frr`, pinned by digest so everyone runs the same build (moving to FRR 10.x from quay.io is planned). You can pull it beforehand: `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce`. |
 | The collector feels heavy on a large lab (5+ nodes) | On larger labs (5+ nodes), if the collector feels heavy, add `--interval 2` (about 5 s to update instead of about 3 s). |
@@ -128,6 +128,8 @@ Use `ospf` instead of `bgp` for an OSPF-only lab. `--exclude-mgmt` takes the man
 | A router shows nothing / routes do not appear | Give it 30–60 seconds (OSPF/BGP need time to come up). If it stays empty, check `docker ps` (the router is running) and `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`. |
 | A previous lab is still running | `sudo containerlab inspect --all` lists the labs; `sudo containerlab destroy -t <lab.clab.yml> --cleanup` removes one. |
 | WSL2 | Docker Desktop with the WSL2 backend (or Docker inside the WSL2 distro) is fine. Run everything inside the Linux shell, not in PowerShell. |
+| My fix is gone after restarting the lab | A fix lives only inside the running containers. Redeploying the lab (`./demo.sh`, `containerlab deploy`) starts again from the broken config — and restarting only FRR inside a router can bring the original config back too, even after `write memory`. |
+| A lab that advertises a BGP default route (e.g. netlab): `0.0.0.0/0` is never selected | Expected. The router's management interface brings its own default route, which beats a BGP-learned `0.0.0.0/0`, so the router really forwards with the management route — X-Ray shows what the routing table actually uses. |
 
 **Coming from Cisco IOS?** The routers are FRR. Common differences:
 
@@ -183,7 +185,7 @@ Open `index.html` for the landing, or each directly:
 | **`clab-paste.html`** | Paste a **containerlab** `.clab.yml` → it maps your lab's nodes & links to an X-Ray diagram (OSPF state, fault, DeepDive). *Small FRR labs: 2–3 nodes (link / path / triangle).* |
 | **`srl-paste.html`** | Paste a **Nokia SR Linux** node's `info from state … \| as json` → it draws that node's OSPF/BGP DeepDive. *Same X-Ray view as FRR, from real `sr_cli` state.* |
 | **`xray-graph.html`** | A **containerlab `graph --template`** drop-in: render your *live* lab as a topology view of **any size**, then click any node for its X-Ray DeepDive. *See [containerlab graph template](#containerlab-graph-template) below.* |
-| **`ccna-ospf.html`** | Step the 7 OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (RFC 2328 §10.1 accurate.) |
+| **`ccna-ospf.html`** | Step the OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (RFC 2328 §10.1 accurate.) |
 | **`bgp-session.html`** | Step the eBGP FSM (Idle→Established) between two ASes. DeepDive shows the BGP processor and the session tunnel; at Established it learns `203.0.113.0/24`. (RFC 4271 §8.) |
 | **`noc-live.html`** | Wire `startPolling()` to telemetry; the view updates itself in real time. |
 | **`failover.html`** | A redundant OSPF triangle: cut the shortest path → detour, cut the backup → isolation. |
@@ -484,7 +486,7 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 **ブラウザで試す** — 一番上の **Open in GitHub Codespaces** ボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。
 - ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。** コンテナのノード (FRR など) だけ動きます (Codespaces では入れ子の仮想化ができないため)。
 
-**ルータが *なぜ* その経路を選んだかを見る。** `network-xray` は、ルータの生きた状態(`show` / JSON)を転送判断の絵にします — どの経路が勝ち、どれが負け、なぜか。インストール不要・ブラウザだけ。
+**ルータが *なぜ* その経路を選んだかを見る。** `network-xray` は、ルータの生きた状態(`show` / JSON)を転送判断の絵にします — どの経路が勝ち、どれが負け、なぜか。ギャラリーはインストール不要・ブラウザだけ。
 
 `network-xray` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
 **筋道立てて考えられる絵**にします — パケットがどこへ向かうか、なぜ経路が在る(または無い)のか、
@@ -571,7 +573,7 @@ OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を 
 |---|---|
 | `containerlab: command not found` | 入れる: <https://containerlab.dev/install/> (1 行で: `bash -c "$(curl -sL https://get.containerlab.dev)"`)。 |
 | `permission denied` / パスワードを聞かれる | containerlab は root が要る。`demo.sh` は `sudo` で動かす。ユーザが `clab_admins` と `docker` のグループにいれば `SUDO= ./demo.sh …`。 |
-| `address already in use` | 別の graph が 8080 を使っている。末尾にポート: `./demo.sh <lab.clab.yml> 8081`、または前のものを止める。 |
+| `address already in use` / `port 8080 is already in use` | 別の graph が 8080 を使っている。末尾にポート: `./demo.sh <lab.clab.yml> 8081`、または前のものを止める。 |
 | 別の PC から開けない | そのマシンの IP で開く (`http://<IP>:8080/`)・ファイアウォールでポートを許可。WSL2 なら Windows から `http://localhost:8080/`。 |
 | 初回の起動が遅い | FRR のイメージを 1 回取得している — Docker Hub の `frrouting/frr` の **FRR 8.4** を digest で固定 (誰でも同じ版で動く・quay.io の FRR 10.x への移行は今後)。先に `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce` しておくと早い。 |
 | ノードの多いラボで collector が重い (5 台以上) | ノードの多いラボ (5 台以上) で collector が重い時は `--interval 2` を付けてください (反映まで約 3 秒 → 約 5 秒)。 |
@@ -580,6 +582,8 @@ OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を 
 | ルータの中が空 / 経路が出ない | 30〜60 秒待つ (OSPF/BGP は立ち上がりに時間がかかる)。空のままなら `docker ps` (ルータが動いているか) と `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`。 |
 | 前のラボが残っている | `sudo containerlab inspect --all` で一覧、`sudo containerlab destroy -t <lab.clab.yml> --cleanup` で消す。 |
 | WSL2 | Docker Desktop (WSL2 バックエンド) か WSL2 の中の Docker で動く。PowerShell ではなく Linux のシェルで打つ。 |
+| ラボを立て直したら直しが消えた | 直しは動いているコンテナの中だけに残る。ラボを立て直す(`./demo.sh`・`containerlab deploy`)と壊れた初期の設定から始まる。ルータの中で FRR だけを立て直しても、`write memory` の後でも初期の設定に戻ることがある。 |
+| BGP で既定経路を流すラボ(netlab など)で `0.0.0.0/0` が選ばれない | 正常。ルータの管理インターフェースに既定経路があり、BGP で受けた `0.0.0.0/0` より強いので、ルータは実際に管理網の経路で転送する — X-Ray は経路表が実際に使っている方を出す。 |
 
 **Cisco IOS に慣れている人へ:** ルータは FRR です。よくある違い:
 
@@ -626,7 +630,7 @@ view.openDeepDive();                                      // ルータの中へ
 | **`clab-paste.html`** | **containerlab** の `.clab.yml` を貼る → ラボのノード/リンクを X-Ray 図にマップ(OSPF 状態・障害・DeepDive)。*小規模 FRR ラボ: 2〜3 ノード(link / path / triangle)。* |
 | **`srl-paste.html`** | **Nokia SR Linux** のノードの `info from state … \| as json` を貼る → そのノードの OSPF/BGP の DeepDive を描画。*FRR と同じ X-Ray の見た目を、実際の `sr_cli` の状態から。* |
 | **`xray-graph.html`** | **containerlab `graph --template`** の drop-in:稼働中ラボを**任意サイズ**の全体図で描き、ノードをクリックでそのノードの X-Ray DeepDive。*下記 [containerlab graph テンプレート](#containerlab-graph-テンプレート) 参照。* |
-| **`ccna-ospf.html`** | OSPF の7状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 準拠)。 |
+| **`ccna-ospf.html`** | OSPF のネイバー状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 準拠)。 |
 | **`bgp-session.html`** | eBGP の FSM(Idle→Established)を2つの AS 間で1歩ずつ。DeepDive で BGP プロセッサとセッショントンネルを表示し、Established で `203.0.113.0/24` を学習(RFC 4271 §8)。 |
 | **`noc-live.html`** | `startPolling()` をテレメトリに繋ぐと、ビューが自分でリアルタイム更新。 |
 | **`failover.html`** | 冗長 OSPF 三角形:最短路を切る→迂回、バックアップも切る→孤立。 |
