@@ -48,7 +48,8 @@ elif grep -qsE '^router ospf' "$LABDIR"/*/frr.conf; then PROTO=ospf; fi
 PJ="$HERE/problem.json"; PJ_MADE=""; CPID=""
 pj_ours() { [ -L "$PJ" ] && case "$(readlink "$PJ")" in "$HERE"/examples/*/problem.json) return 0 ;; esac; return 1; }
 pj_cleanup() { [ -n "$PJ_MADE" ] && [ -L "$PJ" ] && [ "$(readlink "$PJ")" = "$PJ_MADE" ] && rm -f "$PJ"; return 0; }
-trap 'pj_cleanup; [ -n "$CPID" ] && kill $CPID 2>/dev/null; echo; echo "stopped. remove the lab with:  sudo containerlab destroy -t $YML --cleanup"' EXIT
+# nx_demo_trap_true: set +e first - a failing step (e.g. the collector already ended on Ctrl-C) must not cut the clean-up short
+trap 'set +e; pj_cleanup; [ -n "$CPID" ] && kill $CPID 2>/dev/null || true; echo; echo "stopped. remove the lab with:  sudo containerlab destroy -t $YML --cleanup"' EXIT
 if pj_ours; then rm -f "$PJ"; fi   # left by an earlier demo.sh that was killed
 if [ -f "$LABDIR/problem.json" ]; then
   if [ -e "$PJ" ] || [ -L "$PJ" ]; then echo "==> $PJ was not made by demo.sh - left as is (the problem band shows that file)"
