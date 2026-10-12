@@ -99,7 +99,7 @@ cd network-xray
    docker exec -it clab-q21-bgp-lp-r1 vtysh
    ```
 5. Compare with the solved version: stop (Ctrl-C) and run `./demo.sh examples/q21-bgp-lp-solved/q21.clab.yml`.
-6. Clean up: Ctrl-C, then `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup`.
+6. Clean up: Ctrl-C, then `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup` (if you also started the solved version: `sudo containerlab destroy -t examples/q21-bgp-lp-solved/q21.clab.yml --cleanup`).
 
 **More labs:** `examples/` has 21 problems (q1–q21, OSPF / BGP / static) plus one BGP best-path sample, each with a broken version and a `-solved` version, and a README (the problem, how to check it, how to start and stop). Run any of them the same way: `./demo.sh examples/<problem>/<file>.clab.yml`.
 No git? Download one problem as a folder from the **[Releases](https://github.com/rclab-dev/network-xray/releases/latest)** page and run `./run.sh` in it (opens on :50080).
@@ -112,6 +112,7 @@ node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-m
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 0.0.0.0:8080
 ```
 Use `ospf` instead of `bgp` for an OSPF-only lab. `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://<host>:8080/`. To stop: Ctrl-C, then `kill %1` for the collector.
+If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
 
 ## FAQ / Troubleshooting
 
@@ -554,7 +555,7 @@ cd network-xray
    docker exec -it clab-q21-bgp-lp-r1 vtysh
    ```
 5. 解決版と比べる: Ctrl-C で止めて `./demo.sh examples/q21-bgp-lp-solved/q21.clab.yml`。
-6. 片付け: Ctrl-C のあと `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup`。
+6. 片付け: Ctrl-C のあと `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup`。解決版も立てたなら `sudo containerlab destroy -t examples/q21-bgp-lp-solved/q21.clab.yml --cleanup` も。
 
 **ほかの例題:** `examples/` に 21 問 (q1〜q21・OSPF / BGP / static) と BGP の best path の見本 1 つ。各問に壊れた版と `-solved` の版、README (問題文・確かめ方・起動と停止) がある。どれも同じく `./demo.sh examples/<問>/<ファイル>.clab.yml` で動く。
 git を使わない場合は **[Releases](https://github.com/rclab-dev/network-xray/releases/latest)** から 1 問ずつのフォルダを取って、その中で `./run.sh` (:50080 で開く)。
@@ -567,6 +568,7 @@ node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-m
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 0.0.0.0:8080
 ```
 OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://<ホスト>:8080/` を開きます。止める時は Ctrl-C のあと `kill %1` (collector)。
+`<network-xray>` に `problem.json` が残っていたら (古い `demo.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
 
 ## よくある質問 / 困ったとき
 

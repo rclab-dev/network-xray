@@ -42,9 +42,18 @@ PROTO=static
 if grep -qsE '^router bgp' "$LABDIR"/*/frr.conf; then PROTO=bgp
 elif grep -qsE '^router ospf' "$LABDIR"/*/frr.conf; then PROTO=ospf; fi
 
-# the problem text band reads problem.json next to the page (repo root): link this lab's one
-rm -f "$HERE/problem.json"
-[ -f "$LABDIR/problem.json" ] && ln -s "$LABDIR/problem.json" "$HERE/problem.json"
+# the problem text band reads problem.json next to the page (repo root): link this lab's one.
+# nx_demo_pj_cleanup: demo.sh only touches a link it made (one into examples/ left by an earlier run, or the one made
+# now); a problem.json you put there yourself is left alone. The link is removed again when demo.sh stops.
+PJ="$HERE/problem.json"; PJ_MADE=""; CPID=""
+pj_ours() { [ -L "$PJ" ] && case "$(readlink "$PJ")" in "$HERE"/examples/*/problem.json) return 0 ;; esac; return 1; }
+pj_cleanup() { [ -n "$PJ_MADE" ] && [ -L "$PJ" ] && [ "$(readlink "$PJ")" = "$PJ_MADE" ] && rm -f "$PJ"; return 0; }
+trap 'pj_cleanup; [ -n "$CPID" ] && kill $CPID 2>/dev/null; echo; echo "stopped. remove the lab with:  sudo containerlab destroy -t $YML --cleanup"' EXIT
+if pj_ours; then rm -f "$PJ"; fi   # left by an earlier demo.sh that was killed
+if [ -f "$LABDIR/problem.json" ]; then
+  if [ -e "$PJ" ] || [ -L "$PJ" ]; then echo "==> $PJ was not made by demo.sh - left as is (the problem band shows that file)"
+  else ln -s "$LABDIR/problem.json" "$PJ" && PJ_MADE="$LABDIR/problem.json"; fi
+fi
 
 echo "==> deploying lab '$LABNAME' ($PROTO) ..."
 $SUDO containerlab deploy -t "$YML" --reconfigure
@@ -70,8 +79,7 @@ set -e
 
 echo "==> collecting router state every second (the page follows the lab by itself) ..."
 node "$HERE/clab-xray-collect.js" "$YML" "$HERE" "$PROTO" --exclude-mgmt --watch &
-CPID=$!
-trap 'kill $CPID 2>/dev/null; echo; echo "stopped. remove the lab with:  sudo containerlab destroy -t $YML --cleanup"' EXIT
+CPID=$!   # the EXIT trap (set above, nx_demo_pj_cleanup) stops it and removes the problem.json link
 sleep 8
 
 echo ""
