@@ -196,8 +196,9 @@ Already running a **[containerlab](https://containerlab.dev)** lab? `xray-graph.
 `containerlab graph --template`. It renders your live topology as a topology view of **any size** (the
 layout is commodity — it doesn't try to out-draw NeXt UI), and then **clicking any node opens
 that node's X-Ray DeepDive**: OSPF/BGP adjacencies, the LSDB (every prefix the node learned — its own
-networks and the remote loopbacks, own vs learned), and the route it installs. Nodes with 3+ neighbors
-get a peer-pair selector (the cylinder shows one adjacency pair at a time).
+networks and the remote loopbacks, own vs learned), and the route it installs. However many neighbors
+a node has, the DeepDive draws **all of its links at once**, each tunnel coming from the direction that
+neighbor sits in the topology view (link labels are shown only where they fit).
 
 ![containerlab deploy, then `graph --template xray-graph.html` — click any node to look inside the router (OSPF/BGP, LSDB, installed route), live. Recorded from a real containerlab/FRR lab.](docs/clab-workflow.gif)
 
@@ -640,8 +641,8 @@ view.openDeepDive();                                      // ルータの中へ
 すでに **[containerlab](https://containerlab.dev)** でラボを動かしているなら、`xray-graph.html` が
 `containerlab graph --template` の drop-in です。稼働中トポロジを**任意サイズ**の全体図で描き
 (レイアウトは commodity — NeXt UI と描画品質を競わない)、**ノードをクリックするとその
-ノードの X-Ray DeepDive** が開きます:OSPF/BGP 隣接・LSDB・インストールされる経路。隣接3+のノードは
-peer-pair セレクタが出ます(円柱は隣接1対ずつ表示)。
+ノードの X-Ray DeepDive** が開きます:OSPF/BGP 隣接・LSDB・インストールされる経路。隣が何台あっても、
+そのノードの**リンクを全部いっぺんに**描き、どのトンネルも全体図でその相手がいる向きから入ります(リンクの名前は置ける所だけに出します)。
 
 ```
 containerlab graph \

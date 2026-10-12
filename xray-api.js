@@ -257,6 +257,9 @@
   function _bgpIsIos() { return !!(_lastState && /^ios/i.test(String(_lastState.nos || ''))); }
   function _bgpOrderLegend(primaryLabel) {
     var ios = _bgpIsIos();
+    /* nx_bgp_legend_nos: only the two orders we know (FRR / IOS-XE); another NOS (e.g. srlinux) gets no legend rather than a wrong one */
+    var _nos = String((_lastState && _lastState.nos) || '');
+    if (!ios && _nos && !/^frr/i.test(_nos)) return '';
     var parts = (ios ? _BGP_IOS_ORDER : _BGP_FRR_ORDER).map(function (lbl) {
       return (primaryLabel && lbl === primaryLabel) ? '<span style="color:#ffd54f;font-weight:700">' + lbl + '</span>' : lbl;
     });

@@ -46,6 +46,9 @@
     miss.forEach(function (L, i) { L.angle = -Math.PI / 2 + (i + 1) * (Math.PI / (miss.length + 1)); });
     // legacy-pin: generalized by real link count (zero regression, opt.legacyPin). 1 link (edge node) = right 0deg
     //   (no phantom left link) / 2 links (transit node) = legacy L/R (180deg/0deg). 3+ = radial (not pinned).
+    // nx_de_parallel: a 2nd/3rd link to the same peer is turned +12 / -12 / +24 ... degrees (same spacing as the Standard)
+    var _pSeen = {};
+    links.forEach(function(L) { if (L.angle == null || !L.peer) return; var k = _pSeen[L.peer] = _pSeen[L.peer] == null ? 0 : _pSeen[L.peer] + 1; if (k) { L.angle += (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 12 * Math.PI / 180; L.pk = k; } });
     if (opt.legacyPin) {
       if (links.length === 1) links[0].angle = 0;
       else if (links.length === 2) { links[0].angle = Math.PI; links[1].angle = 0; }
@@ -119,7 +122,7 @@
         var base = pt(a, R), lx = (base[0] + _co * 8).toFixed(1);
         var anc = _co > 0.35 ? 'start' : (_co < -0.35 ? 'end' : 'middle');
         var _lyR = (shape === 'rect' ? CY + HH : CY + RER) + 16;   // 16px below the box/circle bottom edge
-        s += '<text x="' + lx + '" y="' + _lyR.toFixed(1) + '" fill="var(--xto-link,#00e5ff)" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + L.iface + (L.peer ? ' - ' + L.peer : '') + '</text>';
+        s += '<text x="' + lx + '" y="' + (_lyR + (L.pk || 0) * 16).toFixed(1) + '" fill="var(--xto-link,#00e5ff)" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + L.iface + (L.peer ? ' - ' + L.peer : '') + '</text>';
       }
     });
 

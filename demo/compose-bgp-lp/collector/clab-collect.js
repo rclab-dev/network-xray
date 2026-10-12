@@ -101,13 +101,15 @@ function parseInterfaces(j) {
     else if (d.administrativeStatus) up = /up/i.test(d.administrativeStatus);
     else if (d.linkDetection != null || d.flags) up = /up/i.test(d.flags || '');
     var addr = '', pfx = 24;
-    if (Array.isArray(d.ipAddresses) && d.ipAddresses[0]) {
-      var a0 = d.ipAddresses[0].address || d.ipAddresses[0];
+    // nx_collect_ipv4_only: the first IPv4 address (FRR may list an IPv6 link-local fe80::… first, or only that)
+    var v4 = (Array.isArray(d.ipAddresses) ? d.ipAddresses : []).filter(function (a) { return String((a && a.address) || a || '').indexOf(':') < 0; })[0];
+    if (v4) {
+      var a0 = v4.address || v4;
       if (typeof a0 === 'string' && a0.indexOf('/') >= 0) { addr = a0.split('/')[0]; pfx = +a0.split('/')[1] || 24; }
       else addr = a0;
     }
     // nx_collect_unnumbered: FRR marks an unnumbered iface (borrowing a loopback /32) with ipAddresses[0].unnumbered
-    var unn = !!(Array.isArray(d.ipAddresses) && d.ipAddresses[0] && d.ipAddresses[0].unnumbered);
+    var unn = !!(v4 && v4.unnumbered);
     out[ifn] = unn ? { up: up, ip: addr, prefix: pfx, unnumbered: true } : { up: up, ip: addr, prefix: pfx };
   });
   return out;
@@ -144,7 +146,7 @@ function parseBgpSummary(j) {
     var p = peers[ip] || {};
     var st = p.state || p.peerState || '';
     var rec = { ip: ip, state: st, established: /establ/i.test(st), remoteAs: p.remoteAs, localAs: p.localAs, ibgp: (p.remoteAs != null && p.localAs != null && p.remoteAs === p.localAs),
-      upDown: p.peerUptime, pfxRcd: p.pfxRcd };   /* nx_bgp_nbr_detail (2026-10-06): Up/Down + PfxRcd for the RE panel neighbor fold */
+      upDown: p.peerUptime, pfxRcd: p.pfxRcd, hostname: p.hostname || '' };  /* nx_collect_peer_map: the peer's hostname (BGP hostname capability) */   /* nx_bgp_nbr_detail (2026-10-06): Up/Down + PfxRcd for the RE panel neighbor fold */
     out.byIp[ip] = rec; out.list.push(rec);
   });
   return out;
@@ -227,13 +229,33 @@ function buildState(opts) {
     bgpSum.list.forEach(function (b) {
       var peerName = null;
       // find the directly-connected iface whose subnet contains b.ip, map via clab link
-      var connRoute = routes.filter(function (r) { return r.protocol === 'connected'; })
+      // nx_collect_peer_map: never match the loopback's own connected /32 (a session to a remote lo is not on lo)
+      var connRoute = routes.filter(function (r) { return r.protocol === 'connected' && !(r.nexthops[0] && /^lo/i.test(r.nexthops[0].iface)); })
         .filter(function (r) { return _sameSubnet(r.prefix, b.ip); })[0];
       if (connRoute && connRoute.nexthops[0]) peerName = ifaceToPeer[connRoute.nexthops[0].iface];
+      // not on a connected link (iBGP over lo / multihop): the peer's own hostname from the FRR summary (= the clab node name;
+      // a non-adjacent peer, e.g. an RR client two hops away, simply has no link). Without a hostname: the old order-based guess.
+      // a link whose iface is down has no connected route, but its address is still on the iface (show interface) = the session is on that link
+      var _ifOn = connRoute ? '' : (Object.keys(ifFallback).filter(function (f) { var d = ifFallback[f] || {}; return !/^lo/i.test(f) && d.ip && _sameSubnet(d.ip + '/' + (d.prefix || 24), b.ip); })[0] || '');
+      if (!peerName && _ifOn) peerName = ifaceToPeer[_ifOn];
+      // the hostname as the clab node name: an adjacent node's own spelling when it matches ignoring case, else the short name (no domain)
+      if (!peerName && !connRoute && !_ifOn && b.hostname) {
+        var _hs = String(b.hostname).split('.')[0];
+        peerName = (adj.filter(function (a) { return String(a.peer).toLowerCase() === _hs.toLowerCase() || String(a.peer).toLowerCase() === String(b.hostname).toLowerCase(); })[0] || {}).peer || _hs;
+      }
       if (!peerName) peerName = adj[seq - 2] && adj[seq - 2].peer;
       if (!peerName) peerName = 'r' + (seq);
       seq++;
-      peers.push({ name: peerName, iface: (connRoute && connRoute.nexthops[0] && connRoute.nexthops[0].iface) || '', full: b.established, state: b.state, ip: b.ip });
+      /* nx_collect_peer_map: a session to an address reached by ROUTING (IGP/static, not connected) = iBGP over lo / multihop. Its packets go out
+         the route's exit iface(s): when an exit iface is a link TO THIS PEER, the session rides that link (row + bgp_over_lo); otherwise
+         (exit via another node / non-adjacent peer) it owns no link (iface '' and no fill-in from --adj). Not on a link subnet and no route
+         at all (e.g. the local link IP was removed) = unknown -> the old behaviour (no mark). */
+      var _loRt = (connRoute || _ifOn) ? null : routes.filter(function (r) { return r.selected && !/^(connected|local|kernel)$/.test(r.protocol) && r.prefix !== '0.0.0.0/0' && _sameSubnet(r.prefix, b.ip); })
+        .sort(function (x, y) { return (parseInt(y.prefix.split('/')[1], 10) || 0) - (parseInt(x.prefix.split('/')[1], 10) || 0); })[0] || null;
+      var _loExit = '';
+      if (_loRt) { var _ex = (_loRt.nexthops || []).map(function (h) { return h.iface; }); _loExit = (adj.filter(function (a) { return a.peer === peerName && _ex.indexOf(a.iface) >= 0; })[0] || {}).iface || ''; }
+      peers.push({ name: peerName, iface: (connRoute && connRoute.nexthops[0] && connRoute.nexthops[0].iface) || _ifOn || _loExit || '', full: b.established, state: b.state, ip: b.ip,
+        overLo: !!_loRt && !!_loExit, noLink: !!_loRt && !_loExit });
     });
   } else {
     nei.list.forEach(function (n) {
@@ -257,7 +279,7 @@ function buildState(opts) {
   // link iface never enters `interfaces` -> wan/lan fall back to eth0(mgmt)/lo -> wan!=lan -> a spurious
 
   peers.forEach(function (p) {
-    if (!p.iface) { var _ai = adj.filter(function (a) { return a.peer === p.name; })[0]; if (_ai && _ai.iface) p.iface = _ai.iface; }
+    if (!p.iface && !p.noLink) { var _ai = adj.filter(function (a) { return a.peer === p.name; })[0]; if (_ai && _ai.iface) p.iface = _ai.iface; }  /* nx_collect_peer_map: a routed session whose exit is not a link to this peer owns no link */
   });
 
   var fullCount = peers.filter(function (p) { return p.full; }).length;
@@ -294,6 +316,13 @@ function buildState(opts) {
       interfaces[p.iface] = { up: _pd.up !== false, ip: _ifIpStr(p.iface) };
     }
   });
+  // nx_collect_peer_map: every clab link iface too (a link with no OSPF and no BGP peer on it lost its UP/IP), when FRR knows it
+  adj.forEach(function (a) {
+    if (a.iface && !/^lo/i.test(a.iface) && !interfaces[a.iface] && (ifs[a.iface] || ifFallback[a.iface])) {
+      var _ad = ifs[a.iface] || ifFallback[a.iface];
+      interfaces[a.iface] = { up: _ad.up !== false, ip: _ifIpStr(a.iface) };
+    }
+  });
   // nx_collect_unnumbered: keep ip as is ("10.0.0.3/32") and flag the iface, so the page can say "(unnumbered)"
   Object.keys(interfaces).forEach(function (ifn) {
     if ((ifFallback[ifn] || {}).unnumbered && interfaces[ifn].ip) interfaces[ifn].unnumbered = true;
@@ -310,7 +339,7 @@ function buildState(opts) {
     routes.forEach(function (r) {
       var nh = (r.nexthops && r.nexthops[0]) || {};
       if (!nh.iface || nh.iface === 'lo') return;
-      var pl = parseInt((r.prefix || '').split('/')[1], 10); if (isNaN(pl)) return;
+      var pl = parseInt((r.prefix || '').split('/')[1], 10); if (isNaN(pl) || pl === 0) return;  /* nx_collect_peer_map */
       if (_sameSubnet(r.prefix, ip) && pl > bestLen) { best = nh.iface; bestLen = pl; }
     });
     return best;
@@ -334,7 +363,9 @@ function buildState(opts) {
     matched_prefix: chosen.prefix
   } : { target: '', resolved: false, protocol: '', out_iface: '', next_hop: '', matched_prefix: '' };
 
-  var primaryPeer = peers.filter(function (p) { return p.full; })[0] || peers[0] || {};
+  var _adjPeer = function (p) { return adj.some(function (a) { return a.peer === p.name; }); };  /* nx_collect_peer_map */
+  var primaryPeer = peers.filter(function (p) { return p.full && !p.noLink && _adjPeer(p); })[0]
+    || peers.filter(function (p) { return p.full; })[0] || peers[0] || {};
 
   // Area / hello timers for the DeepDive panel. A Full OSPF adjacency GUARANTEES matching area
   // and hello/dead timers (OSPF never reaches Full otherwise), so for a Full neighbor we can
@@ -538,7 +569,10 @@ function buildState(opts) {
   Object.keys(_area).forEach(function (k) { s[k] = _area[k]; });
   Object.keys(_hello).forEach(function (k) { s[k] = _hello[k]; });
 
+  var _keepUp = {};  /* nx_collect_keep_up: 2+ links/sessions to one peer -> an up one keeps the per-peer keys (was last-wins) */
   peers.forEach(function (p) {
+    if (_keepUp[p.name] && !p.full) return;
+    if (p.full) _keepUp[p.name] = true;
     s[p.name + '_has_full'] = p.full;
     s[p.name + '_iface'] = p.iface;
     s[p.name + '_neighbor_state'] = p.full ? 'Full' : (p.state || 'None');
@@ -550,7 +584,7 @@ function buildState(opts) {
   // (Full/2-Way/Init/Down) instead of echoing the BGP state. For a pure-OSPF lab they mirror the
   // primary (nei == the OSPF neighbors), so single-protocol output is unchanged in meaning.
   var _ospfByPeer = {};
-  nei.list.forEach(function (n) { var _pn = n.iface ? ifaceToPeer[n.iface] : null; if (_pn) _ospfByPeer[_pn] = n; });
+  nei.list.forEach(function (n) { var _pn = n.iface ? ifaceToPeer[n.iface] : null; if (_pn && !(_ospfByPeer[_pn] && _ospfByPeer[_pn].full && !n.full)) _ospfByPeer[_pn] = n; });  /* nx_collect_keep_up: a Full neighbor keeps <peer>_ospf_* */
   s.ospf_neighbor_state = nei.list.some(function (n) { return n.full; }) ? 'Full'
     : (nei.list[0] ? nei.list[0].state : (s.ospf_configured ? 'Down' : 'None'));
   peers.forEach(function (p) {
@@ -565,16 +599,45 @@ function buildState(opts) {
   if (proto === 'bgp' && s.ospf_configured) {
     var _ih = s.iface_hellos || {}, _ph = s.peer_hellos || {}, _psh = s.peer_sending_hellos || {};
     if (!Object.keys(_ih).length && !Object.keys(_ph).length && !Object.keys(_psh).length) {
-      peers.forEach(function (p) {
+      // nx_collect_peer_map: the clab links as well as the BGP peers (BGP peers over lo carry no link iface)
+      peers.map(function (p) { return { name: p.name, iface: p.iface }; })
+        .concat(adj.map(function (a) { return { name: a.peer, iface: a.iface }; })).forEach(function (p) {
         if (p.iface && ifs[p.iface] && !ifs[p.iface].passive) _ih[p.iface] = ifs[p.iface].hello || 10;  /* nx_ospf_passive_no_hello */
         var _on = _ospfByPeer[p.name];
         var _up = !!(_on && (_on.full || /^(full|loading|exchange|exstart|2-?way|init)/i.test(_on.state || '')));
+        if (_psh[p.name] === true) return;
         _psh[p.name] = _up;
-        if (_up) _ph[p.name] = (ifs[p.iface] && ifs[p.iface].hello) || 10;
+        if (_up) _ph[p.name] = (ifs[_on.iface] && ifs[_on.iface].hello) || (ifs[p.iface] && ifs[p.iface].hello) || 10;
       });
       s.iface_hellos = _ih; s.peer_hellos = _ph; s.peer_sending_hellos = _psh;
     }
   }
+
+  /* nx_peer_links (2026-10-11, DeepDive N tunnels): one row PER LINK (= local iface), additive.
+     The per-peer keys above (<peer>_iface / _has_full / _neighbor_state / _ospf_*) are keyed by the PEER NAME,
+     so two links to the same peer overwrite each other and a down 2nd link is never emitted. peer_links keeps
+     every topology link (--adj first: incl. IP-less / unused links), then live peers not in --adj. Loopback-only
+     sessions (iBGP over lo: iface "" / lo) own no link and are not rows. Old keys unchanged = RCL / 2-peer same. */
+  var _plRows = [], _plSeen = {};
+  var _plOspfByIf = {};
+  nei.list.forEach(function (n) { if (n.iface && !_plOspfByIf[n.iface]) _plOspfByIf[n.iface] = n; });
+  var _plPeerByIf = function (ifn) { return peers.filter(function (p) { return p.iface === ifn; })[0] || null; };
+  var _plAdd = function (ifn, peerName) {
+    if (!ifn || /^lo/i.test(ifn) || _plSeen[ifn]) return;
+    _plSeen[ifn] = true;
+    var _lp = _plPeerByIf(ifn), _lo = _plOspfByIf[ifn], _li = interfaces[ifn] || {};
+    _plRows.push({
+      iface: ifn, peer: peerName || (_lp && _lp.name) || '',
+      up: interfaces[ifn] ? _li.up !== false : !!_lp, ip: _li.ip || '',
+      full: !!(_lp && _lp.full), state: _lp ? (_lp.full ? 'Full' : (_lp.state || 'None')) : 'Down',
+      ospf_full: !!(_lo && _lo.full), ospf_state: _lo ? (_lo.full ? 'Full' : _lo.state) : (s.ospf_configured ? 'Down' : 'None'),
+      peer_ip: (_lp && _lp.ip) || (_lo && _lo.address) || ''
+    });
+    if (_lp && _lp.overLo) _plRows[_plRows.length - 1].bgp_over_lo = true;  /* nx_collect_peer_map: the BGP state on this row is a loopback session to this peer, carried over this link */
+  };
+  adj.forEach(function (a) { _plAdd(a.iface, a.peer); });
+  peers.forEach(function (p) { _plAdd(p.iface, p.name); });
+  if (_plRows.length) s.peer_links = _plRows;
 
   return s;
 }
@@ -590,6 +653,14 @@ function _normArea(a) {
 
 function _sameSubnet(prefix, ip) {
   if (!prefix || !ip) return false;
+  // nx_collect_peer_map: the real prefix length when given (a /30 link must not match the next /30); no length -> first 3 octets as before
+  var _pl = parseInt(String(prefix).split('/')[1], 10);
+  var _ip4 = function (s) { var o = String(s).split('/')[0].split('.').map(Number); return o.length === 4 && o.every(function (x) { return x >= 0 && x <= 255; }) ? ((o[0] * 16777216) + (o[1] << 16) + (o[2] << 8) + o[3]) : null; };
+  var _a = _ip4(prefix), _b = _ip4(ip);
+  if (!isNaN(_pl) && _pl >= 0 && _pl <= 32 && _a !== null && _b !== null) {
+    var _sz = Math.pow(2, 32 - _pl);
+    return Math.floor(_a / _sz) === Math.floor(_b / _sz);
+  }
   var net = prefix.split('/')[0].split('.').slice(0, 3).join('.');
   return ip.split('.').slice(0, 3).join('.') === net;
 }
@@ -728,6 +799,18 @@ function selfTest() {
   _assert(st.r2_iface === 'eth0', 'r2 iface = eth0');
   _assert(st.interfaces.eth0 && st.interfaces.eth0.ip === '10.1.0.10/24', 'eth0 ip from ospf-interface json');
   _assert(st.iface_hellos.eth0 === 10, 'hello = 10s parsed from timerMsecs 10000');
+  // nx_collect_keep_up: 2 links to one peer, the 2nd down -> the up one keeps r2_iface / r2_has_full / r2_neighbor_state
+  (function () {
+    var _ku = buildState({ selfName: 'r1', proto: 'bgp', adjacency: [{ iface: 'eth1', peer: 'r2' }, { iface: 'eth2', peer: 'r2' }],
+      ifaces: { eth1: { up: true, ip: '10.0.1.1', prefix: 30 }, eth2: { up: true, ip: '10.0.2.1', prefix: 30 } },
+      routes: [{ prefix: '10.0.1.0/30', protocol: 'connected', selected: true, nexthops: [{ iface: 'eth1' }] }, { prefix: '10.0.2.0/30', protocol: 'connected', selected: true, nexthops: [{ iface: 'eth2' }] }],
+      bgpSum: { byIp: {}, list: [{ ip: '10.0.1.2', state: 'Established', established: true, remoteAs: 65002, localAs: 65001 }, { ip: '10.0.2.2', state: 'Active', established: false, remoteAs: 65002, localAs: 65001 }] } });
+    _assert(_ku.r2_iface === 'eth1' && _ku.r2_has_full === true && _ku.r2_neighbor_state === 'Full', 'keep_up: 2 links to r2 (eth1 Established, eth2 Active) -> r2_iface eth1 / Full');
+    var _k1 = buildState({ selfName: 'r1', proto: 'bgp', adjacency: [{ iface: 'eth1', peer: 'r2' }],
+      ifaces: { eth1: { up: true, ip: '10.0.1.1', prefix: 30 } }, routes: [{ prefix: '10.0.1.0/30', protocol: 'connected', selected: true, nexthops: [{ iface: 'eth1' }] }],
+      bgpSum: { byIp: {}, list: [{ ip: '10.0.1.2', state: 'Active', established: false, remoteAs: 65002, localAs: 65001 }] } });
+    _assert(_k1.r2_iface === 'eth1' && _k1.r2_has_full === false && _k1.r2_neighbor_state === 'Active', 'keep_up: one link to r2, down -> unchanged (r2 Active)');
+  })();
   _assert(st.has_ospf_route === true && st.ping_ok === true, 'route resolved + ping_ok');
   _assert(st.route_resolution.next_hop === '10.1.0.20' && st.route_resolution.out_iface === 'eth0', 'route_resolution next-hop/iface real');
   _assert(/\/32$/.test(st.route_resolution.matched_prefix), 'target prefers a remote loopback /32');
@@ -779,6 +862,19 @@ function selfTest() {
   _assert(!sDrop.interfaces.eth0 && sDrop.interfaces.eth1, 'mgmt: --mgmt-subnet drops eth0(172.20.20.x) by subnet, keeps eth1(data)');
   var sEth0Data = buildState({ selfName: 'r1', proto: 'ospf', ifaces: { eth0: { up: true, ip: '10.0.0.1', prefix: 24 } }, adjacency: [{ iface: 'eth0', peer: 'r2' }], mgmtSubnet: '172.20.20.0/24' });
   _assert(sEth0Data.interfaces.eth0, 'mgmt: eth0 as DATA iface (10.0.0.x) NOT dropped by mgmt-subnet (subnet-based, not name-based)');
+
+  console.log('self-test: nx_peer_links - two links to the same peer (eth1 Full, eth2 shut) + an IP-less spare link');
+  var _plNei = { neighbors: { '2.2.2.2': [ { state: 'Full/DR', address: '10.1.0.20', ifaceName: 'eth1:10.1.0.10' } ] } };
+  var _plIf = { interfaces: { eth1: { ifUp: true, ospfEnabled: true, ipAddress: '10.1.0.10', ipAddressPrefixlen: 24, area: '0.0.0.0', timerMsecs: 10000 },
+    eth2: { ifUp: false, ospfEnabled: true, ipAddress: '10.2.0.10', ipAddressPrefixlen: 24, area: '0.0.0.0', timerMsecs: 10000 } } };
+  var spl = collectFromJson({ node: 'r1', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'r2' }, { iface: 'eth2', peer: 'r2' }, { iface: 'eth3', peer: 'r3' }],
+    ospfNeighbor: _plNei, ospfInterface: _plIf, interface: { eth3: { up: true } }, route: FIX.route });
+  _assert(Array.isArray(spl.peer_links) && spl.peer_links.length === 3, 'peer_links: one row per link (3) incl. 2 links to r2');
+  _assert(spl.peer_links[0].iface === 'eth1' && spl.peer_links[0].peer === 'r2' && spl.peer_links[0].full === true && spl.peer_links[0].ospf_state === 'Full', 'peer_links eth1 -> r2 Full');
+  _assert(spl.peer_links[1].iface === 'eth2' && spl.peer_links[1].peer === 'r2' && spl.peer_links[1].full === false && spl.peer_links[1].state === 'Down' && spl.peer_links[1].up === false, 'peer_links eth2 -> r2 Down (2nd link kept, not overwritten)');
+  _assert(spl.peer_links[2].iface === 'eth3' && spl.peer_links[2].peer === 'r3' && spl.peer_links[2].ip === '' && spl.peer_links[2].state === 'Down', 'peer_links eth3 -> r3 IP-less spare link kept');
+  _assert(spl.r2_iface === 'eth1' && spl.r2_has_full === true, 'old per-peer keys unchanged (r2 = the live eth1)');
+  _assert(st.peer_links && st.peer_links.length === 1 && st.peer_links[0].iface === 'eth0' && st.peer_links[0].peer === 'r2', 'single-link lab: peer_links = [eth0 -> r2]');
 
   console.log('\nALL SELF-TESTS PASSED');
 }

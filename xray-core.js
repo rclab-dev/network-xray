@@ -1479,7 +1479,7 @@ function _xrayApplyHelloTiming(state) {
     }
     var _orbH = document.querySelectorAll(".de-hello-orb");
     for (var _ob = 0; _ob < _orbH.length; _ob++) {
-      if (_orbH[_ob].style) { _orbH[_ob].style.removeProperty("display");
+      if (_orbH[_ob].style && !(_orbH[_ob].classList && (_orbH[_ob].classList.contains("de-x-hout") || _orbH[_ob].classList.contains("de-x-hin")))) { _orbH[_ob].style.removeProperty("display");   /* nx_de_extra_hello: not the extra orbs */
         /* nx_hello_sig_reset: Simple left animation:none!important inline -> it masked the CSS (hello-out/in) Hello in Standard */
         if (_orbH[_ob].style.getPropertyValue("animation-name") === "none") { _orbH[_ob].style.removeProperty("animation"); _orbH[_ob]._helloSig = null; } }
     }
@@ -1659,6 +1659,8 @@ window.xrayCfDraw = function() {
   var de = document.querySelector(".xray-deep-engine");
   if (!de || !de._deFlow || !de._deCfGeom) return;
   var g = de._deCfGeom, C = g.C, q = g.q;
+  /* nx_de_extra_loser (2026-10-11, DeepDive N links U4): "if:<iface>" = an extra link (3+ peers) -> its end point from g.X (U2b). left / right as before. */
+  var _cfPt = function(sd) { if (sd && sd.indexOf("if:") === 0 && g.X && g.X[sd.slice(3)]) return g.X[sd.slice(3)]; return (sd === "left") ? g.L : g.R; };
   var fb = de._deFlow.querySelector(".de-fwd-b");
   var cfP = de._deFlow.querySelector(".de-fwd-cf"), cfLd = de._deFlow.querySelector(".de-cf-leader");
   var cf = window._xrayCf, side = cf && cf.side ? cf.side : null;
@@ -1667,18 +1669,18 @@ window.xrayCfDraw = function() {
 
   if (fb && window._xrayArrowClickDriven) {
     if (isBest && side) {
-      var _ba = arw((side === "left") ? g.L : g.R);
+      var _ba = arw(_cfPt(side));
       fb.setAttribute("d", _ba.d); fb.style.display = ""; fb.style.stroke = "var(--xto-bgp,#a855f7)";
       var _mk = de._deFlow.querySelector("#de-fwd-head polygon"); if (_mk) _mk.style.fill = "#a855f7";
     } else { fb.style.display = "none"; }
   }
 
-  if (isLoser && side && cfP) { var _la = arw((side === "left") ? g.L : g.R); cfP.setAttribute("d", _la.d); cfP.style.opacity = "0.95"; }
+  if (isLoser && side && cfP) { var _la = arw(_cfPt(side)); cfP.setAttribute("d", _la.d); cfP.style.opacity = "0.95"; }
   else if (cfP) { cfP.style.opacity = "0"; }
 
   var badge = de._deCfBadge;
   if (cf && side && cf.badge) {
-    var _aa = arw((side === "left") ? g.L : g.R), bay = _aa.y - 42;
+    var _aa = arw(_cfPt(side)), bay = _aa.y - 42;
     if (!badge) { badge = document.createElement("div"); badge.className = "de-cf-badge"; de.appendChild(badge); de._deCfBadge = badge; }
     badge.textContent = cf.badge;
     var tone = isBest ? "color:#a7f3d0;border:1px solid rgba(74,222,128,0.6);box-shadow:0 0 8px rgba(74,222,128,0.3)" : "color:#c3ccd6;border:1px solid rgba(138,151,166,0.6);box-shadow:0 0 8px rgba(138,151,166,0.35)";
@@ -1749,7 +1751,12 @@ function _xrayCfSideForNh(nh) {
   var wif = _xrayCfIfaceForNh(nh);
   var dbg = window._xrayDirDbg || {};
   var lIf = s[tn.left + "_iface"] || dbg.lIf, rIf = s[tn.right + "_iface"] || dbg.rIf;
-  return wif && wif === lIf ? "left" : wif && wif === rIf ? "right" : null;
+  var _sd = wif && wif === lIf ? "left" : wif && wif === rIf ? "right" : null;
+  if (!_sd && wif) {  /* nx_de_extra_loser: the loser leaves through an extra link -> "if:<iface>" when that link has an end point */
+    var _deX = document.querySelector(".xray-deep-engine"), _gX = _deX && _deX._deCfGeom && _deX._deCfGeom.X;
+    if (_gX && _gX[wif] && _deX.querySelector(".de-x")) _sd = "if:" + wif;   /* only when extra links exist (3+ peers): with <=2 peers X may hold the main ends -> null as before */
+  }
+  return _sd;
 }
 window.xrayCfToggle = function(rowEl, pfx, nh) {
   if (document.body.classList.contains("trace-active")) return;
@@ -4515,12 +4522,269 @@ function _xrayDeSideAngles(cfg) {
   };
 }
 
+/* nx_deep_n_u1 (DeepDive N links - the shared contract): one entry per link of the centre node, in topology-link order.
+   {iface, peer, deg, up, hasIp, proto, main, same}
+     iface : the centre node's interface on that link ("" if unknown)   peer : the node on the other end
+     deg   : screen angle centre -> peer (atan2 degrees, right = 0, down = +90) from the drawn overview (_xrayOvXY), else
+             config.positions, else null; in 0.5 deg steps. A 2nd/3rd link to the same peer is turned by +12 / -12 / +24 ... degrees.
+     up    : the interface is not DOWN   hasIp : the interface has an address   proto : "bgp" | "ospf" | ""
+     main  : "left" / "right" when the peer is window._triNodes.left / right (the two existing sides), else null (= extra)
+     same  : 0 for the first link to that peer, 1 for the second ...
+   Links come from config.links ({a, aIf, b, bIf} - the page adds them from the topology), else state.peer_links, else
+   config.networks + state.<peer>_iface. Read only by the N-link code; with 2 neighbors or fewer nothing reads it. */
+function _xrayDeTunnels(s, cfg) {
+  s = s || {}; cfg = cfg || (typeof window !== "undefined" && window._scenarioConfig) || {};
+  var nodes = cfg.nodes || [];
+  var tgt = String(s.target_node || (nodes.filter(function(n) { return n && n.target; })[0] || {}).id || "").replace("topo-node-", "");
+  if (!tgt) return [];
+  var raw = [];
+  if (Array.isArray(cfg.links) && cfg.links.length) {
+    cfg.links.forEach(function(l) { if (!l) return; if (l.a === tgt) raw.push({ peer: l.b, iface: _xrayIfToState(l.aIf || "", s) }); else if (l.b === tgt) raw.push({ peer: l.a, iface: _xrayIfToState(l.bIf || "", s) });   /* nx_de_srl_ifname */ });
+  } else if (Array.isArray(s.peer_links) && s.peer_links.length) {
+    s.peer_links.forEach(function(p) { if (p && p.peer) raw.push({ peer: p.peer, iface: p.iface || "" }); });
+  } else {
+    (cfg.networks || []).forEach(function(nw) {
+      var ms = nw && nw.members || []; if (ms.length !== 2) return;
+      var pr = ms[0].node === tgt ? ms[1].node : ms[1].node === tgt ? ms[0].node : null;
+      if (pr) { var f = s[pr + "_iface"]; raw.push({ peer: pr, iface: f && !/^lo/i.test(f) ? f : "" }); }
+    });
+  }
+  /* nx_de_parallel: 2+ links to one peer -> the link the state names (<peer>_iface = the session's link, which the main side is drawn and
+     labelled from) is the first one; the others are the parallel extras. Else the first link in topology order became the main side but
+     took the session link's label = the same name twice. One link per peer (all curated questions) -> nothing moves. */
+  (function() {
+    var _k = typeof _xrayIfKey === "function" ? _xrayIfKey : function(n) { return String(n == null ? "" : n); }, _first = {};
+    raw.forEach(function(r, i) { if (_first[r.peer] == null) _first[r.peer] = i; });
+    /* the main = the link the state names; but if that link is not up in state.peer_links while another link to the same peer is
+       (an older collector named the last link even when it was down), the up link is the main (a down link must not
+       take the node-wide "up" colour). No up link -> as the state says. */
+    var _up = function(r) { return !!(r && (r.full || r.ospf_full || r.state === "Full" || r.state === "Established")); }, _want = {};
+    Object.keys(_first).forEach(function(p) {
+      var sf = s[p + "_iface"];
+      if (!sf || /^lo/i.test(sf)) return;
+      var pl = (s.peer_links || []).filter(function(r) { return r && r.peer === p && r.iface; });
+      var cur = pl.filter(function(r) { return _k(r.iface) === _k(sf); })[0];
+      if (pl.length >= 2 && cur && !_up(cur)) { var alt = pl.filter(_up)[0]; if (alt) sf = alt.iface; }
+      _want[p] = sf;
+    });
+    raw.forEach(function(r, i) {
+      var f = _first[r.peer], w = _want[r.peer];
+      if (i === f || !w || !r.iface) return;
+      if (_k(r.iface) === _k(w) && _k(raw[f].iface) !== _k(w)) { var _tmp = raw[f].iface; raw[f].iface = r.iface; r.iface = _tmp; }
+    });
+  })();
+  var ifs = s.interfaces || {}, tn = typeof window !== "undefined" ? window._triNodes : null, seen = {};
+  var me = typeof _xrayOvXY === "function" ? _xrayOvXY(tgt) : null, P = cfg.positions || {};
+  var dproto = s.bgp_configured ? "bgp" : s.ospf_configured ? "ospf" : "";
+  var out = raw.map(function(r) {
+    var same = seen[r.peer] = seen[r.peer] == null ? 0 : seen[r.peer] + 1;
+    var deg = null, o = typeof _xrayOvXY === "function" ? _xrayOvXY(r.peer) : null;
+    if (me && o) deg = Math.atan2(o.y - me.y, o.x - me.x) * 180 / Math.PI;
+    else if (P[tgt] && P[r.peer]) deg = Math.atan2(P[r.peer].y - P[tgt].y, P[r.peer].x - P[tgt].x) * 180 / Math.PI;
+    /* a 2nd/3rd link to the same peer: ~one tunnel width apart at the cylinder edge (44px at ~200px = 12 deg each side) */
+    if (deg != null && same) deg += (same % 2 ? 12 : -12) * Math.ceil(same / 2);
+    if (deg != null) deg = Math.round(deg * 2) / 2;   /* 0.5 deg steps: the overview positions move 1-3px between draws - no jitter */
+    var it = r.iface ? ifs[r.iface] : null;
+    var main = !same && tn ? r.peer === tn.left ? "left" : r.peer === tn.right ? "right" : null : null;
+    return { iface: r.iface, peer: r.peer, deg: deg, up: !it || it.up !== false, hasIp: !!(it && String(it.ip || "").split("/")[0]),
+      proto: s[r.peer + "_proto"] || dproto, main: main, same: same };
+  });
+  /* peers in almost the same overview direction: a link that comes closer than MIN to another link is pushed away
+     (extra links, and with 3+ neighbors the right side too; U2b turns the two sides by these angles then). Away from its nearest link, keeping the order
+     around the cylinder; equal angles: the later link in topology order goes clockwise. 2 passes. */
+  var MIN = 18, wrap = function(a) { return ((a % 360) + 540) % 360 - 180; };
+  /* "3+ neighbors" = distinct peers (a 2nd link to the same peer does not count - same measure as the extra DOM, U2a) */
+  var nPeers = Object.keys(seen).length, hasExtra = nPeers >= 3;
+  out.nPeers = nPeers;
+  if (!hasExtra) return out;   /* 2 neighbors or fewer: no spreading at all (a parallel link keeps its +-12 deg) */
+  /* relaxation: each close pair is pushed apart a little per pass (both ends when both may move), and no link moves more than
+     CAP degrees from its overview direction (a dense fan - e.g. 8 peers in 90 deg - keeps its shape; the labels are laid out
+     separately by U3b so they stay readable even when tunnels touch near the cylinder) */
+  /* nx_deep_n_u1_order: order-keeping spread (replaces the pairwise relaxation, which could swap two neighbours) */
+  var CAP = 25, list = out.filter(function(t) { return t.deg != null; });
+  var anc = list.filter(function(t) { return t.main === "left"; })[0], base = anc ? anc.deg : (list[0] ? list[0].deg : 0);
+  list.forEach(function(t) { t._u = base + (((t.deg - base) % 360) + 360) % 360; });
+  list.sort(function(a, b) { return (a === anc ? -1 : b === anc ? 1 : 0) || (a._u - b._u) || (out.indexOf(a) - out.indexOf(b)); });
+  var items = list.map(function(t) { return { t: t, d: t._u, fx: t === anc }; });
+  if (anc) items.push({ t: null, d: base + 360, fx: true });   /* the anchor again after a full turn = the upper bound */
+  var blocks = items.map(function(it, i) { return { a: i, b: i }; });
+  var start = function(bl) {   /* a pinned block keeps its pinned item where it is, else the mean of its wishes */
+    for (var k = bl.a; k <= bl.b; k++) if (items[k].fx) return items[k].d - (k - bl.a) * MIN;
+    var sm = 0; for (var q = bl.a; q <= bl.b; q++) sm += items[q].d - (q - bl.a) * MIN; return sm / (bl.b - bl.a + 1);
+  };
+  for (var guard = 0, merged = true; merged && guard < 64; guard++) {
+    merged = false;
+    for (var bi = 0; bi + 1 < blocks.length; bi++) {
+      var b1 = blocks[bi], b2 = blocks[bi + 1];
+      if (start(b2) < start(b1) + (b1.b - b1.a) * MIN + MIN - 1e-9) { blocks.splice(bi, 2, { a: b1.a, b: b2.b }); merged = true; break; }
+    }
+  }
+  blocks.forEach(function(bl) {
+    var st = start(bl);
+    for (var k = bl.a; k <= bl.b; k++) {
+      var it = items[k]; if (!it.t || it.fx) continue;
+      var x = Math.max(it.d - CAP, Math.min(it.d + CAP, st + (k - bl.a) * MIN));
+      it.t.deg = x;
+    }
+  });
+  out.forEach(function(t) { if (t.deg != null) t.deg = Math.round(wrap(t.deg) * 2) / 2; delete t._u; });
+  return out;
+}
+/* nx_de_parallel: an extra link = with 3+ distinct peers every link that is not one of the two sides; with 1-2 peers the 2nd+ link
+   to the same peer (a parallel link). No parallel link and <=2 peers -> none (the curated questions have none = unchanged). */
+/* nx_de_parallel: the peer of a single-link view when the state has no peer_node key (the SR Linux collector does not send it):
+   the only other node of the view, else the first link's peer. A state WITH the key (every FRR state) -> that value, unchanged. */
+function _xrayDePeerNode(s, cfg) {
+  if (!s) return "";
+  if (Object.prototype.hasOwnProperty.call(s, "peer_node")) return s.peer_node;
+  cfg = cfg || (typeof window !== "undefined" && window._scenarioConfig) || {};
+  var tgt = String(s.target_node || s.id || "").replace("topo-node-", "");
+  var others = (cfg.nodes || []).filter(function(n) { return n && n.id && n.id !== tgt && !n.target; });
+  if (others.length === 1) return others[0].id;
+  var tu = typeof _xrayDeTunnels === "function" ? _xrayDeTunnels(s, cfg) : [];
+  return tu.length ? tu[0].peer : "";
+}
+function _xrayDeIsX(t, tuns) { return !!t && ((tuns && tuns.nPeers || 0) >= 3 ? !t.main : t.same > 0); }
+function _xrayDeExtras(s, cfg) { var a = _xrayDeTunnels(s, cfg); return a.filter(function(t) { return _xrayDeIsX(t, a); }); }   /* nx_deep_n_u1 + nx_de_parallel */   /* nx_deep_n_u1: the links beyond the two sides (3+ neighbors only) */
+/* nx_de_srl_ifname (2026-10-12): one interface, two spellings. containerlab names an SR Linux port e1-N (cfg.links) while the
+   SR Linux state / show use ethernet-1/N.0. _xrayIfKey gives both the same key; _xrayIfToState turns a cfg.links name into the name
+   this state uses - only for the e<X>-<Y> form AND only when the state has that interface (else the name is returned unchanged).
+   FRR names (eth1 ...) never match the form = untouched. */
+function _xrayIfKey(n) {
+  n = String(n == null ? "" : n);
+  var m = n.match(/^e(\d+)-(\d+)$/);
+  if (m) return "ethernet-" + m[1] + "/" + m[2];
+  m = n.match(/^(ethernet-\d+\/\d+)\.0$/);
+  return m ? m[1] : n;
+}
+function _xrayIfToState(n, s) {
+  if (!n || !s || !/^e\d+-\d+$/.test(String(n))) return n;
+  var k = _xrayIfKey(n), ifs = s.interfaces || {}, x;
+  if (Object.prototype.hasOwnProperty.call(ifs, n)) return n;
+  for (x in ifs) if (Object.prototype.hasOwnProperty.call(ifs, x) && _xrayIfKey(x) === k) return x;
+  var pl = s.peer_links || [];
+  for (var i = 0; i < pl.length; i++) if (pl[i] && pl[i].iface && _xrayIfKey(pl[i].iface) === k) return pl[i].iface;
+  for (x in s) if (/_iface$/.test(x) && typeof s[x] === "string" && s[x] && _xrayIfKey(s[x]) === k) return s[x];
+  return n;
+}
+if (typeof window !== "undefined") { window._xrayIfKey = _xrayIfKey; window._xrayIfToState = _xrayIfToState; window._xrayDeIfName = function(s, n) { return _xrayIfToState(n, s); }; }
+if (typeof window !== "undefined") { window._xrayDeTunnels = _xrayDeTunnels; window._xrayDeExtras = _xrayDeExtras; }
+
+/* nx_deep_n_u2b (DeepDive N links - Standard): put each extra link (.de-x from U2a) in its own turned box, record every link's
+   end point by interface (de._deCfGeom.X) and place the extra labels. g = {connPt, reachPt, W, Hh, L, R} from _xrayDeAngleView. */
+function _xrayDeExtraBoxes(de, s, cfg, g) {
+  var X = {}, keep = [];
+  var tuns = typeof _xrayDeTunnels === "function" ? _xrayDeTunnels(s, cfg) : [];
+  var q = function(v) { return String(v == null ? "" : v).replace(/["\\]/g, "\\$&"); };
+  if ((tuns.nPeers || 0) >= 3) tuns.forEach(function(t) {   /* 3+ distinct peers only: with 2 or fewer X stays empty = U4 / U3 read nothing new */
+    if (t.iface && t.main === "left") X[t.iface] = g.L;
+    if (t.iface && t.main === "right") X[t.iface] = g.R;
+  });
+  tuns.forEach(function(t) {
+    if (t.deg == null || !_xrayDeIsX(t, tuns)) return;   /* extra links: 3+ distinct peers, or a parallel link (nx_de_parallel) */
+    var x = de.querySelector('.de-x[data-iface="' + q(t.iface) + '"][data-peer="' + q(t.peer) + '"]');
+    if (!x) return;
+    var w = x.parentNode && x.parentNode.classList && x.parentNode.classList.contains("de-side-x") ? x.parentNode : null;
+    if (!w) { w = document.createElement("div"); w.className = "de-side-wrap de-side-x"; w.style.zIndex = "1"; de.appendChild(w); w.appendChild(x); }
+    w.setAttribute("data-iface", t.iface); w.setAttribute("data-peer", t.peer);
+    w.style.transform = "rotate(" + t.deg.toFixed(2) + "deg)";
+    keep.push(w);
+    var pt = g.connPt(t.deg, 1);
+    if (t.iface) X[t.iface] = pt;
+    if (g.visFar) { var _vf = g.visFar(t.deg, 1), _hd = Math.round(Math.hypot(_vf[0] - g.W / 2, _vf[1] - g.Hh / 2)), _hc = Math.round(g.W * (g.mxFrac || 0.5) / Math.max(Math.abs(Math.cos(t.deg * Math.PI / 180)), 0.01)); x._helloFar = Math.min(_hd, _hc); }   /* U6: Hello travel distance of this box (same cap as the right side) */
+    var lb = x.querySelector(".de-label");
+    if (lb) { lb.classList.add("de-x-label"); lb.setAttribute("data-iface", t.iface); lb.setAttribute("data-peer", t.peer); de.appendChild(lb); }
+    else lb = de.querySelector('.de-x-label[data-iface="' + q(t.iface) + '"][data-peer="' + q(t.peer) + '"]');
+    if (lb) { lb.style.display = ""; try { _xrayDePlaceEdgeLabel(lb, g.reachPt(t.deg, 1), g.W, g.Hh, t.deg, 1); } catch (_eXl) {} }
+  });
+  de.querySelectorAll(".de-side-x").forEach(function(w) {   /* a link that is gone (or no longer extra): unwrap, hide its label */
+    if (keep.indexOf(w) >= 0) return;
+    while (w.firstChild) de.appendChild(w.firstChild);
+    var lb2 = de.querySelector('.de-x-label[data-iface="' + q(w.getAttribute("data-iface")) + '"][data-peer="' + q(w.getAttribute("data-peer")) + '"]');
+    if (lb2) lb2.style.display = "none";
+    w.remove();
+  });
+  if (de._deCfGeom) de._deCfGeom.X = X;
+  return X;
+}
+/* nx_deep_n_labels (DeepDive N links - Standard, 3+ neighbors only): lay every link label out along its own link so all are
+   readable on the first screen (not under a panel, inside the frame, not on another label). g = {C, W, Hh}. */
+function _xrayDeNLabels(de, s, cfg, g) {
+  /* nx_deep_n_labels_fill4: lay the labels out again once, 600ms later (the panels may have grown since) */
+  if (de && !de._nlRe && !de._nlT) de._nlT = setTimeout(function() {
+    de._nlT = 0;
+    if (!de.isConnected || (typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {}))) return;
+    de._nlRe = true; try { _xrayDeNLabels(de, window._lastXrayState, window._scenarioConfig, g); } catch (_eNr) {} de._nlRe = false;
+  }, 600);
+  var tuns = typeof _xrayDeTunnels === "function" ? _xrayDeTunnels(s, cfg) : [];
+  if ((tuns.nPeers || 0) < 3 && !tuns.some(function(t) { return t.same > 0; })) return;   /* 2 neighbors or fewer and no parallel link: leave the existing labels alone (nx_de_parallel) */
+  var dr = de.getBoundingClientRect(), M = 4;
+  var rel = function(r) { return { l: r.left - dr.left, t: r.top - dr.top, r: r.right - dr.left, b: r.bottom - dr.top }; };
+  var obst = [];
+  ["#de-re-panel", "#de-routing-panel", "#de-lsdb", "#de-bgp-panel", "#de-bgp-decision-panel", ".de-close-btn", ".xray-deep-close", ".rcl-fb-badge", ".de-br-tabs", ".de-skin-btn"].forEach(function(sel) {   /* panels + the badge / tabs / Skin button */
+    de.querySelectorAll(sel).forEach(function(p) { if (!p.offsetWidth || getComputedStyle(p).display === "none" || getComputedStyle(p).visibility === "hidden") return; obst.push(rel(p.getBoundingClientRect())); });
+  });
+  var q = function(v) { return String(v == null ? "" : v).replace(/["\\]/g, "\\$&"); };
+  var items = [];
+  tuns.forEach(function(t) {
+    if (t.deg == null) return;
+    var el = t.main === "left" ? de.querySelector(".de-label.in") : t.main === "right" ? de.querySelector(".de-label.out")
+      : (!t.same && !window._triNodes && de.querySelector(".de-sl-label")) ? de.querySelector(".de-sl-label")   /* nx_de_parallel: single-link node */
+      : de.querySelector('.de-x-label[data-iface="' + q(t.iface) + '"][data-peer="' + q(t.peer) + '"]');
+    if (el && getComputedStyle(el).display !== "none") items.push({ t: t, el: el });
+  });
+  var hit = function(a, b) { return Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t)); };
+  var placed = [];
+  /* nx_deep_n_labels_fill3: clockwise from the top, so neighbouring links get neighbouring labels */
+  items.sort(function(a, b) { var ka = ((a.t.deg + 90) % 360 + 360) % 360, kb = ((b.t.deg + 90) % 360 + 360) % 360; return ka - kb; });
+  items.forEach(function(it) {
+    var el = it.el, a = it.t.deg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+    el.style.transform = "none"; el.style.right = "auto";
+    /* the two sides take their name from the state (<peer>_iface = "lo" for a peer reached over the loopback); with 3+ neighbors
+       every label names the topology link's interface, like the extra labels */
+    if ((it.t.main || el.classList.contains("de-sl-label")) && it.t.iface) el.textContent = it.t.iface + " - " + it.t.peer;   /* nx_de_parallel: the single-link label too */
+    /* same chip as the two existing labels (readable over the tunnel lines); the colour (DOWN / no IP) stays as set */
+    el.style.background = (typeof _XRAY_DE !== "undefined" && _XRAY_DE.deLabelChipBg) || "rgba(6,16,26,0.85)";
+    el.style.padding = "1px 7px"; el.style.borderRadius = "4px"; el.style.whiteSpace = "nowrap"; el.style.opacity = "1";
+    var w = el.offsetWidth || 90, h = el.offsetHeight || 18;
+    /* nx_deep_n_labels_fill3: hard = out of the frame / under a panel / on another label (x6 = never stack labels);
+       soft = distance from the own link line (+ a little for the distance from the cylinder) - the line wins when free */
+    var best = null, R0 = 92;
+    /* the spot it was drawn at (its link end, _xrayDePlaceEdgeLabel) = where it is wanted: the nearest free spot to it on the line */
+    var _px = parseFloat(el.style.left), _py = parseFloat(el.style.top), Rend = (isNaN(_px) || isNaN(_py)) ? R0 : Math.max(R0, Math.hypot(_px + w / 2 - g.C[0], _py + h / 2 - g.C[1]));
+    var tryBox = function(cx, cy, soft) {
+      var box = { l: cx - w / 2, t: cy - h / 2, r: cx + w / 2, b: cy + h / 2 };
+      var out = (box.l < M ? M - box.l : 0) + (box.r > g.W - M ? box.r - (g.W - M) : 0) + (box.t < M ? M - box.t : 0) + (box.b > g.Hh - M ? box.b - (g.Hh - M) : 0);
+      var hard = out * h * 4;
+      obst.forEach(function(o) { hard += hit(box, o) * 2; });
+      placed.forEach(function(o) { hard += hit(box, o) * 12; });
+      var cost = hard + soft;
+      var free = hard === 0, bfree = !!best && best.hard === 0;   /* a free spot always beats a blocked one */
+      if (!best || (free && !bfree) || (free === bfree && cost < best.cost - 0.5)) best = { cost: cost, hard: hard, box: box };
+    };
+    for (var r = R0; r <= 420; r += 14) {
+      [0, 1, -1, 2, -2].forEach(function(k) {
+        tryBox(g.C[0] + ca * r - sa * k * (h + 4), g.C[1] + sa * r + ca * k * (h + 4), Math.abs(k) * (h + 4) * 6 + Math.abs(r - Rend) * 0.3);
+      });
+    }
+    /* no free spot near its own link (under a panel / on another label / out of the frame everywhere): the label is NOT shown -
+       the link label is a bonus, never carried far away nor raised over a panel */
+    if (!best || best.hard > 0) { el.style.visibility = "hidden"; el.setAttribute("data-nlbl", "hidden"); return; }
+    el.style.visibility = "";
+    el.style.left = best.box.l.toFixed(1) + "px"; el.style.top = best.box.t.toFixed(1) + "px";
+    el.style.zIndex = "12";
+    el.setAttribute("data-nlbl", "free");
+    placed.push(best.box);
+  });
+}
 function _xrayDeAngleTeardown(de) {
   if (!de || !de.classList.contains("de-angle-on")) return;
   de.classList.remove("de-angle-on");
   document.body.classList.remove("de-angle-active");
   de.querySelectorAll(".de-sl-label, .de-sl-marker").forEach(function(e) { e.remove(); });  /* nx_single_tilt_label */
   de.classList.remove("de-sl-ovf");
+  de.querySelectorAll(".de-side-x").forEach(function(w) { while (w.firstChild) de.appendChild(w.firstChild); w.remove(); });   /* nx_deep_n_u2b */
+  de.querySelectorAll(".de-x-label").forEach(function(l) { l.style.display = "none"; });
   var _topoT = de.closest(".topology");
   if (_topoT && !(typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {}))) {
     _topoT.style.removeProperty("padding-bottom");
@@ -4699,7 +4963,7 @@ function _xrayDeAngleView(s) {
 
 
       try {
-        var _tgtN = s && (s.target_node || s.id), _prN = s && s.peer_node, _P = cfg.positions;
+        var _tgtN = s && (s.target_node || s.id), _prN = s && _xrayDePeerNode(s, cfg), _P = cfg.positions;   /* nx_de_parallel: peer_node may be absent (SR Linux) */
         var _ovT = _xrayOvXY(_tgtN), _ovP = _xrayOvXY(_prN);
         if (_ovT && _ovP) {
           var _degSL = Math.atan2(_ovP.y - _ovT.y, _ovP.x - _ovT.x) * 180 / Math.PI;
@@ -4760,6 +5024,16 @@ function _xrayDeAngleView(s) {
         _topo.style.setProperty("padding-bottom", (_XRAY_DE.deCardPadBottomPx || 44) + "px", "important");
         _topo.style.setProperty("padding-top", (_XRAY_DE.deCardPadTopPx || 32) + "px", "important");
       }
+    }
+    if (ang.dual && typeof _xrayDeTunnels === "function") {   /* nx_deep_n_u2b: 3+ neighbors only */
+      try {
+        var _tnA = _xrayDeTunnels(s, cfg);
+        if ((_tnA.nPeers || 0) >= 3) {   /* distinct peers - a parallel link to one of 2 peers does not count */
+          var _tL = _tnA.filter(function(t) { return t.main === "left" && t.deg != null; })[0], _tR = _tnA.filter(function(t) { return t.main === "right" && t.deg != null; })[0];
+          if (_tL) ang.l = _tL.deg - 180;
+          if (_tR) ang.r = _tR.deg;
+        }
+      } catch (_eAn) {}
     }
     wL.style.transform = "rotate(" + ang.l + "deg)";
     wR.style.transform = "rotate(" + ang.r + "deg)";
@@ -4855,6 +5129,12 @@ function _xrayDeAngleView(s) {
     };
     var mIn = [ (inConn[0] + C[0]) / 2, (inConn[1] + C[1]) / 2 ];
     var bx = C[0] + (outConn[0] - C[0]) * .82, by = C[1] + (outConn[1] - C[1]) * .82, B = [ bx, by ], mOut = [ (C[0] + bx) / 2, (C[1] + by) / 2 ];
+    /* nx_deep_n_u3: the selected route leaves through an extra link -> the arrow (and its route label) go to that link's end */
+    if (window._xrayFwdIface && typeof _xrayDeTunnels === "function") {
+      var _xA = _xrayDeTunnels(s, cfg);   /* 3+ distinct peers only (same as _xrayDeIsExtra) */
+      var _xT = _xA.filter(function(t) { return t.iface === window._xrayFwdIface && _xrayDeIsX(t, _xA) && t.deg != null; })[0] || null;   /* nx_de_parallel */
+      if (_xT) { var _xC = connPt(_xT.deg, 1); bx = C[0] + (_xC[0] - C[0]) * .82; by = C[1] + (_xC[1] - C[1]) * .82; B = [ bx, by ]; mOut = [ (C[0] + bx) / 2, (C[1] + by) / 2 ]; }
+    }
     var _rr = s && s.route_resolution;
     // Gate the FORWARD flow arrow on the CURRENT state (xrayIsCleared(s) / this frame's route), not the
     // body "ping-ok" class: applyXrayState toggles that class AFTER calling us, so on a steady→down frame
@@ -4871,6 +5151,7 @@ function _xrayDeAngleView(s) {
     fb.style.display = arrowOn ? "" : "none";
 
     de._deCfGeom = { C: C, L: L, R: R, q: q };
+    if (typeof _xrayDeExtraBoxes === "function") { try { _xrayDeExtraBoxes(de, s, cfg, { connPt: connPt, reachPt: reachPt, visFar: visFar, mxFrac: _XRAY_DE.beamReachMxFrac, W: W, Hh: Hh, L: L, R: R }); } catch (_eXb) {} }   /* nx_deep_n_u2b */
     if (typeof window.xrayCfDraw === "function") window.xrayCfDraw();
 
     // route_resolution destination (host routes shown bare e.g. 3.3.3.3; networks keep the prefix e.g.
@@ -4979,6 +5260,7 @@ function _xrayDeAngleView(s) {
       var tn = window._triNodes || {};
       var lId = tn.left || "", rId = tn.right || "";
       var lIf = s && s[lId + "_iface"] || "eth0", rIf = s && s[rId + "_iface"] || "eth1";
+      try { var _tvL = _xrayDeMainTruth(s, cfg, lId), _tvR = _xrayDeMainTruth(s, cfg, rId); if (_tvL && _tvL.fixed) lIf = _tvL.iface; if (_tvR && _tvR.fixed) rIf = _tvR.iface; } catch (_eTv) {}   /* nx_de_main_truth */
       var linkCol = "var(--xto-link,#00e5ff)", downCol = "#ef5350";
       var _ifUp = function(ifName) {
         return !(s && s.interfaces && s.interfaces[ifName] && s.interfaces[ifName].up === false);
@@ -5036,6 +5318,7 @@ function _xrayDeAngleView(s) {
           }
         }
       } catch (_eSt) {}
+      if (typeof _xrayDeNLabels === "function") { try { _xrayDeNLabels(de, s, cfg, { C: C, W: W, Hh: Hh }); } catch (_eNl) {} }   /* nx_deep_n_labels: 3+ neighbors only */
       var _rgb = function(col) {
         return col === downCol ? "239,83,80" : "0,229,255";
       };
@@ -5055,12 +5338,13 @@ function _xrayDeAngleView(s) {
          Show "<iface> - <peer>" + marker at the beam end with DEDICATED elements (.de-sl-label/.de-sl-marker:
          the shared .de-label.out is rewritten to "Output: ..." by other renders), clamped inside the frame.
          Removed when not tilted / on teardown. */
-      var _slPeer = s && s.peer_node;
+      var _slPeer = s && _xrayDePeerNode(s, cfg);   /* nx_de_parallel */
       if (_slTilt && window.xrayCore && _slPeer) {
         var _slLb = de.querySelector(".de-sl-label"), _slMk = de.querySelector(".de-sl-marker");
         if (!_slLb) { _slLb = document.createElement("div"); _slLb.className = "de-label de-sl-label"; de.appendChild(_slLb); }
         if (!_slMk) { _slMk = document.createElement("div"); _slMk.className = "de-if-marker de-sl-marker"; de.appendChild(_slMk); }
         var _slIf = s[_slPeer + "_iface"] || s.wan_iface || "";
+        try { var _slT = typeof _xrayDeTunnels === "function" ? _xrayDeTunnels(s, cfg) : []; if (_slT.some(function(x) { return x.same > 0; })) { var _sl0 = _slT.filter(function(x) { return x.peer === _slPeer && !x.same && x.iface; })[0]; if (_sl0) _slIf = _sl0.iface; } } catch (_eSl) {}   /* nx_de_parallel */
         var _slUp = !(s.interfaces && s.interfaces[_slIf] && s.interfaces[_slIf].up === false);
         var _slCol = _slUp ? "var(--xto-link,#00e5ff)" : "#ef5350";
         var _slP = reachPt(ang.r, 1);
@@ -5086,12 +5370,48 @@ function _xrayDeAngleView(s) {
         _slMk.style.top = _slP[1].toFixed(1) + "px";
         _slMk.style.transform = "translate(-50%,-50%)";
         _slMk.style.borderColor = _slCol;
+        if (typeof _xrayDeNLabels === "function") { try { _xrayDeNLabels(de, s, cfg, { C: C, W: W, Hh: Hh }); } catch (_eSn) {} }   /* nx_de_parallel: lay the single label out with the parallel link labels (returns at once without one) */
       } else {
         de.querySelectorAll(".de-sl-label, .de-sl-marker").forEach(function(e) { e.remove(); });
         de.classList.remove("de-sl-ovf");
       }
     }
+    if (typeof _xrayDeLabelUncover === "function") {   /* nx_de_label_uncover_v3: now + once more after the panels filled in */
+      try { _xrayDeLabelUncover(de, s, cfg); } catch (_eLu) {}
+      if (!de._lblT) de._lblT = setTimeout(function() { de._lblT = 0; try { if (de.isConnected && !(typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {}))) _xrayDeLabelUncover(de, window._lastXrayState, window._scenarioConfig); } catch (_eLt) {} }, 600);
+    }
   } catch (_e) {}
+}
+/* nx_de_label_uncover_v3 (DeepDive, 2 neighbors or fewer): a link label sticking out of the visible .topology box moves up to
+   80px along its own link, else it is not shown - the label is a bonus. A label in sight is never touched. */
+function _xrayDeLblHit(a, b) { return Math.min(a.right, b.right) > Math.max(a.left, b.left) && Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top); }
+function _xrayDeLabelUncover(de, s, cfg) {
+  var tn = typeof _xrayDeTunnels === "function" ? _xrayDeTunnels(s, cfg) : [];
+  if ((tn.nPeers || 0) >= 3) return;   /* 3+ neighbors: U3b / U3d */
+  var top = (de.closest && de.closest(".topology")) || de, c = top.getBoundingClientRect();
+  var inside = function(x) { return x.left >= c.left - 1 && x.right <= c.right + 1 && x.top >= c.top - 1 && x.bottom <= c.bottom + 1; };
+  var cyl = de.querySelector(".de-cyl-svg"), g = cyl && cyl.getBoundingClientRect(), dr = de.getBoundingClientRect();
+  var C = g && g.width ? [(g.left + g.right) / 2, (g.top + g.bottom) / 2] : [(dr.left + dr.right) / 2, (dr.top + dr.bottom) / 2];
+  var els = [].slice.call(de.querySelectorAll(".de-label.in, .de-label.out, .de-sl-label, .de-x-label")).filter(function(l) {
+    return l.offsetWidth && getComputedStyle(l).display !== "none" && (l.textContent || "").trim();
+  });
+  els.forEach(function(el) { if (el.getAttribute("data-lbl-out")) { el.style.visibility = ""; el.removeAttribute("data-lbl-out"); } });   /* re-check */
+  els.forEach(function(el) {
+    var b = el.getBoundingClientRect();
+    if (inside(b)) return;
+    var others = els.filter(function(x) { return x !== el && !x.getAttribute("data-lbl-out"); }).map(function(x) { return x.getBoundingClientRect(); });
+    var cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2, vx = C[0] - cx, vy = C[1] - cy, L = Math.hypot(vx, vy) || 1;
+    var ux = vx / L, uy = vy / L, h = b.bottom - b.top + 6, d = null;
+    for (var r = 0; r <= 80 && !d; r += 8) for (var j = 0; j < 3 && !d; j++) {
+      var k = [0, 1, -1][j], dx = Math.round(ux * r - uy * k * h), dy = Math.round(uy * r + ux * k * h);
+      var nb = { left: b.left + dx, top: b.top + dy, right: b.right + dx, bottom: b.bottom + dy };
+      if ((dx || dy) && inside(nb) && !others.some(function(o) { return _xrayDeLblHit(nb, o); })) d = [dx, dy];
+    }
+    if (!d) { el.style.visibility = "hidden"; el.setAttribute("data-lbl-out", "1"); return; }   /* no near spot: not shown */
+    var cs = getComputedStyle(el);
+    el.style.left = (parseFloat(cs.left) + d[0]).toFixed(1) + "px"; el.style.right = "auto";
+    el.style.top = (parseFloat(cs.top) + d[1]).toFixed(1) + "px";
+  });
 }
 
 // nx_state_driven_tab: right-bottom [Best-Path|LSDB] tab toggle (dual-stack). Body-class driven so the
@@ -5223,6 +5543,29 @@ function xrayRenderDeepEngine(config, activeTargetId) {
     html += '<div class="de-energy er"></div>';
     html += '<div class="de-label in">Input: ...</div>';
     html += '<div class="de-label out">Output: ...</div>';
+  }
+  /* nx_de_extra_dom (2026-10-11, DeepDive N links U2a): 3+ peers -> one <div class="de-x"> per extra link (main = left/right as today).
+     Same parts/order as the right side, but WITHOUT the .out/.er/.right/.in modifiers so the body-state rules for the
+     main right link (is-output-down / is-cleared / ping-cylinder-to-left / hello-out ...) never hit an extra.
+     _xrayDeAngleView (U2b) rotates each .de-x to its peer angle. <=2 peers (all curated questions / RCL) -> nothing emitted. */
+  if (otherNodes.length >= 1 && typeof window._xrayDeExtras === "function") {   /* nx_de_parallel: _xrayDeExtras decides (3+ peers, or a parallel link) */
+    var _xList = [];
+    try { _xList = window._xrayDeExtras(_deSt, config) || []; } catch (_eX) { _xList = []; }
+    var _xProto = isBgp ? "BGP" : (isOspf ? "OSPF" : "");
+    var _xEsc = function(v) { return _escapeHtml(String(v == null ? "" : v)).replace(/"/g, "&quot;"); };
+    if (_xList.length) _xrayDeXInjectCss();
+    _xList.forEach(function(xt, xi) {
+      var _xp = _xEsc(xt.peer), _xi = _xEsc(xt.iface);
+      html += '<div class="de-x" data-x="' + xi + '" data-iface="' + _xi + '" data-peer="' + _xp + '">';
+      html += '<div class="de-beam de-x-beam"></div><div class="de-energy de-x-energy"></div>';
+      if (isOspf || isBgp) {
+        html += '<div class="de-tunnel de-x-tunnel"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
+        html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-inner"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div></div><div class="de-tunnel-label">' + _xProto + " &#8212; " + _xp + "</div></div>";
+      }
+      if (isOspf || isBgp || !!_deSt.peer_sending_hello) html += '<div class="de-hello-orb de-x-hout"></div><div class="de-hello-orb de-x-hin"></div>';
+      html += '<div class="de-if-marker de-x-marker"></div><div class="de-label de-x-label" data-x="' + xi + '" data-iface="' + _xi + '">' + (_xi ? _xi + " - " : "") + _xp + "</div>";
+      html += "</div>";
+    });
   }
   html += '<div class="de-packet"></div><div class="de-packet p2"></div>';
   html += '<div class="de-ping-orb" id="de-ping-req"></div><div class="de-ping-orb reply" id="de-ping-rep"></div>';
@@ -5903,9 +6246,45 @@ function _xrayIsDualLinkApexLayout(config) {
   return _xrayCountTargetPeers(config, target.id) >= 2;
 }
 
+/* nx_de_main_truth (DeepDive - the two main links, any neighbor count): the link interface / session facts for one main peer.
+   {iface, fixed, lo, noIp, down, noSess} - see the U9 tool header. null without cfg.links (RCL) = unchanged. */
+function _xrayDeMainTruth(s, cfg, peer) {
+  s = s || {}; cfg = cfg || (typeof window !== "undefined" && window._scenarioConfig) || {};
+  if (!peer || !Array.isArray(cfg.links) || !cfg.links.length) return null;
+  var nodes = cfg.nodes || [];
+  var tgt = String(s.target_node || (nodes.filter(function(n) { return n && n.target; })[0] || {}).id || "").replace("topo-node-", "");
+  if (!tgt) return null;
+  var L = [];
+  cfg.links.forEach(function(l) {
+    if (!l) return;
+    var f = l.a === tgt && l.b === peer ? l.aIf : l.b === tgt && l.a === peer ? l.bIf : "";
+    if (f && typeof window !== "undefined" && typeof window._xrayDeIfName === "function") f = window._xrayDeIfName(s, f) || f;   /* nx_de_main_truth_v3: the state's own name (SR Linux e1-N -> ethernet-1/N.0) */
+    if (f && !/^lo/i.test(f) && L.indexOf(f) < 0) L.push(f);
+  });
+  if (!L.length) return null;
+  var f0 = String(s[peer + "_iface"] || ""), lo = /^lo/i.test(f0), iface = !f0 || lo ? L[0] : f0;
+  /* nx_de_main_truth_v4: a peer with parallel links - the main link is the one the tunnels drew as main (U10: the link that is up),
+     even when an older state's <peer>_iface points at the link that is down (else two labels with the same name) */
+  if (L.length > 1 && !lo && typeof _xrayDeTunnels === "function") { try { var _tm = _xrayDeTunnels(s, cfg).filter(function(t) { return t.peer === peer && !t.same && t.main && t.iface; })[0]; if (_tm && L.indexOf(_tm.iface) >= 0) iface = _tm.iface; } catch (_eTm) {} }
+  var it = (s.interfaces || {})[iface], row = null;
+  (s.peer_links || []).some(function(r) { if (r && r.iface === iface) { row = r; return true; } return false; });
+  var ip = it ? it.ip : row ? row.ip : null, noIp = ip != null && !String(ip).split("/")[0];
+  var sessUp = !!(s[peer + "_established"] || s[peer + "_has_full"] || s[peer + "_neighbor_state"] === "Established" || s[peer + "_neighbor_state"] === "Full");
+  /* nx_de_main_truth_v2: the peer's session leaves by ANOTHER link (collector peer_map: <peer>_iface = the exit iface of the route
+     to its loopback) - both names in this state's interfaces, so a vendor naming difference never counts */
+  var ifs0 = s.interfaces || {}, elsewhere = !!(f0 && !lo && L.indexOf(f0) < 0 && ifs0[f0] && ifs0[L[0]]);
+  /* ...or the key is there but empty: peer_map leaves <peer>_iface = "" for a neighbor whose loopback route leaves by another
+     link (an older collector always filled a neighbor's iface from the topology links; a missing key = no session data) */
+  if (!elsewhere && f0 === "" && Object.prototype.hasOwnProperty.call(s, peer + "_iface")) elsewhere = true;
+  if (elsewhere) { iface = L[0]; it = ifs0[iface]; row = null; (s.peer_links || []).some(function(r) { if (r && r.iface === iface) { row = r; return true; } return false; }); ip = it ? it.ip : row ? row.ip : null; noIp = ip != null && !String(ip).split("/")[0]; }
+  return { iface: iface, fixed: iface !== f0, lo: lo, elsewhere: elsewhere, off: lo || elsewhere, noIp: noIp, down: it ? it.up === false : row ? row.up === false : false, noSess: noIp && !(sessUp && !elsewhere) };
+}
+if (typeof window !== "undefined") window._xrayDeMainTruth = _xrayDeMainTruth;
+
 function _xrayApplyDualLinkLabels(s, peers) {
   var lIf = s[peers.left + "_iface"] || "?";
   var rIf = s[peers.right + "_iface"] || "?";
+  try { var _tlL = _xrayDeMainTruth(s, null, peers.left), _tlR = _xrayDeMainTruth(s, null, peers.right); if (_tlL && _tlL.fixed) lIf = _tlL.iface; if (_tlR && _tlR.fixed) rIf = _tlR.iface; } catch (_eTl) {}   /* nx_de_main_truth: link iface, not "lo" */
   var lLabel = document.querySelector(".de-label.in");
   var rLabel = document.querySelector(".de-label.out");
   if (lLabel) lLabel.textContent = lIf + " - " + peers.left;
@@ -5950,6 +6329,125 @@ function _xrayApplyDualLinkEnergies(s, leftLink, rightLink) {
   _xrayApplyDualLinkEnergyOrb(document.querySelector(".de-energy.er"), rightLink, ifaces);
 }
 
+/* nx_de_extra_dom: CSS for the extra links (copies of the right-side geometry / tunnel-active look, scoped to .de-x).
+   Injected only when an extra is rendered (3+ peers) -> pages with <=2 peers get no new rule. */
+function _xrayDeXInjectCss() {
+  if (document.getElementById("xray-de-x-css")) return;
+  var st = document.createElement("style");
+  st.id = "xray-de-x-css";
+  st.textContent = ".xray-deep-engine .de-x{position:absolute;inset:0;pointer-events:none;transform-origin:50% 50%}" +
+    ".de-x .de-x-beam{left:calc(50% + 60px);right:0;background:var(--xto-link,#00e5ff)}" +
+    ".de-x .de-x-energy{left:calc(50% + 60px)}" +
+    ".de-x .de-x-hout{top:calc(50% + 10px)}" +
+    ".de-x .de-x-hin{top:calc(50% - 18px)}" +
+    ".de-x .de-x-marker{right:1.67%;transform:translate(50%,-50%)}" +
+    ".de-x .de-x-label{right:10px;transform:translateY(14px)}" +
+    ".de-x .de-x-tunnel:not(.tunnel-active):not(.tunnel-2way){height:0!important;opacity:0!important}" +
+    ".de-x .de-x-tunnel.tunnel-active,.de-x .de-x-tunnel.tunnel-2way{height:36px!important;opacity:1!important}" +
+    ".de-x .de-x-tunnel.tunnel-active .de-tunnel-fill{opacity:1}" +
+    ".de-x .de-x-tunnel.tunnel-active .de-tunnel-wall{background:var(--xto-ospf,#39ff14);box-shadow:0 0 6px rgba(var(--xto-ospf-rgb,57,255,20),0.5),0 0 14px rgba(var(--xto-ospf-rgb,57,255,20),0.2)}" +
+    ".de-x .de-x-tunnel.tunnel-active .de-tunnel-label{opacity:1;color:var(--xto-ospf,#39ff14);text-shadow:0 0 8px rgba(var(--xto-ospf-rgb,57,255,20),0.5);animation:xtunnelLabelPulse 2s ease-in-out infinite alternate}" +
+    ".de-x.de-x-down .de-x-marker{border-color:var(--xto-linkDown,#ff4d4d);z-index:11}" +
+    ".de-x.de-x-down .de-x-marker::after{content:\"\\2716\";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(220,40,40,0.85);border:2px solid #ef5350;border-radius:50%;color:#fff;font-size:14px;line-height:24px;text-align:center;box-shadow:0 0 12px rgba(239,83,80,0.7),0 0 30px rgba(239,83,80,0.3);pointer-events:none;z-index:11}" +
+    ".de-x-label.de-x-down{color:#ef5350!important;text-shadow:0 0 6px rgba(239,83,80,0.5)!important}" +
+    ".de-x.de-x-noip,.de-x-label.de-x-noip{opacity:0.45}" +
+    ".xray-deep-engine.de-angle-single-tilt .de-label.de-x-label:not([style*=\"display: none\"]),.xray-deep-engine.de-angle-single-tilt .de-x .de-if-marker.de-x-marker{display:block!important}" +   /* nx_de_parallel: a single-link node with a parallel link */
+    "body.trace-active .de-x,body.trace-active .de-side-x,body.trace-active .de-x-label{display:none!important}";
+  (document.head || document.documentElement).appendChild(st);
+}
+
+/* nx_de_extra_dom: link state for ONE link (peer + local iface), same rules as the _leftLink / _rightLink builders in
+   xrayBuildApplyState. When the collector sends s.peer_links (U8) and this iface is NOT the one the per-peer keys
+   describe (= 2nd link to the same peer), the per-link row is used instead of the overwritten <peer>_* keys. */
+function _xrayDeLinkInfo(s, peerId, iface, ospfMode) {
+  s = s || {};
+  var ifName = iface || s[peerId + "_iface"] || "";
+  var row = null;
+  (s.peer_links || []).some(function(r) { if (r && r.iface === ifName) { row = r; return true; } return false; });
+  var ifaces = s.interfaces || {};
+  var perPeer = !row || s[peerId + "_iface"] === ifName;
+  /* the peer's session runs over ANOTHER interface (e.g. iBGP over lo while this is an IP-less spare link) and no per-link row:
+     the session is not on this link -> link only (no session colour / Hello / arrow) */
+  var _sessIf = s[peerId + "_iface"];
+  if (!row && _sessIf && ifName && _sessIf !== ifName) {
+    return { up: false, fallback: false, ifName: ifName, proto: "", noSession: true, ifaceDown: !!(ifName && ifaces[ifName] && !ifaces[ifName].up) };
+  }
+  var ospfOf = function() {
+    if (perPeer) {
+      if (s[peerId + "_ospf_state"] === undefined && s[peerId + "_ospf_full"] === undefined) return null;
+      return { full: !!(s[peerId + "_ospf_full"] === true || s[peerId + "_ospf_state"] === "Full"), state: s[peerId + "_ospf_state"] };
+    }
+    if (row.ospf_state === undefined && row.ospf_full === undefined) return null;
+    return { full: !!(row.ospf_full === true || row.ospf_state === "Full"), state: row.ospf_state };
+  };
+  var link;
+  if (ospfMode) {
+    var full = perPeer ? (s[peerId + "_has_full"] !== undefined ? !!s[peerId + "_has_full"] : false) : !!row.full;
+    var nbr = perPeer ? (s[peerId + "_neighbor_state"] || "None") : (row.state || "None");
+    var _o = ospfOf();
+    if (_o) {
+      full = _o.full;
+      nbr = full ? "Full" : (_o.state || "None");
+      if (nbr === "Down" && s.iface_hellos && ifName && !Object.prototype.hasOwnProperty.call(s.iface_hellos, ifName)) nbr = "None";
+    }
+    var _rr = s.route_resolution || {};
+    var _act = full || nbr !== "None";
+    var _isStatic = !!(s.has_static || s.has_floating_static) && !_act && _rr.protocol === "static" && _rr.out_iface === ifName;
+    link = { up: full, fallback: _isStatic, ifName: ifName, nbrState: nbr, proto: "ospf" };
+  } else {
+    var bgpUp = perPeer ? !!(s[peerId + "_established"] || s[peerId + "_has_full"] || s[peerId + "_neighbor_state"] === "Established" || s[peerId + "_neighbor_state"] === "Full") : !!row.full;
+    var _ob = ospfOf();
+    var _os = _ob ? (_ob.state || "") : "";
+    var _ospfOn = !!(_ob && (_ob.full || (_os && _os !== "Down" && _os !== "None")));
+    var _lp = _ospfOn ? (s.bgp_configured ? "coexist" : "ospf") : "bgp";
+    var _ospfUp = perPeer ? !!(s[peerId + "_has_full"] || s[peerId + "_ospf_full"] === true || s[peerId + "_ospf_state"] === "Full") : !!(_ob && _ob.full);
+    link = { up: _lp === "bgp" ? bgpUp : (_ospfUp || bgpUp), fallback: false, nbrState: _lp !== "bgp" ? (_os || "Full") : undefined,
+      bgpUp: bgpUp, ospfUp: _ospfUp, ifName: ifName, proto: _lp };
+  }
+  link.ifaceDown = !!(ifName && ifaces[ifName] && !ifaces[ifName].up);
+  /* a link without an IP and no session up on it (e.g. a spare link whose peer the state names by this interface): no session
+     colour / Hello - same rule as the two main links (U9). A session that IS up stays (BGP unnumbered). */
+  var _it = ifName && ifaces[ifName];
+  if (_it && !String(_it.ip || "").split("/")[0] && !link.up && !link.bgpUp && !link.ospfUp) {
+    return { up: false, fallback: false, ifName: ifName, proto: "", noSession: true, ifaceDown: link.ifaceDown };
+  }
+  return link;
+}
+
+/* nx_de_extra_dom: colour / DOWN / no-IP / protocol classes for every rendered .de-x. Returns [{el: tunnel, link}] for
+   _xrayApplyDualLinkTunnels. No .de-x (<=2 peers) -> [] = nothing changes. */
+function _xrayApplyDeExtras(s, ospfMode) {
+  var de = document.querySelector(".xray-deep-engine");
+  if (!de || !s) return [];
+  var xs = de.querySelectorAll(".de-x");
+  if (!xs.length) return [];
+  var ifaces = s.interfaces || {}, out = [];
+  for (var i = 0; i < xs.length; i++) {
+    var x = xs[i], peer = x.getAttribute("data-peer") || "", iface = x.getAttribute("data-iface") || s[peer + "_iface"] || "";
+    var _ifS = _xrayIfToState(iface, s);   /* nx_de_srl_ifname */
+    if (_ifS !== iface) { var _lbS = de.querySelector('.de-x-label[data-x="' + x.getAttribute("data-x") + '"]'); x.setAttribute("data-iface", _ifS); if (_lbS) _lbS.setAttribute("data-iface", _ifS); iface = _ifS; }
+    var link = _xrayDeLinkInfo(s, peer, iface, ospfMode);
+    _xrayApplyDualLinkBeam(x.querySelector(".de-x-beam"), link, ifaces);
+    _xrayApplyDualLinkEnergyOrb(x.querySelector(".de-x-energy"), link, ifaces);
+    var it = iface && ifaces[iface];
+    var hasIp = !!(it && String(it.ip || "").split("/")[0]);
+    x.classList.toggle("de-x-down", link.ifaceDown);
+    x.classList.toggle("de-x-noip", !hasIp && !link.ifaceDown);
+    /* the label may have been lifted to the engine root by _xrayDeAngleView (U2b) -> find it by its index */
+    var lb = x.querySelector(".de-x-label") || de.querySelector('.de-x-label[data-x="' + x.getAttribute("data-x") + '"]');
+    if (lb) {
+      lb.textContent = (iface ? iface + " - " : "") + peer;
+      lb.classList.toggle("de-x-down", link.ifaceDown);
+      lb.classList.toggle("de-x-noip", !hasIp && !link.ifaceDown);
+    }
+    x.classList.toggle("de-x-nosess", !!link.noSession);
+    var _xt = x.querySelector(".de-x-tunnel");
+    if (link.noSession) { if (_xt) _xt.className = "de-tunnel de-x-tunnel"; continue; }   /* no session on this link: no tunnel */
+    out.push({ el: _xt, link: link });
+  }
+  return out;
+}
+
 function _xrayApplyDualLinkTunnels(leftLink, rightLink) {
   var tLeft = document.getElementById("de-tunnel-left");
   var tRight = document.getElementById("de-tunnel-right");
@@ -5988,10 +6486,12 @@ function _xrayApplyDualLinkTunnels(leftLink, rightLink) {
   }
   _apply(tLeft, leftLink);
   _apply(tRight, rightLink);
+  (arguments[2] || []).forEach(function(x) { _apply(x.el, x.link); });  /* nx_de_extra_dom */
 }
 
 function _xrayApplyDualLinkDirection(s, peers) {
   var rr = s.route_resolution || {};
+  window._xrayFwdIface = null;   /* nx_deep_n_u3: set below only when the exit is an extra link */
   if (window._xrayIsTransit) {
     window._xrayFwdDirection = "right";
     document.body.classList.remove("ping-left");
@@ -6015,6 +6515,7 @@ function _xrayApplyDualLinkDirection(s, peers) {
   }
   var _lIf = s[peers.left + "_iface"];
   var _rIf = s[peers.right + "_iface"];
+  try { var _tdL = _xrayDeMainTruth(s, null, peers.left), _tdR = _xrayDeMainTruth(s, null, peers.right); if (_tdL && _tdL.lo) _lIf = _tdL.iface; if (_tdR && _tdR.lo) _rIf = _tdR.iface; } catch (_eTd) {}   /* nx_de_main_truth */
   var _lan = s.lan_iface || function() {
     var k = Object.keys(s.interfaces || {});
     return k[k.length - 1];
@@ -6042,7 +6543,9 @@ function _xrayApplyDualLinkDirection(s, peers) {
   }
   window._xrayRtSelPrefixGone = _rtSelGone;
   var out = _rtSelGone ? null : (_rtSelIf || rr.out_iface);
-  var goesLeft = out ? out === _lIf ? true : out === _rIf ? false : out === _lan : false;
+  var _xOut = !!(out && out !== _lIf && out !== _rIf && _xrayDeIsExtra(s, out));   /* nx_deep_n_u3 */
+  window._xrayFwdIface = _xOut ? out : null;
+  var goesLeft = out && !_xOut ? out === _lIf ? true : out === _rIf ? false : out === _lan : false;
   window._xrayDirDbg = {
     out: out,
     lIf: _lIf,
@@ -6070,6 +6573,12 @@ function _xrayApplyDualLinkDirection(s, peers) {
 // mapped to left/right by the current dual-apex peer ifaces (window._triNodes / _xrayDirDbg). RCL and
 // curated scenarios never call it, so their route_resolution-driven arrow is unchanged (non-regression).
 // Returns "left" / "right" on success, or null if iface is not one of the two peer links.
+/* nx_deep_n_u3: is iface an extra link (3rd+ neighbor) of the DeepDive now open? */
+function _xrayDeIsExtra(s, iface) {
+  if (!iface || typeof _xrayDeTunnels !== "function") return false;
+  var _a = _xrayDeTunnels(s || window._lastXrayState, window._scenarioConfig);
+  return _a.some(function(t) { return t.iface === iface && _xrayDeIsX(t, _a); });   /* 3+ distinct peers, or a parallel link (nx_de_parallel) */
+}
 function xraySetForwardIface(iface) {
   var s = window._lastXrayState;
   if (!iface || iface === "lo" || !s) return null;
@@ -6085,6 +6594,9 @@ function xraySetForwardIface(iface) {
     var _pIf = s.wan_iface || (s.peer_node && s[s.peer_node + "_iface"]) || s.r2_iface;
     if (_pIf && _pIf !== "lo" && iface === _pIf) dir = "right";
   }
+  /* nx_deep_n_u3: an extra link -> the two sides stay, the arrow goes to that link (_xrayFwdIface) */
+  if (!dir && tn && _xrayDeIsExtra(s, iface)) { window._xrayFwdIface = iface; if (typeof _xrayDeAngleView === "function") _xrayDeAngleView(s); return "extra"; }
+  window._xrayFwdIface = null;
   if (!dir) return null;
   window._xrayFwdDirection = dir;
   if (dir === "left") document.body.classList.add("ping-left"); else document.body.classList.remove("ping-left");
@@ -6198,6 +6710,8 @@ function xrayBuildApplyState(config) {
     // Without this the arrow lags one frame: on a failover step it kept pointing at the now-down link.
     // Kept idempotent — the call below still runs to transform the in-cylinder arrow once the deep
     // engine has (re)built it, and to keep single-link / non-triangle paths unchanged.
+    /* nx_de_parallel: a single-link node (no left/right boxes) with a parallel link -> colour its extra links here (the triangle path does it below) */
+    if (!_triNodes && typeof _xrayApplyDeExtras === "function") { try { var _xs1 = _xrayApplyDeExtras(s, pattern === "ospf_triangle" || protocol === "ospf"); if (_xs1.length) _xrayApplyDualLinkTunnels(null, null, _xs1); } catch (_eX1) {} }
     if (_triNodes) { try { _xrayApplyDualLinkDirection(s, _triNodes); } catch (_e) {} }
     try {
       _xrayDeAngleView(s);
@@ -6355,6 +6869,26 @@ function xrayBuildApplyState(config) {
         };
         deepLines = typeof xrayBgpDeepLines === "function" ? xrayBgpDeepLines(s) : [];
       }
+      /* nx_de_main_truth: a session over the loopback is not ON this link -> the BGP colour goes (OSPF on the link stays);
+         an IP-less link whose peer session is not up -> no session at all (same as the extra links, U2a noSession) */
+      try {
+        var _tmFix = function(lk, mt) {
+          if (!mt || !(mt.noSess || mt.off)) return lk;   /* a loopback BGP whose route leaves by THIS link (peer_links bgp_over_lo, RCL q14): drawn as now */
+          if (!mt.noSess && (lk.proto === "coexist" || lk.proto === "ospf"))
+            return { up: lk.ospfUp === undefined ? !!lk.up : !!lk.ospfUp, fallback: false, nbrState: lk.nbrState, bgpUp: false, ospfUp: lk.ospfUp, ifName: mt.iface, proto: "ospf" };
+          return { up: false, fallback: false, ifName: mt.iface, proto: "", noSession: true, ifaceDown: mt.down };
+        };
+        var _tmL = _xrayDeMainTruth(s, null, _lId), _tmR = _xrayDeMainTruth(s, null, _rId);
+        _leftLink = _tmFix(_leftLink, _tmL); _rightLink = _tmFix(_rightLink, _tmR);
+        var _tmDe = document.querySelector(".xray-deep-engine");
+        if (_tmDe) { _tmDe.classList.toggle("de-mt-noip-l", !!(_tmL && _tmL.noIp && _tmL.noSess && !_tmL.down)); _tmDe.classList.toggle("de-mt-noip-r", !!(_tmR && _tmR.noIp && _tmR.noSess && !_tmR.down)); }
+        if (!document.getElementById("xray-de-mt-style")) {
+          var _tmSt = document.createElement("style"); _tmSt.id = "xray-de-mt-style";
+          _tmSt.textContent = ".xray-deep-engine.de-mt-noip-l .de-beam.in,.xray-deep-engine.de-mt-noip-l .de-energy.el,.xray-deep-engine.de-mt-noip-l .de-label.in,.xray-deep-engine.de-mt-noip-l .de-if-marker.left," +
+            ".xray-deep-engine.de-mt-noip-r .de-beam.out,.xray-deep-engine.de-mt-noip-r .de-energy.er,.xray-deep-engine.de-mt-noip-r .de-label.out,.xray-deep-engine.de-mt-noip-r .de-if-marker.right{opacity:0.45}";
+          (document.head || document.documentElement).appendChild(_tmSt);
+        }
+      } catch (_eTm) {}
       _xrayApplyDualLinkLabels(s, _triNodes);
       _xrayApplyDualLinkBeams(s, _leftLink, _rightLink);
       _xrayApplyDualLinkEnergies(s, _leftLink, _rightLink);
@@ -6362,7 +6896,7 @@ function xrayBuildApplyState(config) {
       var _liDown = !!(_leftLink.ifName && _dlIfaces[_leftLink.ifName] && !_dlIfaces[_leftLink.ifName].up);
       var _riDown = !!(_rightLink.ifName && _dlIfaces[_rightLink.ifName] && !_dlIfaces[_rightLink.ifName].up);
       _leftLink.ifaceDown = _liDown; _rightLink.ifaceDown = _riDown;   // pass iface-down into the tunnel gate
-      _xrayApplyDualLinkTunnels(_leftLink, _rightLink);
+      _xrayApplyDualLinkTunnels(_leftLink, _rightLink, _xrayApplyDeExtras(s, pattern === "ospf_triangle" || protocol === "ospf"));  /* nx_de_extra_dom */
       _xrayApplyDualLinkDirection(s, _triNodes);
       document.body.classList.toggle("is-input-down", _liDown);
       document.body.classList.toggle("is-output-down", _riDown);
@@ -9702,6 +10236,7 @@ window.xrayBuildFaultState = function(state, tracePattern) {
 };
 
 function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
+  try { var _thL = _xrayDeMainTruth(s, null, leftNode), _thR = _xrayDeMainTruth(s, null, rightNode); if (_thL && _thL.noSess && _thL.noIp) leftIf = ""; if (_thR && _thR.noSess && _thR.noIp) rightIf = ""; } catch (_eTh) {}   /* nx_de_main_truth */
   if (typeof _xrayUnifiedActive === "function" && _xrayUnifiedActive(window._scenarioConfig || {})) {
     var _duh = document.querySelectorAll(".de-hello-orb");
     for (var _du = 0; _du < _duh.length; _du++) {
@@ -9744,7 +10279,7 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
     iface: {},
     node: {}
   };
-  function drive(outOrb, inOrb, ifName, peerNode, kfOut, kfIn) {
+  function drive(outOrb, inOrb, ifName, peerNode, kfOut, kfIn, farOverride) {  /* nx_de_extra_hello: farOverride = an extra box's own reach */
     var up = ifName && ifaces[ifName] && ifaces[ifName].up;
     var active = ifName && Object.prototype.hasOwnProperty.call(hellos, ifName);
     var showOut = active && up;
@@ -9768,7 +10303,7 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
     var _srF = _XRAY_DE.helloSendRecvPhaseFrac > 0 ? _XRAY_DE.helloSendRecvPhaseFrac : 0;
     var _inDelay = Math.floor(inH / 2) - inH * _phF + inH * _srF;
     var _isLeftB = /Left/.test(kfOut);
-    var _far = _isLeftB ? _deHM && _deHM._helloFarL : _deHM && _deHM._helloFarR;
+    var _far = farOverride > 0 ? farOverride : (_isLeftB ? _deHM && _deHM._helloFarL : _deHM && _deHM._helloFarR);
     if (_far > 0) {
       var _fromC = _isLeftB ? "calc(50% - 10px)" : "calc(50% + 10px)";
       var _endStr = _isLeftB ? "calc(50% - " + _far + "px)" : "calc(50% + " + _far + "px)";
@@ -9808,6 +10343,17 @@ function _xrayApplyDualLinkHello(s, leftIf, rightIf, leftNode, rightNode) {
   }
   drive(document.querySelector(".de-hello-orb.left-out"), document.querySelector(".de-hello-orb.left-in"), leftIf, leftNode, "deHelloLeftOut", "deHelloLeftIn");
   drive(document.querySelector(".de-hello-orb.out"), document.querySelector(".de-hello-orb.in"), rightIf, rightNode, "deHelloOut", "deHelloIn");
+  /* nx_de_extra_hello (2026-10-11, DeepDive N links U6): every extra link (.de-x, 3+ peers) gets its own Hello pair, same rules as the
+     two main links. Reach = the box's own _helloFar set by _xrayDeAngleView (U2b), else the right box's value. */
+  if (_deHM) {
+    var _xs = _deHM.querySelectorAll(".de-x");
+    for (var _xi = 0; _xi < _xs.length; _xi++) {
+      var _xe = _xs[_xi], _xPeer = _xe.getAttribute("data-peer") || "", _xIf = _xe.getAttribute("data-iface") || s[_xPeer + "_iface"] || "";
+      if (_xe.classList.contains("de-x-nosess")) _xIf = "";   /* no session on this link (U2a) -> no Hello: drive() hides both orbs for an empty iface */
+      var _xn = _xe.getAttribute("data-x") || String(_xi);
+      drive(_xe.querySelector(".de-x-hout"), _xe.querySelector(".de-x-hin"), _xIf, _xPeer, "deHelloX" + _xn + "Out", "deHelloX" + _xn + "In", _xe._helloFar > 0 ? _xe._helloFar : 0);
+    }
+  }
   if (_deHM && _kfParts.length) {
     var _okfH = document.getElementById("xray-de-hello-kf");
     if (!_okfH) {
@@ -9874,6 +10420,9 @@ function _xrayDeepDeconflict() {
     miss.forEach(function(L, i) {
       L.angle = -Math.PI / 2 + (i + 1) * (Math.PI / (miss.length + 1));
     });
+    /* nx_de_parallel: a 2nd/3rd link to the same peer is turned +12 / -12 / +24 ... degrees (same spacing as the Standard) */
+    var _pSeen = {};
+    links.forEach(function(L) { if (L.angle == null || !L.peer) return; var k = _pSeen[L.peer] = _pSeen[L.peer] == null ? 0 : _pSeen[L.peer] + 1; if (k) { L.angle += (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 12 * Math.PI / 180; L.pk = k; } });
     if (opt.legacyPin) {
       if (links.length === 1) links[0].angle = 0; else if (links.length === 2) {
         links[0].angle = Math.PI;
@@ -10057,7 +10606,7 @@ function _xrayDeepDeconflict() {
         if (!(fullFrame && lp)) {
           var _one = L.iface + (L.peer ? " - " + L.peer : "");
           var _lyR = _sEdge === "top" ? _sbe[1] - 8 : _sEdge === "bottom" ? _sbe[1] + 18 : _ly1; /* nx_simple_edge_label_outside */ /* simple_single_link_label_terminus: single-link label follows the link terminus (like the multi-link path) not a fixed bottom slot */
-          s += '<text x="' + lx + '" y="' + _lyR.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + _one + "</text>";
+          s += '<text x="' + lx + '" y="' + (_lyR + (L.pk || 0) * 16 * (_sEdge === "top" ? -1 : 1)).toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + _one + "</text>";
           return;
         }
         s += '<text x="' + lx + '" y="' + _ly1.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '">' + L.iface + "</text>";
@@ -10066,7 +10615,7 @@ function _xrayDeepDeconflict() {
       }
       var reach = reachFor(a), lbl = L.iface + (L.peer ? " - " + L.peer : "");
       var lp = pt(a, reach + 6), anc2 = _co < -.35 ? "end" : _co > .35 ? "start" : "middle";
-      s += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] + 4).toFixed(1) + '" fill="var(--xto-accent,#7fb2c2)" font-size="12" font-family="monospace" text-anchor="' + anc2 + '">' + lbl + "</text>";
+      s += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] + 4 + (L.pk || 0) * 16).toFixed(1) + '" fill="var(--xto-accent,#7fb2c2)" font-size="12" font-family="monospace" text-anchor="' + anc2 + '">' + lbl + "</text>";
     });
     if (ax.processGlyph === "inside" || ax.processGlyph === "outside") {
       var order = [], rank = {
@@ -10321,6 +10870,17 @@ function _xrayCanonicalPositions(targetId, peerIds) {
 }
 
 function _xrayUnifiedPositionsFor(config, targetId, peerIds) {
+  /* nx_deep_n_u1_order: OSS + 3 or more distinct peers -> positions on the Standard tunnel angles (drawn overview + the
+     order-keeping spread), so Simple and Standard show the overview's clockwise order. 2 peers or fewer: as before */
+  try {
+    var _uq = (peerIds || []).filter(function(p, i, A) { return A.indexOf(p) === i; });
+    if (typeof window !== "undefined" && window.xrayCore && _uq.length >= 3 && typeof _xrayDeTunnels === "function") {
+      var _tn = _xrayDeTunnels(window._lastXrayState, config), _po = {}, _ok = (_tn.nPeers || 0) >= 3;
+      _po[targetId] = { x: 0, y: 0 };
+      _uq.forEach(function(p) { var t = _tn.filter(function(x) { return x.peer === p && !x.same && x.deg != null; })[0]; if (!t) { _ok = false; return; } _po[p] = { x: Math.cos(t.deg * Math.PI / 180) * 100, y: Math.sin(t.deg * Math.PI / 180) * 100 }; });
+      if (_ok) return _po;
+    }
+  } catch (_eUo) {}
   var cp = config && config.positions;
   if (cp && cp[targetId] && peerIds.length && peerIds.every(function(pid) {
     return cp[pid];
@@ -10509,6 +11069,9 @@ function _xrayUnifiedNodeFromLive(config, s) {
     var _ospfOnU = isOspf || !!_drvU.ospf;
     var mlinks = peers.map(function(p) {
       var pid = p.id, iface = s[pid + "_iface"] || "";
+      var _mtU = null; try { _mtU = _xrayDeMainTruth(s, config, pid); } catch (_eTu) {}   /* nx_de_main_truth */
+      if (_mtU && _mtU.fixed) iface = _mtU.iface;
+      var _mtUx = !!(_mtU && _mtU.noSess);   /* no session at all on this link */
       var est = protoRaw === "bgp" ? !!(s[pid + "_established"] || s[pid + "_has_full"] || s[pid + "_neighbor_state"] === "Established" || s[pid + "_neighbor_state"] === "Full") : !!(s[pid + "_has_full"] || s[pid + "_neighbor_state"] === "Full");
       var _egIf = rr && rr.out_iface || outIf;
       var isBest = bpv === pid || !!_egIf && !!iface && _egIf === iface;
@@ -10535,15 +11098,43 @@ function _xrayUnifiedNodeFromLive(config, s) {
         peer: pid,
         protocols: (function() {  /* nx_simple_coexist_state_driven: [bgp, ospf] like _xrayProtocolsForIface */
           var _pl = [];
-          if (hasProto && proto === "bgp") _pl.push({ proto: "bgp", up: est, fsm: "" });
-          if (_linkOspf && (hasProto || _drvU.ospf)) _pl.push({ proto: "ospf", up: _oFullU, fsm: _oFsmU });
+          if (hasProto && proto === "bgp" && !(_mtU && (_mtU.noSess || _mtU.off))) _pl.push({ proto: "bgp", up: est, fsm: "" });   /* nx_de_main_truth */
+          if (!_mtUx && _linkOspf && (hasProto || _drvU.ospf)) _pl.push({ proto: "ospf", up: _oFullU, fsm: _oFsmU });
           return _pl;
         })(),
-        ospfHello: ph,
+        ospfHello: _mtUx ? null : ph,
         selected: isBest,
         up: iface ? ifUp(iface) : true
       };
     });
+    /* nx_de_parallel (Simple): a peer with 2+ links gets one link per interface (was one per peer = the 2nd link vanished).
+       The link the per-peer state describes (<peer>_iface) keeps the values above; the others take the per-link row
+       (state.peer_links) or, without a row, no session (same rule as the Standard extras). Only peers with a parallel link change. */
+    if (typeof _xrayDeTunnels === "function") {
+      try {
+        var _ptu = _xrayDeTunnels(s, config), _pc = {};
+        _ptu.forEach(function(t) { if (t.iface) _pc[t.peer] = (_pc[t.peer] || 0) + 1; });
+        if (Object.keys(_pc).some(function(k) { return _pc[k] >= 2; })) {
+          var _egIfP = rr && rr.out_iface || outIf, _nl = [];
+          mlinks.forEach(function(m) {
+            if (!(_pc[m.peer] >= 2)) { _nl.push(m); return; }
+            _ptu.forEach(function(t) {
+              if (t.peer !== m.peer || !t.iface) return;
+              if (t.iface === m.iface) { _nl.push(m); return; }
+              var row = null;
+              (s.peer_links || []).some(function(r) { if (r && r.iface === t.iface) { row = r; return true; } return false; });
+              var pls = [];
+              if (row) {
+                if (hasProto && proto === "bgp") pls.push({ proto: "bgp", up: !!row.full, fsm: "" });
+                if (row.ospf_state && row.ospf_state !== "None" && row.ospf_state !== "Down" && (hasProto || _drvU.ospf)) pls.push({ proto: "ospf", up: !!row.ospf_full, fsm: row.ospf_full ? "Full" : row.ospf_state });
+              }
+              _nl.push({ iface: t.iface, peer: t.peer, protocols: pls, ospfHello: null, selected: !!_egIfP && _egIfP === t.iface, up: ifUp(t.iface) });
+            });
+          });
+          mlinks = _nl;
+        }
+      } catch (_ePl) {}
+    }
     return {
       target: targetId,
       positions: _xrayUnifiedPositionsFor(config, targetId, peers.map(function(p) {
@@ -10850,7 +11441,27 @@ function _xrayRenderUnifiedLive(s) {
 /* nx_simple_re_clear_host (2026-10-02 CML2 long hostnames): in Simple the Routing Engine panel can sit on the
    SVG hostname (e.g. after switching router in Simple its inline top is gone -> CSS default). Only when the panel
    really overlaps the hostname, push it just below the name; otherwise leave the position untouched (FRR r1..r3). */
-function _xrayUnifiedReClearHost(host) {
+/* nx_simple_label_overlap2: Simple link labels ("<iface> - <peer>") that collide - the later one is not shown (a link label is a bonus) */
+function _xraySimpleLabelOverlap(host) {
+  var sv = host && host.querySelector("svg");
+  if (!sv) return;
+  var ts = [].slice.call(sv.querySelectorAll("text")).filter(function(t) { return / - /.test(t.textContent || ""); });
+  ts.forEach(function(t) { if (t.getAttribute("data-lbl-ov")) { t.style.visibility = ""; t.removeAttribute("data-lbl-ov"); } });
+  var kept = [];
+  ts.forEach(function(t) {
+    var r = t.getBoundingClientRect();
+    if (!r.width) return;
+    var b = { l: r.left - 4, t: r.top - 1, r: r.right + 4, b: r.bottom + 1 };   /* 4px each side: glyph halo (paint-order stroke) */
+    if (kept.some(function(k) { return Math.min(b.r, k.r) > Math.max(b.l, k.l) && Math.min(b.b, k.b) > Math.max(b.t, k.t); })) {
+      t.style.visibility = "hidden"; t.setAttribute("data-lbl-ov", "1"); return;
+    }
+    kept.push(b);
+  });
+}
+function _xrayUnifiedReClearHost(host) {   /* nx_simple_label_overlap: the old body + the label check */
+  try { _xrayUnifiedReClearHost0(host); } finally { try { _xraySimpleLabelOverlap(host); } catch (_eSo) {} }
+}
+function _xrayUnifiedReClearHost0(host) {
   try {
     var re = document.getElementById("de-re-panel"), sv = host && host.querySelector("svg"), de = re && re.parentElement;
     if (!re || !sv || !de) return;

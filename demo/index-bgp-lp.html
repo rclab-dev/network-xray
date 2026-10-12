@@ -11,7 +11,7 @@
 
   Clean 3-layer split (2026-06-21 dedupe):
     outer shell (this file) = clab graph overview + node/peer selection UX
-    bridge  clabXray.deepViews(fullConfig, nodeId) = enumerate the DeepDive views (per peer-pair)
+    bridge  clabXray.deepViews(fullConfig, nodeId) = the DeepDive view (one view with all of the node's links)
     facade  xrayCore.openDeepDiveFor(nodeId, state) = render one view (OSS network-xray 80e3f88+)
 
   containerlab renders this with Go html/template and passes:
@@ -188,7 +188,7 @@ window.__xrayGraphBoot = function () {
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }
 
-  // ================= node click → deepViews + (b) peer-pair selector =================
+  // ================= node click → deepViews (one view with all of the node's links) =================
   function showNode(nodeId){
     window.__xrayCurNode = nodeId;   // remember the open node so the live poll can refresh it in place
     document.querySelectorAll('.ov-node').forEach(function(e){e.classList.toggle('sel', e.getAttribute('data-n')===nodeId);});

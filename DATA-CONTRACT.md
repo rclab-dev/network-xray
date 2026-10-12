@@ -116,21 +116,27 @@ var view = xrayCore.renderTopology('#topo', config, { topology });
 view.openDeepDiveFor('r2', r2Snapshot);   // re-points the cylinder to r2 and zooms in
 ```
 
-**Multi-peer nodes (degree > 2) / 多ピアノード — `clabXray.deepViews(config, nodeId)`** (clab bridge helper):
-the cylinder is two-sided, so a node with 3+ neighbors has several inspectable views (one per peer
-pair). `deepViews` enumerates them — each entry is a 3-node sub-scene (`nodeId` + the two peers) that
-stays within X-Ray's shapes, so you never feed a full N-node graph to the engine. A host topology view can
-turn the list into a peer-pair selector.
+**Nodes with many neighbors / 隣の多いノード — `clabXray.deepViews(config, nodeId, opts)`** (clab bridge helper):
+returns the DeepDive scene for `nodeId` — **one view with all of its neighbors**, however many there are. The
+DeepDive draws every link around the cylinder, each tunnel from the direction that neighbor sits in the topology
+view (`config.positions`), with the session's own interface on each tunnel; a spare link without an IP, or a
+second link to the same neighbor, is drawn too (faint when it carries no session). Pass `config.links` (every link
+with its end interfaces) so those extra links are known, and `opts.state` (the node's live state) so the links
+that carry a session are put first. The result is still an array (so older hosts keep working) but now always
+has a single entry; the peer-pair buttons of earlier versions are no longer needed.
 
-シリンダーは2側ゆえ、隣接 3+ のノードは見られるビューが複数(ピア対ごと)。`deepViews` がそれを列挙
-(各ビュー = `nodeId` + 2ピアの3ノード sub-scene = X-Ray の3形内)。full N-node を engine に渡さない。
+`nodeId` の DeepDive の場面を返します — 隣が何台あっても**全部の隣を入れた 1 つの画面**。DeepDive は円柱のまわりに
+リンクを全部描き、どのトンネルも全体図 (`config.positions`) でその相手がいる向きから入り、トンネルにはそのセッションの
+IF が付きます。IP の無い予備のリンクや、同じ相手への 2 本目のリンクも描きます (セッションが無ければ薄く)。
+`config.links` (各リンクと両端の IF) を渡すとその予備のリンクが分かり、`opts.state` (そのノードの今の状態) を渡すと
+セッションを運ぶリンクが先に並びます。戻り値は今も配列 (古い呼び方のページもそのまま動く) ですが、要素は常に 1 つです。
+以前の版の「組の切り替えボタン」は要りません。
 
 ```js
-clabXray.deepViews(fullConfig, 'spine1').forEach(function (v) {
-  // v = { label, peers:[a,b], scene:{ config, topo, states } }  → make a button per v
-  // on click: var view = xrayCore.renderTopology('#topo', v.scene.config, { topology: v.scene.topo });
-  //           view.openDeepDiveFor('spine1', v.scene.states.normal);
-});
+var v = clabXray.deepViews(fullConfig, 'spine1', { state: liveStates.spine1 })[0];
+// v = { label, peers:[a, b, c, …], scene:{ config, topo, states } }
+var view = xrayCore.renderTopology('#topo', v.scene.config, { topology: v.scene.topo });
+view.openDeepDiveFor('spine1', v.scene.states.normal);
 ```
 
 ---
@@ -149,6 +155,8 @@ Passed to `xrayRenderTopology(config)` and `xrayBuildApplyState(config)`.
 | `networks[]` | array | The links / subnets. See below. リンク/サブネット。下表参照。 |
 | `xray` | object | Visualization config. See below. 可視化設定。下表参照。 |
 | `capture` | object | Optional packet-capture view config. 任意のパケットキャプチャ設定。 |
+| `links[]` | array | Optional. Every link with its end interfaces: `{ a: "r1", aIf: "eth1", b: "r2", bIf: "eth1" }`. Lets the DeepDive draw a spare link without an IP and a second link to the same neighbor. 任意。各リンクと両端の IF。IP の無い予備のリンクや、同じ相手への 2 本目のリンクも DeepDive に描けるようになる。 |
+| `positions` | object | Optional node positions from your topology view: `{ r1: { x, y }, … }`. Each DeepDive tunnel is drawn from the direction its neighbor sits in. 任意。全体図のノードの位置。DeepDive のトンネルを相手のいる向きから描く。 |
 
 ### `config.nodes[]`
 
@@ -199,7 +207,7 @@ scenario needs; everything is optional and defaults sensibly.
 
 | Field | Type | Meaning / 意味 |
 |---|---|---|
-| `interfaces` | object | `{ "eth0": { up: true, ip: "10.202.0.20/24" }, … }`. Per-interface link state + address (`ip: ""` when the interface has no address; an unnumbered interface that borrows a loopback /32 also has `unnumbered: true`). IF ごとのリンク状態 + アドレス (アドレスの無い IF は `ip: ""`・ループバックの /32 を借りる unnumbered の IF は `unnumbered: true` も付く)。 |
+| `interfaces` | object | `{ "eth0": { up: true, ip: "10.202.0.20/24" }, … }`. Per-interface link state + address (`ip` = the first **IPv4** address — an IPv6 address, e.g. a link-local `fe80::…`, is skipped; `ip: ""` when the interface has no IPv4 address; an unnumbered interface that borrows a loopback /32 also has `unnumbered: true`). IF ごとのリンク状態 + アドレス (`ip` は最初の **IPv4** アドレス — IPv6 (リンクローカルの `fe80::…` など) は飛ばす・IPv4 アドレスの無い IF は `ip: ""`・ループバックの /32 を借りる unnumbered の IF は `unnumbered: true` も付く)。 |
 | `wan_iface` | string | Name of the uplink/WAN interface. 上流(WAN)IF 名。 |
 | `lan_iface` | string | Name of the downlink/LAN interface. 下流(LAN)IF 名。 |
 | `sv_link_up` | boolean | Source/server-side link up (for server-origin pings). 送信元(サーバ)側リンクの up。 |
@@ -303,12 +311,31 @@ Two data sources are supported, in priority order:
 | `static_is_best` | boolean | The static route is the selected best path. 静的経路がベストとして選択されている。 |
 | `static_nh_valid` | boolean | The static next-hop is reachable. 静的ネクストホップが到達可能。 |
 
-### 4.6 Meta / メタ
+### 4.6 Links / リンク別 — `peer_links`
+
+The per-peer keys (`<peer>_iface`, `<peer>_has_full`, …) are keyed by the neighbor's **name**, so they can hold only one
+link per neighbor. `peer_links` (emitted by `clab-collect.js` and `clab-srl-collect.js`) keeps **one row per link** — the
+DeepDive uses it to draw every tunnel, including a second link to the same neighbor and a spare link without an IP.
+Additive: the per-peer keys are unchanged. When there are two or more links (or sessions) to one neighbor, the per-peer
+keys come from the one that is **up** (Full / Established).
+
+隣ごとのキー (`<peer>_iface`・`<peer>_has_full` …) は相手の**名前**で引くので、1 つの相手に 1 本のリンクしか持てません。
+`peer_links` (`clab-collect.js`・`clab-srl-collect.js` が出す) は**リンク 1 本ごとに 1 行**を持ち、DeepDive はこれで全部の
+トンネル (同じ相手への 2 本目・IP の無い予備のリンクも) を描きます。追加の項目で、隣ごとのキーはそのまま。1 つの相手へ
+リンク (セッション) が 2 本以上ある時は、隣ごとのキーは**張れている方** (Full / Established) から取ります。
+
+| Field | Type | Meaning / 意味 |
+|---|---|---|
+| `peer_links[]` | array | One row per link: `{ iface, peer, up, ip, full, state, ospf_full, ospf_state, peer_ip }` — `iface` = this node's interface, `peer` = the neighbor on it, `up` / `ip` = that interface, `full` / `state` = the session on this link (BGP Established or OSPF Full; `"Down"` when nothing runs on it), `ospf_full` / `ospf_state` = the OSPF adjacency on this interface, `peer_ip` = the neighbor's address. A session that only uses the loopback (iBGP over `lo`) owns no link and is not a row. リンク 1 本ごとの行。`iface` = 自分の IF・`peer` = その先の相手・`up` / `ip` = その IF・`full` / `state` = このリンクのセッション (BGP Established か OSPF Full・何も動いていなければ `"Down"`)・`ospf_full` / `ospf_state` = この IF の OSPF 隣接・`peer_ip` = 相手のアドレス。ループバックだけを使うセッション (`lo` 越しの iBGP) はリンクを持たないので行にならない。 SR Linux (`clab-srl-collect.js`) の行は `ospf_full` / `ospf_state` の代わりに `proto` (`"ospf"` / `"bgp"`) を持つ (SR Linux rows carry `proto` instead of `ospf_full` / `ospf_state`). |
+| `peer_links[].bgp_over_lo` | boolean | `true` when the BGP state on this row is a loopback session to this neighbor that is carried over this link (found from the routing table: the route to the neighbor's address leaves through this link — the default route `0.0.0.0/0` is never used for this). この行の BGP の状態が、この相手へのループバックのセッションで、このリンクを通っている時に `true` (経路表で、相手のアドレスへの経路がこのリンクから出ることで判断・既定経路 `0.0.0.0/0` は使わない)。 |
+
+### 4.7 Meta / メタ
 
 | Field | Type | Meaning / 意味 |
 |---|---|---|
 | `target_on_path` | boolean | Whether the inspected node sits on the active forwarding path. `false` dims its packet/ping animation ("bystander"). 調査対象が能動経路上にいるか。`false` で packet/ping 演出を抑制(傍観者)。 |
 | `cleared` | boolean | The scenario is in its "solved/healthy" final state. シナリオが「解決済み/正常」最終状態。 |
+| `nos` | string | Which NOS the state came from, e.g. `"srlinux"` (set by `clab-srl-collect.js`). Absent = FRR. The Best-Path panel shows its order legend only for the orders it knows (FRR, and IOS-XE when `nos` starts with `ios`); for another NOS (e.g. `srlinux`) it shows no legend rather than a wrong one. どの NOS の状態か (例 `"srlinux"`・`clab-srl-collect.js` が付ける)。無ければ FRR。Best-Path の欄は、知っている順 (FRR と、`nos` が `ios` で始まる時の IOS-XE) の時だけ凡例を出し、ほかの NOS (例 `srlinux`) では間違った凡例を出さずに凡例なしにする。 |
 
 ---
 

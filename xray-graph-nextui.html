@@ -225,7 +225,11 @@ window.__xrayGraphBoot = function () {
     nodes: NAMES.map(function (n) { var r=roleOf(n); return { id:n, type:r, role: r==='server'?'Server':'Router' }; }),
     networks: EDGES.map(function (k) { var p=k.split('|');
       return { name: 'net-'+p[0]+p[1], members:[{node:p[0],host_id:10},{node:p[1],host_id:20}] }; }),
-    modes: ['troubleshoot']
+    modes: ['troubleshoot'],
+    /* nx_deep_n_u1: every topology link with its end interfaces (for the DeepDive N links - a spare link without an IP or a
+       second link to the same peer stays visible) */
+    links: rawLinks.filter(function (l) { return l && l.source && l.target && l.source !== l.target; }).map(function (l) {
+      return { a: l.source, aIf: String(l.source_endpoint || '').split(':')[0], b: l.target, bIf: String(l.target_endpoint || '').split(':')[0] }; })
   };
 
   // ---- overview auto-layout POS (used only to align DeepDive left/right + tunnel angles) ----
@@ -289,7 +293,7 @@ window.__xrayGraphBoot = function () {
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }
 
-  // ================= node click → deepViews + peer-pair selector =================
+  // ================= node click → deepViews (one view with all of the node's links) =================
   function showNode(nodeId){
     if (NAMES.indexOf(nodeId) < 0) return;
     window.__xrayCurNode = nodeId;

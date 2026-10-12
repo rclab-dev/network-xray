@@ -37,6 +37,11 @@ function ipOnly(pfx) { return pfx ? String(pfx).split('/')[0] : ''; }
 // loose subnet check (first 3 octets) for recursive next-hop -> connected-route iface resolution.
 function sameNet24(prefix, ip) {
   if (!prefix || !ip) return false;
+  // nx_srl_peer_map: the real prefix length when given (a /30 must not match the next /30); no length -> first 3 octets as before
+  var _pl = parseInt(String(prefix).split('/')[1], 10);
+  var _ip4 = function (s) { var o = ipOnly(s).split('.').map(Number); return o.length === 4 && o.every(function (x) { return x >= 0 && x <= 255; }) ? ((o[0] * 16777216) + (o[1] << 16) + (o[2] << 8) + o[3]) : null; };
+  var _a = _ip4(prefix), _b = _ip4(ip);
+  if (!isNaN(_pl) && _pl >= 0 && _pl <= 32 && _a !== null && _b !== null) { var _sz = Math.pow(2, 32 - _pl); return Math.floor(_a / _sz) === Math.floor(_b / _sz); }
   return ipOnly(prefix).split('.').slice(0, 3).join('.') === String(ip).split('.').slice(0, 3).join('.');
 }
 // dotted netmask -> prefix length (255.255.255.252 -> 30), for OSPF router-LSA stub links.
@@ -58,7 +63,10 @@ var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 
 function buildState(fetch, node, adj, proto) {
   var isBgp = proto === 'bgp';
   var state = { target_node: node, protocol: isBgp ? 'bgp' : 'ospf', interfaces: {} };
+  var _ipPfx = {};   // nx_srl_peer_map: ifn -> 'ip/len' (the output keeps the bare ip)
+  state.nos = 'srlinux';  /* nx_srl_nos: which NOS this state came from (the page picks the Best-path legend by it) */
   if (isBgp) state.bgp_configured = true;
+  var _plByIf = {};   /* nx_peer_links: per-LINK liveness (the <peer>_* keys are per peer name = 2 links to one peer collide) */
 
   // interfaces (ip + up) for the adjacency ifaces + the loopback
   Object.keys(adj).concat(['system0.0']).forEach(function (ifn) {
@@ -66,21 +74,37 @@ function buildState(fetch, node, adj, proto) {
     var j = fetch('interface ' + s.base + ' subinterface ' + s.sub + ' ipv4');
     var ip = j && j.address && j.address[0] && j.address[0]['ip-prefix'];
     state.interfaces[ifn] = { ip: ipOnly(ip), up: !(j && j['admin-state'] === 'disable') };
+    if (ip) _ipPfx[ifn] = ip;
   });
 
   // adjacency -> <peer>_iface / <peer>_has_full / <peer>_proto
   if (isBgp) {
     // BGP: a neighbor is "up" when session-state == established. Map the neighbor's peer-address to a
     // clab peer via the interface subnet (its subinterface ip shares the /30), same idea as --adj.
-    var subnetOf = {};   // "10.0.0" (first 3 octets) -> ifn, to match a bgp peer-address to an adj iface
-    Object.keys(adj).forEach(function (ifn) { var ip = state.interfaces[ifn] && state.interfaces[ifn].ip; if (ip) subnetOf[ip.split('.').slice(0, 3).join('.')] = ifn; });
+    // nx_srl_peer_map: match the peer-address against each adj iface's own prefix (was a first-3-octets map: two /30 in one /24 overwrote each other)
+    var _ifOf = function (pa) { return Object.keys(adj).filter(function (ifn) { return _ipPfx[ifn] && sameNet24(_ipPfx[ifn], pa); })[0] || null; };
     var bn = fetch('network-instance default protocols bgp neighbor *');
+    // nx_srl_bgp_neighbors: the per-neighbor list in the FRR collector's shape (the RE counts it: "Established 3, Idle (Admin) 1")
+    // a disabled neighbor carries no peer-as: borrow it from a neighbor in the same peer-group, else '-' (never "AS undefined")
+    var _grpAs = {}; (bn && bn.neighbor || []).forEach(function (n) { if (n['peer-group'] && n['peer-as'] != null && _grpAs[n['peer-group']] == null) _grpAs[n['peer-group']] = n['peer-as']; });
+    state.bgp_neighbors = (bn && bn.neighbor || []).map(function (n) {
+      var _st = String(n['session-state'] || '').toLowerCase();
+      var _nm = { established: 'Established', active: 'Active', idle: 'Idle', connect: 'Connect', opensent: 'OpenSent', openconfirm: 'OpenConfirm' }[_st] || (n['session-state'] || '');
+      if (n['admin-state'] === 'disable' && _st !== 'established') _nm = 'Idle (Admin)';
+      var _as = n['peer-as'] != null ? n['peer-as'] : (_grpAs[n['peer-group']] != null ? _grpAs[n['peer-group']] : '-');
+      var _o = { ip: n['peer-address'] || '', remote_as: _as, ibgp: n['peer-type'] === 'ibgp', state: _nm };
+      var _af = (n['afi-safi'] || []).filter(function (a) { return a['afi-safi-name'] === 'ipv4-unicast'; })[0];
+      if (_af && _af['received-routes'] != null) _o.pfx_rcvd = _af['received-routes'];
+      return _o;
+    });
     (bn && bn.neighbor || []).forEach(function (n) {
-      var pa = n['peer-address'] || '', ifn = subnetOf[pa.split('.').slice(0, 3).join('.')] || null, peer = ifn && adj[ifn];
+      var pa = n['peer-address'] || '', ifn = _ifOf(pa), peer = ifn && adj[ifn];
       if (!peer) return;
-      state[peer + '_iface'] = ifn;
-      state[peer + '_has_full'] = n['session-state'] === 'established';
+      var _keep = state[peer + '_has_full'] === true && n['session-state'] !== 'established';  /* nx_srl_peer_map: an up session keeps the per-peer keys */
+      if (!_keep) state[peer + '_iface'] = ifn;
+      if (!_keep) state[peer + '_has_full'] = n['session-state'] === 'established';
       state[peer + '_proto'] = 'bgp';
+      _plByIf[ifn] = { full: n['session-state'] === 'established', proto: 'bgp', peer_ip: pa };
     });
   } else {
     var oa = fetch('network-instance default protocols ospf instance default area *');
@@ -89,15 +113,22 @@ function buildState(fetch, node, adj, proto) {
         var ifn = iface['interface-name'];
         (iface.neighbor || []).forEach(function (nb) {
           var peer = adj[ifn]; if (!peer) return;
-          state[peer + '_iface'] = ifn;
-          state[peer + '_has_full'] = nb['adjacency-state'] === 'full';
+          var _keepO = state[peer + '_has_full'] === true && nb['adjacency-state'] !== 'full';  /* nx_srl_peer_map: a Full adjacency keeps the per-peer keys */
+          if (!_keepO) state[peer + '_iface'] = ifn;
+          if (!_keepO) state[peer + '_has_full'] = nb['adjacency-state'] === 'full';
           state[peer + '_proto'] = 'ospf';
+          _plByIf[ifn] = { full: _plByIf[ifn] && _plByIf[ifn].full || nb['adjacency-state'] === 'full', proto: 'ospf', peer_ip: '' };
         });
       });
     });
   }
   // any adj iface with no neighbor entry still records its peer iface (link exists, adjacency down)
   Object.keys(adj).forEach(function (ifn) { var peer = adj[ifn]; if (state[peer + '_iface'] == null) { state[peer + '_iface'] = ifn; state[peer + '_has_full'] = false; state[peer + '_proto'] = state.protocol; } });
+
+  /* nx_peer_links: one row per adj link (incl. 2 links to the same peer / a link with no neighbor = Down). Additive. */
+  var _plRows = Object.keys(adj).map(function (ifn) { var r = _plByIf[ifn], it = state.interfaces[ifn] || {};
+    return { iface: ifn, peer: adj[ifn], up: it.up !== false, ip: it.ip || '', full: !!(r && r.full), state: r ? (r.full ? 'Full' : 'Down') : 'Down', proto: r ? r.proto : state.protocol, peer_ip: (r && r.peer_ip) || '' }; });
+  if (_plRows.length) state.peer_links = _plRows;
 
   // routes: route -> next-hop-group -> next-hop (resolve ip + out-iface)
   var rt = fetch('network-instance default route-table ipv4-unicast');
@@ -118,8 +149,8 @@ function buildState(fetch, node, adj, proto) {
   state.routing_table.forEach(function (r) {
     if (r.next_hop && !r.out_iface) {
       var via = state.routing_table.filter(function (c) {
-        return c.out_iface && c.out_iface.indexOf('system0') !== 0 && sameNet24(c.prefix, r.next_hop);
-      })[0];
+        return c.out_iface && c.out_iface.indexOf('system0') !== 0 && parseInt(String(c.prefix).split('/')[1], 10) !== 0 && sameNet24(c.prefix, r.next_hop);  /* nx_srl_peer_map: not the default route */
+      }).sort(function (x, y) { return (parseInt(String(y.prefix).split('/')[1], 10) || 0) - (parseInt(String(x.prefix).split('/')[1], 10) || 0); })[0];  /* nx_srl_peer_map: longest match */
       if (via) r.out_iface = via.out_iface;
     }
   });
@@ -175,6 +206,7 @@ function buildState(fetch, node, adj, proto) {
   var peers = [];
   Object.keys(adj).forEach(function (ifn) { var p = adj[ifn]; if (peers.indexOf(p) < 0) peers.push(p); });
   var fullCount = peers.filter(function (p) { return state[p + '_has_full']; }).length;
+  state.peer_node = peers.filter(function (p) { return state[p + '_has_full']; })[0] || peers[0] || '';  /* nx_srl_peer_node: the main peer (an up one first), as the FRR collector */
   var reach = routeOk && fullCount > 0;
 
   state.success = true; state.id = node; state.scenario = node;
@@ -258,8 +290,27 @@ function selfTest() {
     'next-hop *': { 'next-hop': [{ index: 'n1', type: 'direct', 'ip-address': '10.0.0.2', subinterface: 'ethernet-1/1.0' }] },
     'route-table ipv4-unicast': { route: [{ 'ipv4-prefix': '1.1.1.1/32', 'route-type': 'host', 'next-hop-group': 'gLocal', active: true }, { 'ipv4-prefix': '2.2.2.2/32', 'route-type': 'ospfv2', 'next-hop-group': 'g1', active: true }] }
   });
+  // nx_srl_peer_map: two /30 links in one /24 -> each BGP peer lands on its own iface
+  var twoFetch = fx({
+    'interface ethernet-1/1 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.1.0.1/30' }] },
+    'interface ethernet-1/2 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.1.0.5/30' }] },
+    'interface system0 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.0.0.1/32' }] },
+    'bgp neighbor': { neighbor: [{ 'peer-address': '10.1.0.2', 'session-state': 'established' }, { 'peer-address': '10.1.0.6', 'session-state': 'active' }] }
+  });
+  var s2 = buildState(twoFetch, 'r1', { 'ethernet-1/1.0': 'r2', 'ethernet-1/2.0': 'r3' }, 'bgp');
+  ok('bgp: /30 peers in one /24 map to their own iface (r2 up on 1/1, r3 down on 1/2)',
+    s2.r2_iface === 'ethernet-1/1.0' && s2.r2_has_full === true && s2.r3_iface === 'ethernet-1/2.0' && s2.r3_has_full === false);
+  // 2 links to ONE peer (1st up, 2nd idle): the up session keeps r2_iface / r2_has_full
+  var s3 = buildState(fx({
+    'interface ethernet-1/1 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.1.0.1/30' }] },
+    'interface ethernet-1/2 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.1.0.5/30' }] },
+    'interface system0 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.0.0.1/32' }] },
+    'bgp neighbor': { neighbor: [{ 'peer-address': '10.1.0.2', 'session-state': 'established' }, { 'peer-address': '10.1.0.6', 'session-state': 'idle' }] }
+  }), 'r1', { 'ethernet-1/1.0': 'r2', 'ethernet-1/2.0': 'r2' }, 'bgp');
+  ok('bgp: 2 links to one peer, the up one keeps r2_iface/r2_has_full (1/1.0 established, 1/2.0 idle)', s3.r2_iface === 'ethernet-1/1.0' && s3.r2_has_full === true && s3.is_established === true);
   var s = buildState(ospfFetch, 'r1', { 'ethernet-1/1.0': 'r2' }, 'ospf');
   ok('ospf: iface ip mapped (10.0.0.1)', s.interfaces['ethernet-1/1.0'].ip === '10.0.0.1');
+  ok('nos: srlinux (nx_srl_nos)', s.nos === 'srlinux');
   ok('ospf: loopback ip mapped (1.1.1.1)', s.interfaces['system0.0'].ip === '1.1.1.1');
   ok('ospf: r2 adjacency Full', s.r2_has_full === true && s.r2_iface === 'ethernet-1/1.0' && s.r2_proto === 'ospf');
   var ospfRoute = s.routing_table.filter(function (r) { return r.prefix === '2.2.2.2/32'; })[0];
@@ -268,6 +319,7 @@ function selfTest() {
   ok('ospf: route_resolution picks the ospf route', s.route_resolution && s.route_resolution.matched_prefix === '2.2.2.2/32');
   // full DeepDive contract (DATA-CONTRACT §4) parity with FRR nodes
   ok('ospf: summary has_full/full_count/neighbor_state', s.has_full === true && s.full_count === 1 && s.neighbor_state === 'Full');
+  ok('peer_node: the up peer (nx_srl_peer_node)', s.peer_node === 'r2');
   ok('ospf: ospf_configured + active + reachability (ping_ok/cleared)', s.ospf_configured === true && s.ospf_active_on_interface === true && s.ping_ok === true && s.cleared === true && s.has_ospf_route === true);
   ok('ospf: route_resolution enriched (next_hop/protocol/target)', s.route_resolution.next_hop === '10.0.0.2' && s.route_resolution.protocol === 'ospf' && s.route_resolution.target === '2.2.2.2');
   ok('ospf: wan_iface = the uplink toward the route', s.wan_iface === 'ethernet-1/1.0');
@@ -299,6 +351,18 @@ function selfTest() {
   var b = buildState(bgpFetch, 'r1', { 'ethernet-1/1.0': 'r2' }, 'bgp');
   ok('bgp: protocol=bgp + bgp_configured', b.protocol === 'bgp' && b.bgp_configured === true);
   ok('bgp: r2 session Established -> has_full, proto bgp', b.r2_has_full === true && b.r2_proto === 'bgp');
+  // nx_srl_bgp_neighbors: the per-neighbor list, FRR spelling (established -> Established; admin disable -> Idle (Admin))
+  var _bn = buildState(fx({
+    'interface ethernet-1/1 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.1.0.1/30' }] },
+    'interface ethernet-1/2 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '10.1.0.5/30' }] },
+    'interface system0 subinterface 0 ipv4': { 'admin-state': 'enable', address: [{ 'ip-prefix': '1.1.1.1/32' }] },
+    'protocols bgp neighbor': { neighbor: [
+      { 'peer-address': '10.1.0.2', 'session-state': 'established', 'admin-state': 'enable', 'peer-as': 65002, 'peer-group': 'g2', 'peer-type': 'ebgp', 'afi-safi': [{ 'afi-safi-name': 'ipv4-unicast', 'received-routes': 3 }] },
+      { 'peer-address': '10.1.0.6', 'session-state': 'idle', 'admin-state': 'disable', 'peer-group': 'g2', 'peer-type': 'ebgp' }] }
+  }), 'r1', { 'ethernet-1/1.0': 'r2', 'ethernet-1/2.0': 'r2' }, 'bgp');
+  ok('bgp_neighbors: 2 entries, Established (AS 65002, PfxRcd 3) + Idle (Admin)', Array.isArray(_bn.bgp_neighbors) && _bn.bgp_neighbors.length === 2
+    && _bn.bgp_neighbors[0].state === 'Established' && _bn.bgp_neighbors[0].remote_as === 65002 && _bn.bgp_neighbors[0].pfx_rcvd === 3 && _bn.bgp_neighbors[0].ibgp === false
+    && _bn.bgp_neighbors[1].state === 'Idle (Admin)' && _bn.bgp_neighbors[1].ip === '10.1.0.6' && _bn.bgp_neighbors[1].remote_as === 65002);
   var bgpRt = b.routing_table.filter(function (r) { return r.prefix === '8.8.8.0/24'; })[0] || {};
   ok('bgp: route 8.8.8.0/24 proto bgp', bgpRt.protocol === 'bgp');
   ok('bgp: indirect next-hop recursively resolved to ethernet-1/1.0 (out_iface)', bgpRt.out_iface === 'ethernet-1/1.0');
@@ -318,6 +382,13 @@ function selfTest() {
   var fd = buildState(dirFetch(sampleDir), 'r1', { 'ethernet-1/1.0': 'r2' }, 'ospf');
   ok('from-dir: replays bundled real srl capture (r1 OSPF Full)', fd.target_node === 'r1' && fd.full_count === 1 && fd.r2_has_full === true);
   ok('from-dir: route_resolution from recorded json (2.2.2.2/32 nh 10.0.0.2)', fd.route_resolution.matched_prefix === '2.2.2.2/32' && fd.route_resolution.next_hop === '10.0.0.2');
+
+  // nx_peer_links: two links to the same peer (1/1.0 full, 1/2.0 no neighbor)
+  var plFetch = fx({ 'protocols ospf': { area: [{ interface: [{ 'interface-name': 'ethernet-1/1.0', neighbor: [{ 'router-id': '2.2.2.2', 'adjacency-state': 'full' }] }] }] } });
+  var pl = buildState(plFetch, 'r1', { 'ethernet-1/1.0': 'r2', 'ethernet-1/2.0': 'r2' }, 'ospf');
+  ok('peer_links: 2 rows for 2 links to r2', pl.peer_links && pl.peer_links.length === 2);
+  ok('peer_links: 1/1.0 Full, 1/2.0 Down (2nd link kept)', pl.peer_links[0].full === true && pl.peer_links[1].iface === 'ethernet-1/2.0' && pl.peer_links[1].state === 'Down');
+  ok('peer_links: old r2_iface key unchanged (= the live 1/1.0)', pl.r2_iface === 'ethernet-1/1.0' && pl.r2_has_full === true);
 
   console.log('\nSUMMARY: ' + pass + '/' + tot + ' PASS');
   return pass === tot;

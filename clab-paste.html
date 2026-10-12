@@ -107,7 +107,7 @@ topology:
 <pre><span class="c">// clab-to-xray.js parses your topology (incl. graph-posX/posY) → X-Ray config:</span>
 var r    = clabToXray.convert(clabYamlText);   <span class="c">// { ok, config }  — config.positions from graph-pos</span>
 <span class="c">// nodes are placed at config.positions (or an auto layout); click a node → its DeepDive:</span>
-var views = clabXray.deepViews(config, nodeId);      <span class="c">// per peer-pair sub-scenes (positions carried)</span>
+var views = clabXray.deepViews(config, nodeId);      <span class="c">// one scene with all of the node's links (positions carried)</span>
 xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside the router (angles follow the coords)</span></pre>
 
   <div class="foot">
@@ -209,7 +209,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
     var de = document.querySelector('.xray-deep-engine'); if (de) de.style.display = 'block';
   }
 
-  // ---- node click → peer-pair selector + DeepDive ----
+  // ---- node click → deepViews (one view) + DeepDive ----
   function showNode(nodeId) {
     window.__xrayCurNode = nodeId;
     document.querySelectorAll('.ov-node').forEach(function (e) { e.classList.toggle('sel', e.getAttribute('data-n') === nodeId); });

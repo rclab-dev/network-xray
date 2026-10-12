@@ -145,12 +145,11 @@
   }
 
   // Multi-peer selector: for any topology node, enumerate the DeepDive "views" it can show.
-  // The X-Ray cylinder has two sides (in/out peer), so a node with 3+ neighbors yields multiple views,
-  // one per "which pair of peers to inspect". Each view is a 3-node sub-config (node + the 2 chosen peers),
-  // within X-Ray's 3-shape limit, so it draws without passing the full N-node config.
-  // A host (e.g. the clab graph shell) turns this array into buttons -> renders the chosen view via renderTopology + openDeepDiveFor.
+  // Returns ONE view with all of the node's neighbors (however many): the DeepDive draws every link toward its
+  // topology direction. Still an array for older hosts (they may loop over it), but it has a single entry now.
+  // The host renders it via renderTopology + openDeepDiveFor.
   //   var views = clabXray.deepViews(fullConfig, 'r1');
-  //   // views[i] = { label, peers:[a,b], scene:{config,topo,states} }
+  //   // views[0] = { label, peers:[a, b, c, …], scene:{config,topo,states} }
   //   var v = views[0]; var view = xrayCore.renderTopology('#topo', v.scene.config, {topology:v.scene.topo});
   //   view.openDeepDiveFor('r1', v.scene.states.normal);
   function deepViews(cfg, nodeId, opts) {   /* nx_default_pair: opts = { state, focusPrefix } (optional) */
@@ -180,13 +179,16 @@
       subNodes.sort(function (x, y) { return ordered.indexOf(x.id) - ordered.indexOf(y.id); });
       var subNets = adj.filter(function (e) { return peerList.indexOf(e.peer) >= 0; }).map(function (e) { return e.net; });
       var subCfg = {
-        success: true, id: cfg.id + '-' + nodeId, topology_type: peerList.length === 2 ? 'linear_3node' : 'linear_2node',
-        layout: peerList.length === 2 ? 'inverted_v' : '', nodes: subNodes, networks: subNets,
+        success: true, id: cfg.id + '-' + nodeId, topology_type: peerList.length >= 2 ? 'linear_3node' : 'linear_2node',   /* nx_deep_n_u1: 3+ peers like 2 */
+        layout: peerList.length >= 2 ? 'inverted_v' : '', nodes: subNodes, networks: subNets,
         modes: cfg.modes || ['troubleshoot']
       };
       // Carry per-node positions (from graph-posX/posY, if the source config has them) for just this
       // sub-scene's nodes, so the unified renderer draws each peer tunnel at its real topology angle
       // (radial DeepDive) instead of the fixed left/right layout. No positions -> unchanged behaviour.
+      /* nx_deep_n_u1: the centre node's links (with end interfaces) for _xrayDeTunnels - a spare link without an IP or a
+         second link to the same peer is known from here */
+      if (Array.isArray(cfg.links)) subCfg.links = cfg.links.filter(function (l) { return l && ((l.a === nodeId && peerList.indexOf(l.b) >= 0) || (l.b === nodeId && peerList.indexOf(l.a) >= 0)); });
       if (cfg.positions) {
         var subPos = {};
         ids.forEach(function (id) { if (cfg.positions[id]) subPos[id] = cfg.positions[id]; });
@@ -194,9 +196,33 @@
       }
       return toScene(subCfg);
     }
-    if (adj.length <= 2) {
-      return [{ label: adj.map(function (e) { return e.peer; }).join(' / ') || nodeId,
-        peers: adj.map(function (e) { return e.peer; }), scene: subScene(adj.map(function (e) { return e.peer; })) }];
+    /* nx_de_parallel: count DISTINCT peers - a 2nd link to the same peer must not add that peer twice (duplicate node) nor push a
+       2-peer node into the old peer-pair views. Without a parallel link the list is exactly the old one. */
+    var _uPeers = adj.map(function (e) { return e.peer; }).filter(function (x, i, A) { return A.indexOf(x) === i; });
+    if (_uPeers.length <= 2) {
+      return [{ label: _uPeers.join(' / ') || nodeId,
+        peers: _uPeers, scene: subScene(_uPeers) }];
+    }
+    /* nx_deep_n_u1 (DeepDive N links): 3+ neighbors -> ONE view with all of them; the DeepDive draws every link toward its
+       overview direction (no peer-pair buttons). The pair list below is no longer reached. */
+    var _allPeers = adj.map(function (e) { return e.peer; }).filter(function (x, i, A) { return A.indexOf(x) === i; });
+    if (_allPeers.length >= 3) {
+      /* the two main sides (otherNodes[0], [1]) = links that carry the session: the state's <peer>_iface is a real interface
+         with an IP and (when the page gave cfg.links) is this link's own interface. A spare link without an IP, or a peer
+         reached over the loopback, goes to the extra links (drawn faint, no session colour). Stable: else the old order. */
+      var _st3 = opts && opts.state;
+      if (_st3 && typeof _st3 === 'object') {
+        var _lk = Array.isArray(cfg.links) ? cfg.links : [];
+        var _onLink = function (p) {
+          var f = _st3[p + '_iface'], it = f && _st3.interfaces && _st3.interfaces[f];
+          if (!f || /^lo/i.test(f) || !(it && String(it.ip || '').split('/')[0])) return false;
+          var L = _lk.filter(function (l) { return l && ((l.a === nodeId && l.b === p) || (l.b === nodeId && l.a === p)); });
+          var _ik = function (n) { n = String(n == null ? '' : n); var m = n.match(/^e(\d+)-(\d+)$/); if (m) return 'ethernet-' + m[1] + '/' + m[2]; m = n.match(/^(ethernet-\d+\/\d+)\.0$/); return m ? m[1] : n; };   /* nx_de_srl_ifname: e1-N == ethernet-1/N(.0) */
+          return !L.length || L.some(function (l) { return _ik(l.a === nodeId ? l.aIf : l.bIf) === _ik(f); });
+        };
+        _allPeers = _allPeers.map(function (p, i) { return { p: p, i: i, s: _onLink(p) ? 1 : 0 }; }).sort(function (a, b) { return b.s - a.s || a.i - b.i; }).map(function (x) { return x.p; });
+      }
+      return [{ label: _allPeers.join(' / '), peers: _allPeers, scene: subScene(_allPeers) }];
     }
     // 3+ neighbors: enumerate unique peer pairs
     var views = [];
