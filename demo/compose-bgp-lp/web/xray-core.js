@@ -12124,6 +12124,37 @@ window._nxBgpResync = function () {
   else if (f === 'decision') { if (win) win.style.zIndex = '60'; if (lose) lose.style.zIndex = '5'; }
   else { if (win) win.style.setProperty('z-index', '60', 'important'); if (lose) lose.style.setProperty('z-index', '5', 'important'); }
 };
+/* nx_panel_front_all (2026-10-13): the DeepDive panel you click comes to the front - RE, Routing table, BGP Table, Best-Path
+   Decision and LSDB alike (before, only RT<->RE and BGP Table<->Decision swapped; the LSDB stayed under the BGP Table). */
+(function () {
+  if (typeof document === "undefined" || window._nxPanelFrontAll) return;
+  window._nxPanelFrontAll = true;
+  var SEL = "#de-re-panel, #de-routing-panel, #de-bgp-panel, #de-bgp-decision-panel, #de-lsdb";
+  var raised = null;   /* {el, v, p}: the panel U13 raised last and its inline z-index before that */
+  document.addEventListener("click", function (ev) {
+    if (!ev || ev.isTrusted === false || !ev.target || !ev.target.closest) return;
+    var me = ev.target.closest(SEL);
+    if (!me || !me.closest(".xray-deep-engine")) return;
+    setTimeout(function () {   /* after the panels' own click handlers (RT<->RE, BGP Table<->Decision) */
+      try {
+        /* put the panel raised before back - only if it still has the value U13 gave it (a panel's own handler may have set a
+           new one since, e.g. BGP Table -> 5 when the Decision was clicked: that one is kept) */
+        if (raised && raised.el && raised.el !== me && raised.el.style.getPropertyValue("z-index") === String(raised.top)) {
+          if (raised.v) raised.el.style.setProperty("z-index", raised.v, raised.p); else raised.el.style.removeProperty("z-index");
+        }
+        if (!raised || raised.el !== me) raised = { el: me, v: me.style.getPropertyValue("z-index"), p: me.style.getPropertyPriority("z-index") };
+        else { raised.v = me.style.getPropertyValue("z-index") === String(raised.top) ? raised.v : me.style.getPropertyValue("z-index"); raised.p = me.style.getPropertyPriority("z-index"); }
+        var top = 0;
+        document.querySelectorAll(SEL).forEach(function (p) {
+          if (p === me || !p.offsetWidth || getComputedStyle(p).display === "none") return;
+          var z = parseInt(getComputedStyle(p).zIndex, 10); if (!isNaN(z) && z > top) top = z;
+        });
+        var mine = parseInt(getComputedStyle(me).zIndex, 10);
+        if (isNaN(mine) || mine <= top) { raised.top = top + 1; me.style.setProperty("z-index", String(top + 1), "important"); }
+      } catch (_eNf) {}
+    }, 0);
+  }, true);
+})();
 window.xrayBgpEnsureRaise = function() {
   var bp = document.getElementById('de-bgp-panel');
   var dp = document.getElementById('de-bgp-decision-panel');
