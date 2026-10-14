@@ -16,7 +16,7 @@ failure propagates and recovers. It renders a **topology view** and an **"inside
 DeepDive cylinder** (forwarding plane, OSPF/BGP processor, hello & LSDB sync, the route it installs).
 You drive it with a few calls through the tidy `xrayCore` facade.
 
-> This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com)**,
+> This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss)**,
 > not a fork — extracted as a shared module so there is no drift.
 
 It runs **on top of your execution engine** — paste a **containerlab** topology, replay a recorded lab,
@@ -147,11 +147,11 @@ If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), 
 
 ## Try it live
 
-The same X-Ray visualizations power **[RouteCrushLab](https://routecrushlab.com)** —
+The same X-Ray visualizations power **[RouteCrushLab](https://routecrushlab.com/?ref=oss)** —
 hands-on FRR network-troubleshooting labs you run in your browser to see *why* a
 network behaves the way it does. No install, no signup.
 
-→ **[Start with a BGP best-path lab (English, beta)](https://routecrushlab.com/lab/tl/q21?try=guest&lang=en)**
+→ **[Start with a BGP best-path lab (English, beta)](https://routecrushlab.com/lab/tl/q21?try=guest&lang=en&ref=oss)**
 Two ISPs advertise the same route — watch why traffic takes the slow one, then fix it.
 
 ## Run it
@@ -496,7 +496,7 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストールされる経路)を描きます。操作は
 `xrayCore` ファサード越しの数行だけ。
 
-> これは **[RouteCrushLab](https://routecrushlab.com) を動かしているのと同じ描画コア**で、
+> これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss) を動かしているのと同じ描画コア**で、
 > フォークではありません — 共有モジュールとして切り出し、本体とドリフトしない構成です。
 
 **実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの

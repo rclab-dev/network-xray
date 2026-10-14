@@ -2986,7 +2986,36 @@ function xrayStaticDeepLines(s, opts) {
 // exist. States WITHOUT routing_table never call this (see the callers' gate) = zero RCL regression.
 
 if (typeof window !== "undefined" && !window._xrayReOspfToggle) { window._xrayReOspfToggle = function () { window._reOspfOpen = !window._reOspfOpen; try { document.querySelectorAll(".re-ospf-nbr").forEach(function (n) { n.style.display = window._reOspfOpen ? "" : "none"; }); var _i = document.querySelector(".re-ospf-ind"); if (_i) _i.textContent = window._reOspfOpen ? "\u25bc" : "\u25b6"; } catch (e) {} }; }
+/* rcl-ospf-nbr-missing-20261013: 隣接ができていない相手は FRR の neighbor の表に出ない = 一覧から消えて Neighbor: Full と出ていた
+   (Q6 の hello 不一致)。一覧があるときだけ、OSPF が動いている IF (iface_hellos) の相手で、相手ごとの値が Full でなく、
+   一覧にその IF の行が無いものを「<相手> Down」として写しに足す。OSPF 専用の <peer>_ospf_* があればそれを先に使う
+   (OSS の同居では <peer>_neighbor_state が BGP の値)。iface_hellos が無い / 一覧の行に iface が無い state は何もしない。 */
+function _xrayOspfNbrAddMissing(s) {
+  var L = (s && Array.isArray(s.ospf_neighbors)) ? s.ospf_neighbors : null;
+  if (!L || !L.length || !s.iface_hellos || typeof s.iface_hellos !== 'object') return L;   /* 空の一覧は触らない (三角の builder は空なら相手ごとの行 = Q9 の STATIC 行・Q12 を出す) */
+  for (var i = 0; i < L.length; i++) { if (!L[i] || !L[i].iface) return L; }
+  var _tn = s.target_node || '', add = [];
+  Object.keys(s).sort().forEach(function (k) {
+    var m = /^(.+)_iface$/.exec(k); if (!m || m[1] === _tn) return;
+    var pk = m[1], pif = s[k];
+    if (!pif || typeof pif !== 'string' || !Object.prototype.hasOwnProperty.call(s.iface_hellos, pif)) return;
+    var os = (s[pk + '_ospf_state'] !== undefined || s[pk + '_ospf_full'] !== undefined);
+    if (!os && s[pk + '_neighbor_state'] === undefined && s[pk + '_has_full'] === undefined) return;
+    var full = os ? !!s[pk + '_ospf_full'] : !!s[pk + '_has_full'];
+    var st = (os ? s[pk + '_ospf_state'] : s[pk + '_neighbor_state']) || 'Down';
+    if (full || st === 'Full') return;
+    if (L.some(function (n) { return n.iface === pif; }) || add.some(function (n) { return n.iface === pif; })) return;
+    add.push({ router_id: pk, address: '', state: _xrayOspfNbrWord(st), role: '', iface: pif, full: false, missing: true });
+  });
+  return add.length ? L.concat(add) : L;
+}
+function _xrayOspfWithMissingNbrs(s) {
+  if (!s || !Array.isArray(s.ospf_neighbors)) return s;
+  var M = _xrayOspfNbrAddMissing(s); if (M === s.ospf_neighbors) return s;
+  var c = {}; for (var k in s) { if (Object.prototype.hasOwnProperty.call(s, k)) c[k] = s[k]; } c.ospf_neighbors = M; return c;
+}
 function _xrayOspfRtSummaryLines(s) {
+  s = _xrayOspfWithMissingNbrs(s);   /* rcl-ospf-nbr-missing-20261013 */
   var lines = [{
     text: "[Routing Engine]",
     cls: "de-title"
@@ -3518,6 +3547,7 @@ function xrayBgpDeepLines(s, opts) {
 
   var _reCxCfg = window._scenarioConfig || {};
   var _reCxSt = window._lastXrayState || s;
+  _reCxSt = _xrayOspfWithMissingNbrs(_reCxSt);   /* rcl-ospf-nbr-missing-20261013 */
   var _reCx = !!(_reCxCfg.xray && _reCxCfg.xray.deep_coexist_ospf) && !!(_reCxSt.ospf_configured || _reCxSt.neighbor_state || _reCxSt.has_full || _reCxSt.ospf_active_on_interface);
   if (_reCx) {
 
