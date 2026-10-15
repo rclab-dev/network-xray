@@ -22,9 +22,10 @@
 var fs = require('fs'), cp = require('child_process'), path = require('path'), os = require('os');
 
 // flags (--watch / --interval N / --exclude-mgmt / --mgmt-subnet <cidr>) may appear in any order
-var argv = process.argv.slice(2), watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = '', pos = [], serialCollect = false;
+var argv = process.argv.slice(2), validateFile = '', watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = '', pos = [], serialCollect = false;
 for (var ai = 0; ai < argv.length; ai++) {
   if (argv[ai] === '--watch') watch = true;
+  else if (argv[ai] === '--validate') validateFile = argv[++ai] || '';   /* nx_netlab_validate: netlab topology JSON with validate: tests */
   else if (argv[ai] === '--serial') serialCollect = true;   /* nx_collect_parallel: old one-node-at-a-time collect */
   else if (argv[ai] === '--interval') intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000;
   else if (argv[ai] === '--exclude-mgmt') mgmtArg = ' --exclude-mgmt';                       // drop clab mgmt IF (172.20.20.0/24)
@@ -213,19 +214,65 @@ function collectAll() {
 function readProblem() {
   try { return JSON.parse(fs.readFileSync(path.join(path.dirname(topoPath), 'problem.json'), 'utf8')); } catch (e) { return null; }
 }
+/* nx_netlab_validate (2026-10-15): a netlab lab's validate: tests (netlab-validate.js), judged on the FRR routers
+   every few seconds -> window.XRAY_VALIDATE (the page shows the band, 3 / 5, ✓ Solved and marks on the graph). */
+/* nx_graph_level (2026-10-15): rows given by the topology itself = containerlab's `graph-level` node label (1 = top row).
+   Any lab (netlab: clab.labels: { graph-level: 1 } on a node, with the network-xray netlab defaults). It wins over the
+   netlab group rule; nodes without the label go below the labelled ones. No label anywhere -> null. */
+function graphLevels() {
+  var lv = {}, any = false, nm = /^[ \t]*nodes:[ \t]*$/m.exec(topo), body = nm ? topo.slice(nm.index) : topo;   /* under nodes: only */
+  nodes.forEach(function (n) {
+    var esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var m = new RegExp('^([ \\t]+)' + esc + ':[ \\t]*\\r?\\n((?:\\1[ \\t]+.*\\r?\\n?|[ \\t]*\\r?\\n)*)', 'm').exec(body)
+         || new RegExp('^[ \\t]+' + esc + ':[ \\t]*(\\{.*)$', 'm').exec(body);   /* nested block (blank lines allowed) or the one-line form */
+    var g = m && /graph-level['"]?[ \t]*:[ \t]*['"]?(\d+)/.exec(m[m.length - 1]);
+    if (g) { lv[n] = +g[1]; any = true; }
+  });
+  if (!any) return null;
+  var vals = Object.keys(lv).map(function (k) { return lv[k]; }), max = Math.max.apply(null, vals);
+  nodes.forEach(function (n) { if (lv[n] === undefined) lv[n] = max + 1; });
+  var ks = []; nodes.forEach(function (n) { if (ks.indexOf(lv[n]) < 0) ks.push(lv[n]); }); ks.sort(function (a, b) { return a - b; });
+  if (ks.length < 2) return null;
+  nodes.forEach(function (n) { lv[n] = ks.indexOf(lv[n]); });
+  return lv;
+}
+var clabTiers = graphLevels();
+var VALIDATE = null, valRes = null, valLast = '', tierRes = clabTiers, lastStates = null, lastLive = false;
+if (validateFile) {
+  try { VALIDATE = require(path.join(__dirname, 'netlab-validate.js')); }
+  catch (e) { console.error('!! --validate: netlab-validate.js not found next to the collector'); VALIDATE = null; }
+}
+function validateRound(cb) {
+  var labv;
+  try { labv = VALIDATE.load(validateFile); } catch (e) { return cb(false); }   /* no file yet (netlab create not run): no band */
+  var nt = clabTiers || labv.tiers, tierChanged = JSON.stringify(nt) !== JSON.stringify(tierRes);   /* nx_netlab_tiers: rows for the graph */
+  tierRes = nt;
+  if (!labv.tests.length) return cb(tierChanged);
+  VALIDATE.run(labv, 'clab-' + lab + '-', function (res) {
+    var j = JSON.stringify(res), changed = j !== valLast;
+    if (changed) { valLast = j; valRes = res; var c = res.counts; console.log('[' + new Date().toISOString() + '] validate: ' + c.pass + '/' + c.total + ' passed' + (c.fail ? ', ' + c.fail + ' failed' : '') + (c.pending ? ', ' + c.pending + ' not run' : '') + (c.unsupported ? ', ' + c.unsupported + ' not checked' : '')); }
+    cb(changed || tierChanged);
+  });
+}
 function writeStates(states, live) {
+  lastStates = states; lastLive = live;
   var prob = readProblem();
   var xp = null;
   if (prob && prob.focus) (xp = xp || {}).focus = prob.focus;
   if (prob && prob.check) { (xp = xp || {}).check = prob.check; if (prob.format) xp.format = prob.format; }   /* format: the evaluator skips an unknown version; check_note_* is README-only: not passed */
   fs.writeFileSync(dest, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\n' +
     (live ? 'window.LIVE_WATCH = true;\n' : '') +
-    (xp ? 'window.XRAY_PROBLEM = ' + JSON.stringify(xp) + ';\n' : ''));   /* nx_problem_check (2026-10-06): focus + check (Solved) */
+    (xp ? 'window.XRAY_PROBLEM = ' + JSON.stringify(xp) + ';\n' : '') +
+    (valRes ? 'window.XRAY_VALIDATE = ' + JSON.stringify(valRes) + ';\n' : '') +
+    (tierRes ? 'window.XRAY_TIERS = ' + JSON.stringify(tierRes) + ';\n' : ''));   /* nx_problem_check + nx_netlab_validate (2026-10-06): focus + check (Solved) */
 }
 
 console.log('lab=' + lab + ' proto=' + proto + ' nodes=' + nodes.join(',') + (watch ? ' (watch ' + (intervalMs / 1000) + 's)' : ''));
 
 if (!watch) {
+  if (VALIDATE) validateRound(function () { oneShot(); }); else oneShot();
+}
+function oneShot() {
   var r0 = collectAll();
   if (!r0.ok && !Object.keys(r0.states).length && fs.existsSync(dest)) {
     console.error('!! every node failed - kept the existing ' + dest);
@@ -234,7 +281,10 @@ if (!watch) {
     writeStates(r0.states, false);
     console.log('wrote ' + dest + '  (' + r0.ok + '/' + nodes.length + ' nodes)');
   }
-} else {
+}
+if (watch) {
+  /* nx_netlab_validate: its own loop (one docker exec per node and command); the page file is rewritten only when the verdict changes */
+  if (VALIDATE) (function vloop() { validateRound(function (changed) { if (changed && lastStates) writeStates(lastStates, lastLive); setTimeout(vloop, Math.max(intervalMs, 3000)); }); })();
   /* nx_quiet_log (2026-10-06): xray-states.js is still rewritten on every change (the page stays exact), but the
      log line appears only when the summary changes. BGP states that are all "not up" (Idle/Connect/Active/OpenSent/
      OpenConfirm) count as one, so a session retrying Connect <-> Active no longer prints a line every few seconds.

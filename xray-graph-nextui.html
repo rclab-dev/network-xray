@@ -95,6 +95,28 @@
   /* nx_solved_check: Solved badge on the problem band */
   #nx-problem.nx-solved{border-left-color:#66bb6a}
   #nx-problem .nxp-solved{display:inline-block;margin-left:auto;font-size:12px;font-weight:700;color:#0f1318;background:#66bb6a;border-radius:10px;padding:2px 10px}
+  /* nx_netlab_validate (2026-10-15): netlab validate: tests -> the same band (count, ✓ Solved) + one row per test */
+  #nx-validate{display:none;background:#1c2736;border-left:3px solid #4dd0e1;padding:14px 20px;margin:14px 0 20px;border-radius:0 6px 6px 0}
+  #nx-validate.nx-solved{border-left-color:#66bb6a}
+  #nx-validate .nxp-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  #nx-validate .nxp-badge{display:inline-block;font-size:11px;font-weight:700;color:#0f1318;background:#4dd0e1;border-radius:10px;padding:1px 9px}
+  #nx-validate .nxp-title{font-size:15px;font-weight:700;color:#4dd0e1}
+  #nx-validate .nxp-count{font-size:13px;font-weight:700;color:#cfd8dc}
+  #nx-validate .nxp-solved{display:inline-block;margin-left:auto;font-size:12px;font-weight:700;color:#0f1318;background:#66bb6a;border-radius:10px;padding:2px 10px}
+  #nx-validate .nxp-solved.part{background:#90a4ae}
+  /* nx_validate_list (2026-10-15, owner mock): every test shown (no scroll), columns by width (2 on a laptop, 1 on a phone);
+     done = green ✓ and green title, not yet = grey ✓ and white title, not read by network-xray = grey dash */
+  #nx-validate .nxv-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(430px,100%),1fr));column-gap:28px;margin-top:4px}
+  #nx-validate .nxv-row{display:flex;gap:8px;min-width:0;font-size:12.5px;line-height:1.45;padding:5px 0;border-top:1px solid #24323e}
+  #nx-validate .nxv-st{flex:0 0 16px;font-weight:700;text-align:center;color:#78909c}
+  #nx-validate .nxv-txt{min-width:0;flex:1 1 auto}
+  #nx-validate .nxv-ttl{color:#e0e6ea;font-weight:700}
+  #nx-validate .nxv-ttl code{font-weight:400;margin-left:4px}
+  #nx-validate .nxv-why{display:block;font-size:12px;color:#90a4ae;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #nx-validate .nxv-row.pass .nxv-st,#nx-validate .nxv-row.pass .nxv-ttl{color:#66bb6a}
+  #nx-validate .nxv-row.pending .nxv-ttl,#nx-validate .nxv-row.unsupported .nxv-ttl,#nx-validate .nxv-row.skip .nxv-ttl{color:#90a4ae}
+  #nx-validate .nxv-note{font-size:12px;color:#78909c;margin-top:6px}
+  #nx-validate code{color:#ffd54f}
 </style>
 </head>
 <body class="is-xray-mode">
@@ -107,6 +129,7 @@
     <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The topology view is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
 
   <div id="nx-problem"></div>
+  <div id="nx-validate"></div>
   <div class="ov-frame">
     <div class="ov-bar">
       <span class="cap"><span data-i18n="topo_label">ContainerLab Topology</span> <b id="ovname">{{ .Name }}</b></span>
@@ -163,6 +186,7 @@
     if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
     try { localStorage.setItem('nx-lang', lang); } catch(e){}
     if (window.__nxPaintProblem) window.__nxPaintProblem(lang);   /* nx_problem_band */
+    if (window.__nxValidateTick) { window.__nxValidateSig = ''; window.__nxValidateTick(); }   /* nx_netlab_validate */
   }
   function init(){
     apply(pickLang());
@@ -389,6 +413,33 @@ window.__initNeXtOverview = function (data) {
     tooltipManagerConfig:{ nodeTooltipContentClass:'CustomNodeTooltip' }
   });
   window.__nxTopo = topo;
+  /* nx_netlab_validate: a bgp_neighbor test colours the link between the two routers (red dashed = not yet, green = OK);
+     a bgp_prefix test colours the router it runs on (red = a route check fails there). Untested links/nodes keep
+     the stock look. Labs without netlab validate tests: never called. */
+  window.__nxValidateMarks = function (v) {
+    try {
+      var linkSt = {}, nodeSt = {}, key = function (a, b) { return [a, b].sort().join('|'); };
+      ((v && v.tests) || []).forEach(function (t) { (t.marks || []).forEach(function (m) {
+        if (m.link) { var k = key(m.link[0], m.link[1]); linkSt[k] = linkSt[k] === false ? false : !!m.ok; }
+        else if (m.node) nodeSt[m.node] = nodeSt[m.node] === false ? false : !!m.ok;
+      }); });
+      topo.eachLink(function (l) {
+        var a = nameOf(l.sourceNode()), b = nameOf(l.targetNode()); if (!a || !b) return;
+        var st = linkSt[key(a, b)];
+        l.color(st === undefined ? '#93C5FD' : st ? '#66bb6a' : '#ef5350');
+        if (typeof l.dotted === 'function') l.dotted(st === false);
+        if (typeof l.width === 'function') l.width(st === undefined ? 2 : 3);
+      });
+      topo.eachNode(function (n) {
+        var nm = nameOf(n); if (!nm || typeof n.color !== 'function') return;
+        var st = nodeSt[nm];
+        if (st === undefined) { if (n.__nxvColored) { n.color(n.__nxvOrig); n.__nxvColored = false; } return; }
+        if (!n.__nxvColored) { n.__nxvOrig = n.color(); n.__nxvColored = true; }
+        n.color(st ? '#66bb6a' : '#ef5350');
+      });
+    } catch (e) {}
+  };
+  try { topo.on('topologyGenerated', function(){ if (window.XRAY_VALIDATE) window.__nxValidateMarks(window.XRAY_VALIDATE); }); } catch (e) {}
   // nx_static_align_reposition: after NeXt's force layout settles, snap nodes to the RCL 'Static view' layout
   // (hub top-centre / leaves bottom, 2-node left-right). A 'Please Wait' overlay hides the shuffle;
   // it fades out once nodes have landed. tunnel-instant means the DeepDive re-angle is jump-free.
@@ -401,6 +452,17 @@ window.__initNeXtOverview = function (data) {
       var adj={}; names.forEach(function(n){adj[n]=[];});
       (gd.links||[]).forEach(function(l){var a=l.source,b=l.target; if(!a||!b||a===b)return; if(adj[a]&&adj[a].indexOf(b)<0)adj[a].push(b); if(adj[b]&&adj[b].indexOf(a)<0)adj[b].push(a);});
       var deg=function(n){return (adj[n]||[]).length;}; var W=560,H=360,cx=W/2,cy=H/2,POS={};
+      /* nx_netlab_tiers (2026-10-15): a netlab lab -> rows from its groups (window.XRAY_TIERS: 0 = top = ISP / spine,
+         last = bottom = customer / leaf), opened like Vertical with the top row on top; Horizontal = rows left -> right.
+         Labs without XRAY_TIERS (examples/, plain containerlab) keep the rules below. */
+      var _T=window.XRAY_TIERS;
+      if(_T && names.length && names.every(function(n){return _T[n]!==undefined;})){
+        var _rows={}; names.forEach(function(n){(_rows[_T[n]]=_rows[_T[n]]||[]).push(n);});
+        var _ks=Object.keys(_rows).map(Number).sort(function(a,b){return a-b;}), _hz=window.__nxTierDir==='horizontal';
+        _ks.forEach(function(k,ri){ var r=_rows[k].sort(function(a,b){return a.localeCompare(b,undefined,{numeric:true});}), t=_ks.length===1?0.5:ri/(_ks.length-1);
+          r.forEach(function(n,i){ var u=(i+1)/(r.length+1); POS[n]=_hz?[W*0.15+W*0.7*t, 40+(H-80)*u]:[W*u, 70+(H-140)*t]; }); });
+        return {names:names,POS:POS};
+      }
       if(names.length===1){POS[names[0]]=[cx,cy];}
       else if(names.length===2){POS[names[0]]=[W*0.30,cy];POS[names[1]]=[W*0.70,cy];}
       else{ /* nx_star_inline_layout: 3-node linear (gateway q1/q2 inet-r1-sv, path q15 r1-r2-r3) -> inline horizontal
@@ -444,7 +506,27 @@ window.__initNeXtOverview = function (data) {
       var dx=hb.width/2-cx, dy=hb.height/2-cy; var gd=data||{};
       (gd.nodes||[]).forEach(function(n){var nd=topo.getNode(n.name); if(nd&&typeof nd.move==='function') nd.move(dx,dy);});
     }catch(e){} }
-    function _done(){ _reposition();
+    /* nx_netlab_tiers: in a netlab lab, nodes you drag keep their place when the page is opened again (this browser) */
+    function _posKey(){ return (window.XRAY_TIERS || window.XRAY_VALIDATE) ? 'nx-pos:' + ((document.getElementById('labname')||{}).textContent || '') : null; }
+    function _restore(){ try{ var k=_posKey(); if(!k) return; var sv=JSON.parse(localStorage.getItem(k)||'null'); if(!sv) return;
+      var pp=_pos(); if(!pp.names.every(function(n){return sv[n];})) return;
+      pp.names.forEach(function(n){ var nd=topo.getNode(n); if(!nd||typeof nd.position!=='function') return; var c=nd.position(); nd.move(sv[n][0]-c.x, sv[n][1]-c.y); });
+    }catch(e){} }
+    window.__nxSavePos = function(){ try{ var k=_posKey(); if(!k) return; var o={}; (data.nodes||[]).forEach(function(n){ var nd=topo.getNode(n.name); if(nd&&typeof nd.position==='function'){ var c=nd.position(); o[n.name]=[c.x,c.y]; } }); localStorage.setItem(k, JSON.stringify(o)); }catch(e){} };
+    window.__nxForgetPos = function(){ try{ var k=_posKey(); if(k) localStorage.removeItem(k); }catch(e){} };
+    window.__nxCenter = _center;
+    /* nx_tier_labels (2026-10-15, owner): in a lab with rows the node names sit at a fixed place, the same every time —
+       top row above the icon, bottom row below (centred), middle rows to the right; Horizontal: outer columns outside. NeXt's smart label (which moves a name away from the
+       links and lands differently on each load) is switched off only here; labs without rows keep it. */
+    window.__nxTierLabels = function(){ try{ var T=window.XRAY_TIERS; if(!T) return;
+      if (typeof topo.enableSmartLabel === 'function') topo.enableSmartLabel(false);
+      topo.eachNode(function(n){ var nm=nameOf(n); if(!nm || T[nm]===undefined || typeof n.labelAngle!=='function') return;
+        var last=Math.max.apply(null,Object.keys(T).map(function(k){return T[k];})), r=T[nm], hz=window.__nxTierDir==='horizontal';
+        /* rows: top above, bottom below, middle rows to the right (links go up and down there); Horizontal: outer columns outside, middle below */
+        n.labelAngle(hz ? (r===0 ? 180 : r===last ? 0 : 90) : (r===0 ? 270 : r===last ? 90 : 0)); if (typeof n.calcLabelPosition==='function') n.calcLabelPosition(true); });
+    }catch(e){} };
+    function _done(){ _reposition(); _restore(); if (window.__nxTierLabels) window.__nxTierLabels();
+      if (window.XRAY_TIERS) { activeLayout = window.__nxTierDir || 'vertical'; setCur(activeLayout==='horizontal'?'h-btn':'v-btn'); }
       setTimeout(function(){ _center();
         if(window.__xrayPushLayout) try{window.__xrayPushLayout();}catch(e){}
         if(ov){ ov.classList.add('hide'); setTimeout(function(){ if(ov&&ov.parentNode) ov.parentNode.removeChild(ov); },400); } }, 200); }
@@ -505,7 +587,7 @@ window.__initNeXtOverview = function (data) {
   var _lastLive=0;
   function onDragLive(){ var now=(window.performance&&performance.now)?performance.now():0;
     if(now && now-_lastLive<60) return; _lastLive=now; pushLayout(); freezeDeepDive(true); }
-  function onDragDone(){ pushLayout(); freezeDeepDive(true); setDragging(false); }
+  function onDragDone(){ pushLayout(); freezeDeepDive(true); setDragging(false); if (window.__nxSavePos) window.__nxSavePos(); }   /* nx_netlab_tiers: remember */
   ['dragNodeStart','dragStageStart','dragGroupStart'].forEach(function(ev){ try{ topo.on(ev, function(){ setDragging(true); }); }catch(e){} });
   ['dragNode','dragStage','dragGroup'].forEach(function(ev){ try{ topo.on(ev, onDragLive); }catch(e){} });
   ['dragNodeEnd','dragStageEnd','dragGroupEnd'].forEach(function(ev){ try{ topo.on(ev, onDragDone); }catch(e){} });
@@ -514,6 +596,11 @@ window.__initNeXtOverview = function (data) {
   // layout toggle buttons (group-based hierarchy; falls back gracefully when all groups are N/A)
   function setCur(id){ ['h-btn','v-btn'].forEach(function(x){ var b=document.getElementById(x); if(b) b.classList.toggle('cur', x===id); }); }
   window.__nxLayout = function(dir){
+    if (window.XRAY_TIERS && window.__nxAlign) {   /* nx_netlab_tiers: the lab's rows; a click also forgets dragged places */
+      activeLayout=dir; window.__nxTierDir=dir; setCur(dir==='horizontal'?'h-btn':'v-btn'); if (window.__nxForgetPos) window.__nxForgetPos();
+      window.__nxAlign(); setTimeout(function(){ try{ if(window.__nxCenter) window.__nxCenter(); if(window.__nxTierLabels) window.__nxTierLabels(); if(window.__xrayPushLayout) window.__xrayPushLayout(); }catch(e){} }, 60);
+      return;
+    }
     if(activeLayout===dir) return; activeLayout=dir; setCur(dir==='horizontal'?'h-btn':'v-btn');
     try{ var lay=topo.getLayout('hierarchicalLayout'); lay.direction(dir);
       lay.levelBy(function(node,model){ return model.get('group'); }); topo.activateLayout('hierarchicalLayout'); }catch(e){}
@@ -692,14 +779,53 @@ window.__initNeXtOverview = function (data) {
       nxSolvedPaint();
     } catch (e) {}
   };
+  /* nx_netlab_validate (2026-10-15): window.XRAY_VALIDATE (clab-xray-collect.js --validate, from the netlab lab's
+     validate: tests) -> a band like the problem band: "3 / 5", one row per test (netlab's description, the lab's
+     fail/pass text, network-xray's reason), ✓ Solved after the same hold as problem.json. Tests network-xray does
+     not read (show/valid, ping, OSPF, non-FRR routers) stay grey and keep ✓ Solved off: never a false Solved. */
+  window.__nxValidateSig = '';
+  window.__nxValidateTick = function(){
+    try {
+      var v = window.XRAY_VALIDATE, host = document.getElementById('nx-validate'); if (!host) return;
+      if (!v || !v.tests || !v.tests.length) { host.style.display = 'none'; return; }
+      var c = v.counts || {}, allOk = c.total > 0 && c.pass === c.total, partOk = c.checked > 0 && !c.fail && !c.warning && !c.pending && c.pass === c.checked;
+      var hold = window.LIVE_WATCH ? (+window.NX_SOLVED_HOLD_MS || 4000) : 0;
+      if (partOk) { if (!window.__nxValidateSince) window.__nxValidateSince = Date.now(); } else window.__nxValidateSince = 0;
+      var held = partOk && (Date.now() - window.__nxValidateSince >= hold);
+      var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
+      var sig = JSON.stringify(v) + L + held;
+      if (sig === window.__nxValidateSig) return;
+      window.__nxValidateSig = sig;
+      var ja = L === 'ja', esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); };
+      var MARK = { pass: '\u2713', fail: '\u2713', warning: '\u2713', pending: '\u2713', unsupported: '\u2013', skip: '\u2013' };   /* nx_validate_list: grey \u2713 until done */
+      var WHY = { pending: ja ? '\u524d\u306e\u691c\u67fb\u304c\u901a\u308b\u307e\u3067\u672a\u78ba\u8a8d (stop_on_error)' : 'not run yet: an earlier check has to pass first (stop_on_error)',
+                  unsupported: ja ? 'network-xray \u3067\u306f\u898b\u306a\u3044\u691c\u67fb \u2014 netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044' : 'not checked by network-xray \u2014 run netlab validate for this one',
+                  skip: ja ? '\u3053\u306e\u6a5f\u7a2e\u3067\u306f\u884c\u308f\u306a\u3044\u691c\u67fb' : 'not run on this device type' };
+      var rows = v.tests.map(function(t){
+        var judged = t.status === 'pass' || t.status === 'fail' || t.status === 'warning';
+        var why = judged ? (t.message || t.text || '') : (WHY[t.status] || t.status) + (t.status === 'unsupported' && t.message ? ' (' + t.message + ')' : '');
+        var tip = [t.text, why].filter(Boolean).join('\n');
+        return '<div class="nxv-row ' + esc(t.status) + '" title="' + esc(tip) + '"><span class="nxv-st">' + (MARK[t.status] || '?') + '</span>'
+          + '<span class="nxv-txt"><span class="nxv-ttl">' + esc(t.description) + '<code>' + esc(t.name) + '</code></span><span class="nxv-why">' + esc(why) + '</span></span></div>';
+      }).join('');
+      var badge = held ? (allOk ? '<span class="nxp-solved">' + (ja ? '\u2713 \u89e3\u3051\u307e\u3057\u305f (Solved)' : '\u2713 Solved') + '</span>'
+                                : '<span class="nxp-solved part">' + (ja ? '\u2713 network-xray \u306e\u691c\u67fb\u306f\u5168\u90e8\u901a\u904e' : '\u2713 all checks network-xray reads pass') + '</span>') : '';
+      host.innerHTML = '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
+        + '<span class="nxp-count">' + (c.pass || 0) + ' / ' + (c.total || 0) + '</span>' + badge + '</div><div class="nxv-list">' + rows + '</div>'
+        + (c.unsupported ? '<div class="nxv-note">' + (ja ? '\u7070\u8272\u306e ' + c.unsupported + ' \u3064\u306f network-xray \u3067\u306f\u898b\u3066\u3044\u306a\u3044\u306e\u3067\u3001\u2713 Solved \u306f\u51fa\u3057\u307e\u305b\u3093 (netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044)\u3002' : c.unsupported + ' grey check(s) are not read by network-xray, so \u2713 Solved is not shown: run netlab validate for those.') + '</div>' : '');
+      host.classList.toggle('nx-solved', held && allOk);
+      host.style.display = 'block';
+      if (window.__nxValidateMarks) window.__nxValidateMarks(v);
+    } catch (e) {}
+  };
   (function(){                                   // re-run after every live refresh (v11 poll / :8610 picker)
     var orig = window.__xrayLiveRefresh;
     if (typeof orig !== 'function') return;
-    window.__xrayLiveRefresh = function(cb){ return orig(function(ok){ try { window.__nxSolvedTick(); } catch (e) {} if (cb) cb(ok); }); };
+    window.__xrayLiveRefresh = function(cb){ return orig(function(ok){ try { window.__nxSolvedTick(); } catch (e) {} try { window.__nxValidateTick(); } catch (e) {} if (cb) cb(ok); }); };
   })();
   loadSeq('static/', function(){
-    if (ready()) { initSkin('static/'); renderProblem('static/'); withStates('static/', function(){ boot(); window.__nxSolvedTick(); startLivePoll(); }); }
-    else loadSeq('', function(){ initSkin(''); renderProblem(''); withStates('', function(){ boot(); window.__nxSolvedTick(); startLivePoll(); }); });
+    if (ready()) { initSkin('static/'); renderProblem('static/'); withStates('static/', function(){ boot(); window.__nxSolvedTick(); window.__nxValidateTick(); startLivePoll(); }); }
+    else loadSeq('', function(){ initSkin(''); renderProblem(''); withStates('', function(){ boot(); window.__nxSolvedTick(); window.__nxValidateTick(); startLivePoll(); }); });
   });
 })();
 </script>

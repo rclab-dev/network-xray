@@ -6,6 +6,23 @@
 # netlab up then starts network-xray next to the lab: open http://<host>:8600/ (8600 + the multilab id with the multilab plugin).
 # network-xray reads router state with `docker exec <node> vtysh -c 'show ...'` (FRR) / sr_cli (SR Linux): 'show' commands only.
 # It is given the Docker socket, which is root-equivalent on the host: run it only on a lab machine.
+# netlab create / netlab up also write network-xray.json (the transformed topology, without the defaults):
+# network-xray reads the lab's validate: tests from it and shows them as a band (3 / 5, ✓ Solved) with marks on the graph.
+netlab:
+  create:
+    output:
+      json:
+        options: nodefault
+        output: network-xray.json
+# Rows in the graph: give a node containerlab's graph-level label (1 = top row), e.g.
+#   nodes.s1.clab.labels: { graph-level: 1 }
+# (netlab does not pass clab labels by default: the next lines allow the clab.labels node attribute)
+providers:
+  clab:
+    attributes:
+      node:
+        _keys:
+          labels: dict
 tools:
   network-xray:
     runtime: docker

@@ -38,6 +38,10 @@ case "$PREFIX" in ''|clab) CPFX="clab-$LABNAME-" ;; *) echo "topology prefix '$P
 MGMT="$(awk '/^mgmt:/{f=1;next} f&&/^[^ ]/{f=0} f&&/ipv4[-_]subnet:/{print $2; exit}' "$TOPO" | tr -d '"'"'"'')"
 if [ -n "$MGMT" ]; then MGARG="--mgmt-subnet $MGMT"; else MGARG="--exclude-mgmt"; fi
 
+# netlab labs: the validate: tests (written by netlab create as network-xray.json, see netlab-defaults.yml)
+# -> the netlab validate band, judged by network-xray itself. The file is read on every round (it may appear later).
+VALARG="--validate $(dirname "$TOPO")/network-xray.json"
+
 routers() { docker ps --format '{{.Names}}' | grep "^${CPFX}" || true; }
 
 detect_proto() {
@@ -59,7 +63,7 @@ detect_proto() {
 COLLECT_PID=""; GRAPH_PID=""
 start_collect() {
   [ -n "$COLLECT_PID" ] && kill "$COLLECT_PID" 2>/dev/null && wait "$COLLECT_PID" 2>/dev/null
-  node "$WORK/clab-xray-collect.js" "$TOPO" "$WORK" "$1" $MGARG --watch --interval "$INTERVAL" &
+  node "$WORK/clab-xray-collect.js" "$TOPO" "$WORK" "$1" $MGARG $VALARG --watch --interval "$INTERVAL" &
   COLLECT_PID=$!
   echo "==> collecting $1 state from lab '$LABNAME' (containers ${CPFX}*)"
 }
