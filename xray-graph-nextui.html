@@ -536,7 +536,8 @@ window.__initNeXtOverview = function (data) {
   // lets the engine fire its OSS gates (body.xray-oss-deep → hide the modal Close + show the Skin
   // picker; body.xray-rt-live → hide ping/hello orbs when a routing_table is present). Without it the
   // DeepDive would fall out of parity with the static template.
-  var FILES = ['xray-core.js','xray-api.js','clab-xray-bridge.js','xray-skin.js','solved-check.js'];   /* nx_solved_check: + solved-check.js */
+  var FILES = ['xray-core.js','xray-i18n.js','xray-api.js',   /* nx_i18n_follow_page: English UI strings for the engine */
+               'clab-xray-bridge.js','xray-skin.js','solved-check.js'];   /* nx_solved_check: + solved-check.js */
   function loadSeq(base, done){
     var i = 0;
     (function next(){

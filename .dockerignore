@@ -1,0 +1,7 @@
+.git
+.github
+.devcontainer
+**/*.bak*
+# lab work dirs made by containerlab deploy (examples/<lab>/clab-<name>/) - NOT the clab-*.js tools at the top
+examples/*/clab-*
+demo/**/node_modules

@@ -169,6 +169,14 @@
     var l = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     return l.indexOf('ja') === 0 ? 'ja' : 'en';
   }
+  // nx_i18n_follow_page (2026-10-15): the engine (shared with a Japanese product) reads window._xrayLang in a few
+  // places (e.g. the Best-Path popover's "See all decision steps" link). The product sets it; the OSS pages did not, so
+  // those strings fell back to Japanese on English pages. Follow the page language (<html lang>, set by the toggle).
+  try {
+    if (!Object.getOwnPropertyDescriptor(window, '_xrayLang')) {
+      Object.defineProperty(window, '_xrayLang', { configurable: true, get: function () { return _bgpLang(); }, set: function () {} });
+    }
+  } catch (e) {}
   // Tier3 link — relative URL to the standalone decision-bracket.html, data-driven via base64url.
   // Encoding matches decision-bracket.html's decoder exactly (btoa(unescape(encodeURIComponent))
   // + url-safe  ↔  decodeURIComponent(escape(atob(url-unsafe)))). Payload shape = Tier3 DEFAULT.
@@ -503,6 +511,7 @@
   function _localize(root) {
     var d = window.xrayI18n;
     if (!d) return;
+    if (_bgpLang() === 'ja') return;   // nx_i18n_follow_page: the 日本語 toggle keeps the engine's own Japanese
     if (!_i18nKeys) _i18nKeys = Object.keys(d).sort(function (a, b) { return b.length - a.length; });
     root = root || document.body;
     if (!root || !root.querySelectorAll) return;
