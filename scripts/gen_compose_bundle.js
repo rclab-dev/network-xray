@@ -26,6 +26,11 @@ var links = [], nodeSet = {};
 while ((m = linkRe.exec(clabTxt))) { links.push({ a: m[1], ai: m[2], b: m[3], bi: m[4] }); nodeSet[m[1]] = 1; nodeSet[m[3]] = 1; }
 var nodes = Object.keys(nodeSet).sort();
 if (!nodes.length) { console.error('!! no links/nodes parsed from ' + CLAB); process.exit(1); }
+/* nx_no_shell (2026-10-17): the names go into reload.sh, compose file and service names -> plain names only */
+var _SAFE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/, _SAFE_IF = /^[A-Za-z0-9][A-Za-z0-9_.\/-]{0,62}$/;
+var _bad = [labName].concat(nodes).filter(function (s) { return !_SAFE.test(s); })
+  .concat([].concat.apply([], links.map(function (l) { return [l.ai, l.bi]; })).filter(function (s) { return !_SAFE_IF.test(s); }));
+if (_bad.length) { console.error('!! names that are not plain names (letters, digits, _ . -): ' + _bad.map(function (s) { return JSON.stringify(s.slice(0, 80)); }).join(', ')); process.exit(1); }
 
 // ---- 2) per-node interface IPs + OSPF area from frr.conf (per `interface` stanza) ----
 var ifip = {};   // ifip[node][iface] = { ip, plen, ospfArea }

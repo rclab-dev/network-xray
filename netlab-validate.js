@@ -88,9 +88,13 @@ function evalValue(v, ctx) {
   if (v.list) return v.list.map(function (x) { return evalValue(x, ctx); });
   if (v.dict) { var o = {}; v.dict.forEach(function (kv) { o[evalValue(kv[0], ctx)] = evalValue(kv[1], ctx); }); return o; }
   var path = v.ref, cur, shown = path[0];
+  /* nx_validate_topo_names (2026-10-17): netlab evaluates a test against the whole lab topology, so any top-level name
+     of it can be used (links[5].prefix.ipv4 in BGP Labs policy/d). A name that is not there = network-xray cannot
+     read the test -> grey (not checked), never "failed" */
   if (path[0] === 'node') cur = ctx.node;
   else if (path[0] === 'nodes') cur = ctx.nodes;
-  else throw new Error('unknown name ' + path[0]);
+  else if (ctx.topo && has(ctx.topo, path[0]) && path[0] !== 'validate') cur = ctx.topo[path[0]];
+  else throw Object.assign(new Error('unknown name ' + path[0]), { unsupported: true });
   for (var i = 1; i < path.length; i++) {
     var key = typeof path[i] === 'string' ? path[i] : evalValue(path[i], ctx);
     shown += typeof path[i] === 'string' ? '.' + key : '[' + key + ']';
@@ -103,7 +107,7 @@ function evalValue(v, ctx) {
     if (Array.isArray(cur) && typeof key === 'number') cur = cur[key];
     else if (has(cur, key)) cur = cur[key];
     else cur = undefined;
-    if (cur === undefined || cur === null) throw new Error('the lab has no ' + shown);
+    if (cur === undefined || cur === null) throw Object.assign(new Error('the lab has no ' + shown), { unsupported: true });   /* nx_validate_nodata (2026-10-18): netlab does not run such a test either -> grey, not failed */
   }
   return cur;
 }
@@ -145,6 +149,7 @@ function neighborAddr(ngb, nId, af) {
   }
   throw new Fail('Cannot find the ' + af + ' address of the neighbor ' + nId);
 }
+var POSITIONAL = { bgp_neighbor: ['ngb', 'n_id', 'af'], bgp_prefix: ['pfx'] };   /* nx_validate_kwargs */
 var PLUGINS = {
   bgp_neighbor: {
     // args: (ngb, n_id, af='ipv4', *, vrf='default', state='Established', activate='', intf='')
@@ -273,11 +278,18 @@ function tiers(topo) {
 function load(file) {
   var topo = JSON.parse(fs.readFileSync(file, 'utf8'));
   var tests = Array.isArray(topo.validate) ? topo.validate : Object.keys(topo.validate || {}).map(function (k) { return Object.assign({ name: k }, topo.validate[k]); });
-  return { name: topo.name || '', nodes: topo.nodes || {}, tests: tests, tiers: tiers(topo), mtime: fs.statSync(file).mtimeMs };
+  var mtime = fs.statSync(file).mtimeMs, started = mtime;
+  try { started = fs.statSync(require('path').join(require('path').dirname(file), 'netlab.lock')).mtimeMs; } catch (e) {}   /* nx_validate_converge */
+  if (LIVE_START) started = Math.max(started, PROC_START);   /* nx_validate_clistart: only the live band counts from its own start */   /* the netlab tool starts network-xray after the lab is configured: count from whichever is later */
+  return { name: topo.name || '', nodes: topo.nodes || {}, topo: topo, tests: tests, tiers: tiers(topo), mtime: mtime, started: started };
 }
 function shell1(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
 // one docker exec per (node, command) per round; results cached within the round
 function runShow(container, cmd, cb) {
+  /* nx_no_shell (2026-10-17): values from the lab file (vrf, af, prefix) go into one vtysh -c argument, and vtysh runs each
+     line of it as a command -> only plain words reach it (no newline, no other characters) */
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,126}$/.test(container)) return cb(new Error('not a plain container name: ' + JSON.stringify(String(container).slice(0, 80))));
+  if (!/^[A-Za-z0-9 ._:\/-]+$/.test(cmd)) return cb(new Error('a value in this test is not a plain word: ' + JSON.stringify(String(cmd).slice(0, 120))));
   cp.execFile('docker', ['exec', container, 'vtysh', '-c', 'show ' + cmd], { timeout: 8000, maxBuffer: 8 * 1024 * 1024 }, function (err, out) {
     if (err) return cb(new Error((err.killed ? 'timeout: ' : '') + 'docker exec ' + container + " vtysh -c " + shell1('show ' + cmd) + ' failed'));
     var j; try { j = JSON.parse(String(out).trim() || '{}'); } catch (e) { return cb(new Error('not JSON: show ' + cmd)); }
@@ -291,8 +303,32 @@ function unsupportedWhy(t) {
   return null;
 }
 /* result = { format, lab, tests:[{name, description, status, message, text, nodes:[{node,status,message}], marks:[...]}], counts } */
+/* nx_validate_settle (2026-10-17): a "not there" check (state='missing') passes the moment the lab starts, before any
+   route had time to arrive (netlab validate does the same when typed that early; BGP Labs tests carry no wait:). Here the
+   band is live from the first second, so such a pass only counts once the router's BGP sessions have all been up for
+   SETTLE_S seconds (or the test's own numeric wait:, if longer); until then the test is 'settling' (grey, no Solved). */
+var SETTLE_S = 30;
+/* nx_validate_converge (2026-10-17): (1) for CONVERGE_S seconds after the lab started (netlab.lock) the result says
+   converging: true and the page shows no Solved; (2) a test with a numeric wait: is not judged until that many seconds
+   after the lab started (netlab counts wait: from the lab start too). */
+var CONVERGE_S = 60;
+var PROC_START = Date.now(), LIVE_START = false;   /* nx_validate_clistart: set by the collector in --watch */
+function bgpSettled(container, vrf, needS, cache, labMtime, cb) {
+  var key = container + '|' + vrf;
+  var finish = function (j) {
+    if (j === null) return cb(false, 0);   /* nx_review_1017 (F-02): the summary could not be read = not settled */
+    var up = [], peers = 0;
+    Object.keys(j || {}).forEach(function (af) { var ps = (j[af] && j[af].peers) || {};
+      Object.keys(ps).forEach(function (ip) { var p = ps[ip] || {}; peers++; if (p.state === 'Established') up.push(+p.peerUptimeMsec || 0); }); });
+    if (peers && !up.length) return cb(false, 0);   /* F-02: BGP neighbours but none up = BGP is down, "not there" means nothing yet */
+    var secs = up.length ? Math.floor(Math.min.apply(null, up) / 1000) : Math.floor((Date.now() - (labMtime || 0)) / 1000);   /* no neighbour at all: from the lab start */
+    cb(secs >= needS, secs);
+  };
+  if (has(cache, key)) return finish(cache[key]);
+  runShow(container, 'bgp vrf ' + vrf + ' summary json', function (err, j) { cache[key] = err ? null : j; finish(cache[key]); });
+}
 function run(lab, prefix, done) {
-  var out = [], stopped = false, idx = 0;
+  var out = [], stopped = false, idx = 0, sumCache = {};   /* nx_validate_settle: one summary per router per round */
   function next() {
     if (idx >= lab.tests.length) return finish();
     var t = lab.tests[idx++], row = { name: t.name, description: t.description || t.name, nodes: [], marks: [], stop: !!t.stop_on_error, level: t.level || '' };
@@ -302,6 +338,8 @@ function run(lab, prefix, done) {
     if (!why) { try { call = parseCall(t.plugin); } catch (e) { why = 'cannot read: ' + e.message; } }
     if (!why && !PLUGINS[call.fn]) why = call.fn;
     if (why) { row.status = 'unsupported'; row.message = why; return next(); }
+    var _age = Math.floor((Date.now() - (lab.started || lab.mtime || 0)) / 1000);   /* nx_validate_converge (2) */
+    if (typeof t.wait === 'number' && _age < t.wait) { row.status = 'settling'; row.message = 'wait: ' + t.wait + ' s after the lab started (now ' + _age + ' s)'; return next(); }
     var nlist = (t.nodes || []).filter(function (n) {
       var nd = lab.nodes[n];
       if (!nd) { row.nodes.push({ node: n, status: 'error', message: 'no node ' + n + ' in the lab' }); return false; }
@@ -312,17 +350,28 @@ function run(lab, prefix, done) {
     var k = 0;
     (function eachNode() {
       if (k >= nlist.length) return endTest();
-      var n = nlist[k++], nd = lab.nodes[n], ctx = { node: nd, nodes: lab.nodes }, args, kw = {}, cmd;
+      var n = nlist[k++], nd = lab.nodes[n], ctx = { node: nd, nodes: lab.nodes, topo: lab.topo }, args, kw = {}, cmd;
       var rec = { node: n };
       try {
         args = call.args.map(function (a) { return evalValue(a, ctx); });
         Object.keys(call.kw).forEach(function (x) { kw[x] = evalValue(call.kw[x], ctx); });
+        /* nx_validate_kwargs (2026-10-18): Python lets a positional parameter be given by name (bgp_prefix(pfx=...)): move it
+           to its place, as netlab does (names from netlab's frr.py: bgp_neighbor(ngb, n_id, af), bgp_prefix(pfx)) */
+        (POSITIONAL[call.fn] || []).forEach(function (name, i) { if (has(kw, name) && args[i] === undefined) { args[i] = kw[name]; delete kw[name]; } });
         cmd = PLUGINS[call.fn].show(args, kw);
-      } catch (e) { rec.status = 'fail'; rec.message = e.message; row.nodes.push(rec); return eachNode(); }
+      } catch (e) { rec.status = e && e.unsupported ? 'unsupported' : 'fail'; rec.message = e.message; row.nodes.push(rec); return eachNode(); }   /* nx_validate_topo_names */
       runShow(prefix + n, cmd, function (err, j) {
         if (err) { rec.status = 'error'; rec.message = err.message; row.nodes.push(rec); return eachNode(); }
         var r;
         try { r = PLUGINS[call.fn].valid(j, args, kw); } catch (e) { r = (e instanceof Pass || e instanceof Fail) ? e : { pass: false, message: e.message }; }
+        if (r.pass && (kw.state === 'missing' || kw.best === false)) {   /* nx_validate_settle: "not there" / "not the best" checks */
+          var needS = Math.max(SETTLE_S, typeof t.wait === 'number' ? t.wait : 0);
+          return bgpSettled(prefix + n, kw.vrf || 'default', needS, sumCache, lab.started || lab.mtime, function (ok, secs) {
+            if (ok) { rec.status = 'pass'; rec.message = r.message; if (r.mark) row.marks.push(Object.assign({ node: n, ok: true }, r.mark.link ? { link: [n, r.mark.link[0]] } : { prefix: r.mark.prefix })); }
+            else { rec.status = 'settling'; rec.message = 'BGP up for ' + secs + ' s: a "not there" check is judged after ' + needS + ' s'; }
+            row.nodes.push(rec); eachNode();
+          });
+        }
         rec.status = r.pass ? 'pass' : 'fail'; rec.message = r.message;
         if (r.mark) row.marks.push(Object.assign({ node: n, ok: !!r.pass }, r.mark.link ? { link: [n, r.mark.link[0]] } : { prefix: r.mark.prefix }));
         row.nodes.push(rec); eachNode();
@@ -333,9 +382,11 @@ function run(lab, prefix, done) {
       var judged = st.filter(function (s) { return s !== 'skip'; });
       if (!judged.length) row.status = 'skip';
       else if (judged.indexOf('fail') >= 0 || judged.indexOf('error') >= 0) row.status = row.level === 'warning' ? 'warning' : 'fail';
+      else if (judged.indexOf('settling') >= 0) row.status = 'settling';   /* nx_validate_settle */
       else if (judged.indexOf('unsupported') >= 0) row.status = 'unsupported';
       else row.status = 'pass';
-      var bad = row.nodes.filter(function (x) { return x.status === 'fail' || x.status === 'error'; })[0];
+      var bad = row.nodes.filter(function (x) { return x.status === 'fail' || x.status === 'error'; })[0]
+        || row.nodes.filter(function (x) { return x.status === 'settling'; })[0];   /* nx_validate_settle: say why it waits */
       row.message = bad ? bad.node + ': ' + bad.message : (row.nodes.filter(function (x) { return x.status === 'pass'; }).map(function (x) { return x.node + ': ' + x.message; })[0] || (row.nodes[0] || {}).message || '');
       row.text = row.status === 'pass' ? (t.pass || '') : (row.status === 'fail' || row.status === 'warning') ? (t.fail || '') : '';
       if (row.status === 'fail' && row.stop) stopped = true;
@@ -343,15 +394,16 @@ function run(lab, prefix, done) {
     }
   }
   function finish() {
-    var c = { total: 0, pass: 0, fail: 0, warning: 0, pending: 0, unsupported: 0, skip: 0 };
+    var c = { total: 0, pass: 0, fail: 0, warning: 0, pending: 0, settling: 0, unsupported: 0, skip: 0 };
     out.forEach(function (r) { if (r.status === 'error') r.status = 'fail'; c[r.status] = (c[r.status] || 0) + 1; if (r.status !== 'skip') c.total++; });
     c.checked = c.pass + c.fail + c.warning;
-    done({ format: 'netlab-validate/0', lab: lab.name, tests: out, counts: c });
+    var _lage = Math.floor((Date.now() - (lab.started || lab.mtime || 0)) / 1000);
+    done({ format: 'netlab-validate/0', lab: lab.name, tests: out, counts: c, converging: _lage < CONVERGE_S, converge_s: CONVERGE_S });   /* nx_validate_converge (1) */
   }
   next();
 }
 
-module.exports = { load: load, tiers: tiers, run: run, parseCall: parseCall, evalValue: evalValue, getPrefix: getPrefix, PLUGINS: PLUGINS };
+module.exports = { setLiveStart: function (on) { LIVE_START = !!on; }, load: load, tiers: tiers, run: run, parseCall: parseCall, evalValue: evalValue, getPrefix: getPrefix, PLUGINS: PLUGINS };
 
 if (require.main === module) {
   var f = process.argv[2];
@@ -360,7 +412,7 @@ if (require.main === module) {
   run(labx, pfx, function (res) {
     res.tests.forEach(function (r) { console.log('[' + r.status.toUpperCase() + '] ' + r.name + ' - ' + r.description + (r.message ? '\n    ' + r.message : '')); });
     var c = res.counts;
-    console.log('== ' + c.pass + ' passed, ' + c.fail + ' failed, ' + c.pending + ' not run (stop_on_error), ' + c.unsupported + ' not checked by network-xray, of ' + c.total);
+    console.log('== ' + c.pass + ' passed, ' + c.fail + ' failed, ' + c.pending + ' not run (stop_on_error), ' + (c.settling ? c.settling + ' waiting for routes, ' : '') + c.unsupported + ' not checked by network-xray, of ' + c.total);
     process.exitCode = c.fail ? 1 : 0;
   });
 }

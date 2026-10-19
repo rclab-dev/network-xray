@@ -32,17 +32,21 @@ rm -f "$WORK/problem.json"
 LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$TOPO" | head -1 | tr -d '"'"'"'')"
 PREFIX="$(sed -n 's/^prefix:[[:space:]]*//p' "$TOPO" | head -1 | tr -d '"'"'"'')"
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $TOPO" >&2; exit 1; }
+# nx_no_shell (2026-10-17): the lab name becomes part of container names: plain names only (letters, digits, _ . -)
+case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $TOPO is not a plain name (letters, digits, _ . -): not starting" >&2; exit 1 ;; esac
 # the collectors name containers clab-<lab>-<node> (the containerlab / netlab default): other prefixes are not supported yet
 case "$PREFIX" in ''|clab) CPFX="clab-$LABNAME-" ;; *) echo "topology prefix '$PREFIX' is not supported (use the default 'clab')" >&2; exit 1 ;; esac
 # management network to leave out of the view: the topology's mgmt ipv4-subnet (netlab uses its own), else the clab default
 MGMT="$(awk '/^mgmt:/{f=1;next} f&&/^[^ ]/{f=0} f&&/ipv4[-_]subnet:/{print $2; exit}' "$TOPO" | tr -d '"'"'"'')"
-if [ -n "$MGMT" ]; then MGARG="--mgmt-subnet $MGMT"; else MGARG="--exclude-mgmt"; fi
+case "$MGMT" in *[!0-9./]*) MGMT="" ;; esac
+if [ -n "$MGMT" ]; then MGARG=(--mgmt-subnet "$MGMT"); else MGARG=(--exclude-mgmt); fi
 
 # netlab labs: the validate: tests (written by netlab create as network-xray.json, see netlab-defaults.yml)
 # -> the netlab validate band, judged by network-xray itself. The file is read on every round (it may appear later).
-VALARG="--validate $(dirname "$TOPO")/network-xray.json"
+VALARG=(--validate "$(dirname "$TOPO")/network-xray.json")
 
-routers() { docker ps --format '{{.Names}}' | grep "^${CPFX}" || true; }
+# the names that start with clab-<lab>- (a plain string compare: a . in the lab name is not a regex)
+routers() { docker ps --format '{{.Names}}' | awk -v p="$CPFX" 'index($0, p) == 1' || true; }
 
 detect_proto() {
   local c p=static
@@ -63,7 +67,7 @@ detect_proto() {
 COLLECT_PID=""; GRAPH_PID=""
 start_collect() {
   [ -n "$COLLECT_PID" ] && kill "$COLLECT_PID" 2>/dev/null && wait "$COLLECT_PID" 2>/dev/null
-  node "$WORK/clab-xray-collect.js" "$TOPO" "$WORK" "$1" $MGARG $VALARG --watch --interval "$INTERVAL" &
+  node "$WORK/clab-xray-collect.js" "$TOPO" "$WORK" "$1" "${MGARG[@]}" "${VALARG[@]}" --watch --interval "$INTERVAL" &
   COLLECT_PID=$!
   echo "==> collecting $1 state from lab '$LABNAME' (containers ${CPFX}*)"
 }

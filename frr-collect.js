@@ -54,11 +54,20 @@ function buildExecCmd(prefix, showCmd) {
   return p ? (p + ' ' + vt) : vt;
 }
 
+// nx_no_shell (2026-10-17): the same command as an argument array (no local shell). The prefix is split on spaces
+// ('docker exec r1' / 'sudo docker exec r1' / 'ssh host'); for ssh the remote side still gets one string, so only
+// fixed show commands are allowed through (letters, digits, space . / _ -).
+function buildExecArgv(prefix, showCmd) {
+  var p = (prefix || '').trim().split(/\s+/).filter(Boolean);
+  if (p[0] === 'ssh') return p.concat(["vtysh -c '" + showCmd + " json'"]);
+  return p.concat(['vtysh', '-c', showCmd + ' json']);
+}
 function execVtyshJson(prefix, showCmd) {
-  var full = buildExecCmd(prefix, showCmd);
+  if (!/^[A-Za-z0-9 .\/_-]+$/.test(showCmd)) return null;
+  var av = buildExecArgv(prefix, showCmd);
   var out;
   try {
-    out = cp.execSync(full, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+    out = cp.execFileSync(av[0], av.slice(1), { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 8000, stdio: ['ignore', 'pipe', 'ignore'] });   /* nx_review_1017 (F-04) */
   } catch (e) { return null; }               // コマンド不在 / iface down 等は null (呼び側で欠落許容)
   try { return JSON.parse(out); } catch (e) { return null; }
 }

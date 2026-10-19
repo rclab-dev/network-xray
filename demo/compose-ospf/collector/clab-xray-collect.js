@@ -22,16 +22,35 @@
 var fs = require('fs'), cp = require('child_process'), path = require('path'), os = require('os');
 
 // flags (--watch / --interval N / --exclude-mgmt / --mgmt-subnet <cidr>) may appear in any order
-var argv = process.argv.slice(2), watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = '', pos = [], serialCollect = false;
+var argv = process.argv.slice(2), watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = [], pos = [], serialCollect = false;
 for (var ai = 0; ai < argv.length; ai++) {
   if (argv[ai] === '--watch') watch = true;
   else if (argv[ai] === '--serial') serialCollect = true;   /* nx_collect_parallel: old one-node-at-a-time collect */
   else if (argv[ai] === '--interval') intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000;
-  else if (argv[ai] === '--exclude-mgmt') mgmtArg = ' --exclude-mgmt';                       // drop clab mgmt IF (172.20.20.0/24)
-  else if (argv[ai] === '--mgmt-subnet') mgmtArg = ' --mgmt-subnet ' + JSON.stringify(argv[++ai] || '');
+  else if (argv[ai] === '--exclude-mgmt') mgmtArg = ['--exclude-mgmt'];                       // drop clab mgmt IF (172.20.20.0/24)
+  else if (argv[ai] === '--mgmt-subnet') mgmtArg = ['--mgmt-subnet', argv[++ai] || ''];
   else pos.push(argv[ai]);
 }
+/* nx_no_shell (2026-10-17): names from the topology file never reach a shell. The per-node collectors are started with
+   an argument array (no /bin/sh), and lab / node / interface names must look like names (letters, digits, _ . - and, for
+   interfaces, /): anything else is left out of the view with one log line. A topology from someone else is only data. */
+var SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/, SAFE_IF = /^[A-Za-z0-9][A-Za-z0-9_.\/-]{0,62}$/;
+function shown(s) { return JSON.stringify(String(s).slice(0, 80)); }   // log the name as data (quoted, no control characters)
+// the parallel collect: `node -e PAR_RUNNER <jobs as JSON>` spawns every per-node collector at once (argument arrays) and
+// writes each one's exit code next to its state file, as the old `( ... ) & wait` sh line did
+/* nx_unread (2026-10-17): a router that cannot be read is shown as such, never as an empty router and never by freezing
+   the whole picture. The per-node collectors exit 3 with "NX_UNREAD <why>" (stopped | device | timeout); a child that
+   runs longer than CHILD_MS is killed (timeout). A router that timed out keeps its last good state marked stale
+   (nx_unread: 'timeout', nx_stale_since) and is asked again only after RETRY_MS, so the other routers keep updating. */
+var CHILD_MS = 25000, RETRY_MS = 10000;
+var PAR_RUNNER = "var cp=require('child_process'),fs=require('fs');var jobs=JSON.parse(process.argv[1]);var left=jobs.length;" +
+  "jobs.forEach(function(j){var done=false;var fin=function(c){if(done)return;done=true;try{fs.writeFileSync(j.code,String(c)+'\\n');}catch(e){}if(--left===0)process.exit(0);};" +
+  "var fd='ignore';try{fd=fs.openSync(j.err,'w');}catch(e){}" +
+  "var ch=cp.spawn(process.execPath,j.args,{stdio:['ignore','ignore',fd]});var to=setTimeout(function(){try{ch.kill('SIGKILL');}catch(e){}fin(124);}," + CHILD_MS + ");ch.on('error',function(){clearTimeout(to);fin(127);});ch.on('close',function(c){clearTimeout(to);fin(c==null?1:c);});});" +
+  "if(!left)process.exit(0);";
+if (mgmtArg[0] === '--mgmt-subnet' && !/^[0-9.]+\/[0-9]+$/.test(mgmtArg[1])) { console.error('!! --mgmt-subnet ' + shown(mgmtArg[1]) + ' is not an IPv4 subnet: ignored'); mgmtArg = []; }
 var topoPath = pos[0], outDir = pos[1], proto = pos[2] || 'ospf';
+if (!/^[a-z]{1,16}$/.test(proto)) { console.error('!! unknown proto ' + shown(proto)); process.exit(2); }
 if (!topoPath || !outDir) {
   console.error('usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>]');
   process.exit(2);
@@ -69,12 +88,13 @@ if (!fs.existsSync(outDir)) {
 }
 var lab = (topo.match(/^name:\s*"?([^"\s]+)"?/m) || [])[1];
 if (!lab) { console.error('!! could not find `name:` in ' + topoPath); process.exit(1); }
+if (!SAFE_NAME.test(lab)) { console.error('!! the lab name ' + shown(lab) + ' is not a plain name (letters, digits, _ . -): not collecting'); process.exit(1); }   /* nx_no_shell */
 // nx_collect_mgmt_from_topo: --exclude-mgmt uses the lab's own mgmt subnet when the topology sets one
 //   (mgmt: / ipv4-subnet: ..., e.g. netlab = 192.168.121.0/24); otherwise containerlab's default 172.20.20.0/24.
-if (mgmtArg === ' --exclude-mgmt') {
+if (mgmtArg.length === 1 && mgmtArg[0] === '--exclude-mgmt') {
   var _mg = /^mgmt:[ \t]*\r?\n((?:[ \t]+.*\r?\n?)*)/m.exec(topo);
   var _sub = _mg && /^[ \t]+ipv4-subnet:[ \t]*["']?([0-9.]+\/[0-9]+)/m.exec(_mg[1]);
-  if (_sub) mgmtArg = ' --mgmt-subnet ' + JSON.stringify(_sub[1]);
+  if (_sub) mgmtArg = ['--mgmt-subnet', _sub[1]];
 }
 
 // derive per-node adjacency from links: endpoints: ["a:eth1", "b:eth2"]
@@ -92,6 +112,10 @@ var seenLink = {};
     var lk = [a + ':' + ai2, b + ':' + bi].sort().join('|');
     if (seenLink[lk]) continue;
     seenLink[lk] = 1;
+    if (!SAFE_NAME.test(a) || !SAFE_NAME.test(b) || !SAFE_IF.test(ai2) || !SAFE_IF.test(bi)) {   /* nx_no_shell */
+      console.error('!! left out a link with a name that is not a plain name: ' + shown(a + ':' + ai2) + ' - ' + shown(b + ':' + bi));
+      continue;
+    }
     (adj[a] = adj[a] || []).push({ iface: ai2, peer: b, peerIface: bi });
     (adj[b] = adj[b] || []).push({ iface: bi, peer: a, peerIface: ai2 });
   }
@@ -129,9 +153,10 @@ var dest = path.join(outDir, 'xray-states.js');
 // the page fell back to the synthetic demo). The child's stderr is now shown so the cause is visible.
 // When every node succeeds the output is exactly as before.
 var lastGood = {};
-var failSeen = {};   /* nx_quiet_log: node -> {msg, count} of the current run of identical failures */
+var failSeen = {};
+var lastGoodAt = {}, retryAt = {}, lastOut = {};   /* nx_unread */   /* nx_quiet_log: node -> {msg, count} of the current run of identical failures */
 function collectAll() {
-  var states = {}, ok = 0, kept = 0;
+  var states = {}, ok = 0, kept = 0, unread = 0;
   /* nx_collect_parallel (2026-10-09): start every node's collector at once in one sh and wait for all of them
      (about one node's time instead of the sum - 3 nodes ~4 s -> ~1.5 s). Exit code / stderr of each child go to
      small files next to its state file and are read below, so the failure handling is unchanged. --serial = old way. */
@@ -140,47 +165,61 @@ function collectAll() {
     var srl = isSrl(kindOf[n]);
     var script = srl ? srlCollect : collect;
     var adjStr = adj[n].map(function (l) { return (srl ? srlIface(l.iface) : l.iface) + ':' + l.peer; }).join(',');
-    var mg = srl ? '' : mgmtArg;
+    var mg = srl ? [] : mgmtArg;
     var out = path.join(os.tmpdir(), 'xray-state-' + lab + '-' + n +
       (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json');
-    return { out: out, cmd: 'node ' + JSON.stringify(script) + ' --lab ' + lab + ' --node ' + n +
-      ' --proto ' + proto + ' --adj ' + adjStr + mg + ' --out ' + JSON.stringify(out) };
+    return { out: out, args: [script, '--lab', lab, '--node', n, '--proto', proto, '--adj', adjStr].concat(mg, ['--out', out]) };   /* nx_no_shell: an argument array */
   };
   if (_par) {
-    var _sh = nodes.map(function (n) {
+    /* nx_no_shell: one small node process starts every child with an argument array (no sh) and waits for all of them */
+    var _jobs = nodes.filter(function (n) { return !(retryAt[n] > Date.now()); }).map(function (n) {   /* nx_unread: back-off */
       var c = _cmdOf(n); _job[n] = { code: c.out + '.code', err: c.out + '.err' };
       try { fs.unlinkSync(_job[n].code); } catch (e) {}
-      return '( ' + c.cmd + ' 2>' + JSON.stringify(_job[n].err) + ' >/dev/null; echo $? > ' + JSON.stringify(_job[n].code) + ' ) &';
-    }).join(' ') + ' wait';
-    try { cp.execSync(_sh, { stdio: 'ignore', shell: '/bin/sh' }); } catch (e) {}
+      return { args: c.args, code: _job[n].code, err: _job[n].err };
+    });
+    try { cp.execFileSync(process.execPath, ['-e', PAR_RUNNER, JSON.stringify(_jobs)], { stdio: 'ignore' }); } catch (e) {}
   }
   nodes.forEach(function (n) {
     var srl = isSrl(kindOf[n]);
     var script = srl ? srlCollect : collect;
     var adjStr = adj[n].map(function (l) { return (srl ? srlIface(l.iface) : l.iface) + ':' + l.peer; }).join(',');
-    var mg = srl ? '' : mgmtArg;   // --exclude-mgmt is an FRR-collector flag; srl ignores it
+    var mg = srl ? [] : mgmtArg;   // --exclude-mgmt is an FRR-collector flag; srl ignores it
     var out = path.join(os.tmpdir(), 'xray-state-' + lab + '-' + n +
       (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json');   /* nx_tmp_per_user (2026-10-05): a collector run with sudo and one without no longer fight over a root-owned tmp file (EACCES forever) */   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
+    if (retryAt[n] > Date.now()) { if (lastOut[n]) states[n] = lastOut[n]; return; }   /* nx_unread: asked again after RETRY_MS */
     try {
       if (_par) {   /* nx_collect_parallel: the child already ran - read its exit code (and stderr on failure) */
         var _code = ''; try { _code = fs.readFileSync(_job[n].code, 'utf8').trim(); } catch (e) {}
         if (_code !== '0') { var _pe = new Error('Command failed: node collector exit ' + (_code || '?')); try { _pe.stderr = fs.readFileSync(_job[n].err, 'utf8'); } catch (e) {} throw _pe; }
       } else
-      cp.execSync('node ' + JSON.stringify(script) + ' --lab ' + lab + ' --node ' + n +
-        ' --proto ' + proto + ' --adj ' + adjStr + mg + ' --out ' + JSON.stringify(out),
-        { stdio: ['ignore', 'ignore', 'pipe'] });
+      cp.execFileSync(process.execPath, [script, '--lab', lab, '--node', n, '--proto', proto, '--adj', adjStr].concat(mg, ['--out', out]),
+        { stdio: ['ignore', 'ignore', 'pipe'], timeout: CHILD_MS });   /* nx_no_shell / nx_unread */
       states[n] = JSON.parse(fs.readFileSync(out, 'utf8'));
-      lastGood[n] = states[n];
+      lastGood[n] = states[n]; lastGoodAt[n] = new Date().toISOString(); delete retryAt[n];   /* nx_unread */
       if (failSeen[n]) { console.error('  ' + n + ' collect OK again (after ' + failSeen[n].count + ' failure(s))'); delete failSeen[n]; }   /* nx_quiet_log */
       ok++;
     } catch (e) {
+      /* nx_unread: why the router could not be read */
+      var _why = (/NX_UNREAD (stopped|device|timeout)/.exec(String((e && e.stderr) || '')) || [])[1]
+        || ((e && e.code === 'ETIMEDOUT') || /exit 124$/.test(String((e && e.message) || '')) ? 'timeout' : '');
+      if (_why) {
+        if (_why === 'timeout') retryAt[n] = Date.now() + RETRY_MS;
+        var _um = '  ' + n + ' cannot be read: ' + ({ stopped: 'the container is not running', device: 'not a router network-xray reads (no vtysh / sr_cli) - drawn only', timeout: 'no answer - showing its last good state as stale' })[_why];
+        if (!(failSeen[n] && failSeen[n].msg === _um)) { console.error(_um); failSeen[n] = { msg: _um, count: 1 }; } else failSeen[n].count++;
+        states[n] = (_why === 'timeout' && lastGood[n]) ? Object.assign({}, lastGood[n], { nx_unread: 'timeout', nx_stale_since: lastGoodAt[n] })
+          : { success: false, target_node: n, nx_unread: _why, interfaces: {} };
+        lastOut[n] = states[n]; unread++;
+        return;
+      }
       var errLines = e && e.stderr ? String(e.stderr).split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : [];
       var errTail = errLines.filter(function (x) { return /Error|EACCES|ENOENT|denied|not found/i.test(x); })[0] || errLines[errLines.length - 1] || '';
       var _fm = '  ' + n + ' COLLECT FAILED: ' + String((e && e.message) || e).split('\n')[0] + (errTail ? ' | ' + errTail : '');   /* nx_quiet_log */
       var _fc = (failSeen[n] && failSeen[n].msg === _fm) ? ++failSeen[n].count : (failSeen[n] = { msg: _fm, count: 1 }).count;
       if (_fc === 1) console.error(_fm); else if (_fc % 12 === 0) console.error('  ' + n + ' still failing (same error x' + _fc + ')');
       if (lastGood[n]) { states[n] = lastGood[n]; kept++; }
+      else { states[n] = { success: false, target_node: n, nx_unread: 'error', interfaces: {} }; unread++; }   /* nx_unread: never fall back to the demo state */
     }
+    if (states[n]) lastOut[n] = states[n];
   });
   // Cross-node hello-IN (OSPF): a peer is "sending Hello" iff ITS facing iface participates in OSPF
   // (present in that peer's iface_hellos) -- INDEPENDENT of neighbor state. Makes "Hello flowing but
@@ -194,7 +233,7 @@ function collectAll() {
       var psm = st.peer_sending_hellos || (st.peer_sending_hellos = {});
       (adj[cn] || []).forEach(function (link) {
         var peerSt = states[link.peer];
-        psm[link.peer] = !!(peerSt && peerSt.iface_hellos && peerSt.iface_hellos[link.peerIface]);
+        psm[link.peer] = !!(peerSt && !peerSt.nx_unread && peerSt.iface_hellos && peerSt.iface_hellos[link.peerIface]);   /* nx_unread */
         /* nx_peer_hello_from_iface (2026-10-06, q6): receive period = the peer's hello on the facing iface */
         var _pvh = peerSt && peerSt.iface_hellos && peerSt.iface_hellos[link.peerIface];
         if (_pvh > 0) (st.peer_hellos || (st.peer_hellos = {}))[link.peer] = _pvh;
@@ -203,7 +242,7 @@ function collectAll() {
     });
   }
   if (kept) console.error('  kept the last good state for ' + kept + ' node(s)');
-  return { states: states, ok: ok, kept: kept };
+  return { states: states, ok: ok, kept: kept, unread: unread };
 }
 // --watch sets window.LIVE_WATCH so the template opts in to live polling; a one-shot run omits it
 // (the snapshot stays static), keeping the drop-in graph unchanged unless you ask for watch mode.
@@ -259,7 +298,7 @@ if (!watch) {
   var tick = function () {
     var r = collectAll();
     var json = JSON.stringify(r.states);
-    if (!r.ok && !r.kept && last) { setTimeout(tick, intervalMs); return; }   /* nothing collected and nothing kept: keep the page as it is */
+    if (!r.ok && !r.kept && !r.unread && last) { setTimeout(tick, intervalMs); return; }   /* nx_unread: a router marked unreadable is news too */   /* nothing collected and nothing kept: keep the page as it is */
     if (json !== last) {   // only rewrite when something changed (no churn on idle)
       last = json;
       writeStates(r.states, true);

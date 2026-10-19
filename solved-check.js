@@ -67,7 +67,7 @@
       if (!Array.isArray(c) || c.length < 3) { warn(ctx + ': expected [node, path, op, value]'); return false; }
       if (OPS.indexOf(c[2]) < 0) { warn(ctx + ': unknown op "' + c[2] + '"'); return false; }
       var st = states && states[c[0]];
-      if (!st) return false;   // node not collected (yet)
+      if (!st || st.success === false || st.nx_unread) return false;   // node not collected (yet) / cannot be read (nx_review_1017 F-05)
       return test(get(st, fill(c[1], st)), c[2], c[3], ctx);
     });
     return { defined: true, ok: results.every(Boolean), results: results };

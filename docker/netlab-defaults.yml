@@ -38,5 +38,6 @@ tools:
       message: >-
         Open http://{sys.ipurl}:{ 8600 + defaults.multilab.id if defaults.multilab.id else 8600 }/ in your browser
         (network-xray only runs 'show' commands, but it is given the Docker socket)
-      down:
-        docker kill '{name}_network_xray'
+      down:   # nx_unread (2026-10-17): network-xray.json (written by netlab create, holds the lab's passwords too) goes with the lab
+      - rm -f network-xray.json
+      - docker kill '{name}_network_xray'

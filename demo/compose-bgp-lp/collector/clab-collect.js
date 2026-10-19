@@ -36,6 +36,23 @@ var cp = (typeof require === 'function') ? require('child_process') : null;
 var fs = (typeof require === 'function') ? require('fs') : null;;
 /* compose_socketless_vtysh: in compose-mode (env XRAY_VTY_SOCK_DIR set) reach each FRR via its shared vty socket (vtysh --vty_socket) instead of `docker exec`, so no /var/run/docker.sock is needed. */
 var _VTY_SOCK = process.env.XRAY_VTY_SOCK_DIR || '';
+/* nx_unread (2026-10-17): a router that cannot be read is reported as such (exit 3 + "NX_UNREAD <why> ..." on stderr)
+   instead of an empty router: why = stopped (container not running / gone) | device (no vtysh: linux, cEOS, ...) |
+   timeout (no answer in 8 s). Every docker exec is cut at 8 s, so one hung router cannot hold the whole picture. */
+var NX_EXEC_MS = 8000;
+function _nxErr(why, msg) { var e = new Error(msg || why); e.nxUnread = why; return e; }
+function _nxClassify(e) {
+  if (e && e.code === 'ETIMEDOUT') return _nxErr('timeout', 'no answer in ' + (NX_EXEC_MS / 1000) + ' s');
+  var t = String((e && e.stderr) || '') + ' ' + String((e && e.stdout) || '') + ' ' + String((e && e.message) || '');   /* docker prints "OCI runtime exec failed" on stdout */
+  /* only docker's own messages: FRR itself says e.g. "ospfd is not running" when a daemon is off - that is a readable router */
+  if (/Error response from daemon:.*(is not running|is paused|is restarting)|No such container/i.test(t)) return _nxErr('stopped', 'the container is not running');
+  if (/OCI runtime exec failed.*vtysh|exec: "vtysh": executable file not found/i.test(t)) return _nxErr('device', 'no vtysh in this container');
+  return null;
+}
+function _vtyExec(bin, args, maxBuf) {
+  try { return cp.execFileSync(bin, args, { encoding: 'utf8', maxBuffer: maxBuf, timeout: NX_EXEC_MS, stdio: ['ignore', 'pipe', 'pipe'] }); }
+  catch (e) { var c = _nxClassify(e); throw c || e; }
+}
 function _vtyBase(container){ return _VTY_SOCK ? ['vtysh', ['--vty_socket', _VTY_SOCK + '/' + container]] : ['docker', ['exec', container, 'vtysh']]; }
 function _stripVtyWarn(o){ if(!o) return o; var i = o.indexOf('{'); return i > 0 ? o.slice(i) : o; }
 var path = (typeof require === 'function') ? require('path') : null;
@@ -312,8 +329,8 @@ function buildState(opts) {
   // the 2nd DeepDive beam had no geometry. Layer link ifaces on with ip/up from show-interface.
   peers.forEach(function (p) {
     if (p.iface && p.iface !== 'lo' && !interfaces[p.iface]) {
-      var _pd = ifs[p.iface] || ifFallback[p.iface] || {};
-      interfaces[p.iface] = { up: _pd.up !== false, ip: _ifIpStr(p.iface) };
+      var _pd = ifs[p.iface] || ifFallback[p.iface];
+      interfaces[p.iface] = _pd ? { up: _pd.up !== false, ip: _ifIpStr(p.iface) } : { up: false, ip: '', absent: true };   /* nx_unread (F3): the router has no such iface -> not UP */
     }
   });
   // nx_collect_peer_map: every clab link iface too (a link with no OSPF and no BGP peer on it lost its UP/IP), when FRR knows it
@@ -686,8 +703,7 @@ function collectFromJson(args) {
 // ---- live: docker exec on clab-<lab>-<node> -------------------------------------------------
 function _vtyshJson(container, showCmd) {
   var _b = _vtyBase(container);
-  var out = cp.execFileSync(_b[0], _b[1].concat(['-c', showCmd + ' json']),
-    { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+  var out = _vtyExec(_b[0], _b[1].concat(['-c', showCmd + ' json']), 8 * 1024 * 1024);   /* nx_unread */
   try { return JSON.parse(_stripVtyWarn(out)); } catch (e) { return null; }
 }
 // Run several `show ... json` commands in ONE vtysh process and return their parsed objects in order.
@@ -700,8 +716,8 @@ function _vtyshBatch(container, showCmds) {
   var _b = _vtyBase(container); var args = _b[1].slice();
   showCmds.forEach(function (c) { args.push('-c', c + ' json'); });
   var out;
-  try { out = cp.execFileSync(_b[0], args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }); }
-  catch (e) { return showCmds.map(function () { return null; }); }
+  try { out = _vtyExec(_b[0], args, 16 * 1024 * 1024); }   /* nx_unread */
+  catch (e) { if (e && e.nxUnread) throw e; return showCmds.map(function () { return null; }); }
   var objs = [], depth = 0, start = -1, inStr = false, esc = false;
   for (var i = 0; i < out.length; i++) {
     var cc = out.charCodeAt(i);
@@ -714,6 +730,10 @@ function _vtyshBatch(container, showCmds) {
 }
 
 function collectLive(opts) {
+  /* nx_no_shell (2026-10-17): the commands here are fixed and passed as argument arrays; the lab / node names become a
+     container name (or a socket file name) and must be plain names */
+  var _safeName = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/;
+  if (!_safeName.test(String(opts.node)) || (opts.lab != null && !_safeName.test(String(opts.lab)))) throw new Error('--lab / --node must be plain names (letters, digits, _ . -)');   /* nx_review_1017 (F-06): the lab name too, also with vtysh sockets */
   var container = (_VTY_SOCK ? opts.node : ('clab-' + opts.lab + '-' + opts.node));
   var proto = (opts.proto || 'ospf').toLowerCase();
   var raw = {
@@ -744,7 +764,7 @@ function collectLive(opts) {
       raw.bgpSummary = _bpr[0]; raw.bgp = _bpr[1];
     }
   }
-  var _cfgTxt = _safe(function(){ return (function(){var _b=_vtyBase(container);return cp.execFileSync(_b[0],_b[1].concat(['-c','show running-config']),{encoding:'utf8',maxBuffer:8*1024*1024});})(); }) || '';
+  var _cfgTxt = _safe(function(){ return (function(){var _b=_vtyBase(container);return _vtyExec(_b[0],_b[1].concat(['-c','show running-config']),8*1024*1024);})(); }) || '';
   // Configured static routes (running-config) = TARGET source when a fault leaves the route fully
   // unresolved (FRR omits unresolvable statics from show ip route), so init/solved agree on the
   // scenario destination (Q4 2.2.2.2) instead of the 8.8.8.8 default.
@@ -755,7 +775,7 @@ function collectLive(opts) {
     ospfNeighbor: raw.ospfNeighbor, ospfInterface: raw.ospfInterface, interface: raw.interface,
     route: raw.route, bgpSummary: raw.bgpSummary, bgp: raw.bgp });
 }
-function _safe(fn) { try { return fn(); } catch (e) { return null; } }
+function _safe(fn) { try { return fn(); } catch (e) { if (e && e.nxUnread) throw e; return null; } }   /* nx_unread: a router that cannot be read is not 'empty' */
 
 // ---- CLI ------------------------------------------------------------------------------------
 function _argMap(argv) {
@@ -895,7 +915,9 @@ if (typeof require !== 'undefined' && require.main === module) {
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, out); console.log('wrote ' + a.out); } else console.log(out);
   }
   else if (a.lab && a.node) {
-    var stl = collectLive({ lab: a.lab, node: a.node, proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: _mgmt });
+    var stl;
+    try { stl = collectLive({ lab: a.lab, node: a.node, proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: _mgmt }); }
+    catch (e) { if (e && e.nxUnread) { console.error('NX_UNREAD ' + e.nxUnread + ' ' + e.message); process.exit(3); } throw e; }   /* nx_unread */
     var outl = JSON.stringify(stl, null, 2);
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, outl); console.log('wrote ' + a.out); } else console.log(outl);
   }

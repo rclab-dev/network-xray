@@ -127,7 +127,7 @@ function buildState(fetch, node, adj, proto) {
 
   /* nx_peer_links: one row per adj link (incl. 2 links to the same peer / a link with no neighbor = Down). Additive. */
   var _plRows = Object.keys(adj).map(function (ifn) { var r = _plByIf[ifn], it = state.interfaces[ifn] || {};
-    return { iface: ifn, peer: adj[ifn], up: it.up !== false, ip: it.ip || '', full: !!(r && r.full), state: r ? (r.full ? 'Full' : 'Down') : 'Down', proto: r ? r.proto : state.protocol, peer_ip: (r && r.peer_ip) || '' }; });
+    return { iface: ifn, peer: adj[ifn], up: !!state.interfaces[ifn] && it.up !== false, ip: it.ip || '', full: !!(r && r.full), state: r ? (r.full ? 'Full' : 'Down') : 'Down', proto: r ? r.proto : state.protocol, peer_ip: (r && r.peer_ip) || '' }; });
   if (_plRows.length) state.peer_links = _plRows;
 
   // routes: route -> next-hop-group -> next-hop (resolve ip + out-iface)
@@ -228,7 +228,8 @@ function buildState(fetch, node, adj, proto) {
     state.pfx_rcvd = Object.keys(_rcvd).length;
     peers.forEach(function (p) { state[p + '_established'] = !!state[p + '_has_full']; });
   } else {
-    state.ospf_configured = true;
+    /* nx_unread (F1, 2026-10-17): OSPF only when the router has an OSPF instance with an area (was: always true here) */
+    state.ospf_configured = !!(typeof oa !== 'undefined' && oa && (oa.area || []).length);
     state.ospf_active_on_interface = fullCount > 0;
     state.peer_sending_hello = fullCount > 0;
     state.has_ospf_route = reach;
@@ -404,9 +405,16 @@ if (process.argv.indexOf('--self-test') >= 0) {
 var node = arg('--node'), proto = arg('--proto', 'ospf'), out = arg('--out');
 var fromDir = arg('--from-dir'), lab = arg('--lab'), capture = arg('--capture');
 var adj = {};
-arg('--adj', '').split(',').filter(Boolean).forEach(function (p) { var i = p.indexOf(':'); if (i > 0) adj[p.slice(0, i)] = p.slice(i + 1); });
+/* nx_no_shell (2026-10-17): sr_cli is started with an argument array and every name must look like a name */
+var SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/, SAFE_IF = /^[A-Za-z0-9][A-Za-z0-9_.\/-]{0,62}$/;
+arg('--adj', '').split(',').filter(Boolean).forEach(function (p) {
+  var i = p.indexOf(':'); if (i <= 0) return;
+  if (!SAFE_IF.test(p.slice(0, i)) || !SAFE_NAME.test(p.slice(i + 1))) { console.error('!! --adj: left out ' + JSON.stringify(p.slice(0, 80)) + ' (not a plain name)'); return; }
+  adj[p.slice(0, i)] = p.slice(i + 1);
+});
+if ((lab && !SAFE_NAME.test(lab)) || (node && !SAFE_NAME.test(node))) { console.error('!! --lab / --node must be plain names (letters, digits, _ . -)'); process.exit(2); }
 
-var fetchFn;
+var fetchFn, nxUnread = null;   /* nx_unread: [why, message] when the router cannot be read */
 if (fromDir) {
   // offline replay: read the recorded `info from state ... | as json` files (no docker / no lab).
   if (!node) { console.error('usage: --from-dir <dir> --node <node> --adj if:peer,... [--proto ospf|bgp] [--out f]'); process.exit(2); }
@@ -415,11 +423,20 @@ if (fromDir) {
   // live: run `sr_cli "info from state <path> | as json"` inside clab-<lab>-<node>.
   var container = 'clab-' + lab + '-' + node;
   var live = function (p) {
+    if (!/^[A-Za-z0-9 *._\/-]+$/.test(p)) return null;   /* nx_no_shell: a state path is words, never a second command */
+    if (nxUnread) return null;   /* nx_unread: once the router did not answer / is not there, stop asking this round */
     try {
-      var o = cp.execSync('docker exec ' + container + ' sr_cli "info from state ' + p + ' | as json"',
-        { encoding: 'utf8', maxBuffer: 1024 * 1024 * 32, stdio: ['ignore', 'pipe', 'ignore'] });
+      var o = cp.execFileSync('docker', ['exec', container, 'sr_cli', 'info from state ' + p + ' | as json'],
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 * 32, timeout: 8000, stdio: ['ignore', 'pipe', 'pipe'] });
       return JSON.parse(o);
-    } catch (e) { return null; }
+    } catch (e) {
+      /* nx_unread (2026-10-17): the same 3 reasons as the FRR collector (docker's own messages only) */
+      var t = String((e && e.stderr) || '') + ' ' + String((e && e.stdout) || '') + ' ' + String((e && e.message) || '');   /* docker prints "OCI runtime exec failed" on stdout */
+      if (e && e.code === 'ETIMEDOUT') nxUnread = ['timeout', 'no answer in 8 s'];
+      else if (/Error response from daemon:.*(is not running|is paused|is restarting)|No such container/i.test(t)) nxUnread = ['stopped', 'the container is not running'];
+      else if (/OCI runtime exec failed.*sr_cli|exec: "sr_cli": executable file not found/i.test(t)) nxUnread = ['device', 'no sr_cli in this container'];
+      return null;
+    }
   };
   fetchFn = capture ? teeFetch(live, capture) : live;   // --capture <dir> records for later --from-dir
 } else {
@@ -431,6 +448,7 @@ if (fromDir) {
 }
 
 var state = buildState(fetchFn, node, adj, proto);
+if (nxUnread) { console.error('NX_UNREAD ' + nxUnread[0] + ' ' + nxUnread[1]); process.exit(3); }   /* nx_unread: not an empty router */
 var json = JSON.stringify(state, null, 2);
 if (out) fs.writeFileSync(out, json); else process.stdout.write(json + '\n');
 if (capture && lab) console.error('captured state paths to ' + capture + '/ (replay: --from-dir ' + capture + ' --node ' + node + ' --adj <same> --proto ' + proto + ')');

@@ -62,6 +62,8 @@
   #peers{text-align:center;margin:8px 0;min-height:28px}
   #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
   #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
+  /* nx_unread (2026-10-17): a router network-xray cannot read (stopped / not a router it reads / no answer) */
+  #peers .nx-unread{display:block;margin:6px auto;max-width:680px;padding:6px 10px;border-left:4px solid #90a4ae;background:#1b252c;color:#cfd8dc;font-size:12px;text-align:left;border-radius:4px}
   #peers button.cur{background:#26c6da;color:#06222a;border-color:#26c6da;font-weight:700}
   .topology{position:relative;margin:8px 0;min-height:420px;background:#1e2a38;border-radius:10px}
   #topo{display:none}.xray-deep-engine{min-height:420px}
@@ -104,6 +106,9 @@
   #nx-validate .nxp-count{font-size:13px;font-weight:700;color:#cfd8dc}
   #nx-validate .nxp-solved{display:inline-block;margin-left:auto;font-size:12px;font-weight:700;color:#0f1318;background:#66bb6a;border-radius:10px;padding:2px 10px}
   #nx-validate .nxp-solved.part{background:#90a4ae}
+  #nx-validate .nxp-partial{margin-left:auto;font-size:12px;color:#b0bec5;text-align:right}   /* nx_validate_partial */
+  #nx-validate .nxp-partial .nxpp{display:inline-block}   /* nx_validate_partial3 */
+  #nx-validate .nxp-badge,#nx-validate .nxp-count{white-space:nowrap}   /* nx_validate_partial3 */
   /* nx_validate_list (2026-10-15, owner mock): every test shown (no scroll), columns by width (2 on a laptop, 1 on a phone);
      done = green ✓ and green title, not yet = grey ✓ and white title, not read by network-xray = grey dash */
   #nx-validate .nxv-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(430px,100%),1fr));column-gap:28px;margin-top:4px}
@@ -114,7 +119,7 @@
   #nx-validate .nxv-ttl code{font-weight:400;margin-left:4px}
   #nx-validate .nxv-why{display:block;font-size:12px;color:#90a4ae;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #nx-validate .nxv-row.pass .nxv-st,#nx-validate .nxv-row.pass .nxv-ttl{color:#66bb6a}
-  #nx-validate .nxv-row.pending .nxv-ttl,#nx-validate .nxv-row.unsupported .nxv-ttl,#nx-validate .nxv-row.skip .nxv-ttl{color:#90a4ae}
+  #nx-validate .nxv-row.pending .nxv-ttl,#nx-validate .nxv-row.settling .nxv-ttl,#nx-validate .nxv-row.unsupported .nxv-ttl,#nx-validate .nxv-row.skip .nxv-ttl{color:#90a4ae}
   #nx-validate .nxv-note{font-size:12px;color:#78909c;margin-top:6px}
   #nx-validate code{color:#ffd54f}
 </style>
@@ -322,6 +327,24 @@ window.__xrayGraphBoot = function () {
     if (NAMES.indexOf(nodeId) < 0) return;
     window.__xrayCurNode = nodeId;
     var box=document.getElementById('peers'); box.innerHTML='';
+    /* nx_unread: a router that cannot be read gets a note instead of an empty (or demo) router; a router that stopped
+       answering shows its last good state under the note, marked as old */
+    var _ust = window.LIVE_STATES && window.LIVE_STATES[nodeId], _unote = null, _ustale = false;
+    window.__nxCurUnread = !!(_ust && _ust.nx_unread);
+    if (_ust && _ust.nx_unread) {
+      var _uL = 'en'; try { _uL = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
+      var _uja = _uL === 'ja';
+      var _umsg = ({
+        device: _uja ? 'この機器は network-xray では中を読みません (読むのは FRR と SR Linux)。図にだけ出しています。' : 'network-xray does not read inside this device (it reads FRR and SR Linux). It is drawn in the topology only.',
+        stopped: _uja ? 'コンテナが止まっています。中は読めません。' : 'The container is not running: nothing to read.',
+        timeout: _uja ? '応答がありません。' : 'No answer.',
+        error: _uja ? '読めませんでした (network-xray のログを見てください)。' : 'Could not be read (see the network-xray log).'
+      })[_ust.nx_unread] || '';
+      _ustale = _ust.nx_unread === 'timeout' && _ust.success !== false;
+      if (_ustale) _umsg += _uja ? ' 下は最後に読めた時 (' + (_ust.nx_stale_since || '?') + ') の古い情報です。' : ' Below is its last good state (' + (_ust.nx_stale_since || '?') + '), which may be out of date.';
+      _unote = document.createElement('div'); _unote.className = 'nx-unread'; _unote.textContent = nodeId + ': ' + _umsg;
+      if (!_ustale) { box.appendChild(_unote); var _ude = document.querySelector('.xray-deep-engine'); if (_ude) _ude.style.display = 'none'; return; }
+    }
     var views = window.clabXray.deepViews(fullCfg, nodeId, { state: window.LIVE_STATES && window.LIVE_STATES[nodeId], focusPrefix: window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.prefix });   /* nx_default_pair */
     if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
     if (views.length > 1) {
@@ -332,6 +355,7 @@ window.__xrayGraphBoot = function () {
         if(idx===0) b.classList.add('cur'); box.appendChild(b);
       });
     }
+    if (_unote) box.insertBefore(_unote, box.firstChild);   /* nx_unread */
     renderView(views[0], nodeId);
   }
   window.__xrayShowNode = showNode;
@@ -437,9 +461,23 @@ window.__initNeXtOverview = function (data) {
         if (!n.__nxvColored) { n.__nxvOrig = n.color(); n.__nxvColored = true; }
         n.color(st ? '#66bb6a' : '#ef5350');
       });
+      if (window.__nxUnreadMarks && !window.__nxUnreadInValidate) window.__nxUnreadMarks();   /* nx_unread */
     } catch (e) {}
   };
-  try { topo.on('topologyGenerated', function(){ if (window.XRAY_VALIDATE) window.__nxValidateMarks(window.XRAY_VALIDATE); }); } catch (e) {}
+  /* nx_unread: nodes whose state is marked nx_unread are drawn grey; when they can be read again they get their colour back */
+  window.__nxUnreadMarks = function () {
+    try {
+      var S = window.LIVE_STATES || {}, back = false;
+      topo.eachNode(function (n) {
+        var nm = nameOf(n); if (!nm || typeof n.color !== 'function') return;
+        var un = !!(S[nm] && S[nm].nx_unread);
+        if (un && !n.__nxuGrey) { n.__nxuOrig = n.color(); n.__nxuGrey = true; n.color('#90a4ae'); }
+        else if (!un && n.__nxuGrey) { n.__nxuGrey = false; n.color(n.__nxuOrig); back = true; }
+      });
+      if (back && window.XRAY_VALIDATE && !window.__nxUnreadInValidate) { window.__nxUnreadInValidate = true; try { window.__nxValidateMarks(window.XRAY_VALIDATE); } finally { window.__nxUnreadInValidate = false; } }
+    } catch (e) {}
+  };
+  try { topo.on('topologyGenerated', function(){ if (window.XRAY_VALIDATE) window.__nxValidateMarks(window.XRAY_VALIDATE); window.__nxUnreadMarks(); }); } catch (e) {}
   // nx_static_align_reposition: after NeXt's force layout settles, snap nodes to the RCL 'Static view' layout
   // (hub top-centre / leaves bottom, 2-node left-right). A 'Please Wait' overlay hides the shuffle;
   // it fades out once nodes have landed. tunnel-instant means the DeepDive re-angle is jump-free.
@@ -684,6 +722,8 @@ window.__initNeXtOverview = function (data) {
       }
       // surgical in-place update of the OPEN DeepDive (RCL-style: no rebuild, scroll/open-state preserved) —
       // only when the protocol structure is unchanged; otherwise rebuild so the structure follows live state.
+      if (window.__nxUnreadMarks) window.__nxUnreadMarks();   /* nx_unread */
+      if (st && (st.nx_unread || window.__nxCurUnread)) _structChanged = true;   /* nx_unread: note on / off -> rebuild */
       if (st && !_structChanged && document.body.classList.contains("is-xray-deep") && typeof window.applyXrayState === "function") {
         window._lastXrayState = st; window.applyXrayState(st);
       } else if (cur && window.__xrayShowNode) { window.__xrayShowNode(cur); }   // structure changed / DeepDive closed / other node -> rebuild
@@ -770,7 +810,7 @@ window.__initNeXtOverview = function (data) {
          collector round) since it first held; any miss resets. One-shot collect (no LIVE_WATCH): the page does not
          re-read, so one pass is enough. */
       var r = window.NetworkXrayCheck.evaluate(window.XRAY_PROBLEM, window.LIVE_STATES);
-      var hold = window.LIVE_WATCH ? (+window.NX_SOLVED_HOLD_MS || 4000) : 0;
+      var hold = window.LIVE_WATCH ? (+window.NX_SOLVED_HOLD_MS || 10000) : 0;
       if (r.defined && r.ok) { if (!window.__nxSolvedSince) window.__nxSolvedSince = Date.now(); }
       else window.__nxSolvedSince = 0;
       r.solved = !!(r.defined && r.ok && window.__nxSolvedSince && (Date.now() - window.__nxSolvedSince >= hold));
@@ -788,17 +828,19 @@ window.__initNeXtOverview = function (data) {
     try {
       var v = window.XRAY_VALIDATE, host = document.getElementById('nx-validate'); if (!host) return;
       if (!v || !v.tests || !v.tests.length) { host.style.display = 'none'; return; }
-      var c = v.counts || {}, allOk = c.total > 0 && c.pass === c.total, partOk = c.checked > 0 && !c.fail && !c.warning && !c.pending && c.pass === c.checked;
-      var hold = window.LIVE_WATCH ? (+window.NX_SOLVED_HOLD_MS || 4000) : 0;
+      var c = v.counts || {}, allOk = c.total > 0 && c.pass === c.total, partOk = c.checked > 0 && !c.fail && !c.warning && !c.pending && !c.settling && c.pass === c.checked;   /* nx_validate_settle */
+      if (v.converging) partOk = false;   /* nx_validate_converge (1): no Solved while the lab is converging */
+      var hold = window.LIVE_WATCH ? (+window.NX_SOLVED_HOLD_MS || 20000) : 0;
       if (partOk) { if (!window.__nxValidateSince) window.__nxValidateSince = Date.now(); } else window.__nxValidateSince = 0;
-      var held = partOk && (Date.now() - window.__nxValidateSince >= hold);
+      var held = (typeof v.held === 'boolean') ? (v.held && partOk) : (partOk && (Date.now() - window.__nxValidateSince >= hold));   /* nx_validate_held: the collector counts the 20 s */
       var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
       var sig = JSON.stringify(v) + L + held;
       if (sig === window.__nxValidateSig) return;
       window.__nxValidateSig = sig;
       var ja = L === 'ja', esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); };
-      var MARK = { pass: '\u2713', fail: '\u2713', warning: '\u2713', pending: '\u2713', unsupported: '\u2013', skip: '\u2013' };   /* nx_validate_list: grey \u2713 until done */
-      var WHY = { pending: ja ? '\u524d\u306e\u691c\u67fb\u304c\u901a\u308b\u307e\u3067\u672a\u78ba\u8a8d (stop_on_error)' : 'not run yet: an earlier check has to pass first (stop_on_error)',
+      var MARK = { settling: '\u2713', pass: '\u2713', fail: '\u2713', warning: '\u2713', pending: '\u2713', unsupported: '\u2013', skip: '\u2013' };   /* nx_validate_list: grey \u2713 until done */
+      var WHY = { settling: ja ? '経路が届くのを待っています (BGP が張れてから 30 秒たってから「無い」を判定します)' : 'waiting for routes to arrive: a "not there" check is judged once BGP has been up for 30 s',
+                  pending: ja ? '\u524d\u306e\u691c\u67fb\u304c\u901a\u308b\u307e\u3067\u672a\u78ba\u8a8d (stop_on_error)' : 'not run yet: an earlier check has to pass first (stop_on_error)',
                   unsupported: ja ? 'network-xray \u3067\u306f\u898b\u306a\u3044\u691c\u67fb \u2014 netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044' : 'not checked by network-xray \u2014 run netlab validate for this one',
                   skip: ja ? '\u3053\u306e\u6a5f\u7a2e\u3067\u306f\u884c\u308f\u306a\u3044\u691c\u67fb' : 'not run on this device type' };
       var rows = v.tests.map(function(t){
@@ -808,11 +850,24 @@ window.__initNeXtOverview = function (data) {
         return '<div class="nxv-row ' + esc(t.status) + '" title="' + esc(tip) + '"><span class="nxv-st">' + (MARK[t.status] || '?') + '</span>'
           + '<span class="nxv-txt"><span class="nxv-ttl">' + esc(t.description) + '<code>' + esc(t.name) + '</code></span><span class="nxv-why">' + esc(why) + '</span></span></div>';
       }).join('');
+      /* nx_validate_partial (2026-10-18): grey checks remain -> no tick and no green: "N BGP checks passed, M not read (OSPF, ...)" */
+      var partialLine = function () {
+        var kinds = [];
+        v.tests.forEach(function (t) { if (t.status !== 'unsupported') return; var m = String(t.message || '');
+          var k = /ospf/i.test(m) ? 'OSPF' : /isis/i.test(m) ? 'IS-IS' : /ping/i.test(m) ? 'ping' : /show|valid/.test(m) ? 'show' : /^device /.test(m) ? (ja ? '他の機種' : 'other devices') : /^bgp/i.test(m) ? (ja ? 'BGP のその他' : 'other BGP') : (ja ? 'その他' : 'other');   /* nx_validate_partial2 */
+          if (kinds.indexOf(k) < 0) kinds.push(k); });
+        var kt = kinds.slice(0, 3).join(ja ? '・' : ', ') + (kinds.length > 3 ? (ja ? ' など' : ', ...') : '');
+        return '<span class="nxp-partial">' + (ja   /* nx_validate_partial3: two unbreakable halves, the line breaks at the dash */
+          ? '<span class="nxpp">BGP の検査 ' + c.pass + ' つは通過・残り ' + c.unsupported + ' つ (' + esc(kt) + ') は未確認</span> — <span class="nxpp">netlab validate で確かめてください</span>'
+          : '<span class="nxpp">' + c.pass + ' BGP check' + (c.pass === 1 ? '' : 's') + ' passed; ' + c.unsupported + ' more (' + esc(kt) + ') not read by network-xray</span> — <span class="nxpp">run netlab validate for those</span>') + '</span>';
+      };
       var badge = held ? (allOk ? '<span class="nxp-solved">' + (ja ? '\u2713 \u89e3\u3051\u307e\u3057\u305f (Solved)' : '\u2713 Solved') + '</span>'
-                                : '<span class="nxp-solved part">' + (ja ? '\u2713 network-xray \u306e\u691c\u67fb\u306f\u5168\u90e8\u901a\u904e' : '\u2713 all checks network-xray reads pass') + '</span>') : '';
-      host.innerHTML = '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
-        + '<span class="nxp-count">' + (c.pass || 0) + ' / ' + (c.total || 0) + '</span>' + badge + '</div><div class="nxv-list">' + rows + '</div>'
-        + (c.unsupported ? '<div class="nxv-note">' + (ja ? '\u7070\u8272\u306e ' + c.unsupported + ' \u3064\u306f network-xray \u3067\u306f\u898b\u3066\u3044\u306a\u3044\u306e\u3067\u3001\u2713 Solved \u306f\u51fa\u3057\u307e\u305b\u3093 (netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044)\u3002' : c.unsupported + ' grey check(s) are not read by network-xray, so \u2713 Solved is not shown: run netlab validate for those.') + '</div>' : '');
+                                : partialLine()) : '';   /* nx_validate_partial: no ✓ while grey checks remain */
+      var waitLine = (v.converging || c.settling || (partOk && !held))   /* nx_validate_converge: say why there is no Solved yet */
+        ? '<div class="nxv-note">' + (ja ? 'ラボの収束を待っています… (立ち上げから ' + (v.converge_s || 60) + ' 秒と、全部の合格が 20 秒続くまでは ✓ Solved を出しません)' : 'Waiting for the lab to converge… (no ✓ Solved until ' + (v.converge_s || 60) + ' s after the lab started and all checks have passed for 20 s)') + '</div>' : '';
+      host.innerHTML = waitLine + '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
+        + '<span class="nxp-count">' + (c.pass || 0) + ' / ' + (c.total || 0) + (c.unsupported ? ' · ' + c.unsupported + (ja ? ' つは見ていない' : ' not read') : '') + '</span>' + badge + '</div><div class="nxv-list">' + rows + '</div>'
+        + (c.unsupported && !(held && !allOk) ? '<div class="nxv-note">' + (ja ? '\u7070\u8272\u306e ' + c.unsupported + ' \u3064\u306f network-xray \u3067\u306f\u898b\u3066\u3044\u306a\u3044\u306e\u3067\u3001\u2713 Solved \u306f\u51fa\u3057\u307e\u305b\u3093 (netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044)\u3002' : c.unsupported + ' grey check(s) are not read by network-xray, so \u2713 Solved is not shown: run netlab validate for those.') + '</div>' : '');
       host.classList.toggle('nx-solved', held && allOk);
       host.style.display = 'block';
       if (window.__nxValidateMarks) window.__nxValidateMarks(v);

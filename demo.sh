@@ -28,6 +28,8 @@ YML="$(cd "$(dirname "$YML")" && pwd)/$(basename "$YML")"
 LABDIR="$(dirname "$YML")"
 LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$YML" | head -1)"
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $YML"; exit 1; }
+# nx_review_1017 (F-07): the lab name is used in container names and docker filters: plain names only
+case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $YML is not a plain name (letters, digits, _ . -)"; exit 1 ;; esac
 
 # nx_port_free_check: the graph port must be free, otherwise `containerlab graph` stops right after "==> open"
 # (checked before deploy, so nothing is left running). Same check as .devcontainer/start-demo.sh.
@@ -61,9 +63,9 @@ $SUDO containerlab deploy -t "$YML" --reconfigure
 set +e   # frr_wait (10-08): the checks below return non-zero on purpose
 # --- wait for FRR: zebra sometimes crashes once while the lab starts. Wait until every FRR router answers;
 #     otherwise restart FRR (up to 3 times, 15 s each). Non-FRR nodes (no watchfrr.sh, e.g. alpine) are skipped.
-LAB=$(sed -n 's/^name: *//p' "$YML" | head -1)
+LAB="$LABNAME"
 frr_up() { docker exec "$1" timeout 5 vtysh -c 'show zebra' >/dev/null 2>&1; }
-for c in $(docker ps --filter "label=containerlab=$LAB" --format '{{.Names}}'); do
+for c in $(docker ps --filter "label=containerlab=${LAB}" --format '{{.Names}}'); do
   docker exec "$c" test -x /usr/lib/frr/watchfrr.sh 2>/dev/null || continue
   ok=""
   for i in $(seq 1 20); do frr_up "$c" && { ok=1; break; }; sleep 1; done
