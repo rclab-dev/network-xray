@@ -1,16 +1,45 @@
 # network-xray
 
+**Why did BGP pick this path?** network-xray shows the candidate routes and the reason the router chose one — read from the routers' live state in your containerlab / netlab lab, drawn in the browser.
+
+*English | [日本語](#日本語)*
+
+<!-- nx_readme_entry (2026-10-20) -->
+![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray reads the real FRR state and re-decides. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
+
+### ▶ [Open the Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — no install
+
+Recorded from a real FRR / containerlab lab and replayed in the browser. Three things to look at:
+1. Click **r1** to look inside it.
+2. In its BGP table, compare the two candidates for `8.8.8.0/24`.
+3. Read the **Best-Path Decision** panel: why the winner won (here, Local Preference).
+
+### ▶ Change a real lab yourself — GitHub Codespaces
+
+Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FRR lab where you can change the config and watch the picture follow.
+
+> **Before you start:** it runs on your own Codespaces quota (delete the codespace when you are done). The page is forwarded on port 8600; Codespaces keeps a forwarded port private to you (signed in to GitHub) unless you make it public — keep it private.
+
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/rclab-dev/network-xray?quickstart=1)
 
 **Try it in your browser** — the button starts a GitHub Codespace that deploys a 3-router FRR lab with containerlab and opens the X-Ray graph on port 8600 (about 2–3 minutes). Click any router to look inside it; shut an interface (`sudo docker exec clab-q21-bgp-lp-r1 vtysh -c 'conf t' -c 'interface eth2' -c 'shutdown'`) and the picture updates by itself in a few seconds.
 - Uses your own Codespaces quota (personal accounts: 120 core-hours/month free; this demo asks for a 4-core machine). **Delete the codespace when you are done.**
 - Container-based nodes only (FRR etc.) — Codespaces has no nested virtualization.
 
+**Next:** [your own containerlab lab](#quick-start-run-a-lab-in-containerlab) · [netlab](#netlab-tool) · [what it supports](#scope--maintenance)
+
+## When to use
+
+- **Use it when** you run **FRR** or **Nokia SR Linux** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full.
+- **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux (they appear in the topology, but are not read).
+- **What it reads** (read-only commands; it changes nothing):
+  - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp summary json`, `show ip ospf neighbor json`, `show ip ospf interface json`, `show ip route json`, `show interface json`, `show running-config`.
+  - netlab `validate:` tests are judged like `netlab validate` does: the per-prefix form (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
+  - SR Linux: `sr_cli 'info from state … | as json'`.
+
 **Walkthrough:** [See why BGP picked that path — a browser X-ray for your containerlab lab](https://dev.to/routecrushlab/see-why-bgp-picked-that-path-a-browser-x-ray-for-your-containerlab-lab-3e) (dev.to)
 
 **See *why* a router chose its path.** `network-xray` turns a router's live state (`show` / JSON) into a picture of the forwarding decision — which route won, which lost, and why. The gallery pages (below) are zero-install, browser-only.
-
-*English | [日本語](#日本語)*
 
 `network-xray` turns live router & network **state** (OSPF/BGP adjacency, routes, interfaces) into a
 picture you can **reason about** — where the packet goes, why the route is (or isn't) there, and how a
@@ -87,6 +116,8 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 **You need:** Linux (or Windows with **WSL2**, or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container).
 
+> **Before you start:** use a lab machine — containerlab runs with `sudo`. The page (port 8080) listens on all interfaces and has no login: anyone who can reach the machine can see the lab, so keep it on a trusted network. [More](#security-notes)
+
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
 cd network-xray
@@ -109,12 +140,19 @@ No git? Download one problem as a folder from the **[Releases](https://github.co
 **Your own problem:** put a `problem.json` next to your `*.clab.yml` (the problem text, the route to focus on, and a `check` that turns the band to **✓ Solved**) — the format is in [docs/problem-format.md](docs/problem-format.md).
 
 **Labs started another way (e.g. with netlab):** `demo.sh` redeploys the lab, which would wipe the configuration netlab pushed, so don't use it there. Start the lab as usual (`netlab up`), then, in the lab folder, run the collector and the graph yourself:
+
+> **Before you start:** the graph below listens on all interfaces (`0.0.0.0:8080`) with no login — keep the machine on a trusted network. [More](#security-notes)
+
 ```bash
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 0.0.0.0:8080
 ```
 Use `ospf` instead of `bgp` for an OSPF-only lab. `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://<host>:8080/`. To stop: Ctrl-C, then `kill %1` for the collector.
 If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
+
+<a id="netlab-tool"></a>
+
+> **Before you start (netlab tool / `docker run`):** the container is given the **Docker socket (root-equivalent on the host)** — lab machines only. Its page (port 8600) listens on all interfaces and has no login. With netlab, `network-xray.json` holds the lab's values, passwords included, while the lab is up (`netlab down` removes it). With `docker run`, `-p 127.0.0.1:8600:8600` (instead of `-p 8600:8600`) opens the page to this machine only. [More](#security-notes)
 
 **netlab tool (Docker image):** network-xray also comes as a container that **netlab starts for you** next to the lab. In your netlab topology, add <!-- nx_netlab_tool -->
 ```yaml
@@ -129,6 +167,7 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 **netlab validate tests on the page:** if the lab has `validate:` tests (the ipSpace BGP Labs do), the page shows them as a band above the graph — "3 / 12", one line per test (done = green ✓), **✓ Solved** when all pass — and colours the BGP session or the router a failing test is about. network-xray judges the tests itself every few seconds (FRR routers, `bgp_neighbor` and `bgp_prefix`, the same rules and messages as `netlab validate`), so the band follows you while you configure. Tests it does not read (ping, OSPF, `show`/`valid`, other devices) stay grey and keep ✓ Solved off — run `netlab validate` for those. Right after the lab starts the band waits instead of judging too early: no ✓ Solved for 60 s, a check that a route is *not* there waits until the router's BGP sessions have been up for 30 s (or the test's `wait:`), and ✓ Solved needs all checks to keep passing for 20 s. BGP Labs: use a copy from 2026-10-15 or later (bgplab commit 02b8860) — with an older copy `netlab validate` cannot run the tests that use `bgp.originate` on netlab 26.x. <!-- nx_v105_readme_final --> The tool definition makes `netlab create` / `netlab up` also write `network-xray.json` (the lab data the tests refer to) for this. While the lab is up, that file holds what netlab writes about the lab, passwords in the topology included (it is not shown on the page); `netlab down` removes it — stop the lab with `netlab down` (not only `docker kill` or a power-off), or delete the file yourself. If `netlab up` fails part-way, the tool's clean-up does not run either: delete `network-xray.json` yourself. <!-- nx_review_1017 --> <!-- nx_netlab_validate -->
 
 **Rows in the graph:** a netlab lab opens with its routers in rows — top row = groups named like `provider` / `isp*` / `spine(s)` / `external`, bottom row = `leaf(s)` / `customer(s)` / `host(s)` …, the rest in between (`external` is looked at last: in the BGP Labs it means "pre-configured", so a customer router in it can land on top — set the rows as below). To set the rows yourself, give nodes containerlab's `graph-level` label (1 = top row; it wins over the group names): in netlab `nodes.s1.clab.labels: { graph-level: 1 }` (only with this repository's tool definition — the `defaults.sources.extra` line above — which allows `clab.labels`; without it netlab stops at that line), in a containerlab topology `labels: { graph-level: 1 }` under the node. Horizontal / Vertical re-arrange the rows; nodes you drag keep their place in this browser. <!-- nx_netlab_tiers -->
+<a id="security-notes"></a>
 **Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR and `sr_cli 'info from state …'` on SR Linux (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The page on port 8600 listens on all interfaces and has no login: anyone who can reach the machine can see the lab's state, so keep it on a trusted network (or block the port in front of it).
 
 ## FAQ / Troubleshooting
@@ -502,6 +541,33 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 
 *[English](#network-xray) | 日本語*
 
+**BGP はなぜこの経路を選んだのか。** network-xray は、containerlab / netlab のラボのルータの今の状態を読み、候補の経路と、ルータがそれを選んだ理由をブラウザに描きます。
+
+<!-- nx_readme_entry (2026-10-20) -->
+### ▶ [Best-Path Decision のデモを開く](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — インストール不要
+
+本物の FRR / containerlab のラボで記録した物を、ブラウザで再生します。見るところは 3 つ:
+1. **r1** をクリックして中を見る。
+2. BGP の表で、`8.8.8.0/24` の 2 つの候補を比べる。
+3. **Best-Path Decision** の欄で、勝った方が勝った理由を読む (この例では Local Preference)。
+
+### ▶ 本物のラボを自分で変える — GitHub Codespaces
+
+GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3 台の本物のラボで、設定を変えると図が追いかけます。
+
+> **始める前に:** ご自身の Codespaces の枠を使います (使い終わったら codespace を削除してください)。画面はポート 8600 で転送されます。Codespaces の転送は、公開に切り替えない限り本人 (GitHub にログインした人) だけが見られます — 公開にしないでください。
+
+**次に:** [自分の containerlab のラボで](#クイックスタート-containerlab-で例題を動かす) · [netlab で](#netlab-tool-ja) · [対応範囲](#スコープと保守)
+
+## いつ使うか
+
+- **使う時:** containerlab や netlab で **FRR** か **Nokia SR Linux** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時。
+- **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux 以外の機器 (全体図には出るが、中は読まない)。
+- **読むもの** (読む命令だけ・何も変えません):
+  - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp summary json`、`show ip ospf neighbor json`、`show ip ospf interface json`、`show ip route json`、`show interface json`、`show running-config`。
+  - netlab の `validate:` の検査は `netlab validate` と同じ読み方: 宛先ごとの形 (`show bgp ipv4 unicast <宛先> json`) で、勝った経路は `bestpath.overall`。
+  - SR Linux は `sr_cli 'info from state … | as json'`。
+
 **ブラウザで試す** — 一番上の **Open in GitHub Codespaces** ボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。
 - ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。** コンテナのノード (FRR など) だけ動きます (Codespaces では入れ子の仮想化ができないため)。
 
@@ -560,6 +626,8 @@ FRRouting と **Nokia SR Linux** は実装済みです (FRR と SR Linux が混�
 
 **必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)。
 
+> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。画面 (ポート 8080) は全部の口で待ち受け、ログインがありません。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で。[詳しく](#security-notes-ja)
+
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
 cd network-xray
@@ -582,12 +650,19 @@ git を使わない場合は **[Releases](https://github.com/rclab-dev/network-x
 **自分の問題を作る:** `*.clab.yml` の隣に `problem.json` (問題文・注目する経路・帯を **✓ Solved** にする `check`) を置く — 書き方は [docs/problem-format.md](docs/problem-format.md) (英語)。
 
 **別の方法で立てたラボ (netlab など):** `demo.sh` はラボを作り直すので、netlab が入れた設定が消えます。こちらは使わず、いつもどおり (`netlab up`) ラボを立ててから、ラボのフォルダで collector と図を手で起動してください:
+
+> **始める前に:** 下の図は全部の口 (`0.0.0.0:8080`) で待ち受け、ログインがありません — 信頼できるネットワークの中で。[詳しく](#security-notes-ja)
+
 ```bash
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 0.0.0.0:8080
 ```
 OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://<ホスト>:8080/` を開きます。止める時は Ctrl-C のあと `kill %1` (collector)。
 `<network-xray>` に `problem.json` が残っていたら (古い `demo.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
+
+<a id="netlab-tool-ja"></a>
+
+> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker のソケット (ホストの root と同じ強さ)** を渡します — ラボ用の機械でだけ。画面 (ポート 8600) は全部の口で待ち受け、ログインがありません。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (`netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
 
 **netlab の tool として (Docker のイメージ):** network-xray はコンテナとしても動き、**netlab がラボと一緒に起動**します。netlab の topology に次を足して
 ```yaml
@@ -602,6 +677,7 @@ netlab を使わない場合 (動いている containerlab のラボなら何で
 **netlab validate の検査をページに:** ラボに `validate:` の検査がある時 (ipSpace の BGP Labs はある)、図の上に帯で出します — 「3 / 12」・検査ごとに 1 行 (済んだ物は緑の ✓)・全部通ると **✓ Solved**。落ちている検査の BGP セッションやルータにも色が付きます。network-xray が数秒ごとに自分で判定するので (FRR のルータ・`bgp_neighbor` と `bgp_prefix`・`netlab validate` と同じ規則と文)、設定している間も帯が追いかけます。network-xray が読まない検査 (ping・OSPF・`show`/`valid`・ほかの機器) は灰色のままで ✓ Solved を出しません — それは `netlab validate` で確かめてください。ラボを立てた直後は、早すぎる判定をしないよう帯が待ちます: 60 秒は ✓ Solved を出さず、経路が「無い」ことの検査はそのルータの BGP が張れて 30 秒 (検査に `wait:` があればその秒数) たってから判定し、✓ Solved は全部の合格が 20 秒続いた時だけ出します。BGP Labs は 2026-10-15 以降の写し (bgplab の commit 02b8860 以降) を使ってください — それより古い写しでは、netlab 26.x の `netlab validate` が `bgp.originate` を使う検査を実行できません。このため tool の定義は `netlab create` / `netlab up` に `network-xray.json` (検査が参照するラボの値) も書かせます。ラボを立てている間、このファイルには netlab が書くラボの値がそのまま入ります (topology のパスワードも。画面には出ません)。`netlab down` で消えます — ラボは `netlab down` で止めてください (`docker kill` や電源断だけだと残ります。その時は手で消してください)。`netlab up` が途中で失敗した時も片付けは走らないので、`network-xray.json` を手で消してください。 <!-- nx_netlab_validate -->
 
 **図の段:** netlab のラボはルータを段に並べて開きます — 上の段 = `provider` / `isp*` / `spine(s)` / `external` のような名前のグループ、下の段 = `leaf(s)` / `customer(s)` / `host(s)` など、その他は間 (`external` は最後に見ます: BGP Labs では「設定済みの機器」の意味なので、客のルータが上に来ることがあります — その時は次の指定で直せます)。段を自分で決めるには、ノードに containerlab の `graph-level` ラベルを付けます (1 = 上の段・グループ名より優先): netlab では `nodes.s1.clab.labels: { graph-level: 1 }` (この repository の tool の定義 = 上の `defaults.sources.extra` の行を使う時だけ。それが `clab.labels` を使えるようにしています。無いと netlab がその行で止まります)、containerlab の topology ではノードの下に `labels: { graph-level: 1 }`。Horizontal / Vertical で段のまま並べ直し、ドラッグした位置はこのブラウザが覚えます。 <!-- nx_netlab_tiers -->
+<a id="security-notes-ja"></a>
 **注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker のソケット (ホストの root と同じ強さ) を渡します**。ラボ用の機械でだけ使ってください。ポート 8600 の画面は全部の口で待ち受け、ログインがありません。その機械に届く人なら誰でもラボの状態を見られるので、信頼できるネットワークの中で使ってください (外に出すなら手前でポートを塞いでください)。
 
 ## よくある質問 / 困ったとき

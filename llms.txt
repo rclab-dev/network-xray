@@ -1,0 +1,38 @@
+# network-xray
+
+> Browser view of why a router chose its path, read from the live state of FRR / Nokia SR Linux routers in a containerlab or netlab lab. It shows the BGP candidate routes and the reason the best path won (Best-Path Decision), OSPF adjacency state and OSPF-learned routes, interfaces and the routing table, as a topology view plus a per-router "DeepDive". Read-only: it runs show commands and changes nothing.
+
+## What it is
+- A descriptive renderer of live router state, not a simulator and not a config checker.
+- Input: live state. FRR is read with `docker exec <node> vtysh -c '<show command>'`; SR Linux with `sr_cli 'info from state … | as json'`.
+- Output: a web page (topology + per-router DeepDive) that updates every few seconds while the lab runs.
+
+## Supported
+- Routers read: FRRouting (FRR) and Nokia SR Linux. Other nodes (Linux hosts, cEOS, …) are drawn in the topology but not read.
+- Lab tools: containerlab; netlab (as a netlab tool, netlab 26.10).
+- Protocols shown: BGP (sessions, BGP table, best path and why), OSPFv2 (neighbors, interfaces, OSPF-learned routes; the LSDB panel lists the routes learned through OSPF from `show ip route json` — `show ip ospf database` is not read), static routes.
+- Image: ghcr.io/rclab-dev/network-xray:1 (linux/amd64, linux/arm64). License: MIT.
+
+## FRR fields it reads
+- `show ip bgp json`: per path `bestpath` (true for the winner) and `selectionReason` (FRR's reason), plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric`, next hop. The Best-Path Decision panel compares the candidates on these fields.
+- `show ip bgp summary json`, `show ip ospf neighbor json`, `show ip ospf interface json`, `show ip route json`, `show interface json`, `show running-config`.
+- netlab `validate:` tests (bgp_neighbor, bgp_prefix) are judged like `netlab validate`: per-prefix `show bgp ipv4 unicast <prefix> json`, winner = `bestpath.overall`.
+
+## Start
+- No install (recorded demo): https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html
+- GitHub Codespaces (real 3-router FRR lab, needs a GitHub login): https://codespaces.new/rclab-dev/network-xray?quickstart=1
+- containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./demo.sh examples/q21-bgp-lp/q21.clab.yml` then open http://localhost:8080/ (from another machine: http://<host-ip>:8080/)
+- Any running containerlab lab: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml`
+- netlab: add `defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]` and `tools: { network-xray: }` to the topology, then `netlab up`; open http://<host>:8600/
+
+## Limits and cautions
+- The container is given the Docker socket (root-equivalent on the host): use it on lab machines only.
+- The page has no login and listens on all interfaces: keep it on a trusted network.
+- With netlab, `network-xray.json` in the lab folder holds the lab's values (passwords included) while the lab is up; `netlab down` removes it.
+- Not for production monitoring. For checking configs before deployment, use Batfish. For collecting and querying state across many devices over time, use SuzieQ.
+- Single maintainer; pull requests are not accepted (forks are welcome).
+
+## Links
+- Repository and README: https://github.com/rclab-dev/network-xray
+- Example problems (q1–q21, OSPF / BGP / static): https://github.com/rclab-dev/network-xray/tree/main/examples
+- Problem file format: https://github.com/rclab-dev/network-xray/blob/main/docs/problem-format.md
