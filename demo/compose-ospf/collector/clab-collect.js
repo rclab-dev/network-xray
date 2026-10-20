@@ -107,12 +107,28 @@ function parseOspfInterfaces(j) {
   return out;
 }
 
+/* nx_kernel_tunnel_if (2026-10-20): when the host kernel has the ip_gre / ip6_gre / ip6_tunnel / ipip / sit / vti modules loaded
+   (netlab loads some for MPLS / VXLAN), EVERY network namespace (= every router container) gets the module's fallback device
+   (gre0, gretap0, erspan0, ip6gre0, ip6tnl0, tunl0, sit0, ip_vti0, ip6_vti0): admin down, never up, no address. They are not part
+   of the lab and were drawn as interfaces missing from the topology. Dropped only in exactly that default form - a tunnel the user
+   brought up / gave an address / named otherwise is kept. Shape seen on FRR 8.4 and 10.7.1 (`show interface json`). */
+var _KERNEL_TUNNEL_IF = /^(gre0|gretap0|erspan0|ip6gre0|ip6tnl0|tunl0|sit0|ip_vti0|ip6_vti0)$/;
+function _isKernelTunnelIf(ifn, d) {
+  if (!_KERNEL_TUNNEL_IF.test(ifn) || !d || typeof d !== 'object') return false;
+  if (!/^down$/i.test(String(d.administrativeStatus || ''))) return false;
+  if (d.operationalStatus && /up/i.test(d.operationalStatus)) return false;
+  if (d.linkUps != null && +d.linkUps > 0) return false;
+  var addrs = Array.isArray(d.ipAddresses) ? d.ipAddresses : [];
+  return addrs.length === 0;
+}
+
 // show interface json -> { eth0: {up, ip, prefix} }  (fallback when ospf interface json is thin)
 function parseInterfaces(j) {
   var out = {};
   if (!j) return out;
   Object.keys(j).forEach(function (ifn) {
     var d = j[ifn] || {};
+    if (_isKernelTunnelIf(ifn, d)) return;   /* nx_kernel_tunnel_if */
     var up = false;
     if (d.operationalStatus) up = /up/i.test(d.operationalStatus);
     else if (d.administrativeStatus) up = /up/i.test(d.administrativeStatus);
@@ -896,6 +912,22 @@ function selfTest() {
   _assert(spl.r2_iface === 'eth1' && spl.r2_has_full === true, 'old per-peer keys unchanged (r2 = the live eth1)');
   _assert(st.peer_links && st.peer_links.length === 1 && st.peer_links[0].iface === 'eth0' && st.peer_links[0].peer === 'r2', 'single-link lab: peer_links = [eth0 -> r2]');
 
+  console.log('self-test: nx_kernel_tunnel_if - the kernel fallback tunnels (FRR 8.4 / 10.7.1 `show interface json` shape) are dropped');
+  var _kt = parseInterfaces({
+    gre0: { administrativeStatus: 'down', linkUps: 0, linkDowns: 0, vrfName: 'default', mtu: 1476, flags: '<NOARP>', type: 'GRE over IP', interfaceType: 'GRE', ipAddresses: [] },
+    gretap0: { administrativeStatus: 'down', linkUps: 0, vrfName: 'default', flags: '<BROADCAST,MULTICAST>', type: 'Ethernet', interfaceType: 'GRETAP', ipAddresses: [] },
+    erspan0: { administrativeStatus: 'down', linkUps: 0, vrfName: 'default', type: 'Ethernet', interfaceType: 'Other', ipAddresses: [] },
+    ip6gre0: { administrativeStatus: 'down', linkUps: 0, type: 'GRE over IPv6', interfaceType: 'IP6GRE', ipAddresses: [] },
+    ip6tnl0: { administrativeStatus: 'down', linkUps: 0, type: 'IPIP6 Tunnel', interfaceType: 'Other', ipAddresses: [] },
+    tunl0: { administrativeStatus: 'down', linkUps: 0, ipAddresses: [] },
+    sit0: { administrativeStatus: 'down', ipAddresses: [] },
+    gre1: { administrativeStatus: 'down', linkUps: 0, type: 'GRE over IP', ipAddresses: [] },
+    eth1: { administrativeStatus: 'up', operationalStatus: 'up', linkUps: 1, ipAddresses: [{ address: '10.1.0.1/30' }] },
+    eth2: { administrativeStatus: 'down', linkUps: 0, ipAddresses: [] }
+  });
+  _assert(['gre0', 'gretap0', 'erspan0', 'ip6gre0', 'ip6tnl0', 'tunl0', 'sit0'].every(function (k) { return !_kt[k]; }), 'tunnel: 7 kernel fallback devices dropped');
+  _assert(!!_kt.gre1 && !!_kt.eth1 && !!_kt.eth2, 'tunnel: a user GRE (gre1), an up iface and a shut iface (eth2) are kept');
+  _assert(!!parseInterfaces({ gre0: { administrativeStatus: 'up', operationalStatus: 'up', linkUps: 1, ipAddresses: [{ address: '192.0.2.1/30' }] } }).gre0, 'tunnel: gre0 that is up with an address is kept');
   console.log('\nALL SELF-TESTS PASSED');
 }
 
