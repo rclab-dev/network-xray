@@ -737,6 +737,22 @@ window.__initNeXtOverview = function (data) {
      (xray-states.js sets window.LIVE_WATCH) poll every 3 s; __xrayLiveRefresh redraws only when the states changed. */
   function startLivePoll(){
     try { window.__xrayLastStates = JSON.stringify(window.LIVE_STATES || {}); } catch (_e) {}
+    /* nx_live_poll_late (2026-10-22): opened right after netlab up / docker run, before the collector's first write:
+       no xray-states.js yet (no LIVE_WATCH), so the page never polled. Re-check every 2.5 s (up to 10 min); once the
+       collector has written, reload once so the page boots exactly as if opened later (rows, focus node, live poll).
+       A one-shot run's page (states, no LIVE_WATCH) is unchanged. */
+    if (!window.LIVE_WATCH && !window.__xrayLateId && !(window.LIVE_STATES && Object.keys(window.LIVE_STATES).length)
+        && !/\.github\.io$/.test(location.hostname)) {
+      var _t0 = Date.now();
+      window.__xrayLateId = setInterval(function(){
+        if (Date.now() - _t0 > 600000) { clearInterval(window.__xrayLateId); return; }
+        var s = document.createElement('script');
+        s.src = (window.__xrayStatesBase || '') + 'xray-states.js?t=' + Date.now();
+        s.onload = function(){ s.remove(); if (window.LIVE_STATES && Object.keys(window.LIVE_STATES).length) { clearInterval(window.__xrayLateId); location.reload(); } };
+        s.onerror = function(){ s.remove(); };
+        document.head.appendChild(s);
+      }, 2500);
+    }
     if (!window.LIVE_WATCH || window.__xrayLivePollId) return;
     window.__xrayLivePollId = setInterval(function(){ window.__xrayLiveRefresh(); }, 1000);   /* nx_live_poll_1s (2026-10-09): 3 s -> 1 s (small file, redraw only on change) */
   }
