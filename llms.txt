@@ -10,12 +10,13 @@
 ## Supported
 - Routers read: FRRouting (FRR) and Nokia SR Linux. Other nodes (Linux hosts, cEOS, …) are drawn in the topology but not read.
 - Lab tools: containerlab; netlab (as a netlab tool, netlab 26.10).
-- Protocols shown: BGP (sessions, BGP table, best path and why), OSPFv2 (neighbors, interfaces, OSPF-learned routes; the LSDB panel lists the routes learned through OSPF from `show ip route json` — `show ip ospf database` is not read), static routes.
+- Protocols shown: BGP (sessions, BGP table, best path and why), OSPFv2 and OSPFv3 (neighbors, interfaces and their areas, OSPF-learned routes; the LSDB panel lists the routes learned through OSPF, from the routing table (`show ip route … json` / `show ipv6 route … json`) — `show ip ospf database` is not read), static routes. Interfaces, routes, OSPF and BGP sessions inside VRFs are read too; the BGP table (best path) is read for the default VRF only. A passive OSPF interface is shown as a state, not as a fault.
 - Image: ghcr.io/rclab-dev/network-xray:1 (linux/amd64, linux/arm64). License: MIT.
 
 ## FRR fields it reads
 - `show ip bgp json`: per path `bestpath` (true for the winner) and `selectionReason` (FRR's reason), plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric`, next hop. The Best-Path Decision panel compares the candidates on these fields.
-- `show ip bgp summary json`, `show ip ospf neighbor json`, `show ip ospf interface json`, `show ip route json`, `show interface json`, `show running-config`.
+- `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config`. An FRR that does not answer a `vrf all` command in JSON (e.g. FRR 8.4 for routes) is read with the plain command (default VRF only).
+- OSPFv3, only on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`.
 - netlab `validate:` tests (bgp_neighbor, bgp_prefix) are judged like `netlab validate`: per-prefix `show bgp ipv4 unicast <prefix> json`, winner = `bestpath.overall`.
 
 ## Start
@@ -23,7 +24,7 @@
 - GitHub Codespaces (real 3-router FRR lab, needs a GitHub login): https://codespaces.new/rclab-dev/network-xray?quickstart=1
 - containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./demo.sh examples/q21-bgp-lp/q21.clab.yml` then open http://localhost:8080/ (from another machine: http://<host-ip>:8080/)
 - Any running containerlab lab: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml`
-- netlab: add `defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]` and `tools: { network-xray: }` to the topology, then `netlab up`; open http://<host>:8600/
+- netlab: add `defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]` and `tools: { network_xray: }` to the topology, then `netlab up`; open http://<host>:8600/
 
 ## Limits and cautions
 - The container is given the Docker socket (root-equivalent on the host): use it on lab machines only.

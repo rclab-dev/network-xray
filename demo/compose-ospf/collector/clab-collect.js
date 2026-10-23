@@ -59,10 +59,20 @@ var path = (typeof require === 'function') ? require('path') : null;
 
 // ---- FRR json parsers (defensive: FRR key names vary a little across 7.x/8.x/9.x) -----------
 
+/* nx_vrf_all (2026-10-19): `show ip ospf vrf all ... json` nests one object per VRF ({<vrf>:{vrfName, neighbors|interfaces}});
+   the plain command has the key at the top. Returns [{vrf, obj}] for either form. */
+function _ospfVrfParts(j, key) {
+  if (!j || typeof j !== 'object') return [];
+  if (j[key]) return [{ vrf: j.vrfName || 'default', obj: j }];
+  return Object.keys(j).filter(function (k) { return j[k] && typeof j[k] === 'object' && j[k][key]; })
+    .map(function (k) { return { vrf: j[k].vrfName || k, obj: j[k] }; });
+}
+
 // show ip ospf neighbor json -> { byIface: { eth0: {rid,address,state,full} }, list:[...] }
 function parseOspfNeighbors(j) {
   var out = { byIface: {}, list: [] };
-  if (!j || !j.neighbors) return out;
+  _ospfVrfParts(j, 'neighbors').forEach(function (part) {   /* nx_vrf_all */
+  var j = part.obj;
   Object.keys(j.neighbors).forEach(function (rid) {
     var arr = j.neighbors[rid]; if (!Array.isArray(arr)) arr = [arr];
     arr.forEach(function (n) {
@@ -78,6 +88,29 @@ function parseOspfNeighbors(j) {
         state: state,
         full: /^full/i.test(state)
       };
+      if (part.vrf && part.vrf !== 'default') rec.vrf = part.vrf;   /* nx_vrf_all */
+      out.list.push(rec);
+      if (rec.iface) out.byIface[rec.iface] = rec;
+    });
+  });
+  });
+  return out;
+}
+
+/* nx_ospf6 (2026-10-19): OSPFv3. `show ipv6 ospf6 [vrf <v>] neighbor json` = {neighbors:[{neighborId, state:"Full", ifState,
+   interfaceName}]} (an array, unlike v2). `vrf all` prints one such object per VRF with no VRF key, so the caller passes an
+   array of objects (one per VRF) and the VRF comes from opts.vrfOf(iface). Same output shape as parseOspfNeighbors + af:"v6".
+   ifState is OUR interface state (PointToPoint / DR / ...), not the neighbor's role, so it is not copied into the role. */
+function parseOspf6Neighbors(objs, vrfOf) {
+  var out = { byIface: {}, list: [] };
+  (Array.isArray(objs) ? objs : [objs]).forEach(function (j) {
+    if (!j || !Array.isArray(j.neighbors)) return;
+    j.neighbors.forEach(function (n) {
+      var state = String(n.state || '');
+      var rec = { rid: n.neighborId || '', address: '', iface: String(n.interfaceName || '').split(':')[0], state: state,
+        full: /^full/i.test(state), af: 'v6' };
+      var _v = vrfOf ? vrfOf(rec.iface) : '';
+      if (_v && _v !== 'default') rec.vrf = _v;
       out.list.push(rec);
       if (rec.iface) out.byIface[rec.iface] = rec;
     });
@@ -85,10 +118,59 @@ function parseOspfNeighbors(j) {
   return out;
 }
 
+/* nx_ospf6: `show ipv6 ospf6 [vrf <v>] interface json` = flat {<if>:{status, attachedToArea, areaId, timerIntervalsConfigHello,
+   timerPassiveIface, internetAddress:[{type, address}]}}; an interface without OSPFv3 has no attachedToArea. -> parseOspfInterfaces shape */
+function parseOspf6Interfaces(objs, vrfOf) {
+  var out = {};
+  (Array.isArray(objs) ? objs : [objs]).forEach(function (j) {
+    if (!j || typeof j !== 'object') return;
+    Object.keys(j).forEach(function (ifn) {
+      var d = j[ifn];
+      if (!d || typeof d !== 'object' || d.attachedToArea !== true) return;
+      var g = (Array.isArray(d.internetAddress) ? d.internetAddress : []).filter(function (a) {
+        return a && a.type === 'inet6' && !/^fe80:/i.test(String(a.address || ''));
+      })[0];
+      var ga = g ? String(g.address) : '';
+      out[ifn] = {
+        up: d.status ? /^up$/i.test(d.status) : true, ospf: true,
+        ip: ga.split('/')[0], prefix: ga.indexOf('/') >= 0 ? (+ga.split('/')[1] || 64) : 64,
+        area: d.areaId || '0',
+        hello: d.timerIntervalsConfigHello != null ? d.timerIntervalsConfigHello : 10,
+        passive: !!d.timerPassiveIface, af: 'v6'
+      };
+      var _v = vrfOf ? vrfOf(ifn) : '';
+      if (_v && _v !== 'default') out[ifn].vrf = _v;
+    });
+  });
+  return out;
+}
+
+/* nx_ospf6: one OSPF view from v2 + v3. v2 wins per interface (the lines / Hello keep the v2 meaning on dual-stack links);
+   v3 fills interfaces and neighbors v2 does not have. The neighbor list keeps both (af:"v6" on the v3 rows). */
+function _mergeOspfNei(v2, v3) {
+  var out = { byIface: {}, list: (v2.list || []).concat(v3.list || []) };
+  Object.keys(v2.byIface || {}).forEach(function (k) { out.byIface[k] = v2.byIface[k]; });
+  Object.keys(v3.byIface || {}).forEach(function (k) {
+    var a = out.byIface[k], b = v3.byIface[k];
+    if (!a || (!a.full && b.full)) out.byIface[k] = b;
+  });
+  return out;
+}
+function _mergeOspfIf(v2, v3) {
+  var out = {};
+  Object.keys(v2 || {}).forEach(function (k) { out[k] = v2[k]; });
+  Object.keys(v3 || {}).forEach(function (k) {
+    if (!out[k]) out[k] = v3[k];
+    else { var c = {}; Object.keys(out[k]).forEach(function (x) { c[x] = out[k][x]; }); c.v6 = true; if (v3[k].area != null) c.area6 = v3[k].area; out[k] = c; }
+  });
+  return out;
+}
+
 // show ip ospf interface json -> { eth0: {up, ip, prefix, area, hello} }
 function parseOspfInterfaces(j) {
   var out = {};
-  if (!j || !j.interfaces) return out;
+  _ospfVrfParts(j, 'interfaces').forEach(function (part) {   /* nx_vrf_all */
+  var j = part.obj;
   Object.keys(j.interfaces).forEach(function (ifn) {
     var d = j.interfaces[ifn] || {};
     var hello = d.timerMsecs ? Math.round(d.timerMsecs / 1000)
@@ -103,6 +185,8 @@ function parseOspfInterfaces(j) {
       hello: hello,
       passive: !!d.timerPassiveIface   /* nx_ospf_passive_no_hello: passive IF sends no Hello */
     };
+    if (part.vrf && part.vrf !== 'default') out[ifn].vrf = part.vrf;   /* nx_vrf_all */
+  });
   });
   return out;
 }
@@ -144,26 +228,49 @@ function parseInterfaces(j) {
     // nx_collect_unnumbered: FRR marks an unnumbered iface (borrowing a loopback /32) with ipAddresses[0].unnumbered
     var unn = !!(v4 && v4.unnumbered);
     out[ifn] = unn ? { up: up, ip: addr, prefix: pfx, unnumbered: true } : { up: up, ip: addr, prefix: pfx };
+    /* nx_ospf6 (2026-10-19): an interface with NO IPv4 shows its first global IPv6 (an IPv6-only lab showed "eth1: UP" with no
+       address). Interfaces that have IPv4 are unchanged. */
+    if (!v4) {
+      var g6 = (Array.isArray(d.ipAddresses) ? d.ipAddresses : []).map(function (a) { return String((a && a.address) || a || ''); })
+        .filter(function (a) { return a.indexOf(':') >= 0 && !/^fe80:/i.test(a); })[0];
+      if (g6) { out[ifn].ip = g6.split('/')[0]; out[ifn].prefix = g6.indexOf('/') >= 0 ? (+g6.split('/')[1] || 64) : 64; out[ifn].v6 = true; }
+    }
+    /* nx_vrf_all: `show interface vrf all json` = the same flat shape + vrfName (VRF interfaces were missing from `show interface`) */
+    if (d.vrfName && d.vrfName !== 'default') out[ifn].vrf = d.vrfName;
+    /* nx_vrf_master (2026-10-20): the VRF device itself (interfaceType "VRF" on FRR 8.4 / 10.7.1) is not a link -> dropped in
+       buildState unless the topology uses that name as a link end */
+    if (d.interfaceType === 'VRF') out[ifn].vrfMaster = true;
   });
   return out;
 }
 
 // show ip route json -> [ {prefix, protocol, selected, nexthops:[{ip,iface,connected}]} ]
-function parseRoutes(j) {
+function parseRoutes(j, _vrf) {
   var out = [];
-  if (!j) return out;
+  if (!j || typeof j !== 'object') return out;
   Object.keys(j).forEach(function (prefix) {
-    var arr = j[prefix]; if (!Array.isArray(arr)) arr = [arr];
+    var arr = j[prefix];
+    /* nx_vrf_all: `show ip|ipv6 route vrf all json` = {<vrf>:{<prefix>:[...]}}. A prefix key has "/"; a VRF key does not. */
+    if (!_vrf && String(prefix).indexOf('/') < 0 && arr && typeof arr === 'object' && !Array.isArray(arr)) {
+      parseRoutes(arr, prefix).forEach(function (r) { out.push(r); });
+      return;
+    }
+    if (!Array.isArray(arr)) arr = [arr];
     arr.forEach(function (r) {
+      if (!r || typeof r !== 'object') return;
       var nhs = (r.nexthops || []).map(function (nh) {
-        return { ip: nh.ip || null, iface: nh.interfaceName || nh.interface || '', connected: !!nh.directlyConnected, active: nh.active !== false };
+        return { ip: nh.ip || null, iface: nh.interfaceName || nh.interface || '', connected: !!nh.directlyConnected, active: nh.active !== false,
+                 fib: nh.fib === true };   /* nx_ecmp: installed in the FIB (FRR sets fib:true only on the next-hops it uses) */
       });
-      out.push({
+      var _rr = {
         prefix: r.prefix || prefix,
-        protocol: (r.protocol || '').toLowerCase(),   // "ospf" | "bgp" | "connected" | "static" | "local"
+        protocol: (r.protocol || '').toLowerCase(),   // "ospf" | "ospf6" | "bgp" | "connected" | "static" | "local"
         selected: !!r.selected,
         nexthops: nhs
-      });
+      };
+      var _rv = _vrf || r.vrfName || '';
+      if (_rv && _rv !== 'default') _rr.vrf = _rv;   /* nx_vrf_all */
+      out.push(_rr);
     });
   });
   return out;
@@ -172,15 +279,25 @@ function parseRoutes(j) {
 // show ip bgp summary json -> { byIp: { "10.1.0.20": {state, established, remoteAs} } }
 function parseBgpSummary(j) {
   var out = { byIp: {}, list: [] };
+  /* nx_vrf_all (2026-10-19): `show ip bgp vrf all summary json` = {<vrf>:{(ipv4Unicast:)peers}}; the plain form has peers at the top */
+  var parts = [];
+  if (j && typeof j === 'object') {
+    if (j.ipv4Unicast || j.peers) parts.push({ vrf: j.vrfName || 'default', obj: j });
+    else Object.keys(j).forEach(function (k) { var v = j[k]; if (v && typeof v === 'object' && (v.ipv4Unicast || v.peers)) parts.push({ vrf: v.vrfName || k, obj: v }); });
+  }
+  parts.forEach(function (part) {
+  var j = part.obj;
   var uni = j && (j.ipv4Unicast || j);     // some FRR nest under ipv4Unicast, some flat
   var peers = uni && uni.peers;
-  if (!peers) return out;
+  if (!peers) return;
   Object.keys(peers).forEach(function (ip) {
     var p = peers[ip] || {};
     var st = p.state || p.peerState || '';
     var rec = { ip: ip, state: st, established: /establ/i.test(st), remoteAs: p.remoteAs, localAs: p.localAs, ibgp: (p.remoteAs != null && p.localAs != null && p.remoteAs === p.localAs),
       upDown: p.peerUptime, pfxRcd: p.pfxRcd, hostname: p.hostname || '' };  /* nx_collect_peer_map: the peer's hostname (BGP hostname capability) */   /* nx_bgp_nbr_detail (2026-10-06): Up/Down + PfxRcd for the RE panel neighbor fold */
+    if (part.vrf && part.vrf !== 'default') rec.vrf = part.vrf;   /* nx_vrf_all */
     out.byIp[ip] = rec; out.list.push(rec);
+  });
   });
   return out;
 }
@@ -196,11 +313,14 @@ function parseBgpRoutes(j) {
     arr.forEach(function (r) {
       if (!r || typeof r !== 'object') return;
       var nh = (r.nexthops && r.nexthops[0] && r.nexthops[0].ip) || (r.peerId) || '';
-      out.push({ prefix: r.prefix || prefix, nextHop: nh, best: !!(r.bestpath || r.bestPath),
+      /* nx_bgp_prefixlen (2026-10-23): FRR's "prefix" field has no length ("203.0.113.0", length in prefixLen) -> keep prefix as it was
+         (problem.json checks compare it) and carry the length in prefixlen (from prefixLen, else from the "net/len" key) */
+      var _pl = (r.prefixLen != null) ? +r.prefixLen : (/\/(\d+)$/.exec(String(r.prefix || prefix)) || [])[1];
+      out.push({ prefix: r.prefix || prefix, prefixlen: (_pl != null && _pl !== '' && !isNaN(+_pl)) ? +_pl : null, nextHop: nh, best: !!(r.bestpath || r.bestPath),
         as_path: (r.path != null ? String(r.path).trim() : ''),
         local_pref: (r.locPrf != null ? r.locPrf : (r.localPref != null ? r.localPref : null)),
         weight: r.weight, metric: r.metric, origin: r.origin,
-        reason: r.selectionReason || '' });
+        reason: r.selectionReason || '', multipath: !!r.multipath });   /* nx_ecmp: FRR marks every installed equal path multipath */
     });
   });
   return out;
@@ -220,6 +340,15 @@ function buildState(opts) {
   var nei = opts.ospfNei || { byIface: {}, list: [] };
   var ifs = opts.ospfIf || {};
   var ifFallback = opts.ifaces || {};
+  /* nx_vrf_master: drop the VRF device itself unless a topology link ends on that name */
+  if (Object.keys(ifFallback).some(function (k) { return ifFallback[k] && ifFallback[k].vrfMaster; })) {
+    var _ifF = {};
+    Object.keys(ifFallback).forEach(function (k) {
+      if (ifFallback[k] && ifFallback[k].vrfMaster && !adj.some(function (a) { return a.iface === k; })) return;
+      _ifF[k] = ifFallback[k];
+    });
+    ifFallback = _ifF;
+  }
   var routes = opts.routes || [];
   var bgpSum = opts.bgpSum || { byIp: {}, list: [] };
   var bgpRt = opts.bgpRoutes || [];
@@ -291,9 +420,18 @@ function buildState(opts) {
         overLo: !!_loRt && !!_loExit, noLink: !!_loRt && !_loExit });
     });
   } else {
+    /* nx_ospf6: on a dual-stack link the same router is a v2 AND a v3 neighbor on the same iface -> one peer (v2 first, Full wins).
+       Several routers on one LAN iface keep one peer each (different router ids). */
+    /* ospf6d picks its router-id separately, so v2 and v3 may differ -> match a v3 neighbor to an existing peer on the
+       same iface by the PEER NODE (clab link) first, else by router-id. v2 neighbors are pushed exactly as before. */
     nei.list.forEach(function (n) {
-      var peerName = ifaceToPeer[n.iface] || ('r' + (seq++));
-      peers.push({ name: peerName, iface: n.iface, full: n.full, state: n.state, ip: n.address });
+      var peerName = ifaceToPeer[n.iface];
+      if (n.af === 'v6') {
+        var _same = peers.filter(function (p) { return p.iface === n.iface && (peerName ? p.name === peerName : p.rid === n.rid); })[0];
+        if (_same) { if (n.full && !_same.full) { _same.full = true; _same.state = n.state; } return; }
+      }
+      peerName = peerName || ('r' + (seq++));
+      peers.push({ name: peerName, iface: n.iface, full: n.full, state: n.state, ip: n.address, rid: n.rid });
     });
   }
 
@@ -379,8 +517,13 @@ function buildState(opts) {
   }
   // route_resolution: pick a target = a remote loopback (/32) learned via the protocol,
   // else the farthest learned (non-connected) prefix.
-  var rl = routes.filter(function (r) { return r.protocol === proto && r.selected && r.nexthops[0] && r.nexthops[0].ip; });
-  var loop = rl.filter(function (r) { return /\/32$/.test(r.prefix); })[0];
+  /* nx_ospf6 / nx_vrf_all: OSPFv3 routes count as OSPF; the target stays in the default VRF and IPv4 first (as before) when there is one */
+  var _rlAll = routes.filter(function (r) { return (r.protocol === proto || (proto === 'ospf' && r.protocol === 'ospf6')) && r.selected && r.nexthops[0] && r.nexthops[0].ip; });
+  var _rlDef = _rlAll.filter(function (r) { return !r.vrf; });
+  var rl = _rlDef.length ? _rlDef : _rlAll;
+  var _rl4 = rl.filter(function (r) { return String(r.prefix).indexOf(':') < 0; });
+  if (_rl4.length) rl = _rl4;
+  var loop = rl.filter(function (r) { return /\/(32|128)$/.test(r.prefix); })[0];
   var chosen = loop || rl[0] || null;
   // rr_static_hostroute_fallback: proto-matched RIB has no target (e.g. Q12 ospf-static where the target /32 is
   // reached via a floating/base static, protocol!=proto) -> resolve rr from the selected best route
@@ -445,11 +588,12 @@ function buildState(opts) {
     ospf_active_on_interface: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && _ospfActiveLocal,  /* STATE-INDEPENDENT: local iface participates in OSPF (show ip ospf interface enabled+up), regardless of neighbor_state -> Hello-out orb lit while forming AND at Full; no blink-out on collect-before-Full / neighbor-parse gap */
     ospf_if_count: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) ? _ospfIfCount : 0,  /* nx_ospf_passive_no_hello */
     is_passive: ((opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && Object.keys(ifs).some(function (k) { return !/^lo/i.test(k) && ifs[k] && ifs[k].passive; })),  /* nx_ospf_is_passive: same meaning as RCL server (any non-lo OSPF IF passive) -> engine "passive-interface: YES (Hello停止)" */
+    passive_ifaces: Object.keys(ifs).filter(function (k) { return !/^lo/i.test(k) && ifs[k] && ifs[k].passive; }),   /* nx_passive_state: which interfaces are passive (see below) */
     ospf_neighbor_full: nei.list.some(function (n) { return n.full; }),  /* REAL OSPF Full from show ip ospf neighbor (coexist band Full even under --proto bgp) */
     peer_sending_hello: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && nei.list.length > 0,  /* peer HEARD = ANY OSPF neighbor state (Init and beyond = we received the peer's Hello), not only Full -> Hello-in orb shows during forming too; honest: absent only when no neighbor at all (peer unconfigured/down) */
     iface_hellos: ifaceHellos, peer_hellos: peerHellos, peer_sending_hellos: peerSendingHellos,
     bgp_neighbors: (bgpSum.list || []).map(function (n) { var o = { ip: n.ip, remote_as: n.remoteAs, ibgp: !!n.ibgp, state: n.state }; if (n.upDown != null) o.up_down = n.upDown; if (n.pfxRcd != null) o.pfx_rcvd = n.pfxRcd; return o; }),
-    ospf_neighbors: (nei.list || []).map(function (n) { var _p = String(n.state || '').split('/'); return { router_id: n.rid, address: n.address, state: _p[0] || '', role: _p[1] || '', iface: n.iface, full: !!n.full }; }),
+    ospf_neighbors: (nei.list || []).map(function (n) { var _p = String(n.state || '').split('/'); var _o = { router_id: n.rid, address: n.address, state: _p[0] || '', role: _p[1] || '', iface: n.iface, full: !!n.full }; if (n.af) _o.af = n.af; if (n.vrf) _o.vrf = n.vrf; return _o; }),   /* nx_ospf6 / nx_vrf_all: af / vrf only when set */
     target_on_path: false,
     cleared: routeOk && fullCount > 0
   };
@@ -465,6 +609,17 @@ function buildState(opts) {
     }
   })();
 
+  /* nx_passive_state (2026-10-20): a passive interface is shown as a STATE ("passive-interface: eth2", normal color), never as
+     the cause of a fault (no red "YES (Hello stopped)") - in every lab, example or not; many interfaces are passive on purpose.
+     When the neighbor does not come up, the neighbor line says so as before. is_passive is the engine's fault flag -> off here;
+     passive_shown + passive_ifaces drive the plain state line (xray-core nx_passive_shown). */
+  if (s.passive_ifaces.length) { s.is_passive = false; s.passive_shown = true; } else delete s.passive_ifaces;
+  /* nx_ospf_area (2026-10-19): the OSPF area of each interface (v2, else v3) and of each link row, only for OSPF interfaces */
+  /* only when it tells something: the router has 2+ areas or a non-backbone one (a single-area-0 lab, e.g. every OSS example, is unchanged) */
+  var _areaOf = function (ifn) { var _a = ifs[ifn] && (ifs[ifn].area != null ? ifs[ifn].area : ifs[ifn].area6); return _a != null ? _normArea(_a) : null; };
+  var _areaSet = {}; Object.keys(ifs).forEach(function (k) { if (!/^lo/i.test(k) && _areaOf(k) != null) _areaSet[_areaOf(k)] = 1; });
+  var _areaShow = Object.keys(_areaSet).length > 1 || Object.keys(_areaSet).some(function (a) { return a !== '0'; });
+  Object.keys(interfaces).forEach(function (ifn) { var _a = _areaOf(ifn); if (_areaShow && _a != null) interfaces[ifn].area = _a; if (ifs[ifn] && ifs[ifn].vrf) interfaces[ifn].vrf = ifs[ifn].vrf; else if (ifFallback[ifn] && ifFallback[ifn].vrf) interfaces[ifn].vrf = ifFallback[ifn].vrf; });   /* nx_vrf_all */
   if (proto === 'bgp') {
     s.is_established = fullCount > 0;
     s.has_bgp_route = routeOk && fullCount > 0;
@@ -487,13 +642,19 @@ function buildState(opts) {
     s.bgp_routes = bgpRt.map(function (r) {
       var o = { prefix: r.prefix, next_hop: r.nextHop, as_path: r.as_path || '',
                 best: !!r.best, status: r.best ? '*>' : '* ' };
+      if (r.prefixlen != null) o.prefixlen = r.prefixlen;   /* nx_bgp_prefixlen */
       if (r.local_pref != null) o.local_pref = r.local_pref;
       if (r.weight != null) o.weight = r.weight;
       if (r.metric != null) o.metric = r.metric;
       if (r.origin) o.origin = r.origin;
       if (r.reason) o.reason = r.reason;
+      if (r.multipath) { o.multipath = true; if (!r.best) o.status = '*='; }   /* nx_ecmp: FRR's "=" = multipath, used together with the best */
       return o;
     });
+    /* nx_ecmp_fix2: FRR's table json puts multipath only on the non-best equal paths; the best of such a prefix is installed
+       with them (ECMP), so mark it too -> every path of an ECMP prefix has multipath: true */
+    (function () { var _mpK = {}; s.bgp_routes.forEach(function (o) { if (o.multipath) _mpK[o.prefix + '/' + (o.prefixlen != null ? o.prefixlen : '')] = 1; });
+      s.bgp_routes.forEach(function (o) { if (o.best && _mpK[o.prefix + '/' + (o.prefixlen != null ? o.prefixlen : '')]) o.multipath = true; }); })();
     // prefixes received = number of distinct prefixes (one best per prefix)
     // "Prefixes received" = distinct prefixes learned FROM a neighbor (best per prefix).
     // Exclude locally-originated routes (own lo/32 etc.: next-hop 0.0.0.0/empty) so the count is
@@ -502,7 +663,7 @@ function buildState(opts) {
     // PfxRcd. NOT filtered by best: a received route can be non-best/unusable (Q15 next-hop-self
     // missing -> received but 'no valid path') yet it WAS received. Exclude locally-originated
     // (next-hop 0.0.0.0/empty = self). Dedup by prefix (multiple paths per prefix count once).
-    s.pfx_rcvd = (function(){ var seen={}; s.bgp_routes.forEach(function(r){ if(r.next_hop && r.next_hop!=='0.0.0.0') seen[r.prefix]=1; }); return Object.keys(seen).length; })();
+    s.pfx_rcvd = (function(){ var seen={}; s.bgp_routes.forEach(function(r){ if(r.next_hop && r.next_hop!=='0.0.0.0') seen[r.prefix + '/' + (r.prefixlen != null ? r.prefixlen : '')]=1; }); return Object.keys(seen).length; })();   /* nx_bgp_prefixlen: /24 and /25 are 2 */
   } else {
     s.has_ospf_route = routeOk && fullCount > 0;
     s.ping_ok = routeOk && fullCount > 0;
@@ -517,9 +678,11 @@ function buildState(opts) {
   // of collect --proto (an OSPF node in a bgp-collected/mixed lab, or after live BGP removal, still has an LSDB).
   // Was gated on proto!=='bgp' + filtered by collect-mode proto -> empty LSDB for OSPF nodes under --proto bgp.
   if (s.ospf_configured) {
-    s.lsdb_prefixes = routes.filter(function (r) { return r.protocol === 'ospf'; }).map(function (r) {
+    s.lsdb_prefixes = routes.filter(function (r) { return r.protocol === 'ospf' || r.protocol === 'ospf6'; }).map(function (r) {   /* nx_ospf6 */
       var via = (r.nexthops && r.nexthops[0]) || {};
-      return { text: r.prefix, own: !via.ip, via: via.ip || via.iface || '' };
+      var _o = { text: r.prefix, own: !via.ip, via: via.ip || via.iface || '' };
+      if (r.vrf) _o.vrf = r.vrf;   /* nx_vrf_all */
+      return _o;
     });
   }
 
@@ -545,8 +708,14 @@ function buildState(opts) {
     // route_resolution); a down out-iface (Q1 eth1 shutdown) stays unselected = correctly not installed.
     if (mgmtSubnet && !_sel && r.protocol === 'static' && r.prefix === '0.0.0.0/0'
         && nh.iface && interfaces[nh.iface] && interfaces[nh.iface].up) _sel = true;
-    return { prefix: r.prefix, out_iface: nh.iface || _resolveIface(nh.ip) || '', next_hop: nh.ip || '',
+    var _row = { prefix: r.prefix, out_iface: nh.iface || _resolveIface(nh.ip) || '', next_hop: nh.ip || '',
              protocol: r.protocol, selected: _sel };
+    if (r.vrf) _row.vrf = r.vrf;   /* nx_vrf_all */
+    /* nx_ecmp (2026-10-23): an installed route with 2+ active next-hops (ECMP) carries them all; out_iface / next_hop stay the
+       first one, so problem.json checks that read them are unchanged */
+    var _act = (r.nexthops || []).filter(function (h) { return h && h.fib && (h.ip || h.iface); });
+    if (_sel && _act.length > 1) _row.nexthops = _act.map(function (h) { return { ip: h.ip || '', iface: h.iface || _resolveIface(h.ip) || '' }; });
+    return _row;
   });
 
   // Static-lab route resolution: a pure-static topology has no OSPF/BGP neighbor (fullCount=0), so the
@@ -666,6 +835,8 @@ function buildState(opts) {
       ospf_full: !!(_lo && _lo.full), ospf_state: _lo ? (_lo.full ? 'Full' : _lo.state) : (s.ospf_configured ? 'Down' : 'None'),
       peer_ip: (_lp && _lp.ip) || (_lo && _lo.address) || ''
     });
+    if (_li.area != null) _plRows[_plRows.length - 1].area = _li.area;   /* nx_ospf_area */
+    if (_li.vrf) _plRows[_plRows.length - 1].vrf = _li.vrf;   /* nx_vrf_all */
     if (_lp && _lp.overLo) _plRows[_plRows.length - 1].bgp_over_lo = true;  /* nx_collect_peer_map: the BGP state on this row is a loopback session to this peer, carried over this link */
   };
   adj.forEach(function (a) { _plAdd(a.iface, a.peer); });
@@ -702,14 +873,16 @@ function _sameSubnet(prefix, ip) {
 // raw: { ospfNeighbor, ospfInterface, interface, route, bgpSummary, bgp }  (each = FRR json object)
 function collectFromJson(args) {
   var proto = (args.proto || 'ospf').toLowerCase();
+  var _ifs = parseInterfaces(args.interface);
+  var _vrfOf = function (ifn) { return (_ifs[ifn] && _ifs[ifn].vrf) || ''; };   /* nx_ospf6: the OSPFv3 json has no VRF name -> from the interface */
   return buildState({
     selfName: args.node, id: args.id || args.node, proto: proto,
     adjacency: args.adjacency || [], mgmtSubnet: args.mgmtSubnet || '',
     ospfConfigured: args.ospfConfigured, bgpConfigured: args.bgpConfigured, /* presence-fix-cfg */
-    ospfNei: parseOspfNeighbors(args.ospfNeighbor),
-    ospfIf: parseOspfInterfaces(args.ospfInterface),
-    ifaces: parseInterfaces(args.interface),
-    routes: parseRoutes(args.route),
+    ospfNei: _mergeOspfNei(parseOspfNeighbors(args.ospfNeighbor), parseOspf6Neighbors(args.ospf6Neighbor, _vrfOf)),   /* nx_ospf6 */
+    ospfIf: _mergeOspfIf(parseOspfInterfaces(args.ospfInterface), parseOspf6Interfaces(args.ospf6Interface, _vrfOf)),
+    ifaces: _ifs,
+    routes: parseRoutes(args.route).concat(parseRoutes(args.route6)),
     configStatics: args.configStatics || [],
     bgpSum: parseBgpSummary(args.bgpSummary),
     bgpRoutes: parseBgpRoutes(args.bgp)
@@ -734,6 +907,45 @@ function _vtyshBatch(container, showCmds) {
   var out;
   try { out = _vtyExec(_b[0], args, 16 * 1024 * 1024); }   /* nx_unread */
   catch (e) { if (e && e.nxUnread) throw e; return showCmds.map(function () { return null; }); }
+  var objs = _splitJsonObjs(out);
+  return showCmds.map(function (c, idx) { try { return JSON.parse(objs[idx]); } catch (e) { return null; } });
+}
+/* nx_vrf_all_fallback (2026-10-19): an older FRR (the OSS examples pin a 2022 image) may refuse `... vrf all ... json` or
+   print one object per VRF with no key -> JSON.parse fails -> null. Never lose the interfaces / routes / OSPF because of that: when the
+   `vrf all` answer is null or not the expected shape, read the plain command (as before nx_vrf_all). A router whose FRR failed once is
+   remembered in a small tmp file (10 min), so an old FRR does not pay one extra vtysh run per command on every cycle. */
+var _VA_TTL = 10 * 60 * 1000;
+function _vaFile() { var os = require('os'); return path.join(os.tmpdir(), 'xray-vrfall' + (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json'); }
+function _vaRead() { try { return JSON.parse(fs.readFileSync(_vaFile(), 'utf8')) || {}; } catch (e) { return {}; } }
+function _vaNo(container, base) { var m = _vaRead(), k = container + '|' + base; return !!(m[k] && Date.now() - m[k] < _VA_TTL); }
+function _vaMark(container, base) { if (container.indexOf('selftest-') !== 0) console.error('  vrf all not usable on ' + container + ' (' + base + ') -> plain command'); try { var m = _vaRead(); m[container + '|' + base] = Date.now(); fs.writeFileSync(_vaFile(), JSON.stringify(m)); } catch (e) {} }
+var _VA_SHAPE = {
+  'show interface': function (o) { return Object.keys(o).some(function (k) { var v = o[k]; return v && typeof v === 'object' && (v.operationalStatus != null || v.administrativeStatus != null || v.ipAddresses != null || v.vrfName != null); }); },
+  'show ip route': function (o) { return parseRoutes(o).length > 0; },
+  'show ip ospf neighbor': function (o) { return _ospfVrfParts(o, 'neighbors').length > 0; },
+  'show ip ospf interface': function (o) { return _ospfVrfParts(o, 'interfaces').length > 0; }
+};
+function _vtyshJsonVrfAll(container, base) {
+  var parts = base.split(' ');   /* "show ip ospf neighbor" -> "show ip ospf vrf all neighbor"; "show interface" -> "show interface vrf all" */
+  var va = (parts.length > 3 && parts[2] === 'ospf') ? parts.slice(0, 3).concat(['vrf', 'all'], parts.slice(3)).join(' ') : base + ' vrf all';
+  if (!_vaNo(container, base)) {
+    var o = _vtyshJson(container, va);
+    if (o && typeof o === 'object' && (_VA_SHAPE[base](o) || !Object.keys(o).length)) return o;   /* {} = understood, nothing there yet (OSPF not started) */
+    _vaMark(container, base);   /* text / several objects / another shape -> the plain command = the reading before nx_vrf_all; `vrf all` again after 10 min */
+  }
+  return _vtyshJson(container, base);
+}
+/* the BGP pair: `vrf all summary` + the table, matched by position in one vtysh. If the summary came back as text / several objects the
+   table slides into the summary's place -> check: the 2nd must be the table and the 1st must not be one; else the plain pair. */
+function _bgpTableLike(o) { return !!(o && typeof o === 'object' && (o.routes || o.routerId != null || o.tableVersion != null)); }
+function _bgpPairOk(p) {
+  if (!p) return false;
+  if (_bgpTableLike(p[0])) return false;                                   /* the table sits in the summary's place (summary was text) */
+  if (p[1] && typeof p[1] === 'object' && (p[1].ipv4Unicast || p[1].peers)) return false;   /* a 2nd summary object (one per VRF, no key) */
+  if (p[0] == null && p[1] != null) return false;                          /* summary unreadable */
+  return true;                                                             /* incl. both empty (BGP not up yet) = keep `vrf all` */
+}
+function _splitJsonObjs(out) {
   var objs = [], depth = 0, start = -1, inStr = false, esc = false;
   for (var i = 0; i < out.length; i++) {
     var cc = out.charCodeAt(i);
@@ -742,7 +954,33 @@ function _vtyshBatch(container, showCmds) {
     if (cc === 123) { if (depth === 0) start = i; depth++; }
     else if (cc === 125) { depth--; if (depth === 0 && start >= 0) { objs.push(out.slice(start, i + 1)); start = -1; } }
   }
-  return showCmds.map(function (c, idx) { try { return JSON.parse(objs[idx]); } catch (e) { return null; } });
+  return objs;
+}
+/* nx_ospf6 (2026-10-19): `show ipv6 ospf6 vrf all ... json` prints one object per VRF with no VRF key, and an older FRR may print
+   nothing or a text line for a command -> the objects cannot be matched to commands by position. Run the OSPFv3 commands in ONE vtysh
+   (one docker exec) and sort every returned object by its SHAPE: {neighbors:[...]} = neighbors / {<if>:{interfaceId}} = interfaces /
+   {<prefix with "/">:[...]} or {<vrf>:{<prefix>:[...]}} = IPv6 routes. Anything else is ignored (= no OSPFv3 data, as before). */
+function _classifyOspf6(objStrs) {
+  var r = { nei: [], ifs: [], route: {} };
+  objStrs.forEach(function (t) {
+    var o; try { o = JSON.parse(t); } catch (e) { return; }
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o.neighbors)) { r.nei.push(o); return; }
+    var ks = Object.keys(o); if (!ks.length) return;
+    var v0 = o[ks[0]];
+    if (v0 && typeof v0 === 'object' && !Array.isArray(v0) && (v0.interfaceId != null || v0.status != null || v0.attachedToArea != null)) { r.ifs.push(o); return; }
+    var isRoute = ks.every(function (k) { return String(k).indexOf('/') >= 0 ? Array.isArray(o[k]) : (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k])); });
+    if (isRoute) ks.forEach(function (k) { r.route[k] = o[k]; });
+  });
+  return r;
+}
+function _vtyshOspf6(container) {
+  var _b = _vtyBase(container); var args = _b[1].slice();
+  ['show ipv6 ospf6 vrf all neighbor', 'show ipv6 ospf6 vrf all interface', 'show ipv6 route vrf all'].forEach(function (c) { args.push('-c', c + ' json'); });
+  var out;
+  try { out = _vtyExec(_b[0], args, 16 * 1024 * 1024); }
+  catch (e) { if (e && e.nxUnread) throw e; return null; }
+  return _classifyOspf6(_splitJsonObjs(out));
 }
 
 function collectLive(opts) {
@@ -752,19 +990,25 @@ function collectLive(opts) {
   if (!_safeName.test(String(opts.node)) || (opts.lab != null && !_safeName.test(String(opts.lab)))) throw new Error('--lab / --node must be plain names (letters, digits, _ . -)');   /* nx_review_1017 (F-06): the lab name too, also with vtysh sockets */
   var container = (_VTY_SOCK ? opts.node : ('clab-' + opts.lab + '-' + opts.node));
   var proto = (opts.proto || 'ospf').toLowerCase();
+  /* nx_vrf_all (2026-10-19): read every VRF (`vrf all`), not only the default one - an OSPF/BGP/interface inside a VRF was invisible
+     (VRF links drawn as "no interface" = down). Same number of vtysh runs as before; the parsers accept the plain and the per-VRF form. */
   var raw = {
-    interface: _safe(function () { return _vtyshJson(container, 'show interface'); }),
-    route: _safe(function () { return _vtyshJson(container, 'show ip route'); })
+    interface: _safe(function () { return _vtyshJson(container, 'show interface'); }),   /* the plain command already lists VRF interfaces with vrfName (FRR 8.4 and 10.7.1) */
+    route: _safe(function () { return _vtyshJsonVrfAll(container, 'show ip route'); })
   };
+  var _BGP_PAIR = _vaNo(container, 'bgp-pair') ? ['show ip bgp summary', 'show ip bgp'] : ['show ip bgp vrf all summary', 'show ip bgp'];   /* nx_vrf_all: the summary of every VRF; the re-read below uses the same pair */
   if (proto === 'bgp') {
-    var _bp = _vtyshBatch(container, ['show ip bgp summary', 'show ip bgp']);  /* atomic pair: no tick straddle */
+    var _bp = _vtyshBatch(container, _BGP_PAIR);  /* atomic pair: no tick straddle */
+    if (_BGP_PAIR[0].indexOf('vrf all') >= 0 && !_bgpPairOk(_bp)) {   /* nx_vrf_all_fallback: the table slid into the summary's place -> the plain pair */
+      _vaMark(container, 'bgp-pair'); _BGP_PAIR = ['show ip bgp summary', 'show ip bgp']; _bp = _vtyshBatch(container, _BGP_PAIR);
+    }
     raw.bgpSummary = _bp[0]; raw.bgp = _bp[1];
   }
   // Always collect OSPF neighbor/interface (not only under --proto ospf): a coexist lab runs
   // --proto bgp but ALSO has OSPF, and the DeepDive OSPF band must reflect the REAL adjacency
   // (Full=green) instead of a presence guess (ospf_configured -> Init). Harmless null on pure BGP.
-  raw.ospfNeighbor = _safe(function () { return _vtyshJson(container, 'show ip ospf neighbor'); });
-  raw.ospfInterface = _safe(function () { return _vtyshJson(container, 'show ip ospf interface'); });
+  raw.ospfNeighbor = _safe(function () { return _vtyshJsonVrfAll(container, 'show ip ospf neighbor'); });   /* nx_vrf_all_fallback */
+  raw.ospfInterface = _safe(function () { return _vtyshJsonVrfAll(container, 'show ip ospf interface'); });
   // Atomic-consistency guard (BGP): `show ip bgp summary` and `show ip bgp` are separate vtysh
   // queries; a keepalive tick between them can make the summary momentarily read a peer as not
   // Established while the table still holds its learned routes -> a phantom 'Idle with routes'
@@ -776,7 +1020,7 @@ function collectLive(opts) {
       var _rts = parseBgpRoutes(raw.bgp);
       var _anyEst = _sum.list.some(function (b) { return b.established; });
       if (_anyEst || !_rts.length) break;
-      var _bpr = _vtyshBatch(container, ['show ip bgp summary', 'show ip bgp']);
+      var _bpr = _vtyshBatch(container, _BGP_PAIR);
       raw.bgpSummary = _bpr[0]; raw.bgp = _bpr[1];
     }
   }
@@ -785,11 +1029,24 @@ function collectLive(opts) {
   // unresolved (FRR omits unresolvable statics from show ip route), so init/solved agree on the
   // scenario destination (Q4 2.2.2.2) instead of the 8.8.8.8 default.
   var _cfgStatics = _cfgTxt.split(String.fromCharCode(10)).map(function(l){ var m=l.trim().match(/^ip route (\S+) (\S+)/); return m?{prefix:m[1],nexthop:m[2]}:null; }).filter(Boolean);
+  var _cfgLines = _cfgTxt.split(String.fromCharCode(10)).map(function (l) { return l.trim(); });
+  /* nx_ospf6: OSPFv3 is read only on a router that has `router ospf6` (one extra vtysh run, none on IPv4-only labs) */
+  var _ospf6On = _cfgLines.some(function (l) { return /^router ospf6\b/.test(l); });
+  if (_ospf6On) { var _o6 = _safe(function () { return _vtyshOspf6(container); }); if (_o6) { raw.ospf6Neighbor = _o6.nei; raw.ospf6Interface = _o6.ifs; raw.route6 = _o6.route; } }
   return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [], configStatics: _cfgStatics,
-    ospfConfigured: _cfgTxt.split(String.fromCharCode(10)).some(function(l){return l.trim().indexOf('router ospf')===0;}), bgpConfigured: _cfgTxt.split(String.fromCharCode(10)).some(function(l){return l.trim().indexOf('router bgp')===0;}),
+    ospfConfigured: _cfgLines.some(function(l){return l.indexOf('router ospf')===0;}),   /* "router ospf6" also starts with "router ospf" = OSPFv3-only routers count (nx_ospf6) */
+    bgpConfigured: _bgpCfgWithNeighbor(_cfgLines),   /* nx_bgp_no_nbr */
     mgmtSubnet: opts.mgmtSubnet || '',
     ospfNeighbor: raw.ospfNeighbor, ospfInterface: raw.ospfInterface, interface: raw.interface,
+    ospf6Neighbor: raw.ospf6Neighbor, ospf6Interface: raw.ospf6Interface, route6: raw.route6,
     route: raw.route, bgpSummary: raw.bgpSummary, bgp: raw.bgp });
+}
+/* nx_bgp_no_nbr (2026-10-19): `router bgp <AS>` with NO neighbor at all (netlab's FRR vrf module makes an empty one) is not a BGP that
+   failed - drawing it as the red "BGP: Active" was false. BGP counts as configured only with a `router bgp` AND at least one
+   `neighbor <x> [interface] remote-as|peer-group` line (any block, VRF ones included). Engine untouched: no bgp_configured = no BGP row. */
+function _bgpCfgWithNeighbor(lines) {
+  if (!lines.some(function (l) { return l.indexOf('router bgp') === 0; })) return false;
+  return lines.some(function (l) { return /^neighbor\s+\S+\s+(interface\s+)?(remote-as|peer-group)\b/.test(l); });
 }
 function _safe(fn) { try { return fn(); } catch (e) { if (e && e.nxUnread) throw e; return null; } }   /* nx_unread: a router that cannot be read is not 'empty' */
 
@@ -821,6 +1078,134 @@ var FIX = {
   bgpSummary: { ipv4Unicast: { peers: { '10.1.0.20': { state: 'Established', remoteAs: 65002 } } } },
   bgp: { routes: { '203.0.113.0/24': [ { prefix: '203.0.113.0/24', nexthops: [ { ip: '10.1.0.20' } ], bestpath: true, valid: true } ] } }
 };
+
+/* nx_ospf6 / nx_vrf_all / nx_bgp_no_nbr (2026-10-19) self-tests. JSON shapes = FRR 10.7.1 (netlab ospfv3 02-areas, node x1)
+   and the FRR source (ospf6_interface.c / ospf_vty.c / zebra). */
+var FIX6 = {
+  nei: { neighbors: [{ neighborId: '10.0.0.1', priority: 1, deadTime: '00:00:30', state: 'Full', ifState: 'PointToPoint', duration: '00:00:29', interfaceName: 'eth1', interfaceState: 'PointToPoint' }] },
+  ifs: {
+    eth1: { status: 'up', type: 'BROADCAST', interfaceId: 11135, operatingAsType: 'POINTOPOINT',
+      internetAddress: [{ type: 'inet6', address: '2001:db8:3::2/64' }, { type: 'inet6', address: 'fe80::ebef:fe05:4b9a:8735/64' }],
+      attachedToArea: true, instanceId: 0, areaId: '0.0.0.2', cost: 10, ospf6InterfaceState: 'PointToPoint', timerIntervalsConfigHello: 10, timerPassiveIface: false },
+    gre0: { status: 'down', type: 'BROADCAST', interfaceId: 2 },
+    lo: { status: 'up', type: 'LOOPBACK', interfaceId: 1, internetAddress: [{ type: 'inet6', address: '2001:db8:1:2::1/64' }], attachedToArea: true, areaId: '0.0.0.0', timerIntervalsConfigHello: 10 } },
+  route6: { '2001:db8:1:1::/64': [{ prefix: '2001:db8:1:1::/64', protocol: 'ospf6', selected: true, nexthops: [{ ip: 'fe80::1', interfaceName: 'eth1', active: true }] }] },
+  iface: { eth1: { operationalStatus: 'up', ipAddresses: [{ address: 'fe80::ebef:fe05:4b9a:8735/64' }, { address: '2001:db8:3::2/64' }], vrfName: 'default' },
+           lo: { operationalStatus: 'up', ipAddresses: [{ address: '2001:db8:1:2::1/64' }], vrfName: 'default' } }
+};
+function selfTestOspf6Vrf() {
+  console.log('self-test: OSPFv3 only (FRR 10.7.1 json): the neighbor, the interface and the IPv6 route are read');
+  var s6 = collectFromJson({ node: 'x1', id: 'v3', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'dut' }], ospfConfigured: true,
+    interface: FIX6.iface, ospf6Neighbor: [FIX6.nei], ospf6Interface: [FIX6.ifs], route6: FIX6.route6 });
+  _assert(s6.full_count === 1 && s6.dut_has_full === true, 'v3: dut Full on eth1');
+  _assert(s6.ospf_if_count === 1, 'v3: 1 OSPF interface (lo excluded, gre0 not attached) -> heading Running');
+  _assert(s6.ospf_neighbors.length === 1 && s6.ospf_neighbors[0].state === 'Full' && s6.ospf_neighbors[0].iface === 'eth1', 'v3: ospf_neighbors row');
+  _assert(s6.interfaces.eth1.ip === '2001:db8:3::2/64', 'v3: eth1 shows its global IPv6 (not fe80, not empty)');
+  _assert(s6.lsdb_prefixes.length === 1 && s6.lsdb_prefixes[0].text === '2001:db8:1:1::/64', 'v3: the ospf6 route is in the LSDB');
+  _assert(s6.iface_hellos.eth1 === 10, 'v3: Hello on eth1');
+  _assert(s6.interfaces.eth1.area === '2' && s6.peer_links[0].area === '2', 'area: eth1 area 0.0.0.2 -> "2" on the interface and the link row');
+
+  console.log('self-test: dual-stack - the same router as a v2 and a v3 neighbor on eth1 = ONE peer, both rows listed');
+  var sd = collectFromJson({ node: 'x1', id: 'ds', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'dut' }], ospfConfigured: true,
+    ospfNeighbor: { neighbors: { '10.0.0.1': [{ state: 'Full/-', address: '10.1.0.1', ifaceName: 'eth1:10.1.0.2' }] } },
+    ospfInterface: { interfaces: { eth1: { ifUp: true, ipAddress: '10.1.0.2', ipAddressPrefixlen: 30, area: '0.0.0.0', timerMsecs: 10000 } } },
+    ospf6Neighbor: [FIX6.nei], ospf6Interface: [FIX6.ifs] });
+  _assert(sd.full_count === 1, 'dual-stack: full_count 1 (not 2)');
+  _assert(sd.ospf_neighbors.length === 2 && sd.ospf_neighbors.filter(function (n) { return n.af === 'v6'; }).length === 1, 'dual-stack: 2 rows, the v3 one af v6');
+  _assert(sd.interfaces.eth1.ip === '10.1.0.2/30', 'dual-stack: eth1 keeps its IPv4 address');
+  _assert(sd.interfaces.eth1.area === undefined, 'area: a single-area-0 router gets no area field (OSS examples unchanged)');
+  var sd2 = collectFromJson({ node: 'x1', id: 'ds', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'dut' }], ospfConfigured: true,
+    ospfNeighbor: { neighbors: { '10.0.0.1': [{ state: 'Full/-', address: '10.1.0.1', ifaceName: 'eth1' }] } },
+    ospfInterface: { interfaces: { eth1: { ifUp: true, ipAddress: '10.1.0.2', ipAddressPrefixlen: 30, area: '0.0.0.0', timerMsecs: 10000 } } },
+    ospf6Neighbor: [{ neighbors: [{ neighborId: '0.0.0.99', state: 'Full', interfaceName: 'eth1' }] }], ospf6Interface: [FIX6.ifs] });
+  _assert(sd2.full_count === 1, 'dual-stack: v3 router-id differs from v2 -> still ONE peer (matched by the clab peer node)');
+
+  console.log('self-test: nx_vrf_all_fallback - an old FRR that cannot answer `vrf all` keeps the plain reading');
+  var _origJ = _vtyshJson, _asked = [];
+  _vtyshJson = function (c, cmd) { _asked.push(cmd);
+    if (/vrf all/.test(cmd)) return null;                                     /* old FRR: text / several objects -> null */
+    if (cmd === 'show interface') return { eth1: { operationalStatus: 'up', ipAddresses: [{ address: '10.1.0.1/30' }] } };
+    return null; };
+  try {
+    var _ct = 'selftest-' + process.pid;
+    var _fi = _vtyshJsonVrfAll(_ct, 'show interface');
+    _assert(_fi && _fi.eth1 && _asked.join('|') === 'show interface vrf all|show interface', 'fallback: vrf all null -> plain `show interface` read');
+    _asked = []; _vtyshJsonVrfAll(_ct, 'show interface');
+    _assert(_asked.join('|') === 'show interface', 'fallback: remembered -> only the plain command next time');
+    _vtyshJson = function (c, cmd) { return cmd === 'show ip ospf vrf all neighbor' ? {} : null; };
+    var _fo = _vtyshJsonVrfAll(_ct + 'b', 'show ip ospf neighbor');
+    _assert(_fo && !Object.keys(_fo).length && !_vaNo(_ct + 'b', 'show ip ospf neighbor'), 'fallback: {} (OSPF not up yet) is understood - not remembered as unsupported');
+  } finally {
+    _vtyshJson = _origJ;
+    try { var _vm = _vaRead(); Object.keys(_vm).forEach(function (k) { if (k.indexOf('selftest-') === 0) delete _vm[k]; }); fs.writeFileSync(_vaFile(), JSON.stringify(_vm)); } catch (e) {}   /* leave no test marks */
+  }
+  _assert(_bgpPairOk([{ 'default': { ipv4Unicast: { peers: {} } } }, { routerId: '1.1.1.1', routes: {} }]) === true, 'bgp pair: vrf-all summary + table = ok');
+  _assert(_bgpPairOk([{ routerId: '1.1.1.1', routes: {} }, null]) === false, 'bgp pair: table in the summary place -> plain pair');
+  _assert(_bgpPairOk([{ ipv4Unicast: { peers: {} } }, { ipv4Unicast: { peers: {} } }]) === false, 'bgp pair: two summary objects (per VRF, no key) -> plain pair');
+
+  console.log('self-test: VRF (show ip ospf vrf all ... json) - the VRF neighbor and interface are read');
+  var sv = collectFromJson({ node: 'dut', id: 'vrf', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'x1' }, { iface: 'eth2', peer: 'x2' }], ospfConfigured: true,
+    interface: { eth1: { operationalStatus: 'up', ipAddresses: [{ address: '10.1.0.1/30' }], vrfName: 'default' }, eth2: { operationalStatus: 'up', ipAddresses: [{ address: '10.1.0.5/30' }], vrfName: 'customer' } },
+    ospfNeighbor: { 'default': { vrfName: 'default', neighbors: { '10.0.0.2': [{ state: 'Full/-', address: '10.1.0.2', ifaceName: 'eth1:10.1.0.1' }] } },
+                    customer: { vrfName: 'customer', neighbors: { '10.0.0.3': [{ state: 'Full/-', address: '10.1.0.6', ifaceName: 'eth2:10.1.0.5' }] } } },
+    ospfInterface: { 'default': { vrfName: 'default', interfaces: { eth1: { ifUp: true, ipAddress: '10.1.0.1', ipAddressPrefixlen: 30, area: '0.0.0.0', timerMsecs: 10000 } } },
+                     customer: { vrfName: 'customer', interfaces: { eth2: { ifUp: true, ipAddress: '10.1.0.5', ipAddressPrefixlen: 30, area: '0.0.0.0', timerMsecs: 10000 } } } },
+    route: { 'default': { '10.0.0.2/32': [{ prefix: '10.0.0.2/32', protocol: 'ospf', selected: true, nexthops: [{ ip: '10.1.0.2', interfaceName: 'eth1' }] }] },
+             customer: { '10.0.0.3/32': [{ prefix: '10.0.0.3/32', protocol: 'ospf', selected: true, nexthops: [{ ip: '10.1.0.6', interfaceName: 'eth2' }] }] } } });
+  _assert(sv.full_count === 2 && sv.x2_has_full === true, 'vrf: the customer-VRF neighbor x2 is Full');
+  _assert(sv.interfaces.eth2 && sv.interfaces.eth2.up === true && sv.interfaces.eth2.ip === '10.1.0.5/30', 'vrf: eth2 (in VRF customer) is UP with its address');
+  _assert(sv.ospf_neighbors.filter(function (n) { return n.iface === 'eth2'; }).length === 1, 'vrf: ospf_neighbors has the VRF row');
+  _assert(sv.route_resolution.out_iface === 'eth1', 'vrf: the target stays in the default VRF');
+  _assert((sv.routing_table.filter(function (r) { return r.prefix === '10.0.0.3/32'; })[0] || {}).vrf === 'customer', 'vrf: routing table row carries vrf');
+
+  console.log('self-test: BGP summary per VRF (show ip bgp vrf all summary json)');
+  var bs = parseBgpSummary({ 'default': { vrfName: 'default', ipv4Unicast: { peers: {} } }, d1: { vrfName: 'd1', ipv4Unicast: { peers: { '10.1.0.9': { state: 'Established', remoteAs: 65100, localAs: 65000 } } } } });
+  _assert(bs.list.length === 1 && bs.list[0].established && bs.list[0].vrf === 'd1', 'bgp vrf: the VRF peer is read and Established');
+  _assert(parseBgpSummary({ ipv4Unicast: { peers: { '10.1.0.20': { state: 'Active' } } } }).list.length === 1, 'bgp vrf: the plain form still works');
+
+  console.log('self-test: nx_bgp_no_nbr - `router bgp` with no neighbor is not a BGP');
+  _assert(_bgpCfgWithNeighbor(['router bgp 65000', 'bgp router-id 10.0.0.1']) === false, 'no neighbor -> false');
+  _assert(_bgpCfgWithNeighbor(['router bgp 65000 vrf d1', 'neighbor 10.1.0.9 remote-as 65100']) === true, 'neighbor in a VRF block -> true');
+  _assert(_bgpCfgWithNeighbor(['router bgp 65000', 'neighbor eth1 interface remote-as external']) === true, 'interface neighbor -> true');
+  _assert(_bgpCfgWithNeighbor(['router ospf']) === false, 'no router bgp -> false');
+
+  console.log('self-test: nx_passive_state - passive is a state (normal color), never the red fault flag, in every lab');
+  var _ps = collectFromJson({ node: 'r1', id: 'q10', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'r2' }], ospfConfigured: true,
+    ospfNeighbor: { neighbors: {} },
+    ospfInterface: { interfaces: { eth1: { ifUp: true, ipAddress: '10.10.0.10', ipAddressPrefixlen: 24, area: '0.0.0.0', timerMsecs: 5000, timerPassiveIface: true },
+                                   lo: { ifUp: true, ipAddress: '1.1.1.1', ipAddressPrefixlen: 32, area: '0.0.0.0', timerPassiveIface: true } } } });
+  _assert(_ps.is_passive === false && _ps.passive_shown === true && _ps.passive_ifaces.join(',') === 'eth1', 'passive: eth1 listed (lo not), is_passive off, passive_shown on');
+  _assert(_ps.ospf_if_count === 1 && !_ps.iface_hellos.eth1, 'passive: still an OSPF interface (Running) and sends no Hello');
+  _assert(_ps.passive_ifaces !== undefined && collectFromJson({ node: 'r1', proto: 'ospf', ospfConfigured: true, ospfInterface: FIX.ospfInterface }).passive_ifaces === undefined, 'passive: no passive interface -> no new fields');
+
+  console.log('self-test: nx_kernel_tunnel_if - the kernel fallback tunnels (FRR 8.4 / 10.7.1 `show interface json` shape) are dropped');
+  var _kt = parseInterfaces({
+    gre0: { administrativeStatus: 'down', linkUps: 0, linkDowns: 0, vrfName: 'default', mtu: 1476, flags: '<NOARP>', type: 'GRE over IP', interfaceType: 'GRE', ipAddresses: [] },
+    gretap0: { administrativeStatus: 'down', linkUps: 0, vrfName: 'default', flags: '<BROADCAST,MULTICAST>', type: 'Ethernet', interfaceType: 'GRETAP', ipAddresses: [] },
+    erspan0: { administrativeStatus: 'down', linkUps: 0, vrfName: 'default', type: 'Ethernet', interfaceType: 'Other', ipAddresses: [] },
+    ip6gre0: { administrativeStatus: 'down', linkUps: 0, type: 'GRE over IPv6', interfaceType: 'IP6GRE', ipAddresses: [] },
+    ip6tnl0: { administrativeStatus: 'down', linkUps: 0, type: 'IPIP6 Tunnel', interfaceType: 'Other', ipAddresses: [] },
+    tunl0: { administrativeStatus: 'down', linkUps: 0, ipAddresses: [] },
+    sit0: { administrativeStatus: 'down', ipAddresses: [] },
+    gre1: { administrativeStatus: 'down', linkUps: 0, type: 'GRE over IP', ipAddresses: [] },
+    eth1: { administrativeStatus: 'up', operationalStatus: 'up', linkUps: 1, ipAddresses: [{ address: '10.1.0.1/30' }] },
+    eth2: { administrativeStatus: 'down', linkUps: 0, ipAddresses: [] }
+  });
+  _assert(['gre0', 'gretap0', 'erspan0', 'ip6gre0', 'ip6tnl0', 'tunl0', 'sit0'].every(function (k) { return !_kt[k]; }), 'tunnel: 7 kernel fallback devices dropped');
+  _assert(!!_kt.gre1 && !!_kt.eth1 && !!_kt.eth2, 'tunnel: a user GRE (gre1), an up iface and a shut iface (eth2) are kept');
+  _assert(!!parseInterfaces({ gre0: { administrativeStatus: 'up', operationalStatus: 'up', linkUps: 1, ipAddresses: [{ address: '192.0.2.1/30' }] } }).gre0, 'tunnel: gre0 that is up with an address is kept');
+  var _vmIf = { cust: { administrativeStatus: 'up', operationalStatus: 'up', vrfName: 'cust', type: 'Ethernet', interfaceType: 'VRF', ipAddresses: [] },
+    eth1: { operationalStatus: 'up', ipAddresses: [{ address: '10.0.1.1/30' }] }, eth2: { operationalStatus: 'up', vrfName: 'cust', ipAddresses: [{ address: '10.0.2.1/30' }] } };
+  var _vm1 = collectFromJson({ node: 'r1', id: 'st', proto: 'ospf', ospfConfigured: false, adjacency: [{ iface: 'eth1', peer: 'r2' }, { iface: 'eth2', peer: 'r3' }], interface: _vmIf });
+  _assert(!_vm1.interfaces.cust && !!_vm1.interfaces.eth1 && _vm1.interfaces.eth2.vrf === 'cust', 'vrf master: the VRF device "cust" is not an interface line; its member eth2 keeps vrf');
+  var _vm2 = collectFromJson({ node: 'r1', id: 'st', proto: 'ospf', ospfConfigured: false, adjacency: [{ iface: 'cust', peer: 'r9' }], interface: _vmIf });
+  _assert(!!_vm2.interfaces.cust, 'vrf master: kept when a topology link ends on that name');
+
+  console.log('self-test: OSPFv3 output sorted by shape (vrf all = several objects, no VRF key; an old FRR may print text)');
+  var c6 = _classifyOspf6(_splitJsonObjs('% some text\n' + JSON.stringify(FIX6.nei) + JSON.stringify({ neighbors: [] }) + JSON.stringify(FIX6.ifs) + JSON.stringify({ 'default': FIX6.route6 })));
+  _assert(c6.nei.length === 2 && c6.ifs.length === 1 && Object.keys(c6.route).length === 1, 'classify: 2 neighbor objects, 1 interface object, routes');
+  _assert(parseRoutes(c6.route).length === 1, 'classify: the per-VRF IPv6 routes parse');
+}
 
 function _assert(cond, msg) { if (!cond) { throw new Error('FAIL: ' + msg); } console.log('  PASS: ' + msg); }
 
@@ -888,6 +1273,44 @@ function selfTest() {
   _assert(sb.has_bgp_route === true, 'has_bgp_route true');
   _assert(sb.bgp_routes.length === 1 && sb.bgp_routes[0].prefix === '203.0.113.0/24', 'bgp_routes carries best prefix');
   _assert(sb.r2_has_full === true, 'bgp peer mapped to clab node r2 via connected subnet');
+  _assert(sb.bgp_routes[0].prefixlen === 24, 'nx_bgp_prefixlen: length from the "net/len" prefix');
+
+  console.log('self-test: BGP prefixlen (FRR json: prefix without length + prefixLen; /24 and /25 side by side)');
+  var _plR = parseBgpRoutes({ routes: {
+    '203.0.113.0/24': [ { prefix: '203.0.113.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.20' } ], bestpath: true, path: '65001', origin: 'IGP' } ],
+    '203.0.113.0/25': [ { prefix: '203.0.113.0', prefixLen: 25, nexthops: [ { ip: '10.1.0.20' } ], bestpath: true, path: '65001', origin: 'IGP' } ] } });
+  _assert(_plR.length === 2 && _plR[0].prefix === '203.0.113.0' && _plR[0].prefixlen === 24 && _plR[1].prefixlen === 25,
+    'prefix kept as FRR gives it (checks unchanged), length in prefixlen');
+  var sbl = collectFromJson({ node: 'r1', proto: 'bgp', adjacency: [{ iface: 'eth0', peer: 'r2' }],
+    bgpSummary: FIX.bgpSummary, bgp: { routes: {
+      '203.0.113.0/24': [ { prefix: '203.0.113.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.20' } ], bestpath: true } ],
+      '203.0.113.0/25': [ { prefix: '203.0.113.0', prefixLen: 25, nexthops: [ { ip: '10.1.0.20' } ], bestpath: true } ] } },
+    route: { '10.1.0.0/24': FIX.route['10.1.0.0/24'] } });
+  _assert(sbl.bgp_routes.length === 2 && sbl.bgp_routes[1].prefixlen === 25, 'bgp_routes carries prefixlen');
+  _assert(sbl.pfx_rcvd === 2, '/24 and /25 count as 2 prefixes received');
+
+  console.log('self-test: ECMP (2 active next-hops in the RIB + 2 multipath BGP paths)');
+  var sbe = collectFromJson({ node: 'r1', proto: 'bgp', adjacency: [{ iface: 'eth0', peer: 'r2' }],
+    bgpSummary: FIX.bgpSummary, bgp: { routes: {
+      '10.0.8.0/24': [ { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.30' } ], multipath: true, path: '65002', origin: 'IGP' },
+                       { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.20' } ], multipath: true, bestpath: { overall: true, selectionReason: 'Neighbor IP' }, path: '65002', origin: 'IGP' } ] } },
+    route: { '10.1.0.0/24': FIX.route['10.1.0.0/24'],
+      '10.0.8.0/24': [ { prefix: '10.0.8.0/24', protocol: 'bgp', selected: true, nexthops: [
+        { ip: '10.1.0.20', interfaceName: 'eth0', active: true, fib: true }, { ip: '10.1.0.30', interfaceName: 'eth0', active: true, fib: true } ] } ] } });
+  var _er = sbe.routing_table.filter(function (r) { return r.prefix === '10.0.8.0/24'; })[0] || {};
+  _assert(Array.isArray(_er.nexthops) && _er.nexthops.length === 2 && _er.nexthops[1].ip === '10.1.0.30', 'nx_ecmp: routing_table row carries both next-hops');
+  _assert(_er.next_hop === '10.1.0.20' && _er.out_iface === 'eth0', 'nx_ecmp: out_iface / next_hop stay the first next-hop');
+  var _eb = sbe.bgp_routes.filter(function (r) { return r.prefix === '10.0.8.0'; });
+  _assert(_eb.length === 2 && _eb.every(function (r) { return r.multipath === true; }), 'nx_ecmp: both BGP paths multipath');
+  _assert(_eb.filter(function (r) { return r.status === '*='; }).length === 1 && _eb.filter(function (r) { return r.status === '*>'; }).length === 1, 'nx_ecmp: status *> and *=');
+  var _e1 = (sb.routing_table || []).filter(function (r) { return r.nexthops; }).length;
+  _assert(_e1 === 0, 'nx_ecmp: a single-next-hop RIB has no nexthops field');
+  var sbe2 = collectFromJson({ node: 'r1', proto: 'bgp', adjacency: [{ iface: 'eth0', peer: 'r2' }],
+    bgpSummary: FIX.bgpSummary, bgp: { routes: {
+      '10.0.8.0/24': [ { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.30' } ], multipath: true, path: '65002' },
+                       { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.20' } ], bestpath: { overall: true }, path: '65002' } ] } },
+    route: { '10.1.0.0/24': FIX.route['10.1.0.0/24'] } });
+  _assert(sbe2.bgp_routes.filter(function (r) { return r.multipath === true; }).length === 2, 'nx_ecmp_fix2: the best of an ECMP prefix is multipath too (FRR table json shape)');
 
   // --- clab mgmt-interface exclusion (opt-in, identified by SUBNET not iface name) ---
   var _mgIf = { eth0: { up: true, ip: '172.20.20.3', prefix: 24 }, eth1: { up: true, ip: '10.0.0.1', prefix: 24 } };
@@ -912,22 +1335,7 @@ function selfTest() {
   _assert(spl.r2_iface === 'eth1' && spl.r2_has_full === true, 'old per-peer keys unchanged (r2 = the live eth1)');
   _assert(st.peer_links && st.peer_links.length === 1 && st.peer_links[0].iface === 'eth0' && st.peer_links[0].peer === 'r2', 'single-link lab: peer_links = [eth0 -> r2]');
 
-  console.log('self-test: nx_kernel_tunnel_if - the kernel fallback tunnels (FRR 8.4 / 10.7.1 `show interface json` shape) are dropped');
-  var _kt = parseInterfaces({
-    gre0: { administrativeStatus: 'down', linkUps: 0, linkDowns: 0, vrfName: 'default', mtu: 1476, flags: '<NOARP>', type: 'GRE over IP', interfaceType: 'GRE', ipAddresses: [] },
-    gretap0: { administrativeStatus: 'down', linkUps: 0, vrfName: 'default', flags: '<BROADCAST,MULTICAST>', type: 'Ethernet', interfaceType: 'GRETAP', ipAddresses: [] },
-    erspan0: { administrativeStatus: 'down', linkUps: 0, vrfName: 'default', type: 'Ethernet', interfaceType: 'Other', ipAddresses: [] },
-    ip6gre0: { administrativeStatus: 'down', linkUps: 0, type: 'GRE over IPv6', interfaceType: 'IP6GRE', ipAddresses: [] },
-    ip6tnl0: { administrativeStatus: 'down', linkUps: 0, type: 'IPIP6 Tunnel', interfaceType: 'Other', ipAddresses: [] },
-    tunl0: { administrativeStatus: 'down', linkUps: 0, ipAddresses: [] },
-    sit0: { administrativeStatus: 'down', ipAddresses: [] },
-    gre1: { administrativeStatus: 'down', linkUps: 0, type: 'GRE over IP', ipAddresses: [] },
-    eth1: { administrativeStatus: 'up', operationalStatus: 'up', linkUps: 1, ipAddresses: [{ address: '10.1.0.1/30' }] },
-    eth2: { administrativeStatus: 'down', linkUps: 0, ipAddresses: [] }
-  });
-  _assert(['gre0', 'gretap0', 'erspan0', 'ip6gre0', 'ip6tnl0', 'tunl0', 'sit0'].every(function (k) { return !_kt[k]; }), 'tunnel: 7 kernel fallback devices dropped');
-  _assert(!!_kt.gre1 && !!_kt.eth1 && !!_kt.eth2, 'tunnel: a user GRE (gre1), an up iface and a shut iface (eth2) are kept');
-  _assert(!!parseInterfaces({ gre0: { administrativeStatus: 'up', operationalStatus: 'up', linkUps: 1, ipAddresses: [{ address: '192.0.2.1/30' }] } }).gre0, 'tunnel: gre0 that is up with an address is kept');
+  selfTestOspf6Vrf();
   console.log('\nALL SELF-TESTS PASSED');
 }
 
@@ -942,7 +1350,8 @@ if (typeof require !== 'undefined' && require.main === module) {
     var dir = a.fixtures, rd = function (f) { try { return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); } catch (e) { return null; } };
     var st = collectFromJson({ node: a.node, id: a.lab || a.node, proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: _mgmt,
       ospfNeighbor: rd('ospf-neighbor.json'), ospfInterface: rd('ospf-interface.json'), interface: rd('interface.json'),
-      route: rd('route.json'), bgpSummary: rd('bgp-summary.json'), bgp: rd('bgp.json') });
+      route: rd('route.json'), bgpSummary: rd('bgp-summary.json'), bgp: rd('bgp.json'),
+      ospf6Neighbor: rd('ospf6-neighbor.json'), ospf6Interface: rd('ospf6-interface.json'), route6: rd('route6.json') });   /* nx_ospf6 */
     var out = JSON.stringify(st, null, 2);
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, out); console.log('wrote ' + a.out); } else console.log(out);
   }

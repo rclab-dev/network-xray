@@ -3,10 +3,9 @@
 **RouteCrushLab Q2 as a containerlab lab, with the X-Ray view.** The lab starts in its **broken (fault) state** — find the cause and fix it.
 Nodes: r1 (FRR), inet (Linux), sv (Linux)
 
-> You want to ping the internet (`8.8.8.8`) from sv (the server), but there is no connectivity.
+> sv (the server) wants to ping the internet (`8.8.8.8`) but has no connectivity.
 > Running `ping 8.8.8.8` on sv gets no reply.
-> Look into r1 (the gateway router that sv uses to get out) and fix the cause.
-> After fixing it, confirm that `ping 8.8.8.8` on sv gets a reply.
+> **Mission:** investigate r1 (the gateway router), find the cause, and fix it so that sv can reach the internet at any IP address. Use `ping 8.8.8.8` from sv to check connectivity.
 
 [日本語は下にあります](#日本語)
 
@@ -68,8 +67,7 @@ This package gives you the broken lab and the X-Ray view. **Hints and the explan
 
 > sv (サーバ) からインターネット (`8.8.8.8`) に ping を飛ばしたいのですが、通信できません。
 > sv で `ping 8.8.8.8` を実行しても応答がありません。
-> sv の出口になっている r1 (ゲートウェイルータ) を調べて、原因を直してください。
-> 直したら、sv で `ping 8.8.8.8` が応答することを確認してください。
+> **ミッション:** r1 (ゲートウェイルータ) を調査し、原因を特定して、sv からインターネットのどの IP にも届くように修正してください。sv からの通信確認には `ping 8.8.8.8` を使用してください。
 
 ## 必要なもの
 - Linux + **Docker**・**containerlab**・**Node.js 18 以上**

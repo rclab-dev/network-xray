@@ -30,10 +30,10 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 ## When to use
 
-- **Use it when** you run **FRR** or **Nokia SR Linux** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full.
+- **Use it when** you run **FRR** or **Nokia SR Linux** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 / OSPFv3, VRFs included on FRR).
 - **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux (they appear in the topology, but are not read).
 - **What it reads** (read-only commands; it changes nothing):
-  - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp summary json`, `show ip ospf neighbor json`, `show ip ospf interface json`, `show ip route json`, `show interface json`, `show running-config`.
+  - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. The BGP table is read for the default VRF only.
   - netlab `validate:` tests are judged like `netlab validate` does: the per-prefix form (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
   - SR Linux: `sr_cli 'info from state … | as json'`.
 
@@ -158,8 +158,9 @@ If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), 
 ```yaml
 defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]   # the tool definition (netlab 26.10)
 tools:
-  network-xray:
+  network_xray:
 ```
+In netlab the tool is named `network_xray` (underscore), because tool names are also used in environment variable names; the product, repository and image keep the name network-xray.
 (if your topology already has a `defaults.sources.extra` list — the BGP Labs do — add the file to that list instead of a second line), then `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://<host>:8600/`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR and SR Linux only: other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
 Without netlab (any running containerlab lab): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` — for the example labs (`examples/`) the problem band and **✓ Solved** show too (from the `problem.json` next to the topology); a lab without one has no band. The image is built for linux/amd64 and linux/arm64.
 If `netlab up` says the lab is already running, a lab with the same name is still up from another folder (`netlab status --all`): run `netlab down` there first.
@@ -561,10 +562,10 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 ## いつ使うか
 
-- **使う時:** containerlab や netlab で **FRR** か **Nokia SR Linux** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時。
+- **使う時:** containerlab や netlab で **FRR** か **Nokia SR Linux** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (FRR は OSPFv2 / OSPFv3・VRF も)。
 - **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux 以外の機器 (全体図には出るが、中は読まない)。
 - **読むもの** (読む命令だけ・何も変えません):
-  - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp summary json`、`show ip ospf neighbor json`、`show ip ospf interface json`、`show ip route json`、`show interface json`、`show running-config`。
+  - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp vrf all summary json`、`show ip ospf vrf all neighbor json`、`show ip ospf vrf all interface json`、`show ip route vrf all json`、`show interface json`、`show running-config` (`vrf all` に JSON で答えない FRR は素の命令で読む)。`router ospf6` のあるルータは OSPFv3 も: `show ipv6 ospf6 vrf all neighbor json`、`show ipv6 ospf6 vrf all interface json`、`show ipv6 route vrf all json`。BGP の表は default の VRF だけを読む。
   - netlab の `validate:` の検査は `netlab validate` と同じ読み方: 宛先ごとの形 (`show bgp ipv4 unicast <宛先> json`) で、勝った経路は `bestpath.overall`。
   - SR Linux は `sr_cli 'info from state … | as json'`。
 
@@ -668,8 +669,9 @@ OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を 
 ```yaml
 defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]   # tool の定義 (netlab 26.10)
 tools:
-  network-xray:
+  network_xray:
 ```
+netlab では tool の名前は `network_xray` (下線) です。netlab の tool の名前は環境変数の名前にも使われるためです。製品・リポジトリ・イメージの名前は network-xray のままです。
 (topology に `defaults.sources.extra` の一覧が既にある時 — BGP Labs はそう — は、2 行目を作らずその一覧に足してください)。`netlab up` すると、ラボの設定が終わった後に netlab が `ghcr.io/rclab-dev/network-xray:1` を起動し、`Open http://<host>:8600/` と案内します。OSPF / BGP は自分で見分けます (後から BGP を足しても追いかけます)。`netlab down` で一緒に片付きます。`multilab` プラグイン (`plugin: [ multilab ]`・`defaults.multilab.id: N`) を使うと、ラボごとに 8600 + N の番号になります (プラグインが要ります。無いとラボどうしの管理用の IP がぶつかります)。netlab の tool として確かめたのは FRR のラボ (ipSpace の BGP Labs の 3-rr・OSPF の例)。SR Linux も読めます (containerlab で確かめ済)。network-xray が中を読むのは FRR と SR Linux だけです。ほかの機器 (Linux のホスト・cEOS など) は全体図に出て、DeepDive にもそう出ます。止まっている・応答の無いルータは理由を添えて灰色で出ます。応答が無くなったルータは最後に読めた状態を「古い」と印を付けて残し、ほかのルータは書き換わり続けます。
 netlab を使わない場合 (動いている containerlab のラボなら何でも): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` — 例題 (`examples/`) なら問題の帯と **✓ Solved** も出ます (topology の隣の `problem.json` から)。それが無いラボには帯は出ません。image は linux/amd64 と linux/arm64 です。
 `netlab up` が「already running」と言う時は、同じ名前のラボが別のフォルダで動いたままです (`netlab status --all`)。先にそこで `netlab down` してください。

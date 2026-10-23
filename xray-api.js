@@ -288,6 +288,7 @@
   function _bgpResolveSel(order, groups) {
     if (_bgpSelPrefix && groups[_bgpSelPrefix]) return _bgpSelPrefix;
     var kp = (_lastConfig && _lastConfig.xray && _lastConfig.xray.key_prefix) || (_lastConfig && _lastConfig.key_prefix);
+    if (kp && !groups[kp]) kp = order.filter(function (o) { return o.split('/')[0] === String(kp).split('/')[0]; })[0] || kp;   /* nx_bgp_prefixlen: key_prefix without/with length */
     if (kp && groups[kp]) { _bgpSelPrefix = kp; return kp; }
     for (var i = 0; i < order.length; i++) {
       var g = groups[order[i]];
@@ -299,16 +300,27 @@
   // Build the BGP Table with clickable per-prefix rows, and inline the SELECTED prefix's Best-Path
   // Decision as an amber box below its group (Layout A / accordion). The full FRR-order legend + RFC
   // is returned separately so the caller can show it ONCE at the panel bottom (prefix-independent).
+  /* nx_bgp_prefixlen (2026-10-23): FRR's json gives "prefix" without the length (+ prefixLen); the collector adds prefixlen.
+     Show and group by "net/len" so 203.0.113.0/24 and /25 are two prefixes. r.prefix itself is unchanged (checks read it). */
+  function _bPfx(r) {
+    var p = String(r.prefix || '');
+    return (p && p.indexOf('/') < 0 && r.prefixlen != null && r.prefixlen !== '') ? p + '/' + r.prefixlen : p;
+  }
   function _bgpBuildView(routes) {
     var order = [], groups = {};
-    routes.forEach(function (r) { var p = r.prefix || ''; if (!groups[p]) { groups[p] = []; order.push(p); } groups[p].push(r); });
+    var noMet = routes.every(function (r) { return !(r && r.metric); });   /* nx_bgp_path_sub: no MED anywhere -> no Metric column */
+    routes.forEach(function (r) { var p = _bPfx(r); if (!groups[p]) { groups[p] = []; order.push(p); } groups[p].push(r); });
     var sel = _bgpResolveSel(order, groups);
-    var html = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>Metric</th><th>LocPrf</th><th>Weight</th><th>Path</th><th class="de-bgp-cx"></th></tr></thead><tbody>';
+    var html = '<table class="de-bgp-table"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th>' + (noMet ? '' : '<th>Metric</th>') + '<th>LocPrf</th><th>Weight</th><th>Path</th><th class="de-bgp-cx"></th></tr></thead><tbody>';
     var _primaryLabel = '';   // (iii) deciding criterion of the SELECTED prefix, highlighted in the legend
+    var _ecAny = '', _ecN = 0, _ecMix = false;   /* nx_ecmp (+ nx_ecmp_polish) */
     order.forEach(function (p) {
       var grp = groups[p], dec = _bgpDecision(grp), decCol = (dec && dec.kind === 'decided') ? dec.col : null;
       if (dec) dec._grp = grp;   // Tier3 href needs the candidate routes (min-diff: carry on dec)
       var isSel = (p === sel);
+      /* nx_ecmp (2026-10-23): ECMP paths in their own colours, "*=" for the multipath ones, the representative mark on the selected best */
+      var _ec = (typeof _xrayEcmpOf === 'function') ? _xrayEcmpOf(grp) : null;
+      if (_ec) { _xrayEcmpCss(); var _ecK = Object.keys(_ec).length; if (_ecN && _ecN !== _ecK) _ecMix = true; _ecN = Math.max(_ecN, _ecK); if (isSel) _ecAny = 'sel'; else if (!_ecAny) _ecAny = 'on'; }
       if (isSel && dec && dec.kind === 'decided' && dec.criterion) _primaryLabel = dec.criterion.label;
       grp.forEach(function (rt, gi) {
         var isBest = _bIsBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
@@ -316,21 +328,28 @@
         var pathDisp = (rt.as_path || '') + (rt.origin ? ((rt.as_path ? ' ' : '') + rt.origin) : '');
         var lpDisp = (rt.local_pref != null && rt.local_pref !== '') ? rt.local_pref : '<span class="bgp-default">100</span>';
         // Only the selected prefix shows the amber decider-cell highlight (it ties to the shown decision).
-        function cell(name, val) { return '<td' + (isSel && isBest && decCol === name ? ' class="bgp-decider"' : '') + '>' + val + '</td>'; }
+        function cell(name, val) {   /* nx_bgp_path_sub: Path cell marked for _xrayBgpFitPath (xray-core); Metric left out when empty for every route */
+          if (name === 'metric' && noMet) return '';
+          var c = (isSel && isBest && decCol === name ? 'bgp-decider' : '') + (name === 'path' ? ' de-bgp-pathc' : '');
+          return '<td' + (c.trim() ? ' class="' + c.trim() + '"' : '') + '>' + val + '</td>'; }
         var cls = (isBest ? 'bgp-best' : '') + (isSel ? ' bgp-sel' : '');
+        var _ecC = _ec && _ec[nh];   /* nx_ecmp */
+        if (_ecC) cls += ' bgp-ecmp' + (isBest && isSel ? ' bgp-ecmp-repd' : '');
         var chev = (gi === 0) ? (isSel ? '▾' : '▸') : '';   // affordance on the group's first row
-        html += '<tr class="' + cls.replace(/^\s+/, '') + '" data-bgp-prefix="' + p + '">' +
-          '<td><span class="bgp-st">' + (rt.status || (rt.best ? '*>' : '* ')) + '</span></td>' +
-          '<td>' + (rt.prefix || '') + '</td>' +
+        html += '<tr class="' + cls.replace(/^\s+/, '') + '"' + (_ecC ? ' style="--nx-ecmp:' + _ecC + ';--nx-ecmp-bg:' + _xrayEcmpRgba(_ecC, 0.08) + '"' : '') + ' data-bgp-prefix="' + p + '">' +
+          '<td><span class="bgp-st">' + (_ecC ? (isBest ? '*&gt;' : '*=') : (rt.status || (rt.best ? '*>' : '* '))) + '</span>' +
+            (_ecC && isBest && isSel ? '<span class="bgp-ecmp-rep">' + (_bgpLang() === 'ja' ? '代表' : 'rep.') + '</span>' : '') + '</td>' +
+          '<td>' + _bPfx(rt) + '</td>' +
           '<td>' + nh + '</td>' +
           cell('metric', rt.metric || '') + cell('locprf', lpDisp) + cell('weight', w) + cell('path', pathDisp) +
           '<td class="de-bgp-cx">' + chev + '</td>' +
           '</tr>';
       });
       // accordion: decision box AFTER the group's last row (never between best/alt of the same prefix)
-      if (isSel) html += '<tr class="de-bgp-accd"><td colspan="8"><div class="de-bgp-accd-box">' + _bgpReason(p, dec) + '</div></td></tr>';
+      if (isSel) html += '<tr class="de-bgp-accd"><td colspan="' + (noMet ? 7 : 8) + '"><div class="de-bgp-accd-box">' + (_ec ? _xrayEcmpReasonHtml(p, dec, grp, _ec) : _bgpReason(p, dec)) + '</div></td></tr>';
     });
     html += '</tbody></table>';
+    if (_ecAny && typeof _xrayEcmpLegendHtml === 'function') html += _xrayEcmpLegendHtml(_ecAny === 'sel', _ecN, _ecMix);   /* nx_ecmp */
     return { table: html, legend: _bgpOrderLegend(_primaryLabel) };
   }
   function _bgpInjectCss() {
@@ -434,7 +453,9 @@
     if (document.querySelector('.de-bgp-bracket-pop.open')) { _bgpFontInit(); return; }
     var rows = _bgpRows(), body, legend = '';
     if (!rows || !rows.length) {
-      body = '<div class="de-dim">no routes<br>(BGP session not established)</div>';
+      body = (_lastState && _lastState.is_established === true)   /* nx_noroutes_up (2026-10-23): up but 0 routes != not established */
+        ? '<div class="de-dim">no routes received<br>(BGP session is up)</div>'
+        : '<div class="de-dim">no routes<br>(BGP session not established)</div>';
     } else {
       var view = _bgpBuildView(rows); body = view.table; legend = view.legend;   // table + inline decision
     }
@@ -444,6 +465,7 @@
       + (legend ? '<div class="de-bgp-legend-host">' + legend + '</div>' : '');
     _bgpFontInit();
     var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs || 1);
+    if (window._xrayBgpFitPath) window._xrayBgpFitPath();   /* nx_bgp_path_sub */
   }
   function _bgpFontInit() {
     if (window.__xbgpFsInit) return; window.__xbgpFsInit = true; if (window.__xbgpFs == null) window.__xbgpFs = 1;
@@ -451,6 +473,7 @@
       var b = e.target && e.target.closest && e.target.closest('.xbgp-fs-ctl button'); if (!b) return;
       window.__xbgpFs = Math.max(0.7, Math.min(1.5, (window.__xbgpFs || 1) + (b.getAttribute('data-fs') === 'up' ? 0.1 : -0.1)));
       var de = document.querySelector('.xray-deep-engine'); if (de) de.style.setProperty('--xbgp-fs', window.__xbgpFs);
+      if (window._xrayBgpFitPath) window._xrayBgpFitPath();   /* nx_bgp_path_sub: re-fit at the new text size */
       // (decision panel position is CSS-driven now — no re-measure needed on font change)
     });
   }

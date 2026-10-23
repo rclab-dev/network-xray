@@ -4,8 +4,8 @@
   "q_number": "Q2",
   "title_en": "Problem 2 — \"Packets won't forward?\"",
   "title_ja": "第2問「パケットが転送できない？」",
-  "problem_en": "You want to ping the internet (<code>8.8.8.8</code>) from sv (the server), but there is no connectivity.<br>Running <code>ping 8.8.8.8</code> on sv gets no reply.<br>Look into r1 (the gateway router that sv uses to get out) and fix the cause.<br>After fixing it, confirm that <code>ping 8.8.8.8</code> on sv gets a reply.",
-  "problem_ja": "sv (サーバ) からインターネット (<code>8.8.8.8</code>) に ping を飛ばしたいのですが、通信できません。<br>sv で <code>ping 8.8.8.8</code> を実行しても応答がありません。<br>sv の出口になっている r1 (ゲートウェイルータ) を調べて、原因を直してください。<br>直したら、sv で <code>ping 8.8.8.8</code> が応答することを確認してください。",
+  "problem_en": "sv (the server) wants to ping the internet (<code>8.8.8.8</code>) but has no connectivity.<br>Running <code>ping 8.8.8.8</code> on sv gets no reply.<br><strong>Mission:</strong> investigate r1 (the gateway router), find the cause, and fix it so that sv can reach the internet at any IP address. Use <code>ping 8.8.8.8</code> from sv to check connectivity.",
+  "problem_ja": "sv (サーバ) からインターネット (<code>8.8.8.8</code>) に ping を飛ばしたいのですが、通信できません。<br>sv で <code>ping 8.8.8.8</code> を実行しても応答がありません。<br><strong>ミッション:</strong> r1 (ゲートウェイルータ) を調査し、原因を特定して、sv からインターネットのどの IP にも届くように修正してください。sv からの通信確認には <code>ping 8.8.8.8</code> を使用してください。",
   "rcl_qid": "q2",
   "rcl_mode": "tl",
   "ref": "oss-clab",
@@ -37,6 +37,11 @@
             "out_iface",
             "eq",
             "eth1"
+          ],
+          [
+            "next_hop",
+            "eq",
+            "10.10.0.1"
           ]
         ]
       ],

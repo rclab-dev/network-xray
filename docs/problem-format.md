@@ -60,12 +60,12 @@ The collector writes one state object per node. The fields most useful for a che
 
 | Path | Shape |
 |---|---|
-| `routing_table` | array of `{prefix, protocol, out_iface, next_hop, selected}` — like `show ip route`, including routes that are not selected |
+| `routing_table` | array of `{prefix, protocol, out_iface, next_hop, selected}` — like `show ip route`, including routes that are not selected. An installed route with 2+ next-hops (ECMP) also has `nexthops: [{ip, iface}, …]`; `out_iface` / `next_hop` are the first of them |
 | `interfaces` | object `{eth1: {up, ip}, …}` |
 | `route_resolution` | object `{target, resolved, protocol, out_iface, next_hop, matched_prefix}` — how the node reaches its ping target. `resolved` only means a route to the next hop exists, so a wrong next hop inside a connected subnet is still `true` |
 | `ospf_neighbors` | array of `{router_id, address, state, role, iface, full}` |
 | `bgp_neighbors` | array of `{ip, remote_as, ibgp, state, up_down, pfx_rcvd}` |
-| `bgp_routes` | array of `{prefix, next_hop, as_path, best, weight, metric, origin}` — `prefix` is without the mask (`"8.8.8.0"`), `as_path` is a space-separated string (`"65002"`) |
+| `bgp_routes` | array of `{prefix, next_hop, as_path, best, weight, metric, origin}` — `prefix` is without the mask (`"8.8.8.0"`) and `prefixlen` holds the length (`24`; compare both to tell /24 from /25), `as_path` is a space-separated string (`"65002"`); `status` is `*>` (best), `*=` (multipath: an equal path used together with the best — ECMP) or `* `; `multipath: true` on every path of an ECMP prefix |
 
 To see what your lab produces, open the `xray-states.js` the collector writes and look at `LIVE_STATES.<node>`.
 

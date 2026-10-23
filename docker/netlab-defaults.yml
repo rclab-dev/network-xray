@@ -2,7 +2,7 @@
 # In your topology:
 #   defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]
 #   tools:
-#     network-xray:
+#     network_xray:
 # netlab up then starts network-xray next to the lab: open http://<host>:8600/ (8600 + the multilab id with the multilab plugin).
 # network-xray reads router state with `docker exec <node> vtysh -c 'show ...'` (FRR) / sr_cli (SR Linux): 'show' commands only.
 # It is given the Docker socket, which is root-equivalent on the host: run it only on a lab machine.
@@ -24,7 +24,7 @@ providers:
         _keys:
           labels: dict
 tools:
-  network-xray:
+  network_xray:
     runtime: docker
     docker:
       up:

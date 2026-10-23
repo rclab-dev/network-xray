@@ -41,6 +41,7 @@ var driver =
 + '#replaybar .dots i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2b3a44;margin:0 2px}'
 + '#replaybar .dots i.on{background:#26c6da}'
 + '.wrap{padding-top:46px}'
++ '/* nx_mobile_replaybar */@media (max-width:600px){#replaybar{position:static;flex-wrap:wrap;gap:6px 10px;margin:0 0 12px;border:1px solid #26c6da;border-radius:6px}#replaybar .src{margin-left:0;flex-basis:100%}.wrap{padding-top:16px}}'
 + '</style>'
 + '<div id="replaybar"><span class="tag">▶ RECORDED REPLAY</span>'
 + '<span>frame <b id="rb-i">1</b>/' + FRAMES.length + ':</span> <span class="st" id="rb-st">…</span>'
@@ -64,6 +65,7 @@ var driver =
 + 'document.getElementById("rb-toggle").onclick=function(){paused=!paused;this.textContent=paused?"play":"pause";};'
 + '})();<\/script>';
 
+driver += '<script>/* nx_mobile_replaybar: phone width = the RECORDED REPLAY bar sits just above the topology (not fixed over it) */(function(){var mq=window.matchMedia&&window.matchMedia("(max-width:600px)"),b=document.getElementById("replaybar"),home=null;if(!mq||!b)return;function f(){var t=document.querySelector(".wrap .topology")||document.querySelector(".topology");if(!t)return;if(mq.matches){if(!home)home={p:b.parentNode,n:b.nextSibling};if(b.nextSibling!==t)t.parentNode.insertBefore(b,t);}else if(home&&(b.parentNode!==home.p||b.nextSibling!==home.n)){try{home.p.insertBefore(b,home.n);}catch(e){home.p.appendChild(b);}}}f();if(mq.addEventListener)mq.addEventListener("change",f);else if(mq.addListener)mq.addListener(f);})();</script>';   /* nx_mobile_replaybar */
 html = html.replace('</body>', driver + '\n</body>');
 
 fs.writeFileSync(dir + '/index.html', html);
