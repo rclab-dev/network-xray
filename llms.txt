@@ -37,3 +37,4 @@
 - Repository and README: https://github.com/rclab-dev/network-xray
 - Example problems (q1–q21, OSPF / BGP / static): https://github.com/rclab-dev/network-xray/tree/main/examples
 - Problem file format: https://github.com/rclab-dev/network-xray/blob/main/docs/problem-format.md
+- Hosted labs with the same X-Ray, plus hints, explanations and a step-by-step TRACE (RouteCrushLab; English beta, guest, no sign-up): https://routecrushlab.com/lab/tl/q21?try=guest&lang=en&ref=oss

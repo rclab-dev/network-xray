@@ -28,6 +28,8 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 **Next:** [your own containerlab lab](#quick-start-run-a-lab-in-containerlab) · [netlab](#netlab-tool) · [what it supports](#scope--maintenance)
 
+**Want hints and explanations too?** The same X-Ray runs in hosted labs on RouteCrushLab — [try Q21 as a guest](https://routecrushlab.com/lab/tl/q21?try=guest&lang=en&ref=oss) (no sign-up; the lab is ready in under a minute).
+
 ## When to use
 
 - **Use it when** you run **FRR** or **Nokia SR Linux** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 / OSPFv3, VRFs included on FRR).
@@ -47,7 +49,7 @@ failure propagates and recovers. It renders a **topology view** and an **"inside
 DeepDive cylinder** (forwarding plane, OSPF/BGP processor, hello & LSDB sync, the route it installs).
 You drive it with a few calls through the tidy `xrayCore` facade.
 
-> This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss)**,
+> This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en)**,
 > not a fork — extracted as a shared module so there is no drift.
 
 It runs **on top of your execution engine** — paste a **containerlab** topology, replay a recorded lab,
@@ -204,7 +206,7 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 
 ## Try it live
 
-The same X-Ray visualizations power **[RouteCrushLab](https://routecrushlab.com/?ref=oss)** —
+The same X-Ray visualizations power **[RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en)** —
 hands-on FRR network-troubleshooting labs you run in your browser to see *why* a
 network behaves the way it does. No install, no signup.
 
@@ -559,6 +561,8 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 > **始める前に:** ご自身の Codespaces の枠を使います (使い終わったら codespace を削除してください)。画面はポート 8600 で転送されます。Codespaces の転送は、公開に切り替えない限り本人 (GitHub にログインした人) だけが見られます — 公開にしないでください。
 
 **次に:** [自分の containerlab のラボで](#クイックスタート-containerlab-で例題を動かす) · [netlab で](#netlab-tool-ja) · [対応範囲](#スコープと保守)
+
+**ヒントと解説も欲しい方へ:** 同じ X-Ray が RouteCrushLab のラボで動きます — [Q21 をゲストで試す](https://routecrushlab.com/lab/tl/q21?try=guest&lang=ja&ref=oss) (登録不要・1 分以内にラボが立ちます)
 
 ## いつ使うか
 

@@ -1,6 +1,6 @@
 # examples/ — 21 troubleshooting problems (broken + solved) and one best-path showcase
 
-Each of the 21 [RouteCrushLab](https://routecrushlab.com) problems (Q1–Q21) comes as two containerlab labs: the **broken** one (`<dir>/`, the lab starts in the fault state) and the **solved** one (`<dir>-solved/`, the fixed lab to compare with). `bgp-bestpath-multiprefix` (and its `-solved` copy) is an extra best-path showcase — not a broken lab.
+Each of the 21 [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en) problems (Q1–Q21) comes as two containerlab labs: the **broken** one (`<dir>/`, the lab starts in the fault state) and the **solved** one (`<dir>-solved/`, the fixed lab to compare with). `bgp-bestpath-multiprefix` (and its `-solved` copy) is an extra best-path showcase — not a broken lab.
 
 [日本語は下にあります](#日本語)
 
