@@ -106,8 +106,34 @@ var re = /endpoints:\s*\[\s*"([^:"]+):([^"\]]+)"\s*,\s*"([^:"]+):([^"\]]+)"\s*\]
 //     - "a:eth1"
 //     - "b:eth2"
 var reBlock = /endpoints:[ \t]*\r?\n[ \t]*-[ \t]*["']?([^:"'\s]+):([^"'\s]+)["']?[ \t]*\r?\n[ \t]*-[ \t]*["']?([^:"'\s]+):([^"'\s]+)["']?/g;
+/* nx_collect_dict_endpoints (2026-10-26): containerlab's extended link form - endpoints as node/interface maps:
+     - type: veth
+       endpoints:
+         - node: r1
+           interface: eth1
+         - { node: r2, interface: eth1 }
+   Only links with exactly two endpoints are links between nodes (host / mgmt-net / macvlan have one) - others are left out. */
+function dictLinks(text) {
+  var out = [], L = text.split(/\r?\n/);
+  var ind = function (s) { return s.match(/^[ \t]*/)[0].length; };
+  var val = function (s, k) { var x = new RegExp('(?:^|[{,\\s])' + k + ':[ \\t]*["\']?([^"\',}\\s]+)').exec(s); return x ? x[1] : ''; };
+  for (var i = 0; i < L.length; i++) {
+    if (!/^[ \t]*(?:-[ \t]*)?endpoints:[ \t]*$/.test(L[i])) continue;
+    var base = ind(L[i]), items = [], cur = null;
+    for (var j = i + 1; j < L.length && (!L[j].trim() || ind(L[j]) > base); j++) {
+      var s = L[j]; if (!s.trim()) continue;
+      if (/^[ \t]*-/.test(s)) { cur = { node: '', iface: '' }; items.push(cur); }
+      if (!cur) continue;
+      cur.node = cur.node || val(s, 'node'); cur.iface = cur.iface || val(s, 'interface');
+    }
+    if (items.length === 2 && items[0].node && items[0].iface && items[1].node && items[1].iface)
+      out.push([items[0].node, items[0].iface, items[1].node, items[1].iface]);
+  }
+  return out;
+}
 var seenLink = {};
-[re, reBlock].forEach(function (rx) {
+var dictRx = { exec: (function () { var all = dictLinks(topo), k = 0; return function () { return k < all.length ? [null].concat(all[k++]) : null; }; })() };
+[re, reBlock, dictRx].forEach(function (rx) {
   while ((m = rx.exec(topo))) {
     var a = m[1], ai2 = m[2], b = m[3], bi = m[4];
     var lk = [a + ':' + ai2, b + ':' + bi].sort().join('|');

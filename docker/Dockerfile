@@ -6,7 +6,7 @@
 #     ghcr.io/rclab-dev/network-xray:1 --topo /lab/clab.yml
 #
 # The container is given the Docker socket, which is root-equivalent on the host: run it only on a lab machine.
-FROM node:20-alpine
+FROM node:24-alpine
 
 ARG CLAB_VERSION=0.81.0
 ARG TARGETARCH=amd64

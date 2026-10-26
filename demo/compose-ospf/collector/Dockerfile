@@ -1,5 +1,6 @@
-FROM frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce
-RUN apk add --no-cache nodejs
+# Node.js 24 + vtysh from Alpine's frr package (reads the demo routers through their vty sockets)
+FROM node:24-alpine
+RUN apk add --no-cache frr
 COPY . /collector/
 RUN chmod +x /collector/watch.sh
 WORKDIR /collector

@@ -1,6 +1,6 @@
 name: q2-static-solved
 # nx_lab_isolated_routes: nodes do not route via the containerlab mgmt network (RouteCrushLab parity)
-# Lab for RouteCrushLab q2 (https://routecrushlab.com)
+# Lab for RouteCrushLab q2 (https://routecrushlab.com/?ref=oss-clab&lang=en)
 # nx_zebra_watch: FRR 8.4 sometimes loses zebra right after start; each FRR node restarts FRR (up to 3 times) when zebra is missing
 topology:
   nodes:

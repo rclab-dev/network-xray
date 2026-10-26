@@ -221,14 +221,14 @@ _clabText = _clabText.replace(/endpoints:\s*\[([^\]]*)\]/g, function (m, inner) 
 });
 wr(path.join(OUT, 'collector', 'topo.clab.yml'), _clabText);
 wr(path.join(OUT, 'collector', 'Dockerfile'),
-  'FROM frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce\nRUN apk add --no-cache nodejs\nCOPY . /collector/\nRUN chmod +x /collector/watch.sh\nWORKDIR /collector\nENTRYPOINT ["/bin/sh","/collector/watch.sh"]\n');
+  '# Node.js 24 + vtysh from Alpine\'s frr package (reads the demo routers through their vty sockets)\nFROM node:24-alpine\nRUN apk add --no-cache frr\nCOPY . /collector/\nRUN chmod +x /collector/watch.sh\nWORKDIR /collector\nENTRYPOINT ["/bin/sh","/collector/watch.sh"]\n');
 wr(path.join(OUT, 'collector', 'watch.sh'),
   '#!/bin/sh\nexport XRAY_VTY_SOCK_DIR=/socks\ncd /collector\nfirst=1\necho "collector-watch: socketless re-collect (3s) -> /web/xray-states.js"\nwhile true; do\n  node clab-xray-collect.js topo.clab.yml /collector ' + proto + ' >/tmp/collect.log 2>&1 || true\n  if [ -f /collector/xray-states.js ]; then\n    # anti-flicker: hold the first publish until the lab has converged (a best route / Full adj),\n    # so the initial view is never an empty "no routes" flash. after that, publish every cycle.\n    if [ "$first" = "1" ]; then grep -qE \'"best":true|"full":true|"state":"Full"\' /collector/xray-states.js && first=0; fi\n    if [ "$first" = "0" ]; then cp -f /collector/xray-states.js /web/.xs.tmp && mv -f /web/.xs.tmp /web/xray-states.js; fi\n  fi\n  sleep 3\ndone\n');
 
 // ---- 9) server/ ----
 wr(path.join(OUT, 'server', 'server.js'),
   "const http=require('http'),fs=require('fs'),path=require('path');const ROOT='/web',PORT=8080;const MIME={'.html':'text/html','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml'};http.createServer((q,s)=>{let p=decodeURIComponent(q.url.split('?')[0]);if(p==='/favicon.ico'){s.writeHead(204);s.end();return;}if(p==='/'||p==='')p='/index.html';if(p.indexOf('/static/')===0)p=p.slice(7);const fp=path.join(ROOT,path.normalize(p).replace(/^(\\.\\.[/\\\\])+/,''));fs.readFile(fp,(e,b)=>{if(e){s.writeHead(404);s.end('404');return;}s.writeHead(200,{'Content-Type':MIME[path.extname(fp)]||'application/octet-stream','Cache-Control':'no-store'});s.end(b);});}).listen(PORT,()=>console.log('graph-server on :'+PORT));\n");
-wr(path.join(OUT, 'server', 'Dockerfile'), 'FROM node:18-alpine\nCOPY server.js /server.js\nENTRYPOINT ["node","/server.js"]\n');
+wr(path.join(OUT, 'server', 'Dockerfile'), 'FROM node:24-alpine\nCOPY server.js /server.js\nENTRYPOINT ["node","/server.js"]\n');
 
 // ---- 10) reload helper + README ----
 wr(path.join(OUT, 'reload.sh'),

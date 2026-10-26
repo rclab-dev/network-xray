@@ -1691,6 +1691,7 @@ window.xrayCfDraw = function() {
     if (badge) badge.style.display = "none";
     if (cfLd) cfLd.style.opacity = "0";
   }
+  if (window._xrayEcmpArrows) window._xrayEcmpArrows();   /* nx_ecmp_arrows */
 };
 window.xrayCfShow = function(kind, side, badge) { window._xrayCf = { kind: kind, side: side, badge: badge, bestVia: (window._lastXrayState && window._lastXrayState.best_path_via) || "" }; window.xrayCfDraw(); };
 // Loser-Path: click a non-best BGP row -> grey dashed arrow toward the loser peer + "why it lost" badge.
@@ -3748,7 +3749,10 @@ function _xrayEnsureFbBadge() {
     try { if (window.getComputedStyle(root).position === "static") root.style.position = "relative"; } catch (e) {}
     var a = document.createElement("a");
     a.className = "rcl-fb-badge";
-    a.href = _RCL_FB_BADGE_HREF;
+    /* nx_badge_lang (2026-10-24): the RCL link opens in the page's language (English unless the page is Japanese); re-read on click
+       so it follows the EN / JA toggle */
+    a.href = _RCL_FB_BADGE_HREF + "&lang=" + (window._xrayLang === "ja" ? "ja" : "en");
+    a.addEventListener("click", function () { this.href = _RCL_FB_BADGE_HREF + "&lang=" + (window._xrayLang === "ja" ? "ja" : "en"); });
     a.target = "_blank";
     a.rel = "noopener";
     a.innerHTML = '<img src="' + _RCL_FB_BADGE_LOGO + '" alt="RCL" width="18" height="18"><span>Powered by <b>RCL</b></span>';
@@ -12283,7 +12287,7 @@ window.addEventListener("resize", function() { _xrayBgpFitPathOnce(); });
    table row, the routing table's next-hop and the DeepDive beam of its interface - so every path reads as "used", never as a loser
    (grey) or the one best (green). ">" stays FRR's mark of the representative (the one advertised); it is not preferred. Colours
    follow the next-hop address order, so the BGP table and the routing table agree. Labs without ECMP: nothing changes. */
-var _XRAY_ECMP_COLORS = ["#4dd0e1", "#ffb74d", "#ce93d8", "#a5d6a7", "#f48fb1", "#90caf9"];
+var _XRAY_ECMP_COLORS = ["#4dd0e1", "#ffb74d", "#f48fb1", "#a5d6a7", "#ce93d8", "#90caf9"];   /* nx_ecmp_arrows: 3rd = pink (apart from the BGP arrow purple) */
 function _xrayEcmpIpNum(ip) {
   var a = String(ip || "").split(".");
   if (a.length !== 4) return Number.MAX_SAFE_INTEGER;
@@ -12380,6 +12384,7 @@ function _xrayEcmpRtCells(r, esc) {   // routing-table row with 2+ next-hops -> 
 window._xrayEcmpPaintBeams = function () {
   var de = document.querySelector(".xray-deep-engine");
   if (!de) return;
+  try { if (window._xrayEcmpArrows) window._xrayEcmpArrows(); } catch (e) {}   /* nx_ecmp_arrows */
   Array.prototype.forEach.call(de.querySelectorAll("[data-nx-ecmp]"), function (el) {
     el.style.removeProperty("background"); el.style.removeProperty("box-shadow"); el.style.removeProperty("color"); el.removeAttribute("data-nx-ecmp");
   });
@@ -12406,6 +12411,83 @@ window._xrayEcmpPaintBeams = function () {
     var lb = x.querySelector(".de-x-label") || de.querySelector('.de-x-label[data-iface="' + ifn + '"]');
     paint(x.querySelector(".de-x-beam"), lb, c);
   });
+};
+// nx_ecmp_arrows (2026-10-26): ECMP = one forward arrow per equal-cost path, in the same colours as the BGP table, the
+// routing table and the beams. Shown while the selected prefix has 2+ next-hops and no Loser-Path / best-path badge is
+// open; the single forward arrow is hidden meanwhile (visibility only) and comes back when the selection is no longer ECMP. BGP only: the
+// representative path (*>) gets a small "rep." tag at its arrow head, like the table (OSPF has no representative).
+// Drawn from xrayCfDraw (every arrow redraw) and from the beam repaint, so a beam restyle cannot leave a stale arrow.
+window._xrayEcmpArrows = function () {
+  var de = typeof document !== "undefined" && document.querySelector(".xray-deep-engine");
+  if (!de || !de._deFlow || !de._deCfGeom) return;
+  var flow = de._deFlow, g = de._deCfGeom, C = g.C, q = g.q, fb = flow.querySelector(".de-fwd-b");
+  var old = flow.querySelectorAll(".de-fwd-ecmp");
+  for (var i = 0; i < old.length; i++) old[i].parentNode.removeChild(old[i]);
+  var restore = function () { if (fb) fb.style.visibility = ""; };   // hidden by visibility only: the frame redraw owns display
+  var s = window._lastXrayState, rt = (s && s.routing_table) || [];
+  var want = (window._xrayRtSel && window._xrayRtSel.prefix) || window._xrayBgpSelPrefix || "";
+  var row = want ? rt.filter(function (r) { return r && r.prefix === want && r.selected !== false && Array.isArray(r.nexthops) && r.nexthops.length > 1; })[0] : null;
+  var fbOn = !!fb && getComputedStyle(fb).display !== "none";   // the frame's own decision and CSS hides, not ours
+  if (!row || !fbOn || window._xrayCf || document.body.classList.contains("trace-active")) { restore(); return; }
+  var pts = [], seen = {};
+  for (var k = 0; k < row.nexthops.length; k++) {
+    var h = row.nexthops[k], sd = h && h.ip ? _xrayCfSideForNh(h.ip) : null;
+    var pt = !sd ? null : (sd.indexOf("if:") === 0 ? (g.X && g.X[sd.slice(3)]) : (sd === "left" ? g.L : g.R));
+    if (!pt) { restore(); return; }   // a path we cannot place -> keep the single arrow
+    var pk = pt[0].toFixed(0) + "," + pt[1].toFixed(0);
+    if (seen[pk]) { restore(); return; }   // two paths on the same end point would draw one arrow
+    seen[pk] = 1;
+    pts.push({ ip: h.ip, pt: pt });
+  }
+  var cm = _xrayEcmpColorMap(row.nexthops.map(function (x) { return x.ip || x.iface; }));
+  var NS = "http://www.w3.org/2000/svg", defs = flow.querySelector("defs");
+  if (!defs) { defs = document.createElementNS(NS, "defs"); flow.insertBefore(defs, flow.firstChild); }
+  var mk = function (tag, a) { var e = document.createElementNS(NS, tag); for (var n in a) e.setAttribute(n, a[n]); return e; };
+  // Arrow head: a little way down the path's own beam, so parallel links to the same peer (whose end points sit close
+  // together) still show separate heads. The beam is located like the beam repaint does (in/out label, else the extra
+  // link); without a beam the head stops at 90% of the end point, as the Loser-Path arrow does.
+  var dr = de.getBoundingClientRect(), ks = dr.width ? de.offsetWidth / dr.width : 1;
+  var beamOf = function (ifn) {
+    var b = null;
+    ["in", "out"].forEach(function (sd) { var lb = de.querySelector(".de-label." + sd); if (!b && lb && String(lb.textContent || "").split(" - ")[0].trim() === ifn) b = de.querySelector(".de-beam." + sd); });
+    if (!b) { var x = de.querySelector('.de-x[data-iface="' + ifn + '"]'); if (x) b = x.querySelector(".de-x-beam"); }
+    return b;
+  };
+  var headOf = function (h, pt) {
+    var b = h.iface && beamOf(h.iface), r = b && b.getBoundingClientRect();
+    if (r && r.width + r.height > 4) {
+      var cs = [[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom]].map(function (c) { return [(c[0] - dr.left) * ks, (c[1] - dr.top) * ks]; });
+      var dist = function (c) { return Math.hypot(c[0] - pt[0], c[1] - pt[1]); };
+      var near = cs.slice().sort(function (a, b2) { return dist(a) - dist(b2); })[0], far = cs.slice().sort(function (a, b2) { return dist(b2) - dist(a); })[0];
+      var lv = Math.hypot(far[0] - near[0], far[1] - near[1]);
+      if (lv > 20) { var D = Math.min(100, lv * 0.45); return [near[0] + (far[0] - near[0]) / lv * D, near[1] + (far[1] - near[1]) / lv * D]; }
+    }
+    return [C[0] + (pt[0] - C[0]) * 0.90, C[1] + (pt[1] - C[1]) * 0.90];
+  };
+  var tips = {};
+  pts.forEach(function (p, j) {
+    var col = cm[p.ip] || _XRAY_ECMP_COLORS[j % _XRAY_ECMP_COLORS.length], id = "de-fwd-ecmp-head-" + j;
+    var m = mk("marker", { id: id, "class": "de-fwd-ecmp", markerWidth: 7, markerHeight: 6, refX: 5, refY: 3, orient: "auto" });
+    m.appendChild(mk("polygon", { points: "0 0,7 3,0 6", fill: col }));
+    defs.appendChild(m);
+    var hd = headOf(row.nexthops.filter(function (x) { return x.ip === p.ip; })[0] || {}, p.pt), ax = hd[0], ay = hd[1];
+    flow.appendChild(mk("path", { "class": "de-fwd-ecmp", d: q(C, [(C[0] + ax) / 2, (C[1] + ay) / 2], [ax, ay]), fill: "none", stroke: col,
+      "stroke-width": 3, "stroke-linecap": "round", opacity: 0.92, "marker-end": "url(#" + id + ")" }));
+    tips[p.ip] = { x: ax, y: ay, col: col };
+  });
+  if (fb) fb.style.visibility = "hidden";
+  if (s && (s.protocol === "bgp" || s.bgp_configured)) {
+    var grp = (window._xrayLastBgpRoutes || []).filter(function (r) { return r && _xrayBgpKey(r) === want; });
+    var best = grp.filter(function (r) { return (r.status || "").indexOf(">") !== -1 || r.best; })[0];
+    var tp = best && tips[best.nexthop || best.next_hop];
+    if (tp) {
+      var left = tp.x < C[0];
+      var t = mk("text", { "class": "de-fwd-ecmp", "text-anchor": left ? "end" : "start", x: (tp.x + (left ? -9 : 9)).toFixed(1), y: (tp.y - 2).toFixed(1), fill: tp.col,
+        style: "font:600 10px ui-monospace,SFMono-Regular,Menlo,monospace;paint-order:stroke;stroke:rgba(0,12,18,0.9);stroke-width:3px" });
+      t.textContent = _xrayEcmpJa() ? "代表" : "rep.";
+      flow.appendChild(t);
+    }
+  }
 };
 function xrayBuildBgpView(routes) {
   /* LocPrf field parity: accept local_pref when locprf is empty, so non-best paths render their real LocPrf. */
