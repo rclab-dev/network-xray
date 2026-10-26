@@ -96,6 +96,19 @@
   #nx-problem .nxp-cta:hover{background:#80deea}
   /* nx_solved_check: Solved badge on the problem band */
   #nx-problem.nx-solved{border-left-color:#66bb6a}
+  /* nx_solved_cta: problem.json solved_cta = one line under the problem, shown only while it is solved (+ RCL preview) */
+  #nx-problem .nxp-solved-cta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px;padding-top:7px;border-top:1px dashed rgba(102,187,106,.45);font-size:13px;line-height:1.5}
+  #nx-problem .nxp-solved-txt{color:#c8e6c9;flex:1 1 320px}
+  #nx-problem .nxp-solved-link{color:#80deea;text-decoration:underline;text-underline-offset:2px}
+  #nx-problem .nxp-solved-link:hover{color:#e0f7fa;text-decoration-thickness:2px}
+  #nx-problem .nxp-solved-prev{flex:0 0 auto;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit;color:#0f1318;background:#66bb6a;border:0;border-radius:10px;padding:2px 10px}
+  #nx-solved-pip{position:fixed;right:16px;bottom:16px;z-index:9999;width:min(420px,calc(100vw - 32px));background:#0f1318;border:1px solid #66bb6a;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.6);overflow:hidden}
+  #nx-solved-pip .pip-bar{display:flex;align-items:center;gap:8px;padding:4px 8px;font:600 12px system-ui,sans-serif;color:#c8e6c9;background:#14211a}
+  #nx-solved-pip .pip-bar span{flex:1}
+  #nx-solved-pip .pip-x{cursor:pointer;border:0;background:transparent;color:#c8e6c9;font-size:16px;line-height:1}
+  #nx-solved-pip video{display:block;width:100%;background:#000}
+  #nx-solved-pip .pip-err{padding:14px 12px;font:13px/1.5 system-ui,sans-serif;color:#e0e0e0}
+  #nx-solved-pip .pip-err a{color:#a5d6a7}
   #nx-problem .nxp-solved{display:inline-block;margin-left:auto;font-size:12px;font-weight:700;color:#0f1318;background:#66bb6a;border-radius:10px;padding:2px 10px}
   /* nx_netlab_validate (2026-10-15): netlab validate: tests -> the same band (count, ✓ Solved) + one row per test */
   #nx-validate{display:none;background:#1c2736;border-left:3px solid #4dd0e1;padding:14px 20px;margin:14px 0 20px;border-radius:0 6px 6px 0}
@@ -779,6 +792,7 @@ window.__initNeXtOverview = function (data) {
         var host = document.getElementById('nx-problem'); if (!host) return;
         var pick = function(k, L){ var o = L === 'ja' ? ['ja', 'en'] : ['en', 'ja']; for (var i = 0; i < o.length; i++) { var v = pj[k + '_' + o[i]]; if (v) return v; } return pj[k] || ''; };
         if (!pick('title', 'en') && !pick('problem', 'en')) return;
+        window.__nxProblemJson = pj;   /* nx_solved_cta */
         var esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
         var cta = null;
         if (pj.rcl_qid) {
@@ -811,13 +825,66 @@ window.__initNeXtOverview = function (data) {
     var host = document.getElementById('nx-problem'); if (!host) return;
     var b = host.querySelector('.nxp-solved');
     host.classList.toggle('nx-solved', !!window.__nxSolved);
-    if (!window.__nxSolved) { if (b) b.remove(); return; }
+    var sc = host.querySelector('.nxp-solved-cta');   /* nx_solved_cta */
+    if (!window.__nxSolved) { if (b) b.remove(); if (sc) sc.remove(); return; }
+    nxSolvedCta(host, sc);
     var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
     var txt = L === 'ja' ? '\u2713 \u89e3\u3051\u307e\u3057\u305f (Solved)' : '\u2713 Solved';
     if (b) { b.textContent = txt; return; }
     var head = host.querySelector('.nxp-head');
     if (!head) { head = document.createElement('div'); head.className = 'nxp-head'; host.insertBefore(head, host.firstChild); }
     b = document.createElement('span'); b.className = 'nxp-solved'; b.textContent = txt; head.appendChild(b);
+  }
+  /* nx_solved_cta (2026-10-26): problem.json may carry solved_cta {label_en, label_ja, url_en, url_ja} = a link shown under the
+     problem once it is solved (e.g. a step-by-step walkthrough of the same problem). Optional: no field = nothing shown.
+     A missing language falls back en <-> ja; only http(s) links; the label is plain text, and the part in [square brackets] is
+     the link (underlined); a label without brackets is a link as a whole.
+     RouteCrushLab problems (rcl_qid, the optional RCL bridge) also get "Preview": a short muted video of the lab, loaded from
+     NX_RCL_PREVIEW only when the button is pressed (nothing is fetched before that). */
+  var NX_RCL_PREVIEW = { en: 'https://routecrushlab.com/static/pip/pl_en.webm', ja: 'https://routecrushlab.com/static/pip/pl_ja.webm' };
+  function nxSolvedLang(){ var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {} return L === 'ja' ? 'ja' : 'en'; }
+  function nxSolvedCta(host, sc){
+    var pj = window.__nxProblemJson, c = pj && pj.solved_cta;
+    if (!c || typeof c !== 'object') { if (sc) sc.remove(); return; }
+    var L = nxSolvedLang(), o = L === 'ja' ? ['ja', 'en'] : ['en', 'ja'];
+    var pick = function(k){ for (var i = 0; i < o.length; i++) { var v = c[k + '_' + o[i]]; if (v) return String(v); } return String(c[k] || ''); };
+    var t = pick('label'), u = pick('url');
+    if (!t || !/^https?:\/\//i.test(u)) { if (sc) sc.remove(); return; }
+    var key = L + '|' + u;
+    if (sc && sc.getAttribute('data-k') === key) return;
+    if (!sc) { sc = document.createElement('div'); sc.className = 'nxp-solved-cta'; host.appendChild(sc); }
+    sc.setAttribute('data-k', key); sc.innerHTML = '';
+    var mm = /^([\s\S]*?)\[(.+?)\]([\s\S]*)$/.exec(t) || ['', '', t, ''];
+    var tx = document.createElement('span'); tx.className = 'nxp-solved-txt';
+    tx.appendChild(document.createTextNode('\u25b6 ' + mm[1]));
+    var a = document.createElement('a'); a.className = 'nxp-solved-link'; a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = mm[2]; tx.appendChild(a);
+    if (mm[3]) tx.appendChild(document.createTextNode(mm[3]));
+    sc.appendChild(tx);
+    if (pj.rcl_qid) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'nxp-solved-prev';
+      b.textContent = L === 'ja' ? '\u25b6 \u52d5\u753b\u3067\u898b\u308b' : '\u25b6 Preview';
+      b.onclick = function(){ nxSolvedPip(u); }; sc.appendChild(b);
+    }
+  }
+  function nxSolvedPip(link){
+    var L = nxSolvedLang(), w = document.getElementById('nx-solved-pip');
+    if (w) w.remove();
+    w = document.createElement('div'); w.id = 'nx-solved-pip';
+    var bar = document.createElement('div'); bar.className = 'pip-bar';
+    var ti = document.createElement('span'); ti.textContent = L === 'ja' ? '\u30d1\u30b1\u30c3\u30c8\u30ad\u30e3\u30d7\u30c1\u30e3\u30e9\u30dc (RouteCrushLab)' : 'Packet Capture Lab (RouteCrushLab)';
+    var x = document.createElement('button'); x.type = 'button'; x.className = 'pip-x'; x.textContent = '\u00d7'; x.title = L === 'ja' ? '\u9589\u3058\u308b' : 'Close';
+    x.onclick = function(){ var v = w.querySelector('video'); if (v) { v.pause(); v.removeAttribute('src'); v.load(); } w.remove(); };
+    bar.appendChild(ti); bar.appendChild(x); w.appendChild(bar);
+    var v = document.createElement('video'); v.muted = true; v.autoplay = true; v.loop = true; v.playsInline = true; v.controls = true;
+    v.onerror = function(){
+      v.remove();
+      var e = document.createElement('div'); e.className = 'pip-err';
+      e.appendChild(document.createTextNode(L === 'ja' ? '\u52d5\u753b\u3092\u958b\u3051\u307e\u305b\u3093\u3067\u3057\u305f\u3002 ' : 'Could not load the preview. '));
+      var a = document.createElement('a'); a.href = link; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = L === 'ja' ? 'RouteCrushLab \u3067\u958b\u304f' : 'Open it on RouteCrushLab'; e.appendChild(a); w.appendChild(e);
+    };
+    w.appendChild(v); document.body.appendChild(w);
+    v.src = NX_RCL_PREVIEW[L] || NX_RCL_PREVIEW.en;   // the only request, made on the click
   }
   window.__nxSolvedTick = function(){
     try {

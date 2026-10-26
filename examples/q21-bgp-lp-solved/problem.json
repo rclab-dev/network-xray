@@ -9,6 +9,12 @@
   "rcl_qid": "q21",
   "rcl_mode": "tl",
   "ref": "oss-clab",
+  "solved_cta": {
+    "label_en": "Want to see how it recovers, step by step, with the key packet explained? Try [this problem's Packet Capture Lab on RouteCrushLab] (guest, no sign-up)",
+    "label_ja": "キーとなるパケットの解説付きで、復旧までの流れを見たい時は: [RouteCrushLab のこの問のパケットキャプチャラボ] (ゲスト・登録不要)",
+    "url_en": "https://routecrushlab.com/lab/pl/q21?try=guest&ref=oss-solved&lang=en",
+    "url_ja": "https://routecrushlab.com/lab/pl/q21?try=guest&ref=oss-solved&lang=ja"
+  },
   "version": "1",
   "author": "RouteCrush Lab",
   "license": "MIT",
