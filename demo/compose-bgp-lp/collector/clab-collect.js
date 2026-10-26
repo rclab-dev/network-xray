@@ -305,6 +305,15 @@ function parseBgpSummary(j) {
 // show ip bgp json -> [ {prefix, bestNexthop, valid} ]
 function parseBgpRoutes(j) {
   var out = [];
+  /* nx_vrf_bgp_table (2026-10-26): `show ip bgp vrf all json` = {<vrf>:{vrfName, routerId, routes:{...}}}; the plain form has the
+     routes at the top. A VRF key holds an object with routes / vrfName; a prefix key (old flat form) holds an array -> no mix-up. */
+  if (j && typeof j === 'object' && !j.routes && j.routerId == null && j.tableVersion == null) {
+    var _vk = Object.keys(j).filter(function (k) { var v = j[k]; return v && typeof v === 'object' && !Array.isArray(v) && (v.routes || v.vrfName != null); });
+    if (_vk.length) {
+      _vk.forEach(function (k) { var vn = j[k].vrfName || k; parseBgpRoutes(j[k]).forEach(function (r) { if (vn !== 'default') r.vrf = vn; out.push(r); }); });
+      return out;
+    }
+  }
   var routes = j && (j.routes || j);
   if (!routes || typeof routes !== 'object') return out;
   Object.keys(routes).forEach(function (prefix) {
@@ -592,7 +601,7 @@ function buildState(opts) {
     ospf_neighbor_full: nei.list.some(function (n) { return n.full; }),  /* REAL OSPF Full from show ip ospf neighbor (coexist band Full even under --proto bgp) */
     peer_sending_hello: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && nei.list.length > 0,  /* peer HEARD = ANY OSPF neighbor state (Init and beyond = we received the peer's Hello), not only Full -> Hello-in orb shows during forming too; honest: absent only when no neighbor at all (peer unconfigured/down) */
     iface_hellos: ifaceHellos, peer_hellos: peerHellos, peer_sending_hellos: peerSendingHellos,
-    bgp_neighbors: (bgpSum.list || []).map(function (n) { var o = { ip: n.ip, remote_as: n.remoteAs, ibgp: !!n.ibgp, state: n.state }; if (n.upDown != null) o.up_down = n.upDown; if (n.pfxRcd != null) o.pfx_rcvd = n.pfxRcd; return o; }),
+    bgp_neighbors: (bgpSum.list || []).map(function (n) { var o = { ip: n.ip, remote_as: n.remoteAs, ibgp: !!n.ibgp, state: n.state }; if (n.upDown != null) o.up_down = n.upDown; if (n.pfxRcd != null) o.pfx_rcvd = n.pfxRcd; if (n.vrf) o.vrf = n.vrf; return o; }),   /* nx_vrf_bgp_table: vrf only when set */
     ospf_neighbors: (nei.list || []).map(function (n) { var _p = String(n.state || '').split('/'); var _o = { router_id: n.rid, address: n.address, state: _p[0] || '', role: _p[1] || '', iface: n.iface, full: !!n.full }; if (n.af) _o.af = n.af; if (n.vrf) _o.vrf = n.vrf; return _o; }),   /* nx_ospf6 / nx_vrf_all: af / vrf only when set */
     target_on_path: false,
     cleared: routeOk && fullCount > 0
@@ -649,12 +658,14 @@ function buildState(opts) {
       if (r.origin) o.origin = r.origin;
       if (r.reason) o.reason = r.reason;
       if (r.multipath) { o.multipath = true; if (!r.best) o.status = '*='; }   /* nx_ecmp: FRR's "=" = multipath, used together with the best */
+      if (r.vrf) o.vrf = r.vrf;   /* nx_vrf_bgp_table: only when not the default VRF */
       return o;
     });
     /* nx_ecmp_fix2: FRR's table json puts multipath only on the non-best equal paths; the best of such a prefix is installed
        with them (ECMP), so mark it too -> every path of an ECMP prefix has multipath: true */
-    (function () { var _mpK = {}; s.bgp_routes.forEach(function (o) { if (o.multipath) _mpK[o.prefix + '/' + (o.prefixlen != null ? o.prefixlen : '')] = 1; });
-      s.bgp_routes.forEach(function (o) { if (o.best && _mpK[o.prefix + '/' + (o.prefixlen != null ? o.prefixlen : '')]) o.multipath = true; }); })();
+    (function () { var _k = function (o) { return (o.vrf || '') + '|' + o.prefix + '/' + (o.prefixlen != null ? o.prefixlen : ''); };   /* nx_vrf_bgp_table: per VRF */
+      var _mpK = {}; s.bgp_routes.forEach(function (o) { if (o.multipath) _mpK[_k(o)] = 1; });
+      s.bgp_routes.forEach(function (o) { if (o.best && _mpK[_k(o)]) o.multipath = true; }); })();
     // prefixes received = number of distinct prefixes (one best per prefix)
     // "Prefixes received" = distinct prefixes learned FROM a neighbor (best per prefix).
     // Exclude locally-originated routes (own lo/32 etc.: next-hop 0.0.0.0/empty) so the count is
@@ -663,7 +674,7 @@ function buildState(opts) {
     // PfxRcd. NOT filtered by best: a received route can be non-best/unusable (Q15 next-hop-self
     // missing -> received but 'no valid path') yet it WAS received. Exclude locally-originated
     // (next-hop 0.0.0.0/empty = self). Dedup by prefix (multiple paths per prefix count once).
-    s.pfx_rcvd = (function(){ var seen={}; s.bgp_routes.forEach(function(r){ if(r.next_hop && r.next_hop!=='0.0.0.0') seen[r.prefix + '/' + (r.prefixlen != null ? r.prefixlen : '')]=1; }); return Object.keys(seen).length; })();   /* nx_bgp_prefixlen: /24 and /25 are 2 */
+    s.pfx_rcvd = (function(){ var seen={}; s.bgp_routes.forEach(function(r){ if(r.next_hop && r.next_hop!=='0.0.0.0') seen[(r.vrf || '') + '|' + r.prefix + '/' + (r.prefixlen != null ? r.prefixlen : '')]=1; }); return Object.keys(seen).length; })();   /* nx_bgp_prefixlen: /24 and /25 are 2 */
   } else {
     s.has_ospf_route = routeOk && fullCount > 0;
     s.ping_ok = routeOk && fullCount > 0;
@@ -943,6 +954,8 @@ function _bgpPairOk(p) {
   if (_bgpTableLike(p[0])) return false;                                   /* the table sits in the summary's place (summary was text) */
   if (p[1] && typeof p[1] === 'object' && (p[1].ipv4Unicast || p[1].peers)) return false;   /* a 2nd summary object (one per VRF, no key) */
   if (p[0] == null && p[1] != null) return false;                          /* summary unreadable */
+  if (p[1] != null && (typeof p[1] !== 'object' || (!_bgpTableLike(p[1]) && Object.keys(p[1]).length &&
+      !Object.keys(p[1]).some(function (k) { var v = p[1][k]; return v && typeof v === 'object' && (v.routes || v.vrfName != null); })))) return false;   /* nx_vrf_bgp_table: the 2nd is neither a table nor {<vrf>:table} */
   return true;                                                             /* incl. both empty (BGP not up yet) = keep `vrf all` */
 }
 function _splitJsonObjs(out) {
@@ -996,7 +1009,7 @@ function collectLive(opts) {
     interface: _safe(function () { return _vtyshJson(container, 'show interface'); }),   /* the plain command already lists VRF interfaces with vrfName (FRR 8.4 and 10.7.1) */
     route: _safe(function () { return _vtyshJsonVrfAll(container, 'show ip route'); })
   };
-  var _BGP_PAIR = _vaNo(container, 'bgp-pair') ? ['show ip bgp summary', 'show ip bgp'] : ['show ip bgp vrf all summary', 'show ip bgp'];   /* nx_vrf_all: the summary of every VRF; the re-read below uses the same pair */
+  var _BGP_PAIR = _vaNo(container, 'bgp-pair') ? ['show ip bgp summary', 'show ip bgp'] : ['show ip bgp vrf all summary', 'show ip bgp vrf all'];   /* nx_vrf_bgp_table: the table of every VRF too */   /* nx_vrf_all: the summary of every VRF; the re-read below uses the same pair */
   if (proto === 'bgp') {
     var _bp = _vtyshBatch(container, _BGP_PAIR);  /* atomic pair: no tick straddle */
     if (_BGP_PAIR[0].indexOf('vrf all') >= 0 && !_bgpPairOk(_bp)) {   /* nx_vrf_all_fallback: the table slid into the summary's place -> the plain pair */
@@ -1311,6 +1324,20 @@ function selfTest() {
                        { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.20' } ], bestpath: { overall: true }, path: '65002' } ] } },
     route: { '10.1.0.0/24': FIX.route['10.1.0.0/24'] } });
   _assert(sbe2.bgp_routes.filter(function (r) { return r.multipath === true; }).length === 2, 'nx_ecmp_fix2: the best of an ECMP prefix is multipath too (FRR table json shape)');
+  /* nx_vrf_bgp_table: `show ip bgp vrf all json` - the same prefix in two VRFs stays two prefixes, each with its VRF */
+  var _vrfT = { 'default': { vrfId: 0, vrfName: 'default', tableVersion: 3, routerId: '10.0.0.1', routes: {
+      '10.0.8.0/24': [ { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.1.0.20' } ], bestpath: true, valid: true, path: '65002' } ] } },
+    'red': { vrfId: 9, vrfName: 'red', tableVersion: 4, routerId: '10.0.0.1', routes: {
+      '10.0.8.0/24': [ { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.9.0.2' } ], bestpath: true, multipath: true, valid: true, path: '65003' },
+                       { prefix: '10.0.8.0', prefixLen: 24, nexthops: [ { ip: '10.9.0.6' } ], multipath: true, valid: true, path: '65003' } ] } } };
+  var _vr = parseBgpRoutes(_vrfT);
+  _assert(_vr.length === 3 && _vr.filter(function (r) { return r.vrf === 'red'; }).length === 2 && !_vr.filter(function (r) { return r.nextHop === '10.1.0.20'; })[0].vrf, 'nx_vrf_bgp_table: per-VRF table parsed, vrf only on non-default');
+  var sbv = collectFromJson({ node: 'r1', proto: 'bgp', adjacency: [{ iface: 'eth0', peer: 'r2' }],
+    bgpSummary: FIX.bgpSummary, bgp: _vrfT, route: { '10.1.0.0/24': FIX.route['10.1.0.0/24'] } });
+  _assert(sbv.bgp_routes.filter(function (r) { return r.vrf === 'red' && r.multipath; }).length === 2 && !sbv.bgp_routes.filter(function (r) { return !r.vrf; })[0].multipath,
+    'nx_vrf_bgp_table: ECMP marked per VRF (the default-VRF path of the same prefix is not ECMP)');
+  _assert(sbv.pfx_rcvd === 2, 'nx_vrf_bgp_table: Prefixes received counts the same prefix once per VRF');
+  _assert(_bgpPairOk([ { 'default': { peers: {} } }, _vrfT ]) && !_bgpPairOk([ { 'default': { peers: {} } }, { foo: 1 } ]), 'nx_vrf_bgp_table: the pair check accepts {<vrf>:table} and refuses another shape');
 
   // --- clab mgmt-interface exclusion (opt-in, identified by SUBNET not iface name) ---
   var _mgIf = { eth0: { up: true, ip: '172.20.20.3', prefix: 24 }, eth1: { up: true, ip: '10.0.0.1', prefix: 24 } };

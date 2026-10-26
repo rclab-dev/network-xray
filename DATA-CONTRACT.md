@@ -289,6 +289,7 @@ Each entry in `bgp_routes[]` carries the visible attributes (`prefix`, `next_hop
 |---|---|---|
 | `prefixlen` | number | Prefix length (`24` for `203.0.113.0/24`). FRR gives `prefix` without the length, so the table shows `prefix/prefixlen`; `prefix` itself is kept as FRR gives it (problem checks compare it). プレフィックス長。 |
 | `multipath` | boolean | `true` on every path FRR marks multipath (`=` in `show bgp`): with `maximum-paths`, 2+ equal paths are all installed and share the traffic (ECMP). The best keeps `status` `*>` (the representative, advertised to neighbors); the others get `*=`. Absent when the prefix has no ECMP. multipath = 一緒に転送に使う等価の経路。 |
+| `vrf` | string | The VRF of the route (`show ip bgp vrf all json`), only when it is not the default VRF. The same prefix can be in two VRFs; the DeepDive shows one VRF at a time. VRF 名 (default 以外の時だけ)。 |
 | `sel_reason` | string | **(iii) best-path reason authority.** FRR's own `show bgp … json` `paths[].bestpath.selectionReason` for the best route (e.g. `Local Pref`, `MED`, `Older Path`, `Router ID`). When present it is the FIRST authority for naming the decider. FRR 自身の選択理由。存在すれば決定理由の第一権威。 |
 
 **Best-path reason: authority vs. derivation / ベストパス理由の権威と導出.**

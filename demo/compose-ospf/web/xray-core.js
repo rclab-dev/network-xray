@@ -2485,6 +2485,7 @@ function _xrayPaintRoutingPanel(s) {
     return '<tr data-prefix="' + _esc(pfx) + '"' + (on ? ' class="de-rt-sel"' : "") + '><td class="de-rt-pfx">' + _esc(pfx) + '</td>' + (_xrayEcmpRtCells(r, _esc) || ('<td class="de-rt-out">→ ' + _esc(out) + '</td><td class="de-rt-proto">' + _esc(proto) + "</td>")) + "</tr>";   /* nx_ecmp */
   }).join("");
   el.innerHTML = '<div class="de-rt-hd">Routing table</div><table class="de-rt-tbl"><tbody>' + rowsHtml + "</tbody></table>";
+  if (window._xrayVrfBarSync) window._xrayVrfBarSync();   /* nx_vrf_view */
   if (window._xrayEcmpPaintBeams) setTimeout(window._xrayEcmpPaintBeams, 0);   /* nx_ecmp: beams of ECMP interfaces in their colours */
   // arrow visibility follows the current selection: shown only for a non-local selected out-iface.
   var selIf = window._xrayRtSel && window._xrayRtSel.iface;
@@ -4745,7 +4746,7 @@ function _xrayDeExtraBoxes(de, s, cfg, g) {
     var x = de.querySelector('.de-x[data-iface="' + q(t.iface) + '"][data-peer="' + q(t.peer) + '"]');
     if (!x) return;
     var w = x.parentNode && x.parentNode.classList && x.parentNode.classList.contains("de-side-x") ? x.parentNode : null;
-    if (!w) { w = document.createElement("div"); w.className = "de-side-wrap de-side-x"; w.style.zIndex = "1"; de.appendChild(w); w.appendChild(x); }
+    if (!w) { w = document.createElement("div"); w.className = "de-side-wrap de-side-x"; w.style.zIndex = "2";   /* nx_ball_behind_links */ de.appendChild(w); w.appendChild(x); }
     w.setAttribute("data-iface", t.iface); w.setAttribute("data-peer", t.peer);
     w.style.transform = "rotate(" + t.deg.toFixed(2) + "deg)";
     keep.push(w);
@@ -4957,10 +4958,10 @@ function _xrayDeAngleView(s) {
       de.classList.add("de-angle-on");
       wL = document.createElement("div");
       wL.className = "de-side-wrap de-side-left";
-      wL.style.zIndex = "1";
+      wL.style.zIndex = "2";   /* nx_ball_behind_links: link lines over the lower ball */
       wR = document.createElement("div");
       wR.className = "de-side-wrap de-side-right";
-      wR.style.zIndex = "1";
+      wR.style.zIndex = "2";   /* nx_ball_behind_links */
       de.appendChild(wL);
       de.appendChild(wR);
       var mv = function(sels, w) {
@@ -5118,7 +5119,7 @@ function _xrayDeAngleView(s) {
       var _cTop = _cr.top - _dr0.top, _cH = _cr.height;
       de.querySelectorAll(".de-ospf, .de-bgp-proc").forEach(function(el) {
         el.style.top = Math.round(_cTop + _cH * .16) + "px";
-        el.style.zIndex = "7";
+        el.style.zIndex = el.classList.contains("de-ospf-coexist") ? "1" : "7";   /* nx_ball_behind_links: the lower OSPF ball (OSPF + BGP) sits under the link lines (2); the upper ball stays over the cylinder front (6) */
       });
     } catch (_e2) {}
     var der = de.getBoundingClientRect(), W = der.width, Hh = der.height, C = [ W / 2, Hh / 2 ];
@@ -6740,6 +6741,7 @@ function xrayBuildApplyState(config) {
     return declaredMode;
   }
   window.applyXrayState = function applyXrayState(s) {
+    if (window._xrayVrfView) { s = window._xrayVrfView(s); setTimeout(window._xrayVrfBarSync, 0); }   /* nx_vrf_view: one VRF at a time in the tables */
     window._lastXrayState = s;
     window._xrayProtocol = (config.xray && config.xray.protocol) ? protocol : (s.bgp_configured ? 'bgp' : (s.ospf_configured ? 'ospf' : 'static'));
     // resolve transit / bypass and publish the flags BEFORE driving the DeepDive view, so the
@@ -12486,6 +12488,112 @@ window._xrayEcmpArrows = function () {
         style: "font:600 10px ui-monospace,SFMono-Regular,Menlo,monospace;paint-order:stroke;stroke:rgba(0,12,18,0.9);stroke-width:3px" });
       t.textContent = _xrayEcmpJa() ? "代表" : "rep.";
       flow.appendChild(t);
+    }
+  }
+};
+/* nx_vrf_view (2026-10-26): a router with VRFs = one VRF at a time in the Routing table, the BGP Table (+ Best-Path / ECMP /
+   Loser-Path, which group by prefix) and the LSDB; a small "VRF" bar on the Routing table and the BGP Table switches it. The same
+   prefix can sit in two VRFs (multi-VRF labs reuse addresses), so mixing them in one table would merge two different routes.
+   Interfaces, neighbors and the links stay whole (they are the router's, each tagged with its VRF). The first VRF shown is the
+   one whose BGP table has routes (default first), else the default. A state with one VRF (or none) passes through unchanged. */
+function _xrayVrfOf(r) { return (r && r.vrf) ? String(r.vrf) : "default"; }
+function _xrayVrfList(s) {
+  var seen = {}, out = [];
+  ["bgp_routes", "routing_table", "bgp_neighbors", "ospf_neighbors"].forEach(function (k) {
+    (Array.isArray(s[k]) ? s[k] : []).forEach(function (r) { var v = _xrayVrfOf(r); if (!seen[v]) { seen[v] = 1; out.push(v); } });
+  });
+  out = out.filter(function (v) {   // the management VRF ("mgmt", netlab's FRR) is not part of the lab: no button unless BGP / OSPF runs in it
+    return v !== "mgmt" || ["bgp_routes", "bgp_neighbors", "ospf_neighbors"].some(function (k) { return (s[k] || []).some(function (r) { return _xrayVrfOf(r) === v; }); });
+  });
+  return out.sort(function (a, b) { return a === "default" ? -1 : b === "default" ? 1 : (a < b ? -1 : a > b ? 1 : 0); });
+}
+window._xrayVrfView = function (s) {
+  if (!s || typeof s !== "object") return s;
+  if (s._nxVrfSrc) s = s._nxVrfSrc;   // a view handed back in (re-apply of _lastXrayState) -> start again from the whole state
+  var vs = _xrayVrfList(s);
+  window._xrayVrfs = vs;
+  if (vs.length < 2) { window._xrayVrfCur = ""; return s; }
+  var cur = window._xrayVrfSel;
+  if (vs.indexOf(cur) < 0) {
+    /* a VRF with BGP sessions first (default first): its own originated routes alone (e.g. a loopback in the default VRF of a
+       PE whose peers all sit in VRFs) do not make it the one to show; then a VRF with BGP routes; then the default */
+    var has = function (k) { return vs.filter(function (v) { return (s[k] || []).some(function (r) { return _xrayVrfOf(r) === v; }); }); };
+    cur = has("bgp_neighbors")[0] || has("bgp_routes")[0] || "default";
+    if (vs.indexOf(cur) < 0) cur = vs[0];
+  }
+  window._xrayVrfCur = cur;
+  var on = function (r) { return _xrayVrfOf(r) === cur; };
+  var o = {};
+  Object.keys(s).forEach(function (k) { o[k] = s[k]; });
+  if (Array.isArray(s.bgp_routes)) o.bgp_routes = s.bgp_routes.filter(on);
+  if (Array.isArray(s.routing_table)) o.routing_table = s.routing_table.filter(on);
+  if (Array.isArray(s.lsdb_prefixes)) o.lsdb_prefixes = s.lsdb_prefixes.filter(on);
+  if (Array.isArray(s.bgp_routes) && s.pfx_rcvd != null) {   // Prefixes received of the VRF shown (the collector's rule: learned from a peer, once per prefix)
+    var seen = {};
+    o.bgp_routes.forEach(function (r) { if (r.next_hop && r.next_hop !== "0.0.0.0") seen[r.prefix + "/" + (r.prefixlen != null ? r.prefixlen : "")] = 1; });
+    o.pfx_rcvd = Object.keys(seen).length;
+  }
+  /* the forward arrow follows a route of the VRF shown: keep the collector's target when it is in this VRF, else the first
+     learned route of this VRF (a /32 first), as the collector picks one */
+  var rr = s.route_resolution || {}, rt = o.routing_table || [];
+  var inCur = rr.matched_prefix && rt.some(function (r) { return r.prefix === rr.matched_prefix && r.selected !== false &&
+    (rr.next_hop ? r.next_hop === rr.next_hop : (!rr.out_iface || r.out_iface === rr.out_iface)); });   // the same prefix in another VRF is another route
+  if (!inCur && Array.isArray(s.routing_table)) {
+    var lr = rt.filter(function (r) { return r.selected !== false && r.next_hop && !/^(connected|local|kernel)$/.test(r.protocol || ""); });
+    var ch = lr.filter(function (r) { return /\/(32|128)$/.test(r.prefix); })[0] || lr[0];
+    o.route_resolution = ch ? { target: String(ch.prefix).split("/")[0], resolved: true, protocol: ch.protocol || "", out_iface: ch.out_iface || "",
+      next_hop: ch.next_hop || "", matched_prefix: ch.prefix } : { target: "", resolved: false, protocol: "", out_iface: "", next_hop: "", matched_prefix: "" };
+  }
+  try { Object.defineProperty(o, "_nxVrfSrc", { value: s, enumerable: false }); } catch (e) {}
+  return o;
+};
+window.xrayVrfPick = function (v, ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  if (!v || v === window._xrayVrfCur || document.body.classList.contains("trace-active")) return;
+  window._xrayVrfSel = v;
+  window._xrayRtSel = null; window._xrayBgpSelPrefix = null;   // a prefix picked in the other VRF means nothing here
+  if (window.xrayCfClear) { window._xrayCfQuiet = true; try { window.xrayCfClear(); } finally { window._xrayCfQuiet = false; } }
+  if (window._xrayDecisionHide) window._xrayDecisionHide();
+  var s = window._lastXrayState;
+  if (s && window.applyXrayState) window.applyXrayState(s._nxVrfSrc || s);
+};
+function _xrayVrfBarHtml() {
+  var vs = window._xrayVrfs || [], cur = window._xrayVrfCur;
+  if (vs.length < 2 || !cur) return "";
+  var ja = (typeof _xrayEcmpJa === "function") && _xrayEcmpJa();
+  return '<span class="nx-vrf-lbl">VRF</span>' + vs.map(function (v) {
+    var e = _escapeHtml(v);
+    return '<button type="button" class="nx-vrf-chip' + (v === cur ? " on" : "") + '" data-vrf="' + e + '" onclick="xrayVrfPick(this.getAttribute(\'data-vrf\'),event)"'
+      + ' title="' + (ja ? "この VRF の表を見る" : "Show this VRF's tables") + '">' + e + "</button>";
+  }).join("");
+}
+window._xrayVrfBarSync = function () {
+  if (typeof document === "undefined") return;
+  if (!document.getElementById("nx-vrf-css")) {
+    var st = document.createElement("style"); st.id = "nx-vrf-css";
+    st.textContent = ".xray-deep-engine .nx-vrf-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:2px 0 4px;font:600 10px ui-monospace,SFMono-Regular,Menlo,monospace;pointer-events:auto}"
+      + ".xray-deep-engine .nx-vrf-lbl{color:#8a97a6;margin-right:2px}"
+      + ".xray-deep-engine .nx-vrf-chip{pointer-events:auto!important;cursor:pointer;padding:0 6px;line-height:15px;border:1px solid rgba(138,151,166,.55);border-radius:8px;background:transparent;color:#9fb3c8;font:inherit}"
+      + ".xray-deep-engine .nx-vrf-chip.on{border-color:#ffd54f;color:#ffd54f;background:rgba(255,213,79,.12)}";
+    document.head.appendChild(st);
+  }
+  var html = _xrayVrfBarHtml();
+  [["de-routing-panel", ".de-rt-hd"], ["de-bgp-panel", ".de-title"]].forEach(function (pr) {
+    var pn = document.getElementById(pr[0]); if (!pn) return;
+    var bar = pn.querySelector(".nx-vrf-bar");
+    if (!html) { if (bar) bar.parentNode.removeChild(bar); return; }
+    var hd = pn.querySelector(pr[1]); if (!hd) return;
+    if (!bar) { bar = document.createElement("div"); bar.className = "nx-vrf-bar"; }
+    if (bar.previousElementSibling !== hd) hd.parentNode.insertBefore(bar, hd.nextSibling);
+    if (bar.innerHTML !== html) bar.innerHTML = html;
+  });
+  var bt = document.querySelector("#de-bgp-panel .de-title");
+  if (bt) {
+    var sp = bt.querySelector(".nx-vrf-ttl"), txt = html ? " \u2014 vrf " + window._xrayVrfCur : "";
+    if (!txt) { if (sp) sp.parentNode.removeChild(sp); }
+    else {
+      if (!sp) { sp = document.createElement("span"); sp.className = "nx-vrf-ttl"; sp.style.color = "#ffd54f"; bt.insertBefore(sp, bt.querySelector("[class*='fs-ctl']")); }
+      if (sp.textContent !== txt) sp.textContent = txt;
     }
   }
 };
