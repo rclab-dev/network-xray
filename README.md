@@ -154,7 +154,7 @@ If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), 
 
 <a id="netlab-tool"></a>
 
-> **Before you start (netlab tool / `docker run`):** the container is given the **Docker socket (root-equivalent on the host)** — lab machines only. Its page (port 8600) listens on all interfaces and has no login. With netlab, `network-xray.json` holds the lab's values, passwords included, while the lab is up (`netlab down` removes it). With `docker run`, `-p 127.0.0.1:8600:8600` (instead of `-p 8600:8600`) opens the page to this machine only. [More](#security-notes)
+> **Before you start (netlab tool / `docker run`):** the container is given the **Docker socket (root-equivalent on the host)** — lab machines only. Its page (port 8600) listens on all interfaces and has no login. With netlab, `network-xray.json` holds the lab's values, passwords included, while the lab is up (with network-xray's `netlab-defaults.yml`, `netlab down` removes it). With `docker run`, `-p 127.0.0.1:8600:8600` (instead of `-p 8600:8600`) opens the page to this machine only. [More](#security-notes)
 
 **netlab tool (Docker image):** network-xray also comes as a container that **netlab starts for you** next to the lab. In your netlab topology, add <!-- nx_netlab_tool -->
 ```yaml
@@ -163,6 +163,7 @@ tools:
   network_xray:
 ```
 In netlab the tool is named `network_xray` (underscore), because tool names are also used in environment variable names; the product, repository and image keep the name network-xray.
+netlab releases after 26.10 also ship their own `network_xray` tool definition, so `tools: network_xray:` alone starts network-xray (graph and DeepDive). That definition does not write `network-xray.json`: the `validate:` band below does not appear, and a `network-xray.json` you write yourself is not removed by `netlab down`. For the band, keep the `defaults.sources.extra` line above (its tool definition also removes the file on `netlab down`). <!-- nx_readme_builtin_tool -->
 (if your topology already has a `defaults.sources.extra` list — the BGP Labs do — add the file to that list instead of a second line), then `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://<host>:8600/`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR and SR Linux only: other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
 Without netlab (any running containerlab lab): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (the page opens on this machine only; use `-p 8600:8600` to open it to other machines) — for the example labs (`examples/`) the problem band and **✓ Solved** show too (from the `problem.json` next to the topology); a lab without one has no band. The image is built for linux/amd64 and linux/arm64.
 If `netlab up` says the lab is already running, a lab with the same name is still up from another folder (`netlab status --all`): run `netlab down` there first.
@@ -667,7 +668,7 @@ OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を 
 
 <a id="netlab-tool-ja"></a>
 
-> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker のソケット (ホストの root と同じ強さ)** を渡します — ラボ用の機械でだけ。画面 (ポート 8600) は全部の口で待ち受け、ログインがありません。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (`netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
+> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker のソケット (ホストの root と同じ強さ)** を渡します — ラボ用の機械でだけ。画面 (ポート 8600) は全部の口で待ち受け、ログインがありません。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (network-xray の `netlab-defaults.yml` を使う時は `netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
 
 **netlab の tool として (Docker のイメージ):** network-xray はコンテナとしても動き、**netlab がラボと一緒に起動**します。netlab の topology に次を足して
 ```yaml
@@ -676,6 +677,7 @@ tools:
   network_xray:
 ```
 netlab では tool の名前は `network_xray` (下線) です。netlab の tool の名前は環境変数の名前にも使われるためです。製品・リポジトリ・イメージの名前は network-xray のままです。
+26.10 より後の netlab には、netlab 自身の `network_xray` の tool の定義も入っています。`tools: network_xray:` だけで network-xray が起動します (図と DeepDive)。ただしこの定義は `network-xray.json` を書きません。下の `validate:` の帯は出ず、自分で書いた `network-xray.json` は `netlab down` で消えません。帯を出すには、上の `defaults.sources.extra` の 1 行を残してください (その tool の定義は `netlab down` でファイルも消します)。<!-- nx_readme_builtin_tool -->
 (topology に `defaults.sources.extra` の一覧が既にある時 — BGP Labs はそう — は、2 行目を作らずその一覧に足してください)。`netlab up` すると、ラボの設定が終わった後に netlab が `ghcr.io/rclab-dev/network-xray:1` を起動し、`Open http://<host>:8600/` と案内します。OSPF / BGP は自分で見分けます (後から BGP を足しても追いかけます)。`netlab down` で一緒に片付きます。`multilab` プラグイン (`plugin: [ multilab ]`・`defaults.multilab.id: N`) を使うと、ラボごとに 8600 + N の番号になります (プラグインが要ります。無いとラボどうしの管理用の IP がぶつかります)。netlab の tool として確かめたのは FRR のラボ (ipSpace の BGP Labs の 3-rr・OSPF の例)。SR Linux も読めます (containerlab で確かめ済)。network-xray が中を読むのは FRR と SR Linux だけです。ほかの機器 (Linux のホスト・cEOS など) は全体図に出て、DeepDive にもそう出ます。止まっている・応答の無いルータは理由を添えて灰色で出ます。応答が無くなったルータは最後に読めた状態を「古い」と印を付けて残し、ほかのルータは書き換わり続けます。
 netlab を使わない場合 (動いている containerlab のラボなら何でも): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (画面はこの機械の中からだけ開けます。ほかの機械から開く時は `-p 8600:8600`) — 例題 (`examples/`) なら問題の帯と **✓ Solved** も出ます (topology の隣の `problem.json` から)。それが無いラボには帯は出ません。image は linux/amd64 と linux/arm64 です。
 `netlab up` が「already running」と言う時は、同じ名前のラボが別のフォルダで動いたままです (`netlab status --all`)。先にそこで `netlab down` してください。
