@@ -3,7 +3,7 @@
   "image": "ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:0.81.0@sha256:802c7ba9c4def414499a4eb43d6bb3105cbf38c9662cd9276071c522b8264028",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
+      "version": "24"
     }
   },
   "hostRequirements": {

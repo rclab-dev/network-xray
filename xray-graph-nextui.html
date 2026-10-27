@@ -839,7 +839,7 @@ window.__initNeXtOverview = function (data) {
      problem once it is solved (e.g. a step-by-step walkthrough of the same problem). Optional: no field = nothing shown.
      A missing language falls back en <-> ja; only http(s) links; the label is plain text, and the part in [square brackets] is
      the link (underlined); a label without brackets is a link as a whole.
-     RouteCrushLab problems (rcl_qid, the optional RCL bridge) also get "Preview": a short muted video of the lab, loaded from
+     RouteCrushLab problems (rcl_qid, the optional RCL bridge) whose link points to https://routecrushlab.com also get "Preview": a short muted video of the lab, loaded from
      NX_RCL_PREVIEW only when the button is pressed (nothing is fetched before that). */
   var NX_RCL_PREVIEW = { en: 'https://routecrushlab.com/static/pip/pl_en.webm', ja: 'https://routecrushlab.com/static/pip/pl_ja.webm' };
   function nxSolvedLang(){ var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {} return L === 'ja' ? 'ja' : 'en'; }
@@ -860,11 +860,14 @@ window.__initNeXtOverview = function (data) {
     var a = document.createElement('a'); a.className = 'nxp-solved-link'; a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = mm[2]; tx.appendChild(a);
     if (mm[3]) tx.appendChild(document.createTextNode(mm[3]));
     sc.appendChild(tx);
-    if (pj.rcl_qid) {
+    if (pj.rcl_qid && nxIsRclLink(u)) {   /* nx_solved_cta_rcl_only (v1.0.12): another package cannot put the RouteCrushLab preview next to its own link */
       var b = document.createElement('button'); b.type = 'button'; b.className = 'nxp-solved-prev';
       b.textContent = L === 'ja' ? '\u25b6 \u52d5\u753b\u3067\u898b\u308b' : '\u25b6 Preview';
       b.onclick = function(){ nxSolvedPip(u); }; sc.appendChild(b);
     }
+  }
+  function nxIsRclLink(u){   /* https://routecrushlab.com/… (or a subdomain) only */
+    try { var x = new URL(u), h = x.hostname.toLowerCase(); return x.protocol === 'https:' && (h === 'routecrushlab.com' || h.slice(-18) === '.routecrushlab.com'); } catch (e) { return false; }
   }
   function nxSolvedPip(link){
     var L = nxSolvedLang(), w = document.getElementById('nx-solved-pip');
