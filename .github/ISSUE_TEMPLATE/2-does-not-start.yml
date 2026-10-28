@@ -1,0 +1,67 @@
+name: It does not start / the page does not open
+description: The container exits, the page on :8600 does not open, or every router stays grey.
+title: "[start] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        English or 日本語, either is fine. Single maintainer: issues are read, no SLA, pull requests are not accepted.
+        **Please do not attach `network-xray.json`** (it holds the lab's passwords).
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How did you run it?
+      options:
+        - netlab tool (tools.network_xray)
+        - docker run with a containerlab lab
+        - demo.sh / run.sh (examples or a release package)
+        - GitHub Codespaces
+        - Other (say below)
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: |
+        `docker image inspect ghcr.io/rclab-dev/network-xray:1 --format '{{index .RepoDigests 0}}'` · `netlab version` · `containerlab version` · `docker version --format '{{.Server.Version}}'`
+      placeholder: "network-xray sha256:… · netlab 26.10 · containerlab 0.82.0 · Docker 27.3"
+    validations:
+      required: true
+
+  - type: input
+    id: host
+    attributes:
+      label: Host
+      description: OS and CPU (amd64 / arm64), and whether you open the page from the same machine.
+      placeholder: "Ubuntu 24.04 amd64, browser on another PC"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: The command you ran
+      description: The `docker run …` line, or the `tools:` part of your netlab topology.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: The container's log
+      description: |
+        `docker logs <network-xray container> 2>&1 | tail -50`
+        (the container name: `docker ps -a | grep network` — with netlab it is `<lab>_network_xray`)
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: saw
+    attributes:
+      label: What you saw
+      description: The message in the terminal or the browser, or a screenshot.

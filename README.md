@@ -1,11 +1,11 @@
 # network-xray
 
-**Why did BGP pick this path?** network-xray shows the candidate routes and the reason the router chose one — read from the routers' live state in your containerlab / netlab lab, drawn in the browser.
+**Why did BGP pick this path?** network-xray shows the candidate routes and the reason the router chose one. It reads the routers' live state in your containerlab or netlab lab and draws it in the browser.
 
 *English | [日本語](#日本語)*
 
 <!-- nx_readme_entry (2026-10-20) -->
-![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray reads the real FRR state and re-decides. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
+![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
 ### ▶ [Open the Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — no install
 
@@ -13,6 +13,18 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
 1. Click **r1** to look inside it.
 2. In its BGP table, compare the two candidates for `8.8.8.0/24`.
 3. Read the **Best-Path Decision** panel: why the winner won (here, Local Preference).
+
+<!-- nx_readme_three_ways (2026-10-28) -->
+**Three ways in:**
+1. **Just look** — the recorded demo above (no install), or a [30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) of a real lab: change one Local Preference and watch the best path move.
+2. **Your running containerlab lab** — one line, run in the lab's folder, then open <http://localhost:8600/>:
+   ```bash
+   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
+   ```
+   It only runs `show` commands, but the container is given the Docker socket (root-equivalent on the host) — lab machines only. [More](#security-notes)
+3. **An example lab** — `git clone` this repository and run `./demo.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab)).
+
+Using netlab? Add one line to your topology instead: [netlab tool](#netlab-tool).
 
 ### ▶ Change a real lab yourself — GitHub Codespaces
 
@@ -35,9 +47,20 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 - **Use it when** you run **FRR** or **Nokia SR Linux** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 / OSPFv3; on FRR, VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
 - **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux (they appear in the topology, but are not read).
 - **What it reads** (read-only commands; it changes nothing):
-  - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp vrf all json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. On a router with VRFs, the Routing table and the BGP Table show one VRF at a time: a VRF button above them switches (the management VRF `mgmt` gets no button). The IPv6 BGP table is not read.
+  - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp vrf all json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. On a router with VRFs, the Routing table and the BGP Table show one VRF at a time: use the VRF buttons above them to switch (the management VRF `mgmt` gets no button). The IPv6 BGP table is not read.
   - netlab `validate:` tests are judged like `netlab validate` does: the per-prefix form (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
   - SR Linux: `sr_cli 'info from state … | as json'`.
+
+<!-- nx_readme_checked_versions (2026-10-28) -->
+**Tested with** (only these versions have been tried; others may work):
+
+| | Versions |
+|---|---|
+| containerlab | 0.81.0 (host) · 0.82.0 (inside the image) |
+| FRR | 8.4 (the example labs, pinned) · 10.7.1 (netlab 26.10's default) |
+| SR Linux | 26.3.3 (read directly, containerlab) · 26.7.2 (as the device under test in netlab's BGP tests, judged from its FRR neighbors) |
+| netlab | 26.10 |
+| Node.js | 18 (for `demo.sh` / the collector without the image) |
 
 **Walkthrough:** [See why BGP picked that path — a browser X-ray for your containerlab lab](https://dev.to/routecrushlab/see-why-bgp-picked-that-path-a-browser-x-ray-for-your-containerlab-lab-3e) (dev.to)
 
@@ -47,7 +70,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 picture you can **reason about** — where the packet goes, why the route is (or isn't) there, and how a
 failure propagates and recovers. It renders a **topology view** and an **"inside the router"
 DeepDive cylinder** (forwarding plane, OSPF/BGP processor, hello & LSDB sync, the route it installs).
-You drive it with a few calls through the tidy `xrayCore` facade.
+You control it with a few calls through the `xrayCore` API.
 
 > This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en)**,
 > not a fork — extracted as a shared module so there is no drift.
@@ -58,7 +81,7 @@ or point it at live FRR / SR Linux — the **"why"** layer above the "what".
 It is **descriptive**, not a simulator: it draws the real state your feed reports. And it is
 **vendor-neutral** — every field it reads is a standard `show`-command concept. FRRouting and
 **Nokia SR Linux** are both implemented today (a mixed FRR + SR Linux lab renders uniformly); Cisco
-IOS, Arista, … map on via the same small-adapter pattern.
+IOS, Arista and others would need a small adapter of the same kind.
 
 **Status:** network-xray currently supports containerlab with FRR/SR Linux; CML2 and IOS-XE support is in progress.
 
@@ -68,8 +91,8 @@ router decided as it did — it is **not** a config checker. For pre-deployment 
 
 **On CLI parsing.** CLI parsing is best-effort and version-fragile; the robust path is **structured
 input** (`show … json`, or the collector reading device state directly — the FRR collector already
-reads `vtysh … json`). Screen-scraped CLI is a convenience fallback — **PRs with fixtures for more
-vendors/versions welcome.**
+reads `vtysh … json`). Screen-scraped CLI is a convenience fallback — **for a vendor or version it does not read,
+please open an issue with the raw output (`show … json`) attached as a fixture** (pull requests are not accepted, see [Scope & maintenance](#scope--maintenance)).
 
 ## Why
 
@@ -83,14 +106,14 @@ router at the forwarding decision (the deepdive).
 
 ## See it
 
-**Why one BGP route wins — and it re-decides live.** Two upstreams advertise `8.8.8.0/24` with
+**Why one BGP route wins — and the picture follows live.** Two upstreams advertise `8.8.8.0/24` with
 different Local Preference. Open r1: the BGP table shows both candidates and a **Best-Path
 Decision** panel that explains *why* the winner won (LocPref) — then change the LocPref on the running
-lab and the best path flips **in place, no reload** (via r3 at 100 ⇄ via r2 at 150). X-Ray reads the
-real FRR state and re-decides — it's *descriptive*, not a simulator. Or open the recorded, no-install
+lab and the best path flips **in place, no reload** (via r3 at 100 ⇄ via r2 at 150). X-Ray re-reads the
+real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path FRR itself marked best** (`bestpath`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
 version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
-![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray reads the real FRR state and re-decides. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
+![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
 **Also an OSPF lab** — OSPF goes Full (green tunnels, full LSDB), a link drops and a router is isolated
 (route lost, packet dropped), then it recovers and re-converges:
@@ -149,7 +172,7 @@ No git? Download one problem as a folder from the **[Releases](https://github.co
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 0.0.0.0:8080
 ```
-Use `ospf` instead of `bgp` for an OSPF-only lab. `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://<host>:8080/`. To stop: Ctrl-C, then `kill %1` for the collector.
+Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `demo.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://<host>:8080/`. To stop: Ctrl-C, then `kill %1` for the collector.
 If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
 
 <a id="netlab-tool"></a>
@@ -186,7 +209,7 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 | The collector feels heavy on a large lab (5+ nodes) | On larger labs (5+ nodes), if the collector feels heavy, add `--interval 2` (about 5 s to update instead of about 3 s). |
 | `docker pull` fails with "toomanyrequests" / rate limit | Docker Hub limits pulls without a login, counted per IP address — a classroom or office behind one connection can hit it when many people start at once. Run `docker login` first (a free Docker account raises the limit). |
 | `zebra is not running` / a router has no IP address or routes right after start | Occasionally (in our tests a few in 100 router starts with FRR 8.4), zebra crashes right after the container starts — sometimes without any message — and the router is left without its IP addresses and routes. This is an FRR start-up issue, not something you did. The example labs restart FRR by themselves when this happens (up to 3 times, also with a plain `containerlab deploy`), and so do `run.sh` / `demo.sh`. With packages from v1.0.0 / v1.0.1 or your own labs, fix it by hand: `docker exec clab-<lab>-<node> /usr/lib/frr/watchfrr.sh restart all`. |
-| A router shows nothing / routes do not appear | Give it 30–60 seconds (OSPF/BGP need time to come up). If it stays empty, check `docker ps` (the router is running) and `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`. |
+| A router shows nothing / routes do not appear | Give it 30–60 seconds (OSPF/BGP need time to come up). If it stays empty, check `docker ps` (the router is running) and `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`. Then ask the router directly: `docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'` (or `show ip ospf neighbor json`) — if that is empty too, the router has nothing yet; if it answers but the page stays empty, look at the log (`docker logs <network-xray container> 2>&1 | tail -30`: it names the containers it reads, `clab-<lab>-*`) and open an issue with both. |
 | A previous lab is still running | `sudo containerlab inspect --all` lists the labs; `sudo containerlab destroy -t <lab.clab.yml> --cleanup` removes one. |
 | WSL2 | Docker Desktop with the WSL2 backend (or Docker inside the WSL2 distro) is fine. Run everything inside the Linux shell, not in PowerShell. |
 | My fix is gone after restarting the lab | A fix lives only inside the running containers. Redeploying the lab (`./demo.sh`, `containerlab deploy`) starts again from the broken config — and restarting only FRR inside a router can bring the original config back too, even after `write memory`. |
@@ -237,7 +260,7 @@ view.openDeepDive();                                      // inside the router
 
 ## Examples (the gallery)
 
-Open `index.html` for the landing, or each directly:
+Open `index.html` for the gallery, or open a page directly:
 
 | Example | What it shows |
 |---|---|
@@ -255,7 +278,7 @@ Open `index.html` for the landing, or each directly:
 
 Already running a **[containerlab](https://containerlab.dev)** lab? `xray-graph.html` is a drop-in for
 `containerlab graph --template`. It renders your live topology as a topology view of **any size** (the
-layout is commodity — it doesn't try to out-draw NeXt UI), and then **clicking any node opens
+layout is basic — it does not try to compete with NeXt UI), and then **clicking any node opens
 that node's X-Ray DeepDive**: OSPF/BGP adjacencies, the LSDB (every prefix the node learned — its own
 networks and the remote loopbacks, own vs learned), and the route it installs. However many neighbors
 a node has, the DeepDive draws **all of its links at once**, each tunnel coming from the direction that
@@ -424,7 +447,7 @@ picture (the single-node panel looks *inside* one router; this one looks *across
 
 ### Click a node → look inside it (the two modules composed)
 
-The overlay and the single-node panel are meant to click together: `onSelect(name, state)` fires when
+The overlay and the single-node panel are designed to work together: `onSelect(name, state)` fires when
 a node is clicked (and once for the default node), so you wire it straight to `XrayNodePanel.render`
 and the topology view becomes a **click-through explorer** — the graph on the left, the selected router's
 **Routing / BGP / Best-Path + figure** on the right, exactly like a "Node Properties" tab:
@@ -605,7 +628,7 @@ FRRouting と **Nokia SR Linux** は実装済みです (FRR と SR Linux が混�
 
 **CLI パースについて。** CLI パースはベストエフォートでバージョン依存に脆く、堅牢な経路は**構造化入力**
 (`show … json`、またはコレクタがデバイス状態を直接読む — FRR コレクタは既に `vtysh … json` を読みます)。
-画面スクレイプの CLI は簡便なフォールバック — **より多くのベンダー／バージョンの fixture を伴う PR を歓迎します。**
+画面スクレイプの CLI は簡便なフォールバック — **読めないベンダー／版は、生の出力 (`show … json`) を fixture として issue に付けてください** (Pull Request は受け付けません)。
 
 ## なぜ
 

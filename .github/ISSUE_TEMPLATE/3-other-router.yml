@@ -1,0 +1,56 @@
+name: A router OS or version it does not read
+description: Your routers are drawn but not read (another vendor, or an FRR / SR Linux version whose output differs).
+title: "[router] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        network-xray reads FRR and Nokia SR Linux today (FRR is checked live with 8.4 and 10.7.1). Other devices are drawn in the topology but not read.
+        This issue helps decide what to read next. No promise of support. English or 日本語, either is fine.
+
+  - type: input
+    id: os
+    attributes:
+      label: Router OS and version
+      description: As shown by the device's own `show version`, and the container image name.
+      placeholder: "Arista cEOS 4.32.0F (ceos:4.32.0F)"
+    validations:
+      required: true
+
+  - type: input
+    id: lab
+    attributes:
+      label: How you run the lab
+      description: netlab (and its version) or containerlab (and its version).
+      placeholder: "netlab 26.10 · containerlab 0.82.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: want
+    attributes:
+      label: What you would like to see
+      multiple: true
+      options:
+        - BGP best path and the reason
+        - BGP neighbors
+        - OSPF neighbors / interfaces
+        - Routing table
+        - VRFs
+        - Other (say below)
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Sample output (structured if the device has it)
+      description: |
+        The device's JSON (or other structured) output for what you chose above — for example the BGP table for one prefix with two paths.
+        Remove anything you do not want public.
+      render: json
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else

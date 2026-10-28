@@ -1,0 +1,100 @@
+name: Something is wrong or missing in the picture
+description: A route, neighbor, VRF or the Best-Path panel is not shown, or shown wrong, for a running lab.
+title: "[picture] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying network-xray. English or 日本語, either is fine.
+        This is a single-maintainer project: issues are read, but there is no SLA, and pull requests are not accepted.
+        **Please do not attach `network-xray.json`** (netlab writes it; it holds the lab's passwords).
+
+  - type: dropdown
+    id: how
+    attributes:
+      label: How did you run it?
+      options:
+        - netlab tool (tools.network_xray)
+        - docker run with a containerlab lab
+        - demo.sh / run.sh (examples or a release package)
+        - GitHub Codespaces
+        - Other (say below)
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: |
+        network-xray image, netlab (if used), containerlab. For example:
+        `docker image inspect ghcr.io/rclab-dev/network-xray:1 --format '{{index .RepoDigests 0}}'` · `netlab version` · `containerlab version`
+      placeholder: "network-xray sha256:… (or v1.0.13) · netlab 26.10 · containerlab 0.82.0"
+    validations:
+      required: true
+
+  - type: input
+    id: routers
+    attributes:
+      label: Router OS and version
+      description: "FRR: `docker exec <node> vtysh -c 'show version'` · SR Linux: `docker exec <node> sr_cli show version`"
+      placeholder: "FRRouting 8.4_git (all nodes)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: what
+    attributes:
+      label: What was not visible (or wrong)?
+      multiple: true
+      options:
+        - Topology (a node or link missing / wrong)
+        - OSPF neighbor or interface
+        - BGP neighbor (session state)
+        - BGP table (a prefix or a path missing)
+        - Best-Path Decision panel (wrong winner or reason)
+        - Routing table
+        - VRF (button missing, wrong VRF shown)
+        - validate band (netlab tests, ✓ Solved)
+        - A router stays grey / "old"
+        - Other (say below)
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what you saw
+      description: Name the node, and the prefix / neighbor if there is one. A screenshot helps.
+      placeholder: |
+        On r1, 10.0.0.0/24 has two paths in `show ip bgp`, but the BGP table in the DeepDive shows one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: cli
+    attributes:
+      label: The router's own answer
+      description: |
+        The output of the matching command on that node, so we can see what network-xray had to read.
+        For example: `docker exec <node> vtysh -c 'show ip bgp vrf all json'` (BGP) · `… 'show ip ospf vrf all neighbor json'` (OSPF) · `… 'show ip route vrf all json'` (routes).
+        Shorten it to the part that matters if it is long.
+      render: json
+
+  - type: textarea
+    id: state
+    attributes:
+      label: The state network-xray read (optional, helps a lot)
+      description: |
+        - netlab tool / docker run: copy it out of the running network-xray container:
+          `docker cp <network-xray container>:/tmp/network-xray/xray-states.js .`
+          (the container name: `docker ps | grep network` — with netlab it is `<lab>_network_xray`)
+        - demo.sh / run.sh: the file `xray-states.js` in the repository folder (or the package folder).
+        It holds the routers' state (addresses, neighbors, routes), not passwords. Remove anything you do not want public, then attach the file or paste the part for the node.
+
+  - type: textarea
+    id: topo
+    attributes:
+      label: Topology (optional)
+      description: The netlab topology or the .clab.yml, or the smallest lab that shows the problem.
+      render: yaml

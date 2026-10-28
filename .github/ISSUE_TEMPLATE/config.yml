@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security notes (Docker socket, port 8600)
+    url: https://github.com/rclab-dev/network-xray#security-notes
+    about: Read this before opening the page to other machines.
