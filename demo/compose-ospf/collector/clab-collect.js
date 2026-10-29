@@ -76,6 +76,7 @@ function parseOspfNeighbors(j) {
   Object.keys(j.neighbors).forEach(function (rid) {
     var arr = j.neighbors[rid]; if (!Array.isArray(arr)) arr = [arr];
     arr.forEach(function (n) {
+      if (!n || typeof n !== 'object') return;   /* a null / non-object neighbor entry (broken output) is skipped, not a crash */
       var state = n.state || n.nbrState || n.converged || '';   // "Full/DR", "Init/-", "2-Way/DROther"
       // FRR 8.x `show ip ospf neighbor json` reports ifaceName as "eth1:10.1.12.2" (iface:local-ip);
       // strip the :ip so it matches the bare clab link iface (eth1) used for peer mapping & labels.
@@ -209,7 +210,7 @@ function _isKernelTunnelIf(ifn, d) {
 // show interface json -> { eth0: {up, ip, prefix} }  (fallback when ospf interface json is thin)
 function parseInterfaces(j) {
   var out = {};
-  if (!j) return out;
+  if (!j || typeof j !== 'object' || Array.isArray(j)) return out;   /* a string / array is not an iface map (was one iface per character) */
   Object.keys(j).forEach(function (ifn) {
     var d = j[ifn] || {};
     if (_isKernelTunnelIf(ifn, d)) return;   /* nx_kernel_tunnel_if */
@@ -258,13 +259,14 @@ function parseRoutes(j, _vrf) {
     if (!Array.isArray(arr)) arr = [arr];
     arr.forEach(function (r) {
       if (!r || typeof r !== 'object') return;
-      var nhs = (r.nexthops || []).map(function (nh) {
+      /* nexthops not an array / null entries (broken output) -> skipped, not a crash */
+      var nhs = (Array.isArray(r.nexthops) ? r.nexthops : []).filter(function (nh) { return nh && typeof nh === 'object'; }).map(function (nh) {
         return { ip: nh.ip || null, iface: nh.interfaceName || nh.interface || '', connected: !!nh.directlyConnected, active: nh.active !== false,
                  fib: nh.fib === true };   /* nx_ecmp: installed in the FIB (FRR sets fib:true only on the next-hops it uses) */
       });
       var _rr = {
-        prefix: r.prefix || prefix,
-        protocol: (r.protocol || '').toLowerCase(),   // "ospf" | "ospf6" | "bgp" | "connected" | "static" | "local"
+        prefix: String(r.prefix || prefix),
+        protocol: String(r.protocol || '').toLowerCase(),   // "ospf" | "ospf6" | "bgp" | "connected" | "static" | "local"
         selected: !!r.selected,
         nexthops: nhs
       };
