@@ -1335,7 +1335,7 @@ var _helloKfCache = {};
 function _xrayBuildHelloKf(name, interval, direction) {
   var key = name + "_" + interval;
   if (_helloKfCache[key]) return _helloKfCache[key];
-  var tPct = _HELLO_TRAVEL_TIME / interval * 100;
+  var tPct = Math.max(8, Math.min(80, _HELLO_TRAVEL_TIME / interval * 100));  /* same 8%..80% clamp as _mkKf (dual-link) */
   var fadeIn = Math.min(tPct * .13, 3);
   var fadeOut = Math.min(tPct + tPct * .2, 99);
   var positions = {
