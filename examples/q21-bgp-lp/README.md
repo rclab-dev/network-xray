@@ -7,7 +7,7 @@ Nodes: r1 (FRR), r2 (FRR), r3 (FRR)
 > But on r1, the path via r3 (the slow ISP) is the best path.
 > Look into r1's BGP configuration and fix it so that the path via r2 (the fast ISP) becomes the best path.
 > Keep the route from r3 as a backup.
-> After fixing it, confirm with `show ip bgp 8.8.8.0/24` on r1 that the path via r2 is best (>) and that the path via r3 is still there.
+> After fixing it, confirm with `show ip bgp` on r1 that the 8.8.8.0/24 path via r2 has `*>` and that the path via r3 is still there.
 
 [日本語は下にあります](#日本語)
 
@@ -70,7 +70,7 @@ This package gives you the broken lab and the X-Ray view. **Hints and the explan
 > ところが r1 では、r3 (低速 ISP) 経由が best path になっています。
 > r1 の BGP の設定を調べて、r2 (高速 ISP) 経由が best path になるように直してください。
 > r3 からの経路は予備として残してください。
-> 直したら、r1 で `show ip bgp 8.8.8.0/24` を見て、r2 経由の経路が best (>) になり、r3 経由の経路も残っていることを確認してください。
+> 直したら、r1 で `show ip bgp` を見て、8.8.8.0/24 の r2 経由の経路に `*>` が付き、r3 経由の経路も残っていることを確認してください。
 
 ## 必要なもの
 - Linux + **Docker**・**containerlab**・**Node.js 18 以上**

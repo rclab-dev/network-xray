@@ -348,7 +348,7 @@ window.__xrayGraphBoot = function () {
       var _uL = 'en'; try { _uL = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
       var _uja = _uL === 'ja';
       var _umsg = ({
-        device: _uja ? 'この機器は network-xray では中を読みません (読むのは FRR と SR Linux)。図にだけ出しています。' : 'network-xray does not read inside this device (it reads FRR and SR Linux). It is drawn in the topology only.',
+        device: _uja ? 'この機器は network-xray では中を読みません (読むのは FRR・SR Linux・Cisco IOS-XE)。図にだけ出しています。' : 'network-xray does not read inside this device (it reads FRR, SR Linux and Cisco IOS-XE). It is drawn in the topology only.',
         stopped: _uja ? 'コンテナが止まっています。中は読めません。' : 'The container is not running: nothing to read.',
         timeout: _uja ? '応答がありません。' : 'No answer.',
         error: _uja ? '読めませんでした (network-xray のログを見てください)。' : 'Could not be read (see the network-xray log).'
@@ -357,6 +357,16 @@ window.__xrayGraphBoot = function () {
       if (_ustale) _umsg += _uja ? ' 下は最後に読めた時 (' + (_ust.nx_stale_since || '?') + ') の古い情報です。' : ' Below is its last good state (' + (_ust.nx_stale_since || '?') + '), which may be out of date.';
       _unote = document.createElement('div'); _unote.className = 'nx-unread'; _unote.textContent = nodeId + ': ' + _umsg;
       if (!_ustale) { box.appendChild(_unote); var _ude = document.querySelector('.xray-deep-engine'); if (_ude) _ude.style.display = 'none'; return; }
+    }
+    /* nx_ios_parse_warnings (2026-10-27): the IOS collector says which outputs it could not read completely (cut by --More--,
+       a command the image does not know, an empty answer, VRFs) - shown as a note above the drawing, never guessed */
+    if (_ust && _ust.parse_warnings && _ust.parse_warnings.length && !_unote) {
+      var _wL = 'en'; try { _wL = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
+      var _wja = _wL === 'ja', _wn = _ust.parse_warnings.length;
+      var _wwhy = { paging: _wja ? '--More-- で切れた' : 'cut by --More--', cli_error: _wja ? 'コマンドが通らない' : 'command not accepted', empty: _wja ? '空の答え' : 'empty answer', vrf: _wja ? 'VRF は未対応' : 'VRFs not read yet' };
+      var _wlist = _ust.parse_warnings.map(function (w) { return w.cmd + ' (' + (_wwhy[w.why] || w.why) + ')'; }).join(', ');
+      _unote = document.createElement('div'); _unote.className = 'nx-unread';
+      _unote.textContent = nodeId + ': ' + (_wja ? '読めなかった出力が ' + _wn + ' つあります: ' + _wlist + '。下の絵はそれを除いて描いています。' : _wn + ' output' + (_wn > 1 ? 's' : '') + ' could not be read completely: ' + _wlist + '. The drawing below leaves them out.');
     }
     var views = window.clabXray.deepViews(fullCfg, nodeId, { state: window.LIVE_STATES && window.LIVE_STATES[nodeId], focusPrefix: window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.prefix });   /* nx_default_pair */
     if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }

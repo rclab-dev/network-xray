@@ -1,0 +1,32 @@
+Loopback0 is up, line protocol is up 
+  Internet Address 10.0.0.4/32, Interface ID 7, Area 0.0.0.0
+  Attached via Interface Enable
+  Process ID 1, Router ID 10.0.0.4, Network Type LOOPBACK, Cost: 1
+  Topology-MTID    Cost    Disabled    Shutdown      Topology Name
+        0           1         no          no            Base
+  Enabled by interface config, including secondary ip addresses
+  Loopback interface is treated as a stub Host
+Ethernet0/1.502 is up, line protocol is up 
+  Internet Address 172.16.2.4/24, Interface ID 8, Area 0.0.0.0
+  Attached via Interface Enable
+  Process ID 1, Router ID 10.0.0.4, Network Type POINT_TO_POINT, Cost: 10
+  Topology-MTID    Cost    Disabled    Shutdown      Topology Name
+        0           10        no          no            Base
+  Enabled by interface config, including secondary ip addresses
+  Transmit Delay is 1 sec, State POINT_TO_POINT
+  Timer intervals configured, Hello 10, Dead 40, Wait 40, Retransmit 5
+    oob-resync timeout 40
+    Hello due in 00:00:06
+  Supports Link-local Signaling (LLS)
+  Cisco NSF helper support enabled
+  IETF NSF helper support enabled
+  Can be protected by per-prefix Loop-Free FastReroute
+  Can be used for per-prefix Loop-Free FastReroute repair paths
+  Not Protected by per-prefix TI-LFA
+  Index 1/2/2, flood queue length 0
+  Next 0x0(0)/0x0(0)/0x0(0)
+  Last flood scan length is 1, maximum is 1
+  Last flood scan time is 0 msec, maximum is 0 msec
+  Neighbor Count is 1, Adjacent neighbor count is 1 
+    Adjacent with neighbor 10.0.0.1
+  Suppress hello for 0 neighbor(s)

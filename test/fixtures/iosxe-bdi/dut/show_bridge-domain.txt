@@ -1,0 +1,58 @@
+
+
+Bridge-domain 500 (2 ports in all)
+State: UP                    Mac learning: Enabled
+Aging-Timer: 5 minute(s)
+Unknown Unicast Flooding Suppression: Disabled
+Maximum address limit: 10240
+    BDI500  (up)
+    Ethernet0/2 service instance 500
+  Software Bridging Info for Bridge Domain 500, contains 1 ports
+  Flood list id 1, size 2
+  Unknown unicast list id 2, size 1
+  Unicast forwarding information:
+    MAC address        Flags                   Pseudoport
+    aabb.cc00.0210     dynamic                 Ethernet0/2 service instance 500
+    aabb.cc80.01ff     static                  BDI500
+    aac1.ab3a.2731     dynamic                 Ethernet0/2 service instance 500
+  Multicast forward information:
+    (0.0.0.0, 224.0.0.0) oif olist id 1
+    (0.0.0.0, 224.0.1.39) oif olist id 1
+    (0.0.0.0, 224.0.1.40) oif olist id 1
+Bridge-domain 501 (2 ports in all)
+State: UP                    Mac learning: Enabled
+Aging-Timer: 5 minute(s)
+Unknown Unicast Flooding Suppression: Disabled
+Maximum address limit: 10240
+    BDI501  (up)
+    Ethernet0/3 service instance 501
+  Software Bridging Info for Bridge Domain 501, contains 1 ports
+  Flood list id 3, size 2
+  Unknown unicast list id 4, size 1
+  Unicast forwarding information:
+    MAC address        Flags                   Pseudoport
+    aabb.cc00.0310     dynamic                 Ethernet0/3 service instance 501
+    aabb.cc80.01ff     static                  BDI501
+    aac1.ab53.49bb     dynamic                 Ethernet0/3 service instance 501
+  Multicast forward information:
+    (0.0.0.0, 224.0.0.0) oif olist id 3
+    (0.0.0.0, 224.0.1.39) oif olist id 3
+    (0.0.0.0, 224.0.1.40) oif olist id 3
+Bridge-domain 502 (2 ports in all)
+State: UP                    Mac learning: Enabled
+Aging-Timer: 5 minute(s)
+Unknown Unicast Flooding Suppression: Disabled
+Maximum address limit: 10240
+    BDI502  (up)
+    Ethernet0/1 service instance 502
+  Software Bridging Info for Bridge Domain 502, contains 1 ports
+  Flood list id 5, size 2
+  Unknown unicast list id 6, size 1
+  Unicast forwarding information:
+    MAC address        Flags                   Pseudoport
+    aabb.cc00.0410     dynamic                 Ethernet0/1 service instance 502
+    aabb.cc80.01ff     static                  BDI502
+  Multicast forward information:
+    (0.0.0.0, 224.0.0.0) oif olist id 5
+    (0.0.0.0, 224.0.1.39) oif olist id 5
+    (0.0.0.0, 224.0.1.40) oif olist id 5

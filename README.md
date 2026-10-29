@@ -44,12 +44,13 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 ## When to use
 
-- **Use it when** you run **FRR** or **Nokia SR Linux** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 / OSPFv3; on FRR, VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
-- **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux (they appear in the topology, but are not read).
+- **Use it when** you run **FRR**, **Nokia SR Linux** or **Cisco IOS-XE (IOL)** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 on all three; on FRR, OSPFv3 and VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
+- **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux / Cisco IOL (they appear in the topology, but are not read).
 - **What it reads** (read-only commands; it changes nothing):
   - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp vrf all json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. On a router with VRFs, the Routing table and the BGP Table show one VRF at a time: use the VRF buttons above them to switch (the management VRF `mgmt` gets no button). The IPv6 BGP table is not read.
   - netlab `validate:` tests are judged like `netlab validate` does: the per-prefix form (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
   - SR Linux: `sr_cli 'info from state … | as json'`.
+  - Cisco IOS-XE (containerlab kind `cisco_iol`), over SSH: plain-text `show` commands — see [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol).
 
 <!-- nx_readme_checked_versions (2026-10-28) -->
 **Tested with** (only these versions have been tried; others may work):
@@ -59,6 +60,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 | containerlab | 0.81.0 (host) · 0.82.0 (inside the image) |
 | FRR | 8.4 (the example labs, pinned) · 10.7.1 (netlab 26.10's default) |
 | SR Linux | 26.3.3 (read directly, containerlab) · 26.7.2 (as the device under test in netlab's BGP tests, judged from its FRR neighbors) |
+| Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`, image built with vrnetlab) |
 | netlab | 26.10 |
 | Node.js | 18 (for `demo.sh` / the collector without the image) |
 
@@ -79,11 +81,11 @@ It runs **on top of your execution engine** — paste a **containerlab** topolog
 or point it at live FRR / SR Linux — the **"why"** layer above the "what".
 
 It is **descriptive**, not a simulator: it draws the real state your feed reports. And it is
-**vendor-neutral** — every field it reads is a standard `show`-command concept. FRRouting and
-**Nokia SR Linux** are both implemented today (a mixed FRR + SR Linux lab renders uniformly); Cisco
-IOS, Arista and others would need a small adapter of the same kind.
+**vendor-neutral** — every field it reads is a standard `show`-command concept. FRRouting,
+**Nokia SR Linux** and **Cisco IOS-XE (IOL)** are implemented today (a mixed lab renders uniformly);
+Arista and others would need a small adapter of the same kind.
 
-**Status:** network-xray currently supports containerlab with FRR/SR Linux; CML2 and IOS-XE support is in progress.
+**Status:** network-xray supports containerlab with FRR, SR Linux and Cisco IOL (IOS-XE).
 
 **Not a config verifier.** network-xray reads **live state** (`show` / JSON = reality) to show *why* a
 router decided as it did — it is **not** a config checker. For pre-deployment simulation from config
@@ -196,6 +198,28 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 **Rows in the graph:** a netlab lab opens with its routers in rows — top row = groups named like `provider` / `isp*` / `spine(s)` / `external`, bottom row = `leaf(s)` / `customer(s)` / `host(s)` …, the rest in between (`external` is looked at last: in the BGP Labs it means "pre-configured", so a customer router in it can land on top — set the rows as below). To set the rows yourself, give nodes containerlab's `graph-level` label (1 = top row; it wins over the group names): in netlab `nodes.s1.clab.labels: { graph-level: 1 }` (only with this repository's tool definition — the `defaults.sources.extra` line above — which allows `clab.labels`; without it netlab stops at that line), in a containerlab topology `labels: { graph-level: 1 }` under the node. Horizontal / Vertical re-arrange the rows; nodes you drag keep their place in this browser. <!-- nx_netlab_tiers -->
 <a id="security-notes"></a>
 **Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR and `sr_cli 'info from state …'` on SR Linux (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The page on port 8600 listens on all interfaces and has no login: anyone who can reach the machine can see the lab's state, so keep it on a trusted network (or block the port in front of it).
+
+<!-- nx_readme_iosxe (2026-10-29) / nx_readme_iosxe_w5 (2026-10-30) -->
+## Cisco IOS-XE (IOL)
+
+network-xray reads **Cisco IOS-XE** routers in containerlab too: nodes of kind `cisco_iol` go to `clab-iosxe-collect.js`, which logs in
+over SSH, runs read-only `show` commands and builds the same state as for FRR — the same DeepDive, Best-Path and topology views, and a lab
+can mix FRR, SR Linux and IOL. Example labs: `examples/q5-ospf-iol`, `examples/q15-bgp-ospf-static-iol`, `examples/q21-bgp-lp-iol` (each with a
+`-solved` version).
+
+- **No image is included.** network-xray does not ship the IOL binary or a built image — obtain IOL under your own Cisco license, build a
+  container image with [vrnetlab](https://containerlab.dev/manual/kinds/cisco_iol/), and put its name on the `image:` line of your `kind: cisco_iol` nodes.
+- **Login:** containerlab's defaults (`admin` / `admin`); set `NX_IOS_USER` / `NX_IOS_PASSWORD` if yours differ. The password is handed to ssh
+  through an askpass file, never on the command line.
+- **What is read** (plain text, every 10 s by default — change it with `NX_IOS_INTERVAL` (seconds)): `show ip ospf neighbor`, `show ip ospf interface` (brief and full),
+  `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show bridge-domain`. ECMP routes, unnumbered
+  interfaces (`ip unnumbered Loopback0`) and OSPF on a bridge-domain interface (`BDI`, shown as e.g. `Ethernet0/2 (BDI500)`) are read.
+  **VRFs are not read yet** — a lab with VRFs says so instead of drawing a wrong picture (the management VRF is ignored).
+- **When something cannot be read** (output cut by `--More--`, a command the image does not know, an empty answer) the state carries
+  `parse_warnings` and the page shows how many — it does not guess.
+- **Differences from FRR you will see:** IOS's `show ip route` lists only the chosen routes, so the routing table has no "candidate" rows.
+  A shut-down OSPF interface is drawn red, and the OSPF heading counts only the interfaces that are up.
+- Only `cisco_iol` has been tried on a real lab; other IOS-XE kinds (`cisco_c8000v`, `cisco_csr1000v`, `cisco_cat9kv`) are not read yet.
 
 ## FAQ / Troubleshooting
 
@@ -591,12 +615,13 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 ## いつ使うか
 
-- **使う時:** containerlab や netlab で **FRR** か **Nokia SR Linux** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (FRR は OSPFv2 / OSPFv3。VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
-- **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux 以外の機器 (全体図には出るが、中は読まない)。
+- **使う時:** containerlab や netlab で **FRR**・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (OSPFv2 は 3 つとも。FRR は OSPFv3 と VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
+- **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux / Cisco IOL 以外の機器 (全体図には出るが、中は読まない)。
 - **読むもの** (読む命令だけ・何も変えません):
   - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp vrf all json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp vrf all summary json`、`show ip ospf vrf all neighbor json`、`show ip ospf vrf all interface json`、`show ip route vrf all json`、`show interface json`、`show running-config` (`vrf all` に JSON で答えない FRR は素の命令で読む)。`router ospf6` のあるルータは OSPFv3 も: `show ipv6 ospf6 vrf all neighbor json`、`show ipv6 ospf6 vrf all interface json`、`show ipv6 route vrf all json`。VRF のあるルータでは、経路表と BGP の表を 1 つの VRF ずつ出す (上の VRF のボタンで切り替え。管理用の VRF `mgmt` にはボタンを出さない)。IPv6 の BGP の表は読まない。
   - netlab の `validate:` の検査は `netlab validate` と同じ読み方: 宛先ごとの形 (`show bgp ipv4 unicast <宛先> json`) で、勝った経路は `bestpath.overall`。
   - SR Linux は `sr_cli 'info from state … | as json'`。
+  - Cisco IOS-XE (containerlab の kind `cisco_iol`) は SSH で文字の `show` を読みます — [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol-1) を見てください。
 
 **ブラウザで試す** — 一番上の **Open in GitHub Codespaces** ボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。
 - ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。** コンテナのノード (FRR など) だけ動きます (Codespaces では入れ子の仮想化ができないため)。
@@ -619,9 +644,9 @@ FRR・SR Linux に向ける。「何が(what)」の上に立つ「なぜ(why)」
 
 **シミュレータではなく記述的(descriptive)**:与えられた実際の状態を描くだけで、経路計算もプロトコル実行も
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
-FRRouting と **Nokia SR Linux** は実装済みです (FRR と SR Linux が混ざったラボも同じように描けます)。Cisco IOS・Arista … も同じ小さなアダプタの形で載せられます。
+FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (混ざったラボも同じように描けます)。Arista … も同じ小さなアダプタの形で載せられます。
 
-**現状:** containerlab の FRR / SR Linux に対応しています。IOS-XE と CML2 への対応を進めています。
+**現状:** containerlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。
 
 **コンフィグ検証ツールではありません。** network-xray は**生きた状態**(`show` / JSON = 現実)を読み、
 ルータが *なぜ* そう判断したかを示します — コンフィグ(意図)からの事前シミュレーションには **Batfish** を。
@@ -711,6 +736,22 @@ netlab を使わない場合 (動いている containerlab のラボなら何で
 **図の段:** netlab のラボはルータを段に並べて開きます — 上の段 = `provider` / `isp*` / `spine(s)` / `external` のような名前のグループ、下の段 = `leaf(s)` / `customer(s)` / `host(s)` など、その他は間 (`external` は最後に見ます: BGP Labs では「設定済みの機器」の意味なので、客のルータが上に来ることがあります — その時は次の指定で直せます)。段を自分で決めるには、ノードに containerlab の `graph-level` ラベルを付けます (1 = 上の段・グループ名より優先): netlab では `nodes.s1.clab.labels: { graph-level: 1 }` (この repository の tool の定義 = 上の `defaults.sources.extra` の行を使う時だけ。それが `clab.labels` を使えるようにしています。無いと netlab がその行で止まります)、containerlab の topology ではノードの下に `labels: { graph-level: 1 }`。Horizontal / Vertical で段のまま並べ直し、ドラッグした位置はこのブラウザが覚えます。 <!-- nx_netlab_tiers -->
 <a id="security-notes-ja"></a>
 **注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker のソケット (ホストの root と同じ強さ) を渡します**。ラボ用の機械でだけ使ってください。ポート 8600 の画面は全部の口で待ち受け、ログインがありません。その機械に届く人なら誰でもラボの状態を見られるので、信頼できるネットワークの中で使ってください (外に出すなら手前でポートを塞いでください)。
+
+## Cisco IOS-XE (IOL)
+
+network-xray は containerlab の **Cisco IOS-XE** のルータも読みます。kind が `cisco_iol` のノードは `clab-iosxe-collect.js` が SSH で入り、
+読むだけの `show` を打って、FRR と同じ state を作ります (同じ DeepDive・Best-Path・全体図。FRR・SR Linux・IOL を混ぜたラボも可)。
+例題: `examples/q5-ospf-iol`・`examples/q15-bgp-ospf-static-iol`・`examples/q21-bgp-lp-iol` (それぞれ `-solved` 版あり)。
+
+- **image は付いていません。** network-xray には IOL の本体も、作った image も入っていません。IOL は自分の Cisco のライセンスで手に入れ、
+  [vrnetlab](https://containerlab.dev/manual/kinds/cisco_iol/) で image を作り、`kind: cisco_iol` のノードの `image:` の行にその名前を書いてください。
+- **ログイン:** containerlab の既定 (`admin` / `admin`)。違う時は `NX_IOS_USER` / `NX_IOS_PASSWORD`。パスワードはコマンドの引数に出しません (ssh の askpass)。
+- **読む物** (文字の出力・既定は 10 秒ごと = `NX_IOS_INTERVAL` (秒) で変えられます): `show ip ospf neighbor`・`show ip ospf interface` (brief と全部)・`show ip interface brief`・
+  `show ip route`・`show ip bgp summary`・`show ip bgp`・`show bridge-domain`。ECMP の経路・unnumbered の IF (`ip unnumbered Loopback0`)・
+  bridge-domain の IF (`BDI`・`Ethernet0/2 (BDI500)` のように出る) の上の OSPF も読みます。**VRF はまだ読みません** — VRF のあるラボでは、間違った絵の代わりにそう出します (管理の VRF は数えません)。
+- **読めない時** (`--More--` で切れた・その image が知らないコマンド・空の答え) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
+- **FRR と違って見える所:** IOS の `show ip route` は選ばれた経路だけを出すので、経路表に「候補」の行は出ません。shutdown した OSPF の IF は赤で描き、OSPF の見出しは up の IF だけを数えます。
+- 実際のラボで試したのは `cisco_iol` だけです。ほかの IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) はまだ読みません。
 
 ## よくある質問 / 困ったとき
 

@@ -7,7 +7,7 @@ Nodes: r1 (FRR), r2 (FRR), r3 (FRR)
 > r1-r2 are connected with iBGP and OSPF, and r2-r3 with eBGP.
 > r1's BGP table shows `8.8.8.0/24`, yet packets are not forwarded.
 > Change r2's configuration so that a ping from r1 to `8.8.8.8` succeeds.
-> After fixing it, confirm on r1 that the route in `show ip bgp 8.8.8.0/24` becomes best (`*>`) and that `ping 8.8.8.8` gets a reply.
+> After fixing it, confirm on r1 that 8.8.8.0/24 has `*>` in `show ip bgp` and that `ping 8.8.8.8` gets a reply.
 
 **Why "static" in the name:** r3 has two static routes only as setup: `ip route 8.8.8.0/24 lo` so that `network 8.8.8.0/24` has a matching route to advertise over BGP, and a default route back toward r2. The problem itself is not about them.
 
@@ -72,7 +72,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 > r1-r2 間は iBGP と OSPF、r2-r3 間は eBGP でつながっています。
 > r1 の BGP テーブルには `8.8.8.0/24` が見えているのに、パケットが転送されません。
 > r2 の設定を変えて、r1 から `8.8.8.8` に ping が通るようにしてください。
-> 直したら、r1 で `show ip bgp 8.8.8.0/24` の経路が best (`*>`) になり、`ping 8.8.8.8` が応答することを確認してください。
+> 直したら、r1 で `show ip bgp` の 8.8.8.0/24 に `*>` が付き、`ping 8.8.8.8` が応答することを確認してください。
 
 **名前の static について:** r3 の 2 つの static はラボの下ごしらえです。`ip route 8.8.8.0/24 lo` は BGP の `network 8.8.8.0/24` で広告する経路を作るため、default は r2 の方へ戻るためのものです。問題はこの static ではありません。
 

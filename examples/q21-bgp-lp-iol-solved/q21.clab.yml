@@ -1,0 +1,14 @@
+name: q21-bgp-lp-iol-solved
+# solved version of RouteCrushLab Q21 on Cisco IOL. Bring your own IOL image (vrnetlab cisco_iol): change the image line.
+# *.partial.cfg = added to containerlab's default IOL config (Ethernet0/0 stays the management port).
+topology:
+  kinds:
+    cisco_iol:
+      image: vrnetlab/cisco_iol:17.18.02
+  nodes:
+    r1: { kind: cisco_iol, startup-config: r1.partial.cfg }
+    r2: { kind: cisco_iol, startup-config: r2.partial.cfg }
+    r3: { kind: cisco_iol, startup-config: r3.partial.cfg }
+  links:
+    - endpoints: ["r1:Ethernet0/1", "r2:Ethernet0/1"]
+    - endpoints: ["r1:Ethernet0/2", "r3:Ethernet0/1"]

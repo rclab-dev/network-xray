@@ -1,0 +1,156 @@
+{
+ "success": true,
+ "id": "r1",
+ "scenario": "r1",
+ "target_node": "r1",
+ "peer_node": "r2",
+ "interfaces": {
+  "Loopback0": {
+   "up": true,
+   "ip": "1.1.1.1/32"
+  },
+  "Ethernet0/1": {
+   "up": true,
+   "ip": "10.10.0.10/24"
+  }
+ },
+ "wan_iface": "Ethernet0/1",
+ "lan_iface": "Ethernet0/1",
+ "neighbor_state": "Full",
+ "has_full": true,
+ "full_count": 1,
+ "ospf_configured": true,
+ "bgp_configured": true,
+ "ospf_active_on_interface": true,
+ "ospf_if_count": 1,
+ "is_passive": false,
+ "ospf_neighbor_full": true,
+ "peer_sending_hello": true,
+ "iface_hellos": {
+  "Ethernet0/1": 10
+ },
+ "peer_hellos": {
+  "r2": 10
+ },
+ "peer_sending_hellos": {
+  "r2": true
+ },
+ "bgp_neighbors": [
+  {
+   "ip": "2.2.2.2",
+   "remote_as": 65001,
+   "ibgp": true,
+   "state": "Established",
+   "up_down": "00:05:37",
+   "pfx_rcvd": 1
+  }
+ ],
+ "ospf_neighbors": [
+  {
+   "router_id": "2.2.2.2",
+   "address": "10.10.0.20",
+   "state": "Full",
+   "role": "DR",
+   "iface": "Ethernet0/1",
+   "full": true
+  }
+ ],
+ "target_on_path": false,
+ "cleared": true,
+ "is_established": true,
+ "has_bgp_route": true,
+ "protocol": "bgp",
+ "ping_ok": true,
+ "has_ospf_route": false,
+ "bgp_routes": [
+  {
+   "prefix": "8.8.8.0",
+   "next_hop": "2.2.2.2",
+   "as_path": "65002",
+   "best": true,
+   "status": "*>",
+   "local_pref": 100,
+   "weight": 0,
+   "metric": 0,
+   "origin": "IGP",
+   "reason": "First path received"
+  }
+ ],
+ "pfx_rcvd": 1,
+ "route_resolution": {
+  "target": "8.8.8.0",
+  "resolved": true,
+  "protocol": "bgp",
+  "out_iface": "Ethernet0/1",
+  "next_hop": "2.2.2.2",
+  "matched_prefix": "8.8.8.0/24"
+ },
+ "lsdb_prefixes": [
+  {
+   "text": "1.1.1.1/32",
+   "own": true,
+   "via": "Loopback0"
+  },
+  {
+   "text": "2.2.2.2/32",
+   "own": false,
+   "via": "10.10.0.20"
+  },
+  {
+   "text": "10.10.0.0/24",
+   "own": true,
+   "via": "Ethernet0/1"
+  }
+ ],
+ "routing_table": [
+  {
+   "prefix": "1.1.1.1/32",
+   "out_iface": "Loopback0",
+   "next_hop": "",
+   "protocol": "connected",
+   "selected": true
+  },
+  {
+   "prefix": "2.2.2.2/32",
+   "out_iface": "Ethernet0/1",
+   "next_hop": "10.10.0.20",
+   "protocol": "ospf",
+   "selected": true
+  },
+  {
+   "prefix": "8.8.8.0/24",
+   "out_iface": "Ethernet0/1",
+   "next_hop": "2.2.2.2",
+   "protocol": "bgp",
+   "selected": true
+  },
+  {
+   "prefix": "10.10.0.0/24",
+   "out_iface": "Ethernet0/1",
+   "next_hop": "",
+   "protocol": "connected",
+   "selected": true
+  }
+ ],
+ "r2_has_full": true,
+ "r2_iface": "Ethernet0/1",
+ "r2_neighbor_state": "Full",
+ "ospf_neighbor_state": "Full",
+ "r2_ospf_full": true,
+ "r2_ospf_state": "Full",
+ "peer_links": [
+  {
+   "iface": "Ethernet0/1",
+   "peer": "r2",
+   "up": true,
+   "ip": "10.10.0.10/24",
+   "full": true,
+   "state": "Full",
+   "ospf_full": true,
+   "ospf_state": "Full",
+   "peer_ip": "2.2.2.2",
+   "bgp_over_lo": true
+  }
+ ],
+ "nos": "ios-xe"
+}

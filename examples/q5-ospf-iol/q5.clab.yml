@@ -1,0 +1,12 @@
+name: q5-ospf-iol
+# broken version of RouteCrushLab Q5 on Cisco IOL. Bring your own IOL image (vrnetlab cisco_iol): change the image line.
+# *.partial.cfg = added to containerlab's default IOL config (Ethernet0/0 stays the management port).
+topology:
+  kinds:
+    cisco_iol:
+      image: vrnetlab/cisco_iol:17.18.02
+  nodes:
+    r1: { kind: cisco_iol, startup-config: r1.partial.cfg }
+    r2: { kind: cisco_iol, startup-config: r2.partial.cfg }
+  links:
+    - endpoints: ["r1:Ethernet0/1", "r2:Ethernet0/1"]

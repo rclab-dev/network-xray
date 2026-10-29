@@ -1,0 +1,242 @@
+{
+ "success": true,
+ "id": "r4",
+ "scenario": "r4",
+ "target_node": "r4",
+ "peer_node": "r3",
+ "interfaces": {
+  "Loopback0": {
+   "up": true,
+   "ip": "4.4.4.4/32",
+   "ospf_area": "0",
+   "ospf_net_type": "LOOPBACK"
+  },
+  "Ethernet0/2": {
+   "up": true,
+   "ip": "10.34.0.4/24",
+   "ospf_area": "0",
+   "ospf_hello": 10,
+   "ospf_dead": 40,
+   "ospf_net_type": "BROADCAST"
+  },
+  "Ethernet0/1": {
+   "up": true,
+   "ip": "10.24.0.4/24",
+   "ospf_area": "0",
+   "ospf_hello": 10,
+   "ospf_dead": 40,
+   "ospf_net_type": "BROADCAST"
+  }
+ },
+ "wan_iface": "Ethernet0/2",
+ "lan_iface": "Ethernet0/1",
+ "neighbor_state": "Full",
+ "has_full": true,
+ "full_count": 2,
+ "ospf_configured": true,
+ "bgp_configured": false,
+ "ospf_active_on_interface": true,
+ "ospf_if_count": 2,
+ "is_passive": false,
+ "ospf_neighbor_full": true,
+ "peer_sending_hello": true,
+ "iface_hellos": {
+  "Ethernet0/2": 10,
+  "Ethernet0/1": 10
+ },
+ "peer_hellos": {
+  "r3": 10,
+  "r2": 10
+ },
+ "peer_sending_hellos": {
+  "r3": true,
+  "r2": true
+ },
+ "bgp_neighbors": [],
+ "ospf_neighbors": [
+  {
+   "router_id": "3.3.3.3",
+   "address": "10.34.0.3",
+   "state": "Full",
+   "role": "Backup",
+   "iface": "Ethernet0/2",
+   "full": true
+  },
+  {
+   "router_id": "2.2.2.2",
+   "address": "10.24.0.2",
+   "state": "Full",
+   "role": "Backup",
+   "iface": "Ethernet0/1",
+   "full": true
+  }
+ ],
+ "target_on_path": false,
+ "cleared": true,
+ "has_ospf_route": true,
+ "ping_ok": true,
+ "route_resolution": {
+  "target": "1.1.1.1",
+  "resolved": true,
+  "protocol": "ospf",
+  "out_iface": "Ethernet0/2",
+  "next_hop": "10.34.0.3",
+  "matched_prefix": "1.1.1.1/32"
+ },
+ "lsdb_prefixes": [
+  {
+   "text": "1.1.1.1/32",
+   "own": false,
+   "via": "10.34.0.3"
+  },
+  {
+   "text": "2.2.2.2/32",
+   "own": false,
+   "via": "10.24.0.2"
+  },
+  {
+   "text": "3.3.3.3/32",
+   "own": false,
+   "via": "10.34.0.3"
+  },
+  {
+   "text": "4.4.4.4/32",
+   "own": true,
+   "via": "Loopback0"
+  },
+  {
+   "text": "10.12.0.0/24",
+   "own": false,
+   "via": "10.24.0.2"
+  },
+  {
+   "text": "10.13.0.0/24",
+   "own": false,
+   "via": "10.34.0.3"
+  },
+  {
+   "text": "10.24.0.0/24",
+   "own": true,
+   "via": "Ethernet0/1"
+  },
+  {
+   "text": "10.34.0.0/24",
+   "own": true,
+   "via": "Ethernet0/2"
+  }
+ ],
+ "routing_table": [
+  {
+   "prefix": "1.1.1.1/32",
+   "out_iface": "Ethernet0/2",
+   "next_hop": "10.34.0.3",
+   "protocol": "ospf",
+   "selected": true,
+   "nexthops": [
+    {
+     "ip": "10.34.0.3",
+     "iface": "Ethernet0/2"
+    },
+    {
+     "ip": "10.24.0.2",
+     "iface": "Ethernet0/1"
+    }
+   ]
+  },
+  {
+   "prefix": "2.2.2.2/32",
+   "out_iface": "Ethernet0/1",
+   "next_hop": "10.24.0.2",
+   "protocol": "ospf",
+   "selected": true
+  },
+  {
+   "prefix": "3.3.3.3/32",
+   "out_iface": "Ethernet0/2",
+   "next_hop": "10.34.0.3",
+   "protocol": "ospf",
+   "selected": true
+  },
+  {
+   "prefix": "4.4.4.4/32",
+   "out_iface": "Loopback0",
+   "next_hop": "",
+   "protocol": "connected",
+   "selected": true
+  },
+  {
+   "prefix": "10.12.0.0/24",
+   "out_iface": "Ethernet0/1",
+   "next_hop": "10.24.0.2",
+   "protocol": "ospf",
+   "selected": true
+  },
+  {
+   "prefix": "10.13.0.0/24",
+   "out_iface": "Ethernet0/2",
+   "next_hop": "10.34.0.3",
+   "protocol": "ospf",
+   "selected": true
+  },
+  {
+   "prefix": "10.24.0.0/24",
+   "out_iface": "Ethernet0/1",
+   "next_hop": "",
+   "protocol": "connected",
+   "selected": true
+  },
+  {
+   "prefix": "10.34.0.0/24",
+   "out_iface": "Ethernet0/2",
+   "next_hop": "",
+   "protocol": "connected",
+   "selected": true
+  }
+ ],
+ "r1_area": "0",
+ "r2_area": "0",
+ "target_area": "0",
+ "peer_area": "0",
+ "area_match": true,
+ "r1_hello": 10,
+ "r2_hello": 10,
+ "target_hello": 10,
+ "peer_hello": 10,
+ "timer_match": true,
+ "r3_has_full": true,
+ "r3_iface": "Ethernet0/2",
+ "r3_neighbor_state": "Full",
+ "r2_has_full": true,
+ "r2_iface": "Ethernet0/1",
+ "r2_neighbor_state": "Full",
+ "ospf_neighbor_state": "Full",
+ "r3_ospf_full": true,
+ "r3_ospf_state": "Full",
+ "r2_ospf_full": true,
+ "r2_ospf_state": "Full",
+ "peer_links": [
+  {
+   "iface": "Ethernet0/1",
+   "peer": "r2",
+   "up": true,
+   "ip": "10.24.0.4/24",
+   "full": true,
+   "state": "Full",
+   "ospf_full": true,
+   "ospf_state": "Full",
+   "peer_ip": "10.24.0.2"
+  },
+  {
+   "iface": "Ethernet0/2",
+   "peer": "r3",
+   "up": true,
+   "ip": "10.34.0.4/24",
+   "full": true,
+   "state": "Full",
+   "ospf_full": true,
+   "ospf_state": "Full",
+   "peer_ip": "10.34.0.3"
+  }
+ ],
+ "nos": "ios-xe"
+}

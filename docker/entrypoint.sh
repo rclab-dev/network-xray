@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # network-xray container entrypoint: watch a running containerlab / netlab lab and serve the graph on :8600.
 #   network-xray [--topo /lab/clab.yml] [--port 8600] [--proto auto|ospf|bgp|static] [--interval 2]
-# - reads router state with `docker exec <node> vtysh -c 'show ...'` (FRR) / sr_cli (SR Linux): read-only, no config changes
+# - reads router state with `docker exec <node> vtysh -c 'show ...'` (FRR) / sr_cli (SR Linux) / SSH + show (Cisco IOS-XE): read-only, no config changes
 # - proto=auto: asks the routers every 30 s whether they run BGP or OSPF (a netlab lab may be started with --no-config
 #   and configured later), and restarts the collector when the answer changes
 set -u
@@ -29,8 +29,8 @@ rm -rf "$WORK"; mkdir -p "$WORK"; cp -a "$SRC"/. "$WORK"/; rm -rf "$WORK/example
 rm -f "$WORK/problem.json"
 [ -f "$(dirname "$TOPO")/problem.json" ] && cp "$(dirname "$TOPO")/problem.json" "$WORK/problem.json"
 # read the topology where it is (netlab's clab.yml points at node_files/... relative to its own directory)
-LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$TOPO" | head -1 | tr -d '"'"'"'')"
-PREFIX="$(sed -n 's/^prefix:[[:space:]]*//p' "$TOPO" | head -1 | tr -d '"'"'"'')"
+LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$TOPO" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d '"'"'"'')"   # nx_yaml_inline_comment: drop a trailing "# ..."
+PREFIX="$(sed -n 's/^prefix:[[:space:]]*//p' "$TOPO" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d '"'"'"'')"
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $TOPO" >&2; exit 1; }
 # nx_no_shell (2026-10-17): the lab name becomes part of container names: plain names only (letters, digits, _ . -)
 case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $TOPO is not a plain name (letters, digits, _ . -): not starting" >&2; exit 1 ;; esac
@@ -59,6 +59,12 @@ detect_proto() {
       local srl; srl=$(docker exec "$c" timeout 8 sr_cli -d 'info from running network-instance default protocols' 2>/dev/null)
       echo "$srl" | grep -q 'bgp' && { echo bgp; return; }
       echo "$srl" | grep -q 'ospf' && p=ospf
+    elif [ -s "$WORK/xray-states.js" ]; then
+      # nx_ios_detect (2026-10-27): IOS and other routers read over SSH by the collector - no second login here; the
+      # collector's last state says what they run (bgp_configured / ospf_configured). Before the first state: static,
+      # switched on the next 30 s round as for FRR.
+      grep -q '"bgp_configured":true' "$WORK/xray-states.js" && { echo bgp; return; }
+      grep -q '"ospf_configured":true' "$WORK/xray-states.js" && p=ospf
     fi
   done
   echo "$p"

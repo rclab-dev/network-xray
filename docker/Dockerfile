@@ -17,7 +17,7 @@ ARG CLAB_SHA256_ARM64=f04ac8c1f2f6a04c344585cb6a36177c446fce18cb6073b4a0dbd517f3
 
 # npm / npx / corepack / yarn are removed at the end of this step: network-xray only runs node at run time,
 # and their bundled dependencies are what an image scanner reports for the Node layer.
-RUN apk add --no-cache bash docker-cli curl ca-certificates tini coreutils \
+RUN apk add --no-cache bash docker-cli curl ca-certificates tini coreutils openssh-client \
  && case "${TARGETARCH}" in amd64) sum="${CLAB_SHA256_AMD64}" ;; arm64) sum="${CLAB_SHA256_ARM64}" ;; *) echo "unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; esac \
  && curl -fsSL -o /tmp/containerlab.tar.gz "https://github.com/srl-labs/containerlab/releases/download/v${CLAB_VERSION}/containerlab_${CLAB_VERSION}_linux_${TARGETARCH}.tar.gz" \
  && echo "${sum}  /tmp/containerlab.tar.gz" | sha256sum -c - \

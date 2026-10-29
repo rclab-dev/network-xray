@@ -83,10 +83,13 @@
     { key: 'weight', col: 'weight', label: 'Weight',  dir: 1,  val: function (r) { return _bnum(r.weight, 0); } },
     { key: 'locprf', col: 'locprf', label: 'LocPrf',  dir: 1,  val: function (r) { return _bnum(r.local_pref, 100); } },
     { key: 'aspath', col: 'path',   label: 'AS-Path', dir: -1, val: function (r) { return r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0; } },
-    { key: 'origin', col: 'path',   label: 'Origin',  dir: -1, val: function (r) { var m = { i: 0, e: 1, '?': 2 }; return (r.origin in m) ? m[r.origin] : 3; } },
+    { key: 'origin', col: 'path',   label: 'Origin',  dir: -1, val: function (r) { return _bgpOriginRank(r.origin); } },
     { key: 'metric', col: 'metric', label: 'MED',     dir: -1, val: function (r) { return _bnum(r.metric, 0); } }
   ];
   function _bnum(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : n; }
+  /* nx_bgp_origin_rank (2026-10-27): IGP < EGP < incomplete. The collectors write the word ("IGP" / "EGP" / "incomplete"); the one-letter table never matched, so the Origin step was always a tie. Both forms are read. */
+  function _bgpOriginChar(o) { var s = String(o == null ? '' : o).trim().toLowerCase(); if (s === 'i' || s === 'igp') return 'i'; if (s === 'e' || s === 'egp') return 'e'; if (s === '?' || s === 'incomplete') return '?'; return ''; }
+  function _bgpOriginRank(o) { var c = _bgpOriginChar(o); return c === 'i' ? 0 : c === 'e' ? 1 : c === '?' ? 2 : 3; }
   function _bNbrAS(r) { var t = (r.as_path || '').split(/\s+/).filter(Boolean); return t.length ? t[0] : ''; }
   function _bIsBest(r) { return (r.status || '').indexOf('>') !== -1 || r.best === true; }
   function _bgpDecision(group) {
@@ -178,7 +181,7 @@
         return { id: String.fromCharCode(65 + i), via: 'via ' + (r.next_hop || r.nexthop || '?'), as: 'AS' + (_bNbrAS(r) || '?'),
           attrs: { weight: _bnum(r.weight, 0), localpref: _bnum(r.local_pref, 100),
             aspathlen: r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0,
-            origin: ({ i: 1, e: 1, '?': 1 }[r.origin]) ? r.origin : 'i', med: _bnum(r.metric, 0), ebgp: false,
+            origin: _bgpOriginChar(r.origin) || 'i', med: _bnum(r.metric, 0), ebgp: false,
             routerid: r.router_id || ('0.0.0.' + (i + 1)) } };
       });
       var json = JSON.stringify({ prefix: prefix, routes: routes });

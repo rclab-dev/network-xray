@@ -1,0 +1,9 @@
+Interface              IP-Address      OK? Method Status                Protocol
+Ethernet0/0            172.20.20.7     YES TFTP   up                    up      
+Ethernet0/1            unassigned      YES unset  up                    up      
+Ethernet0/2            unassigned      YES unset  up                    up      
+Ethernet0/3            unassigned      YES unset  up                    up      
+BDI500                 172.16.0.1      YES TFTP   up                    up      
+BDI501                 172.16.1.1      YES TFTP   up                    up      
+BDI502                 172.16.2.1      YES TFTP   up                    up      
+Loopback0              10.0.0.1        YES TFTP   up                    up      

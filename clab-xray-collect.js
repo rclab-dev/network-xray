@@ -3,7 +3,7 @@
  * clab-xray-collect.js — auto-wire REAL per-node X-Ray state into a containerlab graph.
  *
  * Parses a containerlab topology, derives each node's adjacency from the links, runs the right
- * per-node collector (clab-collect.js for FRR / clab-srl-collect.js for nokia_srlinux, by node kind),
+ * per-node collector (clab-collect.js for FRR / clab-srl-collect.js for nokia_srlinux / clab-iosxe-collect.js for cisco_iol etc, by node kind),
  * and writes <out-dir>/xray-states.js = `window.LIVE_STATES = { r1:{...}, r2:{...}, ... }`. FRR and
  * SR Linux emit the same state shape, so a mixed lab renders uniformly in the graph DeepDive.
  *
@@ -44,6 +44,9 @@ function shown(s) { return JSON.stringify(String(s).slice(0, 80)); }   // log th
    runs longer than CHILD_MS is killed (timeout). A router that timed out keeps its last good state marked stale
    (nx_unread: 'timeout', nx_stale_since) and is asked again only after RETRY_MS, so the other routers keep updating. */
 var CHILD_MS = 25000, RETRY_MS = 10000;
+/* nx_ios_interval (2026-10-27): an IOS node is read over SSH (a login + 7 shows each time) - not every second like FRR's docker exec.
+   Between reads it keeps its last good state; FRR / SR Linux nodes are not affected. NX_IOS_INTERVAL=<seconds> to change. */
+var IOS_MS = Math.max(2, parseInt(process.env.NX_IOS_INTERVAL || '10', 10) || 10) * 1000, iosNextAt = {};
 var PAR_RUNNER = "var cp=require('child_process'),fs=require('fs');var jobs=JSON.parse(process.argv[1]);var left=jobs.length;" +
   "jobs.forEach(function(j){var done=false;var fin=function(c){if(done)return;done=true;try{fs.writeFileSync(j.code,String(c)+'\\n');}catch(e){}if(--left===0)process.exit(0);};" +
   "var fd='ignore';try{fd=fs.openSync(j.err,'w');}catch(e){}" +
@@ -167,12 +170,55 @@ function srlIface(x) {
   return x;
 }
 
+/* nx_ios_collect (2026-10-27): Cisco IOS / IOS-XE kinds go to clab-iosxe-collect.js (SSH + plain-text show).
+   It needs clab-collect.js next to it (it builds the state with the same buildState). */
+function isIos(kind) { return /^cisco_iol/i.test(kind || ''); }   /* nx_ios_interval: only the kind checked on a real lab (IOL). c8000v / csr1000v (eth1 = GigabitEthernet2) / cat9kv come when checked */
+// containerlab's Linux-side name (eth1) -> the IOS name every `show` prints. IOL: 4 ports per slot, Ethernet0/0 = mgmt.
+function iosIface(x, kind) {
+  var m = /^eth(\d+)$/.exec(x);
+  if (m && /cisco_iol/i.test(kind || '')) { var k = +m[1]; return 'Ethernet' + Math.floor(k / 4) + '/' + (k % 4); }
+  return x;
+}
+
+/* nx_vendors (2026-10-28): which collector reads a node, by its containerlab kind - one row per vendor.
+   Every collector speaks the same --lab/--node/--adj/--proto/--out CLI and emits the same state shape, so a mixed
+   lab gives one uniform window.LIVE_STATES. To add a vendor: add a row above 'frr' (the first row that matches
+   wins, 'frr' matches everything) and put its collector next to this file.
+     match(kind)    - this row reads the node
+     script         - the collector next to this file
+     iface(x, kind) - containerlab's link-side name (e1-1 / eth1) -> the name the router's own show prints
+     frrArgs        - takes the FRR-collector-only flags (--exclude-mgmt)
+     needsFrr       - its collector requires clab-collect.js (it builds the state with the same buildState)
+     slow           - read again only every NX_IOS_INTERVAL s (SSH + plain-text show: console and CPU cost) */
+var VENDORS = [
+  { name: 'srlinux', match: isSrl, script: 'clab-srl-collect.js', what: 'nokia_srlinux nodes',
+    iface: srlIface, frrArgs: false, needsFrr: false, slow: false },
+  { name: 'iosxe', match: isIos, script: 'clab-iosxe-collect.js', what: 'Cisco IOS / IOS-XE nodes',
+    iface: iosIface, frrArgs: false, needsFrr: true, slow: true },
+  { name: 'frr', match: function () { return true; }, script: 'clab-collect.js', what: 'FRR nodes',
+    iface: null, frrArgs: true, needsFrr: true, slow: false }
+];
+function vendorOf(n) {
+  for (var i = 0; i < VENDORS.length; i++) if (VENDORS[i].match(kindOf[n] || '')) return VENDORS[i];
+}
 var collect = path.join(outDir, 'clab-collect.js');
-var srlCollect = path.join(outDir, 'clab-srl-collect.js');
-var anySrl = nodes.some(function (n) { return isSrl(kindOf[n]); });
-var anyFrr = nodes.some(function (n) { return !isSrl(kindOf[n]); });
-if (anyFrr && !fs.existsSync(collect)) { console.error('!! clab-collect.js not found in ' + outDir); process.exit(1); }
-if (anySrl && !fs.existsSync(srlCollect)) { console.error('!! clab-srl-collect.js not found in ' + outDir + ' (needed for nokia_srlinux nodes)'); process.exit(1); }
+var _used = {};
+nodes.forEach(function (n) { var v = vendorOf(n); _used[v.name] = v; });
+var _usedRows = Object.keys(_used).map(function (k) { return _used[k]; });
+if (_usedRows.some(function (v) { return v.needsFrr; }) && !fs.existsSync(collect)) { console.error('!! clab-collect.js not found in ' + outDir); process.exit(1); }
+_usedRows.forEach(function (v) {
+  if (v.script !== 'clab-collect.js' && !fs.existsSync(path.join(outDir, v.script))) { console.error('!! ' + v.script + ' not found in ' + outDir + ' (needed for ' + v.what + ')'); process.exit(1); }
+});
+// which collector, adjacency string and extra args for one node
+function nodeJob(n) {
+  var v = vendorOf(n), k = kindOf[n];
+  return {
+    script: path.join(outDir, v.script),
+    adjStr: adj[n].map(function (l) { return (v.iface ? v.iface(l.iface, k) : l.iface) + ':' + l.peer; }).join(','),
+    mg: v.frrArgs ? mgmtArg : [],   // --exclude-mgmt is an FRR-collector flag (IOS drops its own mgmt port)
+    slow: v.slow
+  };
+}
 var dest = path.join(outDir, 'xray-states.js');
 
 // nx_collect_keep_last_good (2026-10-05, Codespaces trial): a node whose collect fails keeps its last good
@@ -189,17 +235,14 @@ function collectAll() {
      small files next to its state file and are read below, so the failure handling is unchanged. --serial = old way. */
   var _par = !serialCollect && nodes.length > 1, _job = {};
   var _cmdOf = function (n) {
-    var srl = isSrl(kindOf[n]);
-    var script = srl ? srlCollect : collect;
-    var adjStr = adj[n].map(function (l) { return (srl ? srlIface(l.iface) : l.iface) + ':' + l.peer; }).join(',');
-    var mg = srl ? [] : mgmtArg;
+    var _nj = nodeJob(n), script = _nj.script, adjStr = _nj.adjStr, mg = _nj.mg;   /* nx_ios_collect */
     var out = path.join(os.tmpdir(), 'xray-state-' + lab + '-' + n +
       (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json');
     return { out: out, args: [script, '--lab', lab, '--node', n, '--proto', proto, '--adj', adjStr].concat(mg, ['--out', out]) };   /* nx_no_shell: an argument array */
   };
   if (_par) {
     /* nx_no_shell: one small node process starts every child with an argument array (no sh) and waits for all of them */
-    var _jobs = nodes.filter(function (n) { return !(retryAt[n] > Date.now()); }).map(function (n) {   /* nx_unread: back-off */
+    var _jobs = nodes.filter(function (n) { return !(retryAt[n] > Date.now()) && !(iosNextAt[n] > Date.now() && lastGood[n]); }).map(function (n) {   /* nx_unread: back-off */   /* nx_ios_interval */
       var c = _cmdOf(n); _job[n] = { code: c.out + '.code', err: c.out + '.err' };
       try { fs.unlinkSync(_job[n].code); } catch (e) {}
       return { args: c.args, code: _job[n].code, err: _job[n].err };
@@ -207,13 +250,11 @@ function collectAll() {
     try { cp.execFileSync(process.execPath, ['-e', PAR_RUNNER, JSON.stringify(_jobs)], { stdio: 'ignore' }); } catch (e) {}
   }
   nodes.forEach(function (n) {
-    var srl = isSrl(kindOf[n]);
-    var script = srl ? srlCollect : collect;
-    var adjStr = adj[n].map(function (l) { return (srl ? srlIface(l.iface) : l.iface) + ':' + l.peer; }).join(',');
-    var mg = srl ? [] : mgmtArg;   // --exclude-mgmt is an FRR-collector flag; srl ignores it
+    var _nj = nodeJob(n), script = _nj.script, adjStr = _nj.adjStr, mg = _nj.mg;   /* nx_ios_collect: FRR / SR Linux / IOS (--exclude-mgmt is FRR-only) */
     var out = path.join(os.tmpdir(), 'xray-state-' + lab + '-' + n +
       (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json');   /* nx_tmp_per_user (2026-10-05): a collector run with sudo and one without no longer fight over a root-owned tmp file (EACCES forever) */   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
     if (retryAt[n] > Date.now()) { if (lastOut[n]) states[n] = lastOut[n]; return; }   /* nx_unread: asked again after RETRY_MS */
+    if (iosNextAt[n] > Date.now() && lastGood[n]) { states[n] = lastGood[n]; ok++; return; }   /* nx_ios_interval: not yet time to read this IOS node again */
     try {
       if (_par) {   /* nx_collect_parallel: the child already ran - read its exit code (and stderr on failure) */
         var _code = ''; try { _code = fs.readFileSync(_job[n].code, 'utf8').trim(); } catch (e) {}
@@ -223,6 +264,7 @@ function collectAll() {
         { stdio: ['ignore', 'ignore', 'pipe'], timeout: CHILD_MS });   /* nx_no_shell / nx_unread */
       states[n] = JSON.parse(fs.readFileSync(out, 'utf8'));
       lastGood[n] = states[n]; lastGoodAt[n] = new Date().toISOString(); delete retryAt[n];   /* nx_unread */
+      if (_nj.slow) iosNextAt[n] = Date.now() + IOS_MS;   /* nx_ios_interval */
       if (failSeen[n]) { console.error('  ' + n + ' collect OK again (after ' + failSeen[n].count + ' failure(s))'); delete failSeen[n]; }   /* nx_quiet_log */
       ok++;
     } catch (e) {
