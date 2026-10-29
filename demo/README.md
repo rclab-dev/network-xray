@@ -45,8 +45,10 @@ unchanged.
 | file | role |
 |---|---|
 | `index.html` | the standalone replay page (real frames + topology baked in) |
-| `frame{A..D}.json` / `topo.json` | the captured frames and topology this page replays |
-| `build-replay.js` | regenerates `index.html` from the OSS template + captured `frame*.json` + `topo.json` |
+| `index-bgp.html` / `index-bgp-lp.html` | the same kind of replay for a BGP lab and the BGP LocalPref lab (`frame*-bgp.json` / `frame*-bgplp.json`, `topo-bgp.json` / `topo-bgp-lp.json`) |
+| `frame{A..D}.json` / `topo.json` | the captured frames and topology `index.html` replays |
+| `build-replay.js` | regenerates `index.html` (OSPF only) from the OSS template + captured `frame*.json` + `topo.json`. It reads the template from this folder, so copy it in first: `cp ../xray-graph.html . && node build-replay.js` |
+| `compose-ospf/` / `compose-bgp-lp/` | live labs with plain `docker compose` (no containerlab) — see the README in each |
 
 The rendering engine (`xray-core.js` / `xray-api.js` / `clab-xray-bridge.js`) is **not duplicated here** —
 this page loads it from the gallery one level up (`../`), so the demo always runs the published engine. License: MIT (see the

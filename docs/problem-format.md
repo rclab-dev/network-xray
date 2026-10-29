@@ -38,7 +38,7 @@ The problem band appears when the file has a title or a problem text.
   - **node** — a node name from your topology (`r1`). It reads that node's live state, collected by `clab-xray-collect.js`. If the node has no state yet, the condition does not hold.
   - **path** — a dot path into the node's state, e.g. `interfaces.eth1.up`. `{key}` is replaced with that node's own value, e.g. `interfaces.{wan_iface}.up`.
   - **op** and **value** — one of the 12 ops below.
-- The page checks the state every time it refreshes (about once a second). **✓ Solved appears once the check has held for about 4 seconds without a break** while the collector runs with `--watch` (as `demo.sh` does), so a lab that is still converging does not flash Solved. It disappears again as soon as the check stops holding. With a one-shot collect (no `--watch`) the page does not refresh by itself, so one pass is enough.
+- The page checks the state every time it refreshes (about once a second). **✓ Solved appears once the check has held for about 10 seconds without a break** while the collector runs with `--watch` (as `demo.sh` does), so a lab that is still converging does not flash Solved. It disappears again as soon as the check stops holding. With a one-shot collect (no `--watch`) the page does not refresh by itself, so one pass is enough.
 - A broken condition (wrong shape, unknown op) never throws: it simply does not hold, and the browser console shows one warning.
 
 ### Ops
