@@ -160,12 +160,12 @@ view.setSkin(skinObj);            // PER-VIEW override (preview / one embedded d
 xrayCore.renderTopology('#topo', config /* config.skin = fallback */, opts);
 ```
 
-**Engine hook vs. OSS facade / engine 受け口と OSS facade** — the engine (canonical `xray_core.js`)
+**Engine hook vs. OSS facade / engine 受け口と OSS facade** — the engine (canonical `xray-core.js`)
 provides the primitives: a global `xraySetSkin(skin)` (updates the active-skin state + re-applies the
 CSS variables) and `config.skin` read at `xrayRenderTopology`. The tidy `xrayCore.setSkin()` /
 `view.setSkin()` above are a **1:1 OSS wrapper facade** (gallery side) over those primitives — the
 build script does not generate `xrayCore`. RouteCrushLab itself has no `xrayCore` object and uses
-`config.skin` + the global directly. / engine(正典 `xray_core.js`)が提供するのは global
+`config.skin` + the global directly. / engine(正典 `xray-core.js`)が提供するのは global
 `xraySetSkin(skin)`(active-skin 状態更新 + CSS 変数再適用)と `xrayRenderTopology` での `config.skin`
 読取。上記 `xrayCore.setSkin()`/`view.setSkin()` はそれに **1:1 で被せる OSS wrapper facade**(gallery
 側)で、build script は `xrayCore` を生成しない。RCL 本体は `xrayCore` を持たず `config.skin`＋global

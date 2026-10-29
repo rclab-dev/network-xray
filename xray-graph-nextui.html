@@ -892,7 +892,7 @@ window.__initNeXtOverview = function (data) {
   window.__nxSolvedTick = function(){
     try {
       if (!window.NetworkXrayCheck) return;
-      /* nx_solved_hold: with --watch, solved = the check keeps holding for NX_SOLVED_HOLD_MS (default 4 s, longer than one
+      /* nx_solved_hold: with --watch, solved = the check keeps holding for NX_SOLVED_HOLD_MS (default 10 s, longer than one
          collector round) since it first held; any miss resets. One-shot collect (no LIVE_WATCH): the page does not
          re-read, so one pass is enough. */
       var r = window.NetworkXrayCheck.evaluate(window.XRAY_PROBLEM, window.LIVE_STATES);
