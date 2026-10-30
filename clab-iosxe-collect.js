@@ -336,7 +336,7 @@ function parseBgpRoutes(text) {
   var H = ls[hi];
   var col = { net: H.indexOf('Network'), nh: H.indexOf('Next Hop'), metricEnd: H.indexOf('Metric') + 6,
               lpEnd: H.indexOf('LocPrf') + 6, wEnd: H.indexOf('Weight') + 6, path: H.indexOf('Path') };
-  var lastPrefix = null, pendingStatus = null;
+  var lastPrefix = null, pendingStatus = null, pendingRaw = null;
   for (var k = hi + 1; k < ls.length; k++) {
     var line = ls[k].replace(/\s+$/, '');
     if (!line.trim() || /^Total number|^Displayed|^RPKI/.test(line.trim())) continue;
@@ -345,14 +345,14 @@ function parseBgpRoutes(text) {
     // the header positions shifted by how far THIS row's next hop sits from the header's "Next Hop".
     var onlyNet = /^\s*([sdhrSmbfxac=*>i ]*?)\s*(\d{1,3}(?:\.\d{1,3}){3}(?:\/\d+)?)\s*$/.exec(line);
     if (onlyNet && /[*>]/.test(onlyNet[1])) {   // wrapped: status+network only, next hop on the next line
-      pendingStatus = onlyNet[1].replace(/\s+/g, ''); lastPrefix = onlyNet[2]; continue;
+      pendingStatus = onlyNet[1].replace(/\s+/g, ''); pendingRaw = onlyNet[1].trim().replace(/\s+/g, ' '); lastPrefix = onlyNet[2]; continue;   /* nx_bgp_status_raw */
     }
     var rm = /^\s*([sdhrSmbfxac=*>i ]*?)\s*(\d{1,3}(?:\.\d{1,3}){3}(?:\/\d+)?)?\s+(\d{1,3}(?:\.\d{1,3}){3})(?=\s|$)/.exec(line);
     if (!rm) { pendingStatus = null; continue; }
-    var status = rm[1].replace(/\s+/g, '');
-    if (!status && pendingStatus != null) status = pendingStatus;
-    pendingStatus = null;
-    if (!/[*>]/.test(status)) continue;
+    var status = rm[1].replace(/\s+/g, ''), statusRaw = rm[1].trim().replace(/\s+/g, ' ');   /* nx_bgp_status_raw: as printed */
+    if (!status && pendingStatus != null) { status = pendingStatus; statusRaw = pendingRaw; }
+    pendingStatus = null; pendingRaw = null;
+    /* nx_ios_bgp_invalid: a row without '*' (not valid - e.g. next hop unreachable) is kept like FRR keeps every received path */
     var net = rm[2] || '';
     var nhStart = rm.index + rm[0].length - rm[3].length;
     var shift = nhStart - col.nh;
@@ -379,7 +379,7 @@ function parseBgpRoutes(text) {
     var pathStr = pathStart != null ? line.slice(pathStart).trim() : '';
     var origin = (/\s?([ie?])$/.exec(pathStr) || [])[1] || '';
     var asPath = pathStr.replace(/\s?[ie?]$/, '').trim();
-    out.push({ prefix: prefix, nextHop: nhM[1], best: status.indexOf('>') >= 0, valid: status.indexOf('*') >= 0,
+    out.push({ prefix: prefix, nextHop: nhM[1], best: status.indexOf('>') >= 0, valid: status.indexOf('*') >= 0, status_raw: statusRaw,
                ibgp: /i/.test(status.replace(/[^i]/g, '')) && status.indexOf('i') > 0,
                as_path: asPath, local_pref: lp, weight: w, metric: metric,
                origin: origin === 'i' ? 'IGP' : origin === 'e' ? 'EGP' : origin === '?' ? 'incomplete' : '', reason: '' });
@@ -497,11 +497,17 @@ function collectFromIosxeText(args, buildState) {
   // IOS 15+/IOS-XE print "L" (the router's own address as /32) for every interface; FRR 8.x does not,
   // and the DeepDive Routing table would show them as extra rows. Drop them (kept by parseRoutes itself).
   p.routes = p.routes.filter(function (r) { return r.protocol !== 'local'; });
+  /* nx_ios_bgp_nh_unreach: a non-best path whose next hop no route covers = not valid (IOS's table form still prints "*") */
+  (function () {
+    var tab = (p.routes || []).filter(function (r) { return r && r.prefix && r.protocol !== 'bgp'; }).map(function (r) { var sp = String(r.prefix).split('/'); return { n: ip2n(sp[0]), len: +(sp[1] == null ? 32 : sp[1]) }; });
+    var covered = function (ip) { if (!/^\d+\.\d+\.\d+\.\d+$/.test(ip || '')) return true; var x = ip2n(ip); return tab.some(function (t) { var m = t.len === 0 ? 0 : (0xFFFFFFFF << (32 - t.len)) >>> 0; return ((x & m) >>> 0) === ((t.n & m) >>> 0); }); };
+    (p.bgpRoutes || []).forEach(function (r) { if (!r.best && r.valid !== false && r.nextHop && r.nextHop !== '0.0.0.0' && !covered(r.nextHop)) r.valid = false; });
+  })();
   explainBestPath(p.bgpRoutes);
   // FRR json carries the BGP prefix without its length ("8.8.8.0" + prefixLen 24); match that shape.
   p.bgpRoutes.forEach(function (r) {
     var sp = String(r.prefix).split('/');
-    if (sp.length === 2) { r.prefix = sp[0]; r.prefixLen = +sp[1]; }
+    if (sp.length === 2) { r.prefix = sp[0]; r.prefixLen = +sp[1]; r.prefixlen = +sp[1]; }   /* nx_ios_bgp_prefixlen: buildState reads prefixlen */
   });
   var st = buildState({
     selfName: args.node, id: args.id || args.node, proto: (args.proto || 'ospf').toLowerCase(),
@@ -527,6 +533,8 @@ function collectFromIosxeText(args, buildState) {
   // Per-interface OSPF parameters, only when the optional shows were taken (additive: without them
   // nothing changes). The cross-node comparison is annotateOspfMismatch() over all nodes' states.
   var det = args.ospfInterfaceDetail ? parseOspfInterfaceDetail(args.ospfInterfaceDetail) : null;
+  /* nx_ios_bdi (2): a link port that carries a BDI gets the BDI's per-interface OSPF values */
+  if (det) Object.keys(p.ifaces).forEach(function (n) { var b = p.ifaces[n].viaBdi; if (b && det[b] && !det[n]) det[n] = det[b]; });
   var err = args.ospfTraffic ? parseOspfTraffic(args.ospfTraffic) : null;
   Object.keys(st.interfaces || {}).forEach(function (ifn) {
     var i = st.interfaces[ifn], d = det && det[ifn];
@@ -792,8 +800,20 @@ function selfTest() {
     A(!Object.keys(bs).some(function (k) { return /^r\d+_neighbor_state$/.test(k); }), 'BDI: no invented peer names (r2..)');
     A(bs.iface_hellos && bs.iface_hellos['Ethernet0/2'] && bs.iface_hellos['Ethernet0/3'] && bs.iface_hellos['Ethernet0/1'], 'BDI: Hello on the 3 links: ' + JSON.stringify(bs.iface_hellos));
     A(!bs.parse_warnings, 'BDI: no parse warnings: ' + JSON.stringify(bs.parse_warnings));
+    A(['Ethernet0/2', 'Ethernet0/3', 'Ethernet0/1'].every(function (i) { return bs.interfaces[i] && bs.interfaces[i].ospf_area != null; }), 'BDI: the link ports carry ospf_area: ' + ['Ethernet0/2', 'Ethernet0/3', 'Ethernet0/1'].map(function (i) { return i + '=' + (bs.interfaces[i] || {}).ospf_area; }).join(' '));   /* nx_ios_bdi (2) */
   }
   A(JSON.stringify(parseBridgeDomains('')) === '{}', 'no bridge-domain output -> no mapping');
+  // nx_ios_bgp_invalid: a received path whose next hop is unreachable has no '*' -> still in the table, not best, not valid
+  var bi = parseBgpRoutes('     Network          Next Hop            Metric LocPrf Weight Path\n  i  8.8.8.0/24       10.11.0.20               0    100      0 65002 i\n');
+  A(bi.length === 1 && bi[0].best === false && bi[0].valid === false && bi[0].nextHop === '10.11.0.20', 'BGP row without * kept as not valid: ' + JSON.stringify(bi));
+  // nx_ios_bgp_nh_unreach: '*' (no '>') with a next hop no route covers -> valid:false; with a covered next hop -> stays valid
+  var nr = 'Codes: L - local, C - connected, O - OSPF\n\nGateway of last resort is not set\n\nC        10.10.0.0/24 is directly connected, Ethernet0/1\nO        2.2.2.2/32 [110/11] via 10.10.0.20, 00:01:00, Ethernet0/1\n';
+  var nb = '     Network          Next Hop            Metric LocPrf Weight Path\n * i  8.8.8.0/24       10.11.0.20               0    100      0 65002 i\n * i  9.9.9.0/24       2.2.2.2                  0    100      0 65002 i\n';
+  var nst = run({ route: nr, bgp: nb, ipInterface: 'Interface IP-Address OK? Method Status Protocol\nEthernet0/1 10.10.0.10 YES NVRAM up up\n', bgpSummary: 'BGP router identifier 1.1.1.1, local AS number 65001\n' }, 'r1', 'Ethernet0/1:r2', 'bgp', '');
+  var n8 = (nst.bgp_routes || []).filter(function (r) { return r.prefix === '8.8.8.0'; })[0] || {}, n9 = (nst.bgp_routes || []).filter(function (r) { return r.prefix === '9.9.9.0'; })[0] || {};
+  A(n8.valid === false && n9.valid !== false, 'next hop unreachable -> valid false (8.8.8.0 via 10.11.0.20), reachable stays (9.9.9.0 via 2.2.2.2): ' + JSON.stringify([n8.status, n8.valid, n9.status, n9.valid]));
+  A(n8.prefixlen === 24 && n9.prefixlen === 24, 'nx_ios_bgp_prefixlen: the BGP rows carry the length (8.8.8.0 + 24): ' + JSON.stringify([n8.prefix, n8.prefixlen]));
+  A(n8.status_raw === '* i' && n8.status === '  ' && n9.status_raw === undefined && n9.status === '* ', 'nx_bgp_status_raw: the unusable path carries the printed mark ("* i"), a usable one does not: ' + JSON.stringify([n8.status_raw, n8.status, n9.status_raw, n9.status]));
   console.log('clab-iosxe-collect self-test: ' + ok + ' ok, ' + bad + ' failed');
   process.exit(bad ? 1 : 0);
 }

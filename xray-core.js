@@ -12604,6 +12604,11 @@ window._xrayVrfBarSync = function () {
   }
 };
 function xrayBuildBgpView(routes) {
+  if (typeof document !== "undefined" && document.head && !document.getElementById("nx-bgp-invalid-css")) {   /* nx_bgp_invalid_view */
+    var _nxS = document.createElement("style"); _nxS.id = "nx-bgp-invalid-css";
+    _nxS.textContent = ".de-bgp-table tr[data-nx-invalid]{cursor:pointer}.de-bgp-table tr[data-nx-invalid] td{color:#ff9e9e;background:rgba(255,82,82,.10)}.nx-bgp-invalid-note{color:#ff8a80}";
+    document.head.appendChild(_nxS);
+  }
   /* LocPrf field parity: accept local_pref when locprf is empty, so non-best paths render their real LocPrf. */
   if (Array.isArray(routes)) routes.forEach(function(r){ if (r && (r.locprf === undefined || r.locprf === null || r.locprf === '') && r.local_pref !== undefined && r.local_pref !== null && r.local_pref !== '') r.locprf = String(r.local_pref); });
   /* Next-Hop field parity: the live collector emits next_hop; accept it when nexthop is empty (the column was blank). */
@@ -12624,7 +12629,8 @@ function xrayBuildBgpView(routes) {
   var _anyEcmp = "", _ecmpN = 0, _ecmpMix = false;   /* nx_ecmp (+ nx_ecmp_polish: _ecmpMix) */
   order.forEach(function(p) {
     var grp = groups[p];
-    var dec = xrayBgpDecision(grp);
+    var _nxOk = grp.filter(function(r) { return !(r && r.valid === false); }), _nxBad = grp.filter(function(r) { return r && r.valid === false; });   /* nx_bgp_invalid_view: compare only usable paths */
+    var dec = xrayBgpDecision(_nxOk);
     var _cfBest = grp.filter(function(r) { return (r.status || "").indexOf(">") !== -1; })[0], _cfBestNh = _cfBest ? (_cfBest.nexthop || "") : "";
     window._xrayCfRows = window._xrayCfRows || {};
     if (window._xrayCf && window._xrayCf.kind === "loser" && window._xrayCf.pfx === p && window._xrayCf.bestNh !== _cfBestNh) setTimeout(function() { if (window.xrayCfClear) window.xrayCfClear(); }, 0);
@@ -12643,14 +12649,25 @@ function xrayBuildBgpView(routes) {
         return "<td" + (_c.trim() ? ' class="' + _c.trim() + '"' : "") + ">" + val + "</td>";
       }
       var _cfTr = "";
-      if (!isBest && dec && dec.kind === "decided" && dec.criterion && rt.nexthop && !(_ecmp && _ecmp[rt.nexthop])) {   /* nx_ecmp: a multipath path is not a loser */
+      if (!isBest && rt.valid !== false && dec && dec.kind === "decided" && dec.criterion && rt.nexthop && !(_ecmp && _ecmp[rt.nexthop])) {   /* nx_bgp_invalid_view: an unusable path is not a loser */   /* nx_ecmp: a multipath path is not a loser */
         window._xrayCfRows[p + "|" + rt.nexthop] = { reason: dec.criterion.label + " " + dec.cmpVal + " " + (dec.criterion.dir > 0 ? "<" : ">") + " " + dec.bestVal + " \u2715", bestNh: _cfBestNh };
         var _cfOn = window._xrayCf && window._xrayCf.kind === "loser" && window._xrayCf.pfx === p && window._xrayCf.nh === rt.nexthop;
         _cfTr = ' class="de-bgp-loser' + (_cfOn ? ' cf-on' : '') + '" onclick="event.stopPropagation();if(window.xrayCfToggle)window.xrayCfToggle(this,\'' + p + '\',\'' + rt.nexthop + '\')"';
       }
-      html += (_ecmp && _ecmp[rt.nexthop]) ? _xrayEcmpRowHtml(p, rt, isBest, _ecmp[rt.nexthop], [cell("metric", rt.metric || ""), cell("locprf", lpDisp), cell("weight", w), cell("path", pathDisp)]) : "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"' : _cfTr) + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + p + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";
+      var _nxRow = (_ecmp && _ecmp[rt.nexthop]) ? _xrayEcmpRowHtml(p, rt, isBest, _ecmp[rt.nexthop], [cell("metric", rt.metric || ""), cell("locprf", lpDisp), cell("weight", w), cell("path", pathDisp)]) : "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"' : _cfTr) + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + p + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";   /* nx_bgp_invalid_view: mark an unusable path's row */
+      if (rt.valid === false) {   /* nx_bgp_invalid_final (10-30 owner): pale red, St as the router prints it, click -> the reason card */
+        _nxRow = _nxRow.replace(/^<tr/, '<tr data-nx-invalid="1" onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"');
+        if (rt.status_raw != null) _nxRow = _nxRow.replace('<span class="bgp-st">' + st + '</span>', '<span class="bgp-st">' + String(rt.status_raw).replace(/[<>&"]/g, '') + '</span>');
+      }
+      html += _nxRow;
     });
-    if (p === window._xrayBgpSelPrefix) reasons += xrayBgpReasonHtml(p, dec, grp);   /* decision only for the currently selected prefix (hidden by default) */
+    if (p === window._xrayBgpSelPrefix) {   /* nx_bgp_invalid_view: reason from the usable paths + one line per unusable path */
+      var _nxJa = (document.documentElement.getAttribute("lang") || "en") === "ja" || window._xrayLang === "ja";
+      if (dec && dec.kind === "single" && _nxBad.length) reasons += '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>' + (_nxJa ? '使える道は 1 本だけ' : 'only usable path') + '</b></div>';
+      else if (dec) reasons += xrayBgpReasonHtml(p, dec, _nxOk);
+      else if (_nxBad.length) reasons += '<div class="bgp-reason bgp-reason-note">◦ ' + p + ' → ' + (_nxJa ? '使える道が無い' : 'no usable path') + '</div>';
+      _nxBad.forEach(function(r) { reasons += '<div class="bgp-reason bgp-reason-note nx-bgp-invalid-note">✕ ' + p + ' via ' + String(r.nexthop || '?').replace(/[<>&"]/g, '') + ' → ' + (_nxJa ? '使えない (next hop に届かない)' : 'not usable (next hop unreachable)') + '</div>'; });
+    }   /* decision only for the currently selected prefix (hidden by default) */
   });
   html += "</tbody></table>";
   if (_anyEcmp) html += _xrayEcmpLegendHtml(_anyEcmp === "sel", _ecmpN, _ecmpMix);   /* nx_ecmp */

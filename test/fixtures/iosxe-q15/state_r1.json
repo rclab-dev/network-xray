@@ -69,6 +69,7 @@
    "as_path": "65002",
    "best": true,
    "status": "*>",
+   "prefixlen": 24,
    "local_pref": 100,
    "weight": 0,
    "metric": 0,

@@ -54,6 +54,7 @@
    "as_path": "",
    "best": true,
    "status": "*>",
+   "prefixlen": 24,
    "weight": 32768,
    "metric": 0,
    "origin": "IGP",

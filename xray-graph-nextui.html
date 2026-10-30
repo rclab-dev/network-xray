@@ -809,7 +809,7 @@ window.__initNeXtOverview = function (data) {
           var enc = encodeURIComponent, mode = pj.rcl_mode || 'tl';
           var url = 'https://routecrushlab.com/lab/' + enc(mode) + '/' + enc(pj.rcl_qid) + '?try=guest&ref=' + enc(pj.ref || 'oss-clab');
           cta = { en: { t: pj.cta_label_en || (mode === 'tl' ? 'Solve it on RouteCrushLab (guest)' : 'Open in RouteCrushLab (guest)'), u: url + '&lang=en' },
-                  ja: { t: pj.cta_label_ja || (mode === 'tl' ? 'RouteCrushLab で解く (guest)' : 'RouteCrushLab で開く (guest)'), u: url } };
+                  ja: { t: pj.cta_label_ja || (mode === 'tl' ? 'RouteCrushLab で解く (guest)' : 'RouteCrushLab で開く (guest)'), u: url + '&lang=ja' } };   /* nx_cta_lang (v1.1.1): the Japanese view opened the English guest page (no lang = RCL default en) */
         }
         window.__nxPaintProblem = function(lang){
           var L = lang === 'ja' ? 'ja' : 'en';

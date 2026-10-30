@@ -241,6 +241,12 @@ function parseInterfaces(j) {
     /* nx_vrf_master (2026-10-20): the VRF device itself (interfaceType "VRF" on FRR 8.4 / 10.7.1) is not a link -> dropped in
        buildState unless the topology uses that name as a link end */
     if (d.interfaceType === 'VRF') out[ifn].vrfMaster = true;
+    /* nx_frr_vlan_link: the bridge this port is in / the port a VLAN sub-interface rides on */
+    if (d.masterInterface && d.interfaceType !== 'VRF' && !(d.vrfName && d.masterInterface === d.vrfName)) out[ifn].master = d.masterInterface;
+    if (d.linkInterface && d.linkInterface !== ifn) out[ifn].parent = d.linkInterface;
+    /* FRR 10.7.1 prints no linkInterface for a VLAN sub-interface (eth1.502: interfaceType Vlan, vlanId 502) -> the parent from the name */
+    var _sub = /^(.+)\.(\d+)$/.exec(ifn);
+    if (!out[ifn].parent && _sub && /^vlan$/i.test(d.interfaceType || '') && (d.vlanId == null || +d.vlanId === +_sub[2])) out[ifn].parent = _sub[1];
   });
   return out;
 }
@@ -331,7 +337,7 @@ function parseBgpRoutes(j) {
         as_path: (r.path != null ? String(r.path).trim() : ''),
         local_pref: (r.locPrf != null ? r.locPrf : (r.localPref != null ? r.localPref : null)),
         weight: r.weight, metric: r.metric, origin: r.origin,
-        reason: r.selectionReason || '', multipath: !!r.multipath });   /* nx_ecmp: FRR marks every installed equal path multipath */
+        reason: r.selectionReason || '', multipath: !!r.multipath, valid: !!(r.valid || r.bestpath || r.bestPath || r.multipath) });   /* nx_ecmp: FRR marks every installed equal path multipath */   /* nx_frr_bgp_valid: FRR puts "valid": true on usable paths only (missing = invalid, e.g. inaccessible next hop); a best / multipath path is usable by definition (hand-made json without valid stays as before) */
     });
   });
   return out;
@@ -441,7 +447,8 @@ function buildState(opts) {
         var _same = peers.filter(function (p) { return p.iface === n.iface && (peerName ? p.name === peerName : p.rid === n.rid); })[0];
         if (_same) { if (n.full && !_same.full) { _same.full = true; _same.state = n.state; } return; }
       }
-      peerName = peerName || ('r' + (seq++));
+      /* nx_frr_vlan_re_only: a neighbor on an iface that is no clab link gets NO invented name - RE (ospf_neighbors) only */
+      if (!peerName) { peers.push({ name: '', reOnly: true, iface: n.iface, full: n.full, state: n.state, ip: n.address, rid: n.rid }); return; }
       peers.push({ name: peerName, iface: n.iface, full: n.full, state: n.state, ip: n.address, rid: n.rid });
     });
   }
@@ -482,6 +489,7 @@ function buildState(opts) {
       // (Init/2-Way/ExStart/Exchange/Loading/Full). This visualizes "Hello is flowing but the adjacency
       // is stuck below Full" (timer/router-id/MTU mismatch) -- NOT a Full gate. OFF only when we hear
       // NOTHING from the peer: Down / None / Attempt (Hellos sent but none received / dead-timer expired).
+      if (p.reOnly) return;   /* nx_frr_vlan_re_only */
       var _peerUp = /^(full|loading|exchange|exstart|2-?way|init)/i.test(p.state || '') || !!p.full;
       peerSendingHellos[p.name] = _peerUp;
       if (_peerUp) peerHellos[p.name] = (ifs[p.iface] && ifs[p.iface].hello) || 10;
@@ -559,7 +567,7 @@ function buildState(opts) {
   // soundly mirror the target's real area/hello onto the peer side (engine reads literal
   // r1_*/r2_* = target/peer). When not Full we leave them unset (the down panel omits the line).
   var _area = {}, _hello = {};
-  if (proto !== 'bgp' && fullCount > 0) {
+  if ((opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && fullCount > 0) {   /* nx_frr_bgp_valid: was proto !== 'bgp' = a BGP + OSPF lab read with --proto bgp lost the OSPF area / hello lines (same test as ospf_configured) */
     var pif = ifs[primaryPeer.iface] || {};
     var tArea = _normArea(pif.area != null ? pif.area : '0');
     var tHello = pif.hello || 10;
@@ -652,14 +660,16 @@ function buildState(opts) {
     // best won (e.g. LocPref 100 > 50) by grouping paths per prefix.
     s.bgp_routes = bgpRt.map(function (r) {
       var o = { prefix: r.prefix, next_hop: r.nextHop, as_path: r.as_path || '',
-                best: !!r.best, status: r.best ? '*>' : '* ' };
+                best: !!r.best, status: r.valid === false ? '  ' : (r.best ? '*>' : '* ') };   /* nx_frr_bgp_valid: an invalid path (FRR/IOS) gets no '*' - it is not a usable candidate */
+      if (r.valid === false) o.valid = false;
+      if (r.valid === false && r.status_raw != null) o.status_raw = r.status_raw;   /* nx_bgp_status_raw: the router's own mark, unusable paths only (IOS "* i") */
       if (r.prefixlen != null) o.prefixlen = r.prefixlen;   /* nx_bgp_prefixlen */
       if (r.local_pref != null) o.local_pref = r.local_pref;
       if (r.weight != null) o.weight = r.weight;
       if (r.metric != null) o.metric = r.metric;
       if (r.origin) o.origin = r.origin;
       if (r.reason) o.reason = r.reason;
-      if (r.multipath) { o.multipath = true; if (!r.best) o.status = '*='; }   /* nx_ecmp: FRR's "=" = multipath, used together with the best */
+      if (r.multipath && r.valid !== false) { o.multipath = true; if (!r.best) o.status = '*='; }   /* nx_ecmp: FRR's "=" = multipath, used together with the best */   /* nx_frr_bgp_valid: valid paths only */
       if (r.vrf) o.vrf = r.vrf;   /* nx_vrf_bgp_table: only when not the default VRF */
       return o;
     });
@@ -786,6 +796,7 @@ function buildState(opts) {
 
   var _keepUp = {};  /* nx_collect_keep_up: 2+ links/sessions to one peer -> an up one keeps the per-peer keys (was last-wins) */
   peers.forEach(function (p) {
+    if (p.reOnly) return;   /* nx_frr_vlan_re_only */
     if (_keepUp[p.name] && !p.full) return;
     if (p.full) _keepUp[p.name] = true;
     s[p.name + '_has_full'] = p.full;
@@ -803,6 +814,7 @@ function buildState(opts) {
   s.ospf_neighbor_state = nei.list.some(function (n) { return n.full; }) ? 'Full'
     : (nei.list[0] ? nei.list[0].state : (s.ospf_configured ? 'Down' : 'None'));
   peers.forEach(function (p) {
+    if (p.reOnly) return;   /* nx_frr_vlan_re_only */
     var _on = _ospfByPeer[p.name];
     s[p.name + '_ospf_full'] = !!(_on && _on.full);
     s[p.name + '_ospf_state'] = _on ? (_on.full ? 'Full' : _on.state) : (s.ospf_configured ? 'Down' : 'None');
@@ -853,7 +865,7 @@ function buildState(opts) {
     if (_lp && _lp.overLo) _plRows[_plRows.length - 1].bgp_over_lo = true;  /* nx_collect_peer_map: the BGP state on this row is a loopback session to this peer, carried over this link */
   };
   adj.forEach(function (a) { _plAdd(a.iface, a.peer); });
-  peers.forEach(function (p) { _plAdd(p.iface, p.name); });
+  peers.forEach(function (p) { if (!p.reOnly) _plAdd(p.iface, p.name); });   /* nx_frr_vlan_re_only: not a link */
   if (_plRows.length) s.peer_links = _plRows;
 
   return s;
@@ -884,22 +896,48 @@ function _sameSubnet(prefix, ip) {
 
 // ---- assemble from a bundle of parsed-or-raw json -------------------------------------------
 // raw: { ospfNeighbor, ospfInterface, interface, route, bgpSummary, bgp }  (each = FRR json object)
+/* nx_frr_vlan_link: an OSPF interface that is no lab link but rides on exactly ONE lab-link port (a bridge whose member is that
+   port or its VLAN sub-interface, or a VLAN sub-interface of that port) -> the port carries the OSPF interface and neighbors,
+   and the interface line says both names (via). Several ports / none -> unchanged. */
+function _vlanOnLink(ifs, oif, nei, adj) {
+  var links = adj.map(function (a) { return a.iface; }).filter(Boolean);
+  var toLink = function (n) { if (links.indexOf(n) >= 0) return n; var p = ifs[n] && ifs[n].parent; return p && links.indexOf(p) >= 0 ? p : ''; };
+  Object.keys(oif).forEach(function (x) {
+    if (links.indexOf(x) >= 0 || /^lo/i.test(x)) return;
+    var ports = Object.keys(ifs).filter(function (m) { return ifs[m] && ifs[m].master === x; }).map(toLink);
+    if (ifs[x] && ifs[x].parent) ports.push(toLink(x));
+    ports = ports.filter(function (p, i, a) { return p && a.indexOf(p) === i; });
+    if (ports.length !== 1 || oif[ports[0]]) return;
+    var port = ports[0];
+    oif[port] = Object.assign({}, oif[x], { viaVlan: x }); delete oif[x];
+    nei.list.forEach(function (n) { if (n.iface === x) n.iface = port; });
+    if (nei.byIface[x]) { nei.byIface[port] = nei.byIface[x]; delete nei.byIface[x]; }
+    if (ifs[x]) ifs[port] = Object.assign({}, ifs[port] || {}, { up: ifs[x].up !== false && (!ifs[port] || ifs[port].up !== false), ip: ifs[x].ip, prefix: ifs[x].prefix, via: x });
+  });
+}
+
 function collectFromJson(args) {
   var proto = (args.proto || 'ospf').toLowerCase();
   var _ifs = parseInterfaces(args.interface);
   var _vrfOf = function (ifn) { return (_ifs[ifn] && _ifs[ifn].vrf) || ''; };   /* nx_ospf6: the OSPFv3 json has no VRF name -> from the interface */
-  return buildState({
+  var _nei = _mergeOspfNei(parseOspfNeighbors(args.ospfNeighbor), parseOspf6Neighbors(args.ospf6Neighbor, _vrfOf));   /* nx_ospf6 */
+  var _oif = _mergeOspfIf(parseOspfInterfaces(args.ospfInterface), parseOspf6Interfaces(args.ospf6Interface, _vrfOf));
+  _vlanOnLink(_ifs, _oif, _nei, args.adjacency || []);   /* nx_frr_vlan_link */
+  var _st = buildState({
     selfName: args.node, id: args.id || args.node, proto: proto,
     adjacency: args.adjacency || [], mgmtSubnet: args.mgmtSubnet || '',
     ospfConfigured: args.ospfConfigured, bgpConfigured: args.bgpConfigured, /* presence-fix-cfg */
-    ospfNei: _mergeOspfNei(parseOspfNeighbors(args.ospfNeighbor), parseOspf6Neighbors(args.ospf6Neighbor, _vrfOf)),   /* nx_ospf6 */
-    ospfIf: _mergeOspfIf(parseOspfInterfaces(args.ospfInterface), parseOspf6Interfaces(args.ospf6Interface, _vrfOf)),
+    ospfNei: _nei,
+    ospfIf: _oif,
     ifaces: _ifs,
     routes: parseRoutes(args.route).concat(parseRoutes(args.route6)),
     configStatics: args.configStatics || [],
     bgpSum: parseBgpSummary(args.bgpSummary),
     bgpRoutes: parseBgpRoutes(args.bgp)
   });
+  /* nx_frr_vlan_link: the RE line says both names ("eth2 (vlan500)"), like the IOS BDI (nx_re_via) */
+  Object.keys(_ifs).forEach(function (n) { if (_ifs[n].via && _st.interfaces && _st.interfaces[n]) _st.interfaces[n].via = _ifs[n].via; });
+  return _st;
 }
 
 // ---- live: docker exec on clab-<lab>-<node> -------------------------------------------------
@@ -1114,6 +1152,34 @@ function selfTestOspf6Vrf() {
     interface: FIX6.iface, ospf6Neighbor: [FIX6.nei], ospf6Interface: [FIX6.ifs], route6: FIX6.route6 });
   _assert(s6.full_count === 1 && s6.dut_has_full === true, 'v3: dut Full on eth1');
   _assert(s6.ospf_if_count === 1, 'v3: 1 OSPF interface (lo excluded, gre0 not attached) -> heading Running');
+  /* nx_frr_vlan_link */
+  (function () {
+    var nb = { neighbors: { '10.0.0.2': [{ priority: 1, state: 'Full/-', address: '172.16.0.2', ifaceName: 'vlan500:172.16.0.1', upTimeInMsec: 9000 }] } };
+    var oi = { interfaces: { vlan500: { ifUp: true, ospfEnabled: true, ipAddress: '172.16.0.1', ipAddressPrefixlen: 24, area: '0.0.0.0', timerMsecs: 1000 } } };
+    var up = { administrativeStatus: 'up', operationalStatus: 'up' };
+    var a = collectFromJson({ node: 'dut', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'x3' }, { iface: 'eth2', peer: 'x1' }], ospfConfigured: true, ospfNeighbor: nb, ospfInterface: oi,
+      interface: { eth1: up, eth2: Object.assign({ masterInterface: 'vlan500' }, up), vlan500: Object.assign({ interfaceType: 'Bridge', ipAddresses: [{ address: '172.16.0.1/24' }] }, up) } });
+    var r2 = (a.peer_links || []).filter(function (r) { return r.iface === 'eth2'; })[0] || {};
+    _assert(a.x1_neighbor_state === 'Full' && a.x1_iface === 'eth2' && r2.ospf_full === true && r2.peer === 'x1' && a.x3_neighbor_state === 'Down', 'vlan_link: bridge member eth2 -> x1 Full on eth2: ' + JSON.stringify([a.x1_neighbor_state, a.x1_iface, r2.ospf_state, a.x3_neighbor_state]));
+    _assert(a.interfaces.eth2 && a.interfaces.eth2.via === 'vlan500' && a.interfaces.eth2.ip === '172.16.0.1/24' && !a.interfaces.vlan500 && a.iface_hellos && a.iface_hellos.eth2 === 1, 'vlan_link: RE line eth2 (vlan500) with the VLAN address, Hello 1 s on eth2: ' + JSON.stringify([a.interfaces.eth2, a.iface_hellos]));
+    var b = collectFromJson({ node: 'dut', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'x1' }], ospfConfigured: true, ospfNeighbor: nb, ospfInterface: oi,
+      interface: { eth1: up, 'eth1.500': Object.assign({ interfaceType: 'Vlan', vlanId: 500, masterInterface: 'vlan500' }, up), vlan500: Object.assign({ interfaceType: 'Bridge', ipAddresses: [{ address: '172.16.0.1/24' }] }, up) } });
+    _assert(b.x1_neighbor_state === 'Full' && b.x1_iface === 'eth1', 'vlan_link: trunk eth1.500 (Vlan 500 on eth1, no linkInterface = FRR 10.7.1) in vlan500 -> x1 Full on eth1: ' + JSON.stringify([b.x1_neighbor_state, b.x1_iface]));
+    var c = collectFromJson({ node: 'dut', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'x1' }, { iface: 'eth2', peer: 'x2' }], ospfConfigured: true, ospfNeighbor: nb, ospfInterface: oi,
+      interface: { eth1: Object.assign({ masterInterface: 'vlan500' }, up), eth2: Object.assign({ masterInterface: 'vlan500' }, up), vlan500: up } });
+    _assert(c.x1_neighbor_state === 'Down' && c.x2_neighbor_state === 'Down' && c.ospf_neighbors[0].iface === 'vlan500', 'vlan_link: two link ports in one bridge -> unchanged (RE only): ' + JSON.stringify([c.x1_neighbor_state, c.x2_neighbor_state, c.ospf_neighbors[0].iface]));
+  })();
+  /* nx_frr_vlan_re_only */
+  (function () {
+    var _vs = collectFromJson({ node: 'dut', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'x1' }], ospfConfigured: true,
+      ospfNeighbor: { neighbors: { '10.0.0.2': [{ priority: 1, state: 'Full/-', address: '172.16.0.2', ifaceName: 'vlan500', upTimeInMsec: 9000 }] } },
+      ospfInterface: { interfaces: { vlan500: { ifUp: true, ospfEnabled: true, ipAddress: '172.16.0.1', ipAddressPrefixlen: 24, area: '0.0.0.0', timerMsecs: 1000 } } },
+      route: { '172.16.0.0/24': [{ prefix: '172.16.0.0/24', protocol: 'connected', selected: true, nexthops: [{ directlyConnected: true, interfaceName: 'vlan500', active: true }] }] } });
+    var _inv = function (k) { return /^r\d+_(has_full|iface|neighbor_state|ospf_)/.test(k); };   /* r1_area / r2_hello = the engine's fixed target / peer keys, not names */
+    _assert(!Object.keys(_vs).some(_inv) && !Object.keys(_vs.peer_sending_hellos || {}).some(function (k) { return /^r\d+$/.test(k); }), 'vlan_re_only: no invented r<N> keys: ' + Object.keys(_vs).filter(_inv).join(','));
+    _assert(_vs.ospf_neighbors.length === 1 && _vs.ospf_neighbors[0].iface === 'vlan500' && _vs.ospf_neighbor_state === 'Full' && _vs.is_established !== false, 'vlan_re_only: the neighbor stays in RE (ospf_neighbors) and Full: ' + JSON.stringify([_vs.ospf_neighbors.length, _vs.ospf_neighbor_state]));
+    _assert((_vs.peer_links || []).every(function (r) { return r.iface !== 'vlan500'; }) && _vs.x1_neighbor_state === 'Down', 'vlan_re_only: no link row for vlan500, x1 (adj, unread) Down: ' + JSON.stringify(_vs.peer_links));
+  })();
   _assert(s6.ospf_neighbors.length === 1 && s6.ospf_neighbors[0].state === 'Full' && s6.ospf_neighbors[0].iface === 'eth1', 'v3: ospf_neighbors row');
   _assert(s6.interfaces.eth1.ip === '2001:db8:3::2/64', 'v3: eth1 shows its global IPv6 (not fe80, not empty)');
   _assert(s6.lsdb_prefixes.length === 1 && s6.lsdb_prefixes[0].text === '2001:db8:1:1::/64', 'v3: the ospf6 route is in the LSDB');

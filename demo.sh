@@ -41,8 +41,9 @@ fi
 
 # which protocol to collect: BGP if any router runs BGP, else OSPF if any runs OSPF, else static
 PROTO=static
-if grep -qsE '^router bgp' "$LABDIR"/*/frr.conf; then PROTO=bgp
-elif grep -qsE '^router ospf' "$LABDIR"/*/frr.conf; then PROTO=ospf; fi
+# nx_demo_proto_ios: FRR frr.conf and IOS startup configs (*.cfg, e.g. the IOL examples' rN.partial.cfg)
+if grep -qsE '^router bgp' "$LABDIR"/*/frr.conf "$LABDIR"/*.cfg "$LABDIR"/*/*.cfg; then PROTO=bgp
+elif grep -qsE '^router ospf' "$LABDIR"/*/frr.conf "$LABDIR"/*.cfg "$LABDIR"/*/*.cfg; then PROTO=ospf; fi
 
 # the problem text band reads problem.json next to the page (repo root): link this lab's one.
 # nx_demo_pj_cleanup: demo.sh only touches a link it made (one into examples/ left by an earlier run, or the one made
