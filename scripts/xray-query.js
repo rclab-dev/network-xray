@@ -1,0 +1,238 @@
+#!/usr/bin/env node
+/*
+ * xray-query.js - read-only questions about a lab's state, without a browser.
+ *
+ * Reads the state the collectors already write and prints ONE JSON object to stdout, so a script or an
+ * AI assistant can ask "what is up?" and "why did this router pick that BGP path?".
+ *
+ *   node scripts/xray-query.js state <input>
+ *   node scripts/xray-query.js why   <input> <node> <prefix>
+ *
+ * <input> is one of:
+ *   - a per-node state JSON (frr-collect.js / clab-collect.js --out, test/fixtures/<lab>/state_<node>.json)
+ *   - a JSON object { <node>: <state>, ... }
+ *   - the xray-states.js that clab-xray-collect.js writes (window.LIVE_STATES = {...};)
+ *   - a directory with state_<node>.json files (test/fixtures/<lab>/), or an xray-states.js
+ *   - a directory of saved FRR `show ... json` files (frr-collect.js --from-dir layout; node = directory name),
+ *     or a directory whose sub-directories are such node directories
+ *
+ * Errors (missing file, unknown node / prefix, unreadable input) -> {"error": "..."} and exit code 2.
+ * Nothing is sent anywhere; no router is contacted.
+ */
+'use strict';
+var fs = require('fs');
+var path = require('path');
+
+function QueryError(msg) { this.message = msg; }
+
+function isState(o) {
+  return !!(o && typeof o === 'object' && !Array.isArray(o) &&
+    (o.target_node != null || o.interfaces != null || o.bgp_routes != null || o.ospf_neighbors != null));
+}
+function nodeName(st, fallback) { return String(st.target_node || st.id || fallback || ''); }
+
+// a parsed object -> { <node>: state }
+function statesFromObject(obj, fallbackName) {
+  if (isState(obj)) { var one = {}; one[nodeName(obj, fallbackName)] = obj; return one; }
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    var out = {};
+    Object.keys(obj).forEach(function (k) { if (isState(obj[k])) out[k] = obj[k]; });
+    if (Object.keys(out).length) return out;
+  }
+  throw new QueryError('no node state found in input');
+}
+
+// the xray-states.js written by clab-xray-collect.js: first line is `window.LIVE_STATES = {...};`
+function parseText(text, fallbackName) {
+  var m = /window\.LIVE_STATES\s*=\s*(.*?);\s*$/m.exec(text);
+  var obj;
+  try { obj = JSON.parse(m ? m[1] : text); } catch (e) { throw new QueryError('not valid JSON: ' + e.message); }
+  return statesFromObject(obj, fallbackName);
+}
+
+var FRR_SHOW = /^show_.*\.json$|^(ospf-neighbor|ospf-interface|interface|route|bgp-summary|bgp)\.json$/;
+function isFrrDir(dir) {
+  try { return fs.readdirSync(dir).some(function (f) { return FRR_SHOW.test(f); }); } catch (e) { return false; }
+}
+function collectFrrDir(dir) {
+  var frr = require('../frr-collect.js');
+  var name = path.basename(path.resolve(dir));
+  return frr.collectFromDir({ node: name, id: name, fromDir: dir, proto: 'auto', adjacency: [] }).state;
+}
+
+function loadStates(input) {
+  if (!input) throw new QueryError('missing input (a state JSON file or a directory)');
+  var stat;
+  try { stat = fs.statSync(input); } catch (e) { throw new QueryError('not found: ' + input); }
+  if (!stat.isDirectory()) {
+    var text;
+    try { text = fs.readFileSync(input, 'utf8'); } catch (e) { throw new QueryError('cannot read: ' + input); }
+    var base = path.basename(input).replace(/\.json$/, '').replace(/^state_/, '');
+    return parseText(text, base);
+  }
+  var files = fs.readdirSync(input).sort();
+  var out = {};
+  files.filter(function (f) { return /^state_.+\.json$/.test(f); }).forEach(function (f) {
+    var s = parseText(fs.readFileSync(path.join(input, f), 'utf8'), f.slice(6, -5));
+    Object.keys(s).forEach(function (k) { out[k] = s[k]; });
+  });
+  if (Object.keys(out).length) return out;
+  if (files.indexOf('xray-states.js') >= 0) return parseText(fs.readFileSync(path.join(input, 'xray-states.js'), 'utf8'));
+  if (isFrrDir(input)) { var st = collectFrrDir(input); out[nodeName(st)] = st; return out; }
+  files.forEach(function (f) {
+    var sub = path.join(input, f);
+    if (fs.statSync(sub).isDirectory() && isFrrDir(sub)) { var s2 = collectFrrDir(sub); out[nodeName(s2, f)] = s2; }
+  });
+  if (Object.keys(out).length) return out;
+  throw new QueryError('no state files (state_<node>.json, xray-states.js or FRR show_*.json) in ' + input);
+}
+
+// ---- state ----------------------------------------------------------------------------------
+function summarize(states) {
+  var names = Object.keys(states).sort();
+  var nodes = names.map(function (n) {
+    var s = states[n], o = { name: n };
+    if (s.nos) o.nos = s.nos;
+    if (s.protocol) o.protocol = s.protocol;
+    if (s.nx_unread) o.unread = s.nx_unread;
+    o.interfaces = Object.keys(s.interfaces || {}).map(function (i) {
+      var x = s.interfaces[i] || {};
+      return { name: i, up: !!x.up, ip: x.ip || '' };
+    });
+    return o;
+  });
+
+  // links: one row per peer_links entry; the two ends of the same cable are paired in order
+  var links = [], pending = {};
+  names.forEach(function (n) {
+    (states[n].peer_links || []).forEach(function (r) {
+      if (!r || !r.peer) return;
+      var back = n + '>' + r.peer, fwd = r.peer + '>' + n;
+      var row = { a: n, a_iface: r.iface || '', b: r.peer, b_iface: null, up: !!r.up };
+      if (r.ospf_state) row.ospf_state = r.ospf_state;
+      if (pending[back] && pending[back].length) {
+        var other = pending[back].shift();
+        other.b_iface = row.a_iface;
+        other.up = other.up && row.up;
+        return;
+      }
+      (pending[fwd] = pending[fwd] || []).push(row);
+      links.push(row);
+    });
+  });
+
+  var ospf = [], bgp = [];
+  names.forEach(function (n) {
+    var s = states[n], peerOf = {};
+    (s.peer_links || []).forEach(function (r) { if (r && r.iface && r.peer) peerOf[r.iface] = r.peer; });
+    (s.ospf_neighbors || []).forEach(function (x) {
+      var o = { node: n, neighbor_id: x.router_id || '', address: x.address || '', iface: x.iface || '', state: x.state || '' };
+      if (x.role) o.role = x.role;
+      if (peerOf[x.iface]) o.peer = peerOf[x.iface];
+      if (x.af) o.af = x.af;
+      if (x.vrf) o.vrf = x.vrf;
+      ospf.push(o);
+    });
+    (s.bgp_neighbors || []).forEach(function (x) {
+      var o = { node: n, peer_ip: x.ip || '', remote_as: x.remote_as != null ? x.remote_as : null,
+        type: x.ibgp === true ? 'iBGP' : x.ibgp === false ? 'eBGP' : null, state: x.state || '', established: /^established$/i.test(x.state || '') };
+      if (x.pfx_rcvd != null) o.pfx_rcvd = x.pfx_rcvd;
+      if (x.vrf) o.vrf = x.vrf;
+      bgp.push(o);
+    });
+  });
+  return {
+    nodes: nodes, links: links, ospf_adjacencies: ospf, bgp_sessions: bgp,
+    counts: {
+      nodes: nodes.length, links: links.length,
+      ospf_full: ospf.filter(function (x) { return /^full$/i.test(x.state); }).length, ospf_total: ospf.length,
+      bgp_established: bgp.filter(function (x) { return x.established; }).length, bgp_total: bgp.length
+    }
+  };
+}
+
+// ---- why ------------------------------------------------------------------------------------
+// bgp_routes[].prefix is "8.8.8.0" (+ prefixlen 24) or "203.0.113.0/24"; the question may carry a length or not
+function splitPrefix(p) {
+  var m = /^(.*?)(?:\/(\d+))?$/.exec(String(p).trim());
+  return { net: m[1], len: m[2] != null ? +m[2] : null };
+}
+function routeLen(r) {
+  if (r.prefixlen != null) return +r.prefixlen;
+  var m = /\/(\d+)$/.exec(String(r.prefix || ''));
+  return m ? +m[1] : null;
+}
+function pathOut(r) {
+  var o = { next_hop: r.next_hop || '', as_path: r.as_path || '', status: r.status || '' };
+  ['local_pref', 'weight', 'metric', 'origin'].forEach(function (k) { if (r[k] != null) o[k] = r[k]; });
+  if (r.best) o.best = true;
+  if (r.multipath) o.multipath = true;
+  if (r.valid === false) o.valid = false;
+  if (r.vrf) o.vrf = r.vrf;
+  return o;
+}
+
+function why(states, node, prefix, vrf) {
+  if (!node) throw new QueryError('missing node');
+  if (!prefix) throw new QueryError('missing prefix');
+  var s = Object.prototype.hasOwnProperty.call(states, node) ? states[node] : null;
+  if (!s) throw new QueryError('unknown node: ' + node + ' (known: ' + Object.keys(states).sort().join(', ') + ')');
+  var q = splitPrefix(prefix);
+  var vrfOf = function (r) { return r.vrf || 'default'; };
+  var paths = (s.bgp_routes || []).filter(function (r) {
+    var rp = splitPrefix(r.prefix || '');
+    if (rp.net !== q.net) return false;
+    if (vrf && vrfOf(r) !== vrf) return false;
+    return q.len == null || routeLen(r) === q.len;
+  });
+  var vrfs = paths.map(vrfOf).filter(function (v, i, a) { return a.indexOf(v) === i; });
+  if (!vrf && vrfs.length > 1) {
+    throw new QueryError('prefix ' + prefix + ' on ' + node + ' is in several VRFs (' + vrfs.join(', ') + '): give one as the 5th argument');
+  }
+  if (!paths.length) {
+    var known = (s.bgp_routes || []).map(function (r) { var l = routeLen(r); return splitPrefix(r.prefix).net + (l != null ? '/' + l : ''); });
+    known = known.filter(function (k, i) { return known.indexOf(k) === i; });
+    throw new QueryError('unknown prefix on ' + node + ': ' + prefix + (vrf ? ' in VRF ' + vrf : '') + (s.bgp_routes ? ' (BGP table has: ' + (known.join(', ') || 'none') + ')' : ' (no BGP table in the data for this node)'));
+  }
+  var lens = paths.map(routeLen).filter(function (l, i, a) { return a.indexOf(l) === i; });
+  if (q.len == null && lens.length > 1) {
+    throw new QueryError('prefix ' + prefix + ' on ' + node + ' has several lengths (' + lens.join(', ') + '): give one, e.g. ' + q.net + '/' + lens[0]);
+  }
+  var bests = paths.filter(function (r) { return r.best; });
+  var len = lens[0], best = bests[0] || null;
+  var out = { node: node, prefix: q.net + (len != null ? '/' + len : ''), paths: paths.length, best: best ? pathOut(best) : null };
+  if (vrfs.length === 1 && vrfs[0] !== 'default') out.vrf = vrfs[0];
+  if (bests.length > 1) out.also_best = bests.slice(1).map(pathOut);   // multipath / more than one marked best: all of them, not just the first
+  if (!best) {
+    out.reason = null;
+    out.note = 'none of the ' + paths.length + ' path(s) is marked best in the data';
+  } else if (typeof best.reason === 'string' && best.reason) {
+    out.reason = best.reason;
+    out.reason_source = s.nos === 'ios-xe' ? 'bgp_routes[].reason (IOS-XE: derived by the collector from the printed columns)'
+      : !s.nos || s.nos === 'frr' ? 'bgp_routes[].reason (FRR selectionReason)' : 'bgp_routes[].reason (' + s.nos + ' collector)';
+  } else {
+    out.reason = null;
+    out.note = 'the reason is not in the data (no reason stored for the best path)';
+  }
+  out.candidates = paths.map(pathOut);
+  return out;
+}
+
+// ---- CLI ------------------------------------------------------------------------------------
+var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf]';
+function run(argv) {
+  var cmd = argv[0];
+  if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
+  if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
+  throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
+}
+
+if (require.main === module) {
+  var res, code = 0;
+  try { res = run(process.argv.slice(2)); }
+  catch (e) { res = { error: (e && e.message) || String(e) }; code = 2; }
+  process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+  process.exitCode = code;
+}
+
+module.exports = { loadStates: loadStates, summarize: summarize, why: why, run: run };

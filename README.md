@@ -541,6 +541,45 @@ Today this is **drop-in for the browser**: include the two `<script>` tags (abov
 embedding-first (blog posts, dashboards, internal tools), not a bundler dependency. If you need
 ESM/types, fork and wrap it.
 
+## Query from a script or an AI assistant
+
+`scripts/xray-query.js` answers questions about a lab's state without a browser. It is read-only (no router is
+contacted) and prints one JSON object. Input: a state file the collectors already write — a `state_<node>.json`
+or a directory of them (`test/fixtures/<lab>/`), the `xray-states.js` that `clab-xray-collect.js` writes, or a
+directory of saved FRR `show … json` files (`frr-collect.js --from-dir` layout).
+
+```
+node scripts/xray-query.js state test/fixtures/iosxe-q15
+node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
+```
+
+`state` lists nodes, links, OSPF adjacencies and BGP sessions (trimmed here):
+
+```json
+{
+  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "bgp_established": 4, "bgp_total": 4 },
+  "ospf_adjacencies": [ { "node": "r1", "neighbor_id": "2.2.2.2", "iface": "Ethernet0/1", "state": "Full", "role": "DR", "peer": "r2" } ],
+  "bgp_sessions": [ { "node": "r1", "peer_ip": "2.2.2.2", "remote_as": 65001, "type": "iBGP", "state": "Established", "established": true } ]
+}
+```
+
+`why` gives the BGP best path for a prefix on a node and the reason stored with it, the same field the Best-Path panel
+shows: FRR's own `selectionReason`; for Cisco IOS-XE the collector derives it from the printed columns (`reason_source`
+says which). When the data has no reason, `reason` is `null` with a `note` — it is not guessed (trimmed):
+
+```json
+{
+  "node": "r1", "prefix": "8.8.8.0/24", "paths": 1,
+  "best": { "next_hop": "2.2.2.2", "as_path": "65002", "status": "*>", "local_pref": 100, "origin": "IGP", "best": true },
+  "reason": "First path received",
+  "candidates": [ "…every path for the prefix…" ]
+}
+```
+
+If the prefix is in more than one VRF, add the VRF name as a fifth argument (`why <dir> r1 10.0.0.0/24 red`).
+A missing file, an unknown node, an unknown prefix or a wrong number of arguments prints `{"error": "..."}` and exits
+with code 2.
+
 ## Embed the DeepDive in your own tool
 
 X-Ray's per-node **DeepDive** is a self-contained component you can drop into another UI —
