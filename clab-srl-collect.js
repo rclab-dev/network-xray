@@ -53,6 +53,9 @@ function maskToPfx(mask) {
 // OSPF area id: srl prints "0.0.0.0" for the backbone; show the short "0" the labs use.
 function normArea(a) { var s = String(a == null ? '0' : a); if (s === '0.0.0.0') return '0'; var m = s.match(/^0\.0\.0\.(\d+)$/); return m ? m[1] : s; }
 function splitIf(sub) { var m = /^(.*)\.(\d+)$/.exec(sub); return m ? { base: m[1], sub: m[2] } : { base: sub, sub: '0' }; }
+// a list field from sr_cli json: only a real array, and only its object entries (null / 'x' / 7 in place of a
+// list or a list entry would throw below; valid srl output is always an array of objects, so it is unchanged).
+function list(x) { return Array.isArray(x) ? x.filter(function (e) { return e !== null && typeof e === 'object'; }) : []; }
 var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 'ip-vrf': 'connected', static: 'static', 'bgp': 'bgp', 'bgp-vpn': 'bgp', arpnd: 'connected', 'arp-nd': 'connected' };
 
 // ---------------------------------------------------------------------------
@@ -72,7 +75,7 @@ function buildState(fetch, node, adj, proto) {
   Object.keys(adj).concat(['system0.0']).forEach(function (ifn) {
     var s = splitIf(ifn);
     var j = fetch('interface ' + s.base + ' subinterface ' + s.sub + ' ipv4');
-    var ip = j && j.address && j.address[0] && j.address[0]['ip-prefix'];
+    var ip = j && list(j.address)[0] && list(j.address)[0]['ip-prefix']; if (typeof ip !== 'string') ip = '';
     state.interfaces[ifn] = { ip: ipOnly(ip), up: !(j && j['admin-state'] === 'disable') };
     if (ip) _ipPfx[ifn] = ip;
   });
@@ -86,19 +89,19 @@ function buildState(fetch, node, adj, proto) {
     var bn = fetch('network-instance default protocols bgp neighbor *');
     // nx_srl_bgp_neighbors: the per-neighbor list in the FRR collector's shape (the RE counts it: "Established 3, Idle (Admin) 1")
     // a disabled neighbor carries no peer-as: borrow it from a neighbor in the same peer-group, else '-' (never "AS undefined")
-    var _grpAs = {}; (bn && bn.neighbor || []).forEach(function (n) { if (n['peer-group'] && n['peer-as'] != null && _grpAs[n['peer-group']] == null) _grpAs[n['peer-group']] = n['peer-as']; });
-    state.bgp_neighbors = (bn && bn.neighbor || []).map(function (n) {
+    var _grpAs = {}; list(bn && bn.neighbor).forEach(function (n) { if (n['peer-group'] && n['peer-as'] != null && _grpAs[n['peer-group']] == null) _grpAs[n['peer-group']] = n['peer-as']; });
+    state.bgp_neighbors = list(bn && bn.neighbor).map(function (n) {
       var _st = String(n['session-state'] || '').toLowerCase();
-      var _nm = { established: 'Established', active: 'Active', idle: 'Idle', connect: 'Connect', opensent: 'OpenSent', openconfirm: 'OpenConfirm' }[_st] || (n['session-state'] || '');
+      var _nm = { established: 'Established', active: 'Active', idle: 'Idle', connect: 'Connect', opensent: 'OpenSent', openconfirm: 'OpenConfirm' }[_st] || String(n['session-state'] || '');
       if (n['admin-state'] === 'disable' && _st !== 'established') _nm = 'Idle (Admin)';
       var _as = n['peer-as'] != null ? n['peer-as'] : (_grpAs[n['peer-group']] != null ? _grpAs[n['peer-group']] : '-');
-      var _o = { ip: n['peer-address'] || '', remote_as: _as, ibgp: n['peer-type'] === 'ibgp', state: _nm };
-      var _af = (n['afi-safi'] || []).filter(function (a) { return a['afi-safi-name'] === 'ipv4-unicast'; })[0];
+      var _o = { ip: typeof n['peer-address'] === 'string' ? n['peer-address'] : '', remote_as: _as, ibgp: n['peer-type'] === 'ibgp', state: _nm };
+      var _af = list(n['afi-safi']).filter(function (a) { return a['afi-safi-name'] === 'ipv4-unicast'; })[0];
       if (_af && _af['received-routes'] != null) _o.pfx_rcvd = _af['received-routes'];
       return _o;
     });
-    (bn && bn.neighbor || []).forEach(function (n) {
-      var pa = n['peer-address'] || '', ifn = _ifOf(pa), peer = ifn && adj[ifn];
+    list(bn && bn.neighbor).forEach(function (n) {
+      var pa = typeof n['peer-address'] === 'string' ? n['peer-address'] : '', ifn = _ifOf(pa), peer = ifn && adj[ifn];
       if (!peer) return;
       var _keep = state[peer + '_has_full'] === true && n['session-state'] !== 'established';  /* nx_srl_peer_map: an up session keeps the per-peer keys */
       if (!_keep) state[peer + '_iface'] = ifn;
@@ -108,10 +111,10 @@ function buildState(fetch, node, adj, proto) {
     });
   } else {
     var oa = fetch('network-instance default protocols ospf instance default area *');
-    ((oa && oa.area) || []).forEach(function (a) {
-      (a.interface || []).forEach(function (iface) {
+    list(oa && oa.area).forEach(function (a) {
+      list(a.interface).forEach(function (iface) {
         var ifn = iface['interface-name'];
-        (iface.neighbor || []).forEach(function (nb) {
+        list(iface.neighbor).forEach(function (nb) {
           var peer = adj[ifn]; if (!peer) return;
           var _keepO = state[peer + '_has_full'] === true && nb['adjacency-state'] !== 'full';  /* nx_srl_peer_map: a Full adjacency keeps the per-peer keys */
           if (!_keepO) state[peer + '_iface'] = ifn;
@@ -134,11 +137,11 @@ function buildState(fetch, node, adj, proto) {
   var rt = fetch('network-instance default route-table ipv4-unicast');
   var nhgJson = fetch('network-instance default route-table next-hop-group *');
   var nhJson = fetch('network-instance default route-table next-hop *');
-  var nhg = {}; ((nhgJson && nhgJson['next-hop-group']) || []).forEach(function (g) { var first = (g['next-hop'] || [])[0]; if (first) nhg[g.index] = first['next-hop']; });
-  var nh = {}; ((nhJson && nhJson['next-hop']) || []).forEach(function (n) { nh[n.index] = { ip: n['ip-address'] || '', iface: n.subinterface || '' }; });
-  state.routing_table = ((rt && rt.route) || []).filter(function (r) { return r.active !== false; }).map(function (r) {
+  var nhg = {}; list(nhgJson && nhgJson['next-hop-group']).forEach(function (g) { var first = list(g['next-hop'])[0]; if (first) nhg[g.index] = first['next-hop']; });
+  var nh = {}; list(nhJson && nhJson['next-hop']).forEach(function (n) { nh[n.index] = { ip: typeof n['ip-address'] === 'string' ? n['ip-address'] : '', iface: typeof n.subinterface === 'string' ? n.subinterface : '' }; });
+  state.routing_table = list(rt && rt.route).filter(function (r) { return r.active !== false && typeof r['ipv4-prefix'] === 'string'; }).map(function (r) {
     var resolved = nh[nhg[r['next-hop-group']]] || {};
-    var protocol = PROTO[r['route-type']] || r['route-type'] || '';
+    var protocol = (Object.prototype.hasOwnProperty.call(PROTO, r['route-type']) && PROTO[r['route-type']]) || String(r['route-type'] || '');
     var oif = resolved.iface || (protocol === 'local' ? 'system0.0' : '');
     return { prefix: r['ipv4-prefix'], out_iface: oif, next_hop: resolved.ip || undefined, protocol: protocol, selected: true };
   });
@@ -164,8 +167,8 @@ function buildState(fetch, node, adj, proto) {
     var rib = fetch('network-instance default bgp-rib afi-safi ipv4-unicast ipv4-unicast local-rib');
     var attrJson = fetch('network-instance default bgp-rib attr-sets');
     var attrById = {};
-    (((attrJson && attrJson['attr-set']) || [])).forEach(function (a) {
-      var aspath = (a['as-path'] && (a['as-path'].segment || []).map(function (s) { return (s.member || []).join(' '); }).join(' ')) || '';
+    list(attrJson && attrJson['attr-set']).forEach(function (a) {
+      var aspath = (a['as-path'] && list(a['as-path'].segment).map(function (s) { return (Array.isArray(s.member) ? s.member : []).join(' '); }).join(' ')) || '';
       var o = String(a.origin || 'igp');
       attrById[String(a.index)] = {
         next_hop: a['next-hop'] || '',
@@ -175,13 +178,13 @@ function buildState(fetch, node, adj, proto) {
         origin: o === 'incomplete' ? '?' : o.charAt(0)
       };
     });
-    state.bgp_routes = (((rib && rib.route) || [])).map(function (r) {
+    state.bgp_routes = list(rib && rib.route).map(function (r) {
       var at = attrById[String(r['attr-id'])] || {};
       var own = r['origin-protocol'] === 'local';
       var nh = (at.next_hop && at.next_hop !== '0.0.0.0') ? at.next_hop : (own ? '' : (r.neighbor || ''));
       var best = r['best-route'] === true;
       return {
-        prefix: r.prefix || '', next_hop: nh, as_path: at.as_path || '',
+        prefix: String(r.prefix || ''), next_hop: nh, as_path: at.as_path || '',
         local_pref: at.local_pref != null ? at.local_pref : 100, weight: 0,
         metric: at.med || 0, origin: at.origin || 'i',
         best: best, own: own, status: best ? '*>' : '* '
@@ -229,7 +232,7 @@ function buildState(fetch, node, adj, proto) {
     peers.forEach(function (p) { state[p + '_established'] = !!state[p + '_has_full']; });
   } else {
     /* nx_unread (F1, 2026-10-17): OSPF only when the router has an OSPF instance with an area (was: always true here) */
-    state.ospf_configured = !!(typeof oa !== 'undefined' && oa && (oa.area || []).length);
+    state.ospf_configured = !!(typeof oa !== 'undefined' && oa && list(oa.area).length);
     state.ospf_active_on_interface = fullCount > 0;
     state.peer_sending_hello = fullCount > 0;
     state.has_ospf_route = reach;
@@ -239,13 +242,13 @@ function buildState(fetch, node, adj, proto) {
     // prefixes; p2p links are neighbor pointers (not prefixes) and are skipped.
     var myRid = (state.interfaces['system0.0'] && state.interfaces['system0.0'].ip) || '';
     var lsdbSeen = {}, lsdb = [];
-    ((oa && oa.area) || []).forEach(function (a) {
-      var types = (a.lsdb && a.lsdb['lsa-types'] && a.lsdb['lsa-types']['lsa-type']) || [];
+    list(oa && oa.area).forEach(function (a) {
+      var types = list(a.lsdb && a.lsdb['lsa-types'] && a.lsdb['lsa-types']['lsa-type']);
       types.forEach(function (t) {
         if (t.type !== 'router-lsa') return;
-        ((t.lsas && t.lsas.lsa) || []).forEach(function (L) {
+        list(t.lsas && t.lsas.lsa).forEach(function (L) {
           var adv = L['advertising-router'] || '';
-          ((L['router-lsa'] && L['router-lsa'].links) || []).forEach(function (lk) {
+          list(L['router-lsa'] && L['router-lsa'].links).forEach(function (lk) {
             if (lk.type !== 'router-lsa-stub-network') return;
             var pfx = lk['link-id'] + '/' + maskToPfx(lk['link-data']);
             if (lsdbSeen[pfx]) return; lsdbSeen[pfx] = true;
@@ -261,8 +264,8 @@ function buildState(fetch, node, adj, proto) {
     // Area / hello: a Full adjacency GUARANTEES matching area + hello timers (OSPF never reaches Full
     // otherwise), so mirror the target's real area/hello onto both sides -> clears the false "MISMATCH".
     if (fullCount > 0) {
-      var _a0 = (oa && oa.area && oa.area[0]) || {};
-      var _if0 = ((_a0.interface || []).filter(function (i) { return (i.neighbor || []).length; })[0]) || (_a0.interface || [])[0] || {};
+      var _a0 = list(oa && oa.area)[0] || {};
+      var _if0 = (list(_a0.interface).filter(function (i) { return list(i.neighbor).length; })[0]) || list(_a0.interface)[0] || {};
       var tArea = normArea(_a0['area-id']), tHello = _if0['hello-interval'] || 10;
       state.r1_area = state.r2_area = state.target_area = state.peer_area = tArea; state.area_match = true;
       state.r1_hello = state.r2_hello = state.target_hello = state.peer_hello = tHello; state.timer_match = true;
@@ -396,6 +399,9 @@ function selfTest() {
 }
 
 // ---------------------------------------------------------------------------
+module.exports = { buildState: buildState, dirFetch: dirFetch, pathToFile: pathToFile, sameNet24: sameNet24, maskToPfx: maskToPfx, normArea: normArea, splitIf: splitIf, selfTest: selfTest };
+if (require.main !== module) return;   // required (e.g. by test/): export only, no CLI
+
 function arg(name, def) { var i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : def; }
 
 if (process.argv.indexOf('--self-test') >= 0) {
