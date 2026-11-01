@@ -101,6 +101,22 @@ if (mgmtArg.length === 1 && mgmtArg[0] === '--exclude-mgmt') {
   if (_sub) mgmtArg = ['--mgmt-subnet', _sub[1]];
 }
 
+/* the per-node state files live in a directory only this user can use (not loose in the shared tmp dir, where another
+   local user could put a file or a link with the same name first): <tmp>/xray-state-u<uid>, mode 0700, or a fresh
+   mkdtemp directory when that one is not ours / not private */
+function privateStateDir() {
+  var uid = typeof process.getuid === 'function' ? process.getuid() : null;
+  var d = path.join(os.tmpdir(), 'xray-state' + (uid != null ? '-u' + uid : ''));
+  try { fs.mkdirSync(d, { mode: 0o700 }); } catch (e) { if (!e || e.code !== 'EEXIST') d = ''; }
+  try {
+    var st = d && fs.lstatSync(d);
+    if (st && st.isDirectory() && (uid == null || (st.uid === uid && !(st.mode & 0o077)))) return d;
+  } catch (e) {}
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'xray-state-'));
+}
+var stateDir = privateStateDir();
+function stateFile(n) { return path.join(stateDir, lab + '-' + n + '.json'); }   // lab and node are plain names (no / or ..)
+
 // derive per-node adjacency from links: endpoints: ["a:eth1", "b:eth2"]
 var adj = {};
 var re = /endpoints:\s*\[\s*"([^:"]+):([^"\]]+)"\s*,\s*"([^:"]+):([^"\]]+)"\s*\]/g, m;
@@ -236,8 +252,7 @@ function collectAll() {
   var _par = !serialCollect && nodes.length > 1, _job = {};
   var _cmdOf = function (n) {
     var _nj = nodeJob(n), script = _nj.script, adjStr = _nj.adjStr, mg = _nj.mg;   /* nx_ios_collect */
-    var out = path.join(os.tmpdir(), 'xray-state-' + lab + '-' + n +
-      (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json');
+    var out = stateFile(n);
     return { out: out, args: [script, '--lab', lab, '--node', n, '--proto', proto, '--adj', adjStr].concat(mg, ['--out', out]) };   /* nx_no_shell: an argument array */
   };
   if (_par) {
@@ -251,8 +266,7 @@ function collectAll() {
   }
   nodes.forEach(function (n) {
     var _nj = nodeJob(n), script = _nj.script, adjStr = _nj.adjStr, mg = _nj.mg;   /* nx_ios_collect: FRR / SR Linux / IOS (--exclude-mgmt is FRR-only) */
-    var out = path.join(os.tmpdir(), 'xray-state-' + lab + '-' + n +
-      (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json');   /* nx_tmp_per_user (2026-10-05): a collector run with sudo and one without no longer fight over a root-owned tmp file (EACCES forever) */   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
+    var out = stateFile(n);   /* nx_tmp_per_user (2026-10-05): a collector run with sudo and one without no longer fight over a root-owned tmp file (EACCES forever) */   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
     if (retryAt[n] > Date.now()) { if (lastOut[n]) states[n] = lastOut[n]; return; }   /* nx_unread: asked again after RETRY_MS */
     if (iosNextAt[n] > Date.now() && lastGood[n]) { states[n] = lastGood[n]; ok++; return; }   /* nx_ios_interval: not yet time to read this IOS node again */
     try {
