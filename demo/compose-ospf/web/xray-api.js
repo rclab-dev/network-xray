@@ -87,8 +87,16 @@
     { key: 'metric', col: 'metric', label: 'MED',     dir: -1, val: function (r) { return _bnum(r.metric, 0); } }
   ];
   function _bnum(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : n; }
-  /* nx_bgp_origin_rank (2026-10-27): IGP < EGP < incomplete. The collectors write the word ("IGP" / "EGP" / "incomplete"); the one-letter table never matched, so the Origin step was always a tie. Both forms are read. */
-  function _bgpOriginChar(o) { var s = String(o == null ? '' : o).trim().toLowerCase(); if (s === 'i' || s === 'igp') return 'i'; if (s === 'e' || s === 'egp') return 'e'; if (s === '?' || s === 'incomplete') return '?'; return ''; }
+  /* nx_bgp_origin_rank (2026-10-27): IGP < EGP < incomplete. The collectors (FRR json and the IOS collector) write the
+     word ("IGP" / "EGP" / "incomplete"); the old check only knew the one-letter code (i / e / ?), so every Origin step
+     came out a tie. Both forms are read; anything else ranks last. _bgpOriginChar gives the one-letter code. */
+  function _bgpOriginChar(o) {
+    var s = String(o == null ? '' : o).trim().toLowerCase();
+    if (s === 'i' || s === 'igp') return 'i';
+    if (s === 'e' || s === 'egp') return 'e';
+    if (s === '?' || s === 'incomplete') return '?';
+    return '';
+  }
   function _bgpOriginRank(o) { var c = _bgpOriginChar(o); return c === 'i' ? 0 : c === 'e' ? 1 : c === '?' ? 2 : 3; }
   function _bNbrAS(r) { var t = (r.as_path || '').split(/\s+/).filter(Boolean); return t.length ? t[0] : ''; }
   function _bIsBest(r) { return (r.status || '').indexOf('>') !== -1 || r.best === true; }
@@ -172,6 +180,14 @@
     var l = (document.documentElement.getAttribute('lang') || 'en').toLowerCase();
     return l.indexOf('ja') === 0 ? 'ja' : 'en';
   }
+  // nx_i18n_follow_page (2026-10-15): the engine (shared with a Japanese product) reads window._xrayLang in a few
+  // places (e.g. the Best-Path popover's "See all decision steps" link). The product sets it; the OSS pages did not, so
+  // those strings fell back to Japanese on English pages. Follow the page language (<html lang>, set by the toggle).
+  try {
+    if (!Object.getOwnPropertyDescriptor(window, '_xrayLang')) {
+      Object.defineProperty(window, '_xrayLang', { configurable: true, get: function () { return _bgpLang(); }, set: function () {} });
+    }
+  } catch (e) {}
   // Tier3 link — relative URL to the standalone decision-bracket.html, data-driven via base64url.
   // Encoding matches decision-bracket.html's decoder exactly (btoa(unescape(encodeURIComponent))
   // + url-safe  ↔  decodeURIComponent(escape(atob(url-unsafe)))). Payload shape = Tier3 DEFAULT.
@@ -529,6 +545,7 @@
   function _localize(root) {
     var d = window.xrayI18n;
     if (!d) return;
+    if (_bgpLang() === 'ja') return;   // nx_i18n_follow_page: the 日本語 toggle keeps the engine's own Japanese
     if (!_i18nKeys) _i18nKeys = Object.keys(d).sort(function (a, b) { return b.length - a.length; });
     root = root || document.body;
     if (!root || !root.querySelectorAll) return;
