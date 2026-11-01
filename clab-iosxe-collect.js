@@ -41,6 +41,11 @@ function normIf(name) {
 }
 
 function lines(text) { return String(text || '').replace(/\r/g, '').split('\n'); }
+// nx_ios_unparsed: a line a parser could not read is recorded (warn = optional array) instead of guessed.
+// Blank lines, CLI error lines ("% ...", the "^" marker) and --More-- lines are not recorded here:
+// parseWarnings() already reports the last two per command.
+function skipLine(l) { return !String(l).trim() || /^\s*%/.test(l) || /^\s*\^\s*$/.test(l) || /--More--/.test(l); }
+function unread(warn, cmd, l) { if (warn && !skipLine(l)) warn.push({ cmd: cmd, line: String(l).trim().slice(0, 120) }); }
 var IP = '(\\d{1,3}(?:\\.\\d{1,3}){3})';
 
 function maskLen(mask) {
@@ -72,12 +77,12 @@ function parseBridgeDomains(text) {
   return out;
 }
 
-function parseOspfNeighbors(text) {
+function parseOspfNeighbors(text, warn) {
   var out = { byIface: {}, list: [] };
   var re = new RegExp('^' + IP + '\\s+(\\d+)\\s+([A-Za-z0-9-]+)\\s*/\\s*(\\S+)\\s+(?:\\S+\\s+)?(\\S+)\\s+' + IP + '\\s+(\\S+)\\s*$');
   lines(text).forEach(function (l) {
     var m = re.exec(l.trim());
-    if (!m) return;
+    if (!m) { if (!/^\s*Neighbor ID/.test(l)) unread(warn, 'show ip ospf neighbor', l); return; }
     var st = m[3].toUpperCase(), role = m[4];
     // FRR spelling: "Full/DR", "2-Way/DROther", "Init/-"
     var stNice = st === 'FULL' ? 'Full' : st === '2WAY' || st === '2-WAY' ? '2-Way' : st.charAt(0) + st.slice(1).toLowerCase();
@@ -93,7 +98,7 @@ function parseOspfNeighbors(text) {
 // ---- show ip ospf interface brief ---------------------------------------------------------------
 // Interface    PID   Area            IP Address/Mask    Cost  State Nbrs F/C
 // Et0/2        1     0.0.0.0         10.1.0.6/30        10    P2P   1/1
-function parseOspfInterfaces(text) {
+function parseOspfInterfaces(text, warn) {
   var out = {};
   var re = new RegExp('^(\\S+)\\s+(\\d+)\\s+(\\S+)\\s+' + IP + '/(\\d+)\\s+(\\d+)\\s+(\\S+)\\s+(\\d+)/(\\d+)\\s*$');
   lines(text).forEach(function (l) {
@@ -106,7 +111,8 @@ function parseOspfInterfaces(text) {
   /* nx_ios_unnumbered: "Et0/1  1  0.0.0.0  Unnumbered Lo0  10  P2P  1/1" -> an OSPF IF that uses the source IF's address */
   var reU = /^(\S+)\s+(\d+)\s+(\S+)\s+Unnumbered\s+(\S+)\s+(\d+)\s+(\S+)\s+(\d+)\/(\d+)\s*$/i;
   lines(text).forEach(function (l) {
-    var m = reU.exec(l.trim()); if (!m) return;
+    var m = reU.exec(l.trim());
+    if (!m) { if (!re.test(l.trim()) && !/^\s*Interface\s+PID/.test(l)) unread(warn, 'show ip ospf interface brief', l); return; }
     var src = out[normIf(m[4])] || {};
     out[normIf(m[1])] = { up: !/^DOWN$/i.test(m[6]), ospf: true, ip: src.ip || '', prefix: src.prefix != null ? src.prefix : 32, area: m[3] === '0.0.0.0' ? '0' : m[3], hello: 10,
                           cost: +m[5], ospfState: m[6], nbrFull: +m[7], nbrCount: +m[8], unnumbered: normIf(m[4]) };
@@ -172,11 +178,12 @@ function parseOspfTraffic(text) {
 // ---- show ip interface brief --------------------------------------------------------------------
 // Interface              IP-Address      OK? Method Status                Protocol
 // Ethernet0/2            unassigned      YES NVRAM  administratively down down
-function parseInterfaces(text, routes) {
+function parseInterfaces(text, routes, warn) {
   var out = {};
   var re = /^(\S+)\s+(\S+)\s+(YES|NO)\s+(\S+)\s+(.+?)\s+(up|down|deleted)\s*$/i;
   lines(text).forEach(function (l) {
     var m = re.exec(l.trim());
+    if (!m && !/^\s*Interface\s+IP-Address/.test(l)) unread(warn, 'show ip interface brief', l);
     if (!m || /^Interface$/i.test(m[1])) return;
     var ifn = normIf(m[1]);
     var ip = /^\d/.test(m[2]) ? m[2] : '';
@@ -203,7 +210,7 @@ function parseInterfaces(text, routes) {
 // ---- show ip route ------------------------------------------------------------------------------
 var ROUTE_CODE = { C: 'connected', L: 'local', S: 'static', 'S*': 'static', O: 'ospf', B: 'bgp', D: 'eigrp', R: 'rip',
                    i: 'isis', M: 'mobile', o: 'odr', U: 'static', P: 'static', l: 'lisp', a: 'application', H: 'nhrp' };
-function parseRoutes(text) {
+function parseRoutes(text, warn) {
   var out = [];
   var lenFromHeader = null, cur = null;
   var headRe = new RegExp('^\\s*' + IP + '/(\\d+) is (?:variably )?subnetted');
@@ -233,6 +240,7 @@ function parseRoutes(text) {
   }
   lines(text).forEach(function (raw) {
     var l = raw.replace(/\s+$/, '');
+    if (/--More--/.test(l)) { cur = null; return; }   // nx_ios_unparsed: what follows the pager prompt is not the previous route's next hop
     if (!l.trim() || /^Codes:|^\s{7}[A-Za-z0-9]+ - |^Gateway of last resort/.test(l)) return;
     var h = headRe.exec(l);
     if (h) { lenFromHeader = +h[2]; cur = null; return; }
@@ -249,9 +257,13 @@ function parseRoutes(text) {
     }
     // continuation: "                [1/0] via 192.168.0.1" (ECMP) or a wrapped "via ..." line
     if (cur && /^\s+/.test(l) && /via |directly connected/.test(l)) {
-      nexthopsFrom(l).forEach(function (nh) { cur.nexthops.push(nh); });
+      var more = nexthopsFrom(l);
+      more.forEach(function (nh) { cur.nexthops.push(nh); });
+      if (!more.length) unread(warn, 'show ip route', l);
     }
+    else if (!/^\s+\S{1,3} - |^Routing Table: /.test(l)) unread(warn, 'show ip route', l);   // legend lines like "       + - replicated route"
   });
+  out.forEach(function (r) { if (!r.nexthops.length) unread(warn, 'show ip route', r.prefix + ' (no next hop read)'); });
   resolveRecursive(out);
   return out;
 }
@@ -298,7 +310,7 @@ function normBgpState(raw) {
   if (/\(\s*PfxCt\s*\)/i.test(r)) o.max_prefix = true;
   return o;
 }
-function parseBgpSummary(text) {
+function parseBgpSummary(text, warn) {
   var out = { byIp: {}, list: [], routerId: '', localAs: null };
   var hdr = /BGP router identifier\s+(\S+?),\s+local AS number\s+(\S+)/;
   var re = new RegExp('^' + IP + '\\s+(\\d)\\s+(\\S+)\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+(\\S+)\\s+(.+?)\\s*$');
@@ -306,7 +318,7 @@ function parseBgpSummary(text) {
     var h = hdr.exec(l);
     if (h) { out.routerId = h[1]; out.localAs = h[2]; return; }
     var m = re.exec(l.trim());
-    if (!m) return;
+    if (!m) { if (new RegExp('^' + IP + '(?:\\s|$)').test(l.trim())) unread(warn, 'show ip bgp summary', l); return; }
     var tail = m[5].trim();
     var est = /^\d+$/.test(tail);
     var ns = est ? { state: 'Established' } : normBgpState(tail);
@@ -328,7 +340,7 @@ function parseBgpSummary(text) {
 //  *>i 10.2.2.0/24      10.0.0.2                 0    100      0 65002 i
 //  *                    10.0.0.6                 0             0 65003 65002 i      (same prefix, next path)
 // Columns are fixed-width under the header; numeric fields are right-aligned to the header's end.
-function parseBgpRoutes(text) {
+function parseBgpRoutes(text, warn) {
   var out = [];
   var ls = lines(text), hi = -1;
   for (var i = 0; i < ls.length; i++) if (/Network\s+Next Hop\s+Metric\s+LocPrf\s+Weight\s+Path/.test(ls[i])) { hi = i; break; }
@@ -339,6 +351,7 @@ function parseBgpRoutes(text) {
   var lastPrefix = null, pendingStatus = null, pendingRaw = null;
   for (var k = hi + 1; k < ls.length; k++) {
     var line = ls[k].replace(/\s+$/, '');
+    if (/--More--/.test(line)) { lastPrefix = null; pendingStatus = null; pendingRaw = null; continue; }   // nx_ios_unparsed: a path after the cut is not the previous prefix's
     if (!line.trim() || /^Total number|^Displayed|^RPKI/.test(line.trim())) continue;
     // Rows are NOT always aligned to the header (some IOS builds print rows 2 chars left of it), so
     // status / network / next hop are taken by pattern, and the numeric columns are judged against
@@ -348,7 +361,7 @@ function parseBgpRoutes(text) {
       pendingStatus = onlyNet[1].replace(/\s+/g, ''); pendingRaw = onlyNet[1].trim().replace(/\s+/g, ' '); lastPrefix = onlyNet[2]; continue;   /* nx_bgp_status_raw */
     }
     var rm = /^\s*([sdhrSmbfxac=*>i ]*?)\s*(\d{1,3}(?:\.\d{1,3}){3}(?:\/\d+)?)?\s+(\d{1,3}(?:\.\d{1,3}){3})(?=\s|$)/.exec(line);
-    if (!rm) { pendingStatus = null; continue; }
+    if (!rm) { pendingStatus = null; lastPrefix = null; unread(warn, 'show ip bgp', line); continue; }
     var status = rm[1].replace(/\s+/g, ''), statusRaw = rm[1].trim().replace(/\s+/g, ' ');   /* nx_bgp_status_raw: as printed */
     if (!status && pendingStatus != null) { status = pendingStatus; statusRaw = pendingRaw; }
     pendingStatus = null; pendingRaw = null;
@@ -376,6 +389,9 @@ function parseBgpRoutes(text) {
       }
       pathStart = base + t.index; break;
     }
+    // nx_ios_unparsed: IOS always prints Weight (0-65535); no number in its column, or a number out of range
+    // (columns shifted or run together), means the columns cannot be placed -> counted, not guessed
+    if (w == null || w > 65535 || [metric, lp].some(function (v) { return v != null && v > 4294967295; })) { unread(warn, 'show ip bgp', line); continue; }
     var pathStr = pathStart != null ? line.slice(pathStart).trim() : '';
     var origin = (/\s?([ie?])$/.exec(pathStr) || [])[1] || '';
     var asPath = pathStr.replace(/\s?[ie?]$/, '').trim();
@@ -391,22 +407,23 @@ function parseBgpRoutes(text) {
 // args: { node, id, proto, adjacency, ospfNeighbor, ospfInterface, ipInterface, route, bgpSummary, bgp,
 //         ospfConfigured, bgpConfigured, buildState }  (buildState = require('clab-collect').buildState)
 function parseAll(args) {
-  var routes = parseRoutes(args.route);
-  var ifaces = parseInterfaces(args.ipInterface, routes);
+  var warn = args.warn;   // nx_ios_unparsed: optional array, filled with the lines no parser could read
+  var routes = parseRoutes(args.route, warn);
+  var ifaces = parseInterfaces(args.ipInterface, routes, warn);
   // like FRR's state: interfaces without an address (IOL's unused Ethernet0/x) are not data links; the
   // management interface is dropped by the caller (args.mgmtIp = the address containerlab reaches it on).
   Object.keys(ifaces).forEach(function (ifn) { if (!ifaces[ifn].ip || (args.mgmtIp && ifaces[ifn].ip === args.mgmtIp)) delete ifaces[ifn]; });
-  var ospfIf = parseOspfInterfaces(args.ospfInterface);
+  var ospfIf = parseOspfInterfaces(args.ospfInterface, warn);
   // NOTE: like FRR `show ip ospf interface json`, ospfIf holds ONLY OSPF interfaces (buildState treats
   // presence in ospfIf as "OSPF-enabled" for Hello). Non-OSPF data links reach the state via buildState's
   // own backfill from the interface list / routes, as with FRR.
   return {
-    ospfNei: parseOspfNeighbors(args.ospfNeighbor),
+    ospfNei: parseOspfNeighbors(args.ospfNeighbor, warn),
     ospfIf: ospfIf,
     ifaces: ifaces,
     routes: routes,
-    bgpSum: parseBgpSummary(args.bgpSummary),
-    bgpRoutes: parseBgpRoutes(args.bgp)
+    bgpSum: parseBgpSummary(args.bgpSummary, warn),
+    bgpRoutes: parseBgpRoutes(args.bgp, warn)
   };
 }
 
@@ -638,7 +655,8 @@ function splitByPrompt(raw) {
 
 // Things in the raw text that mean "this output cannot be trusted as complete" — shown on the page as a
 // count instead of being silently mis-read (nx_ios_parse_warnings).
-function parseWarnings(texts, opts) {
+function parseWarnings(texts, opts, unparsed) {
+  texts = texts || {}; opts = opts || {};
   var w = [];
   CMDS.forEach(function (c) {
     var t = texts[c[0]];
@@ -650,6 +668,12 @@ function parseWarnings(texts, opts) {
     // (seen on IOL 17.18 with the link shut down, 2026-10-27)
     var _alwaysPrints = c[0] === 'ipInterface' || c[0] === 'route' || (c[0] === 'bgpSummary' && opts.bgpConfigured) || (c[0] === 'ospfInterface' && opts.ospfConfigured);
     if (_alwaysPrints && /^\s*$/.test(t)) w.push({ cmd: c[1], why: 'empty' });
+  });
+  /* nx_ios_unparsed: one entry per command with the count of lines its parser could not read (and the first of them) */
+  var byCmd = {};
+  (unparsed || []).forEach(function (u) { (byCmd[u.cmd] = byCmd[u.cmd] || []).push(u.line); });
+  Object.keys(byCmd).forEach(function (cmd) {
+    w.push({ cmd: cmd, why: 'unparsed', count: byCmd[cmd].length, note: byCmd[cmd].length + ' line(s) could not be read, first: ' + byCmd[cmd][0] });
   });
   if (texts.__syslog) w.push({ cmd: '(console)', why: 'syslog', note: texts.__syslog + ' syslog line(s) in the middle of the outputs were left out' });
   if (/\bVRF\b|vrf forwarding|\(vrf /i.test(texts.ipInterface || '') || /Routing Table: /.test(texts.route || ''))
@@ -715,8 +739,9 @@ function run(texts, node, adjStr, proto, mgmtIp) {
   }
   var parsed = parseAll(Object.assign({ mgmtIp: mgmtIp }, texts));
   var cfg = { ospfConfigured: Object.keys(parsed.ospfIf).length > 0, bgpConfigured: !!parsed.bgpSum.routerId };
-  var st = collectFromIosxeText(Object.assign({ mgmtIp: mgmtIp, node: node, id: node, proto: proto, adjacency: adjacency }, cfg, texts), loadBuildState());
-  var w = parseWarnings(texts, cfg);
+  var unparsed = [];
+  var st = collectFromIosxeText(Object.assign({ mgmtIp: mgmtIp, node: node, id: node, proto: proto, adjacency: adjacency, warn: unparsed }, cfg, texts), loadBuildState());
+  var w = parseWarnings(texts, cfg, unparsed);
   if (w.length) st.parse_warnings = w;   // nx_ios_parse_warnings: absent when everything was read (FRR states never carry it)
   return st;
 }

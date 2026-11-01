@@ -363,7 +363,7 @@ window.__xrayGraphBoot = function () {
     if (_ust && _ust.parse_warnings && _ust.parse_warnings.length && !_unote) {
       var _wL = 'en'; try { _wL = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
       var _wja = _wL === 'ja', _wn = _ust.parse_warnings.length;
-      var _wwhy = { paging: _wja ? '--More-- で切れた' : 'cut by --More--', cli_error: _wja ? 'コマンドが通らない' : 'command not accepted', empty: _wja ? '空の答え' : 'empty answer', vrf: _wja ? 'VRF は未対応' : 'VRFs not read yet' };
+      var _wwhy = { paging: _wja ? '--More-- で切れた' : 'cut by --More--', cli_error: _wja ? 'コマンドが通らない' : 'command not accepted', empty: _wja ? '空の答え' : 'empty answer', vrf: _wja ? 'VRF は未対応' : 'VRFs not read yet', unparsed: _wja ? '読めない行がある' : 'some lines not read' };
       var _wlist = _ust.parse_warnings.map(function (w) { return w.cmd + ' (' + (_wwhy[w.why] || w.why) + ')'; }).join(', ');
       _unote = document.createElement('div'); _unote.className = 'nx-unread';
       _unote.textContent = nodeId + ': ' + (_wja ? '読めなかった出力が ' + _wn + ' つあります: ' + _wlist + '。下の絵はそれを除いて描いています。' : _wn + ' output' + (_wn > 1 ? 's' : '') + ' could not be read completely: ' + _wlist + '. The drawing below leaves them out.');

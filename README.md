@@ -217,7 +217,7 @@ can mix FRR, SR Linux and IOL. Example labs: `examples/q5-ospf-iol`, `examples/q
   `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show bridge-domain`. ECMP routes, unnumbered
   interfaces (`ip unnumbered Loopback0`) and OSPF on a bridge-domain interface (`BDI`, shown as e.g. `Ethernet0/2 (BDI500)`) are read.
   **VRFs are not read yet** — a lab with VRFs says so instead of drawing a wrong picture (the management VRF is ignored).
-- **When something cannot be read** (output cut by `--More--`, a command the image does not know, an empty answer) the state carries
+- **When something cannot be read** (output cut by `--More--`, a command the image does not know, an empty answer, a line no parser understands) the state carries
   `parse_warnings` and the page shows how many — it does not guess.
 - **Differences from FRR you will see:** IOS's `show ip route` lists only the chosen routes, so the routing table has no "candidate" rows.
   A shut-down OSPF interface is drawn red, and the OSPF heading counts only the interfaces that are up.
@@ -753,7 +753,7 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 - **読む物** (文字の出力・既定は 10 秒ごと = `NX_IOS_INTERVAL` (秒) で変えられます): `show ip ospf neighbor`・`show ip ospf interface` (brief と全部)・`show ip interface brief`・
   `show ip route`・`show ip bgp summary`・`show ip bgp`・`show bridge-domain`。ECMP の経路・unnumbered の IF (`ip unnumbered Loopback0`)・
   bridge-domain の IF (`BDI`・`Ethernet0/2 (BDI500)` のように出る) の上の OSPF も読みます。**VRF はまだ読みません** — VRF のあるラボでは、間違った絵の代わりにそう出します (管理の VRF は数えません)。
-- **読めない時** (`--More--` で切れた・その image が知らないコマンド・空の答え) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
+- **読めない時** (`--More--` で切れた・その image が知らないコマンド・空の答え・読めない行) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
 - **FRR と違って見える所:** IOS の `show ip route` は選ばれた経路だけを出すので、経路表に「候補」の行は出ません。shutdown した OSPF の IF は赤で描き、OSPF の見出しは up の IF だけを数えます。
 - 実際のラボで試したのは `cisco_iol` だけです。ほかの IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) はまだ読みません。
 
