@@ -50,8 +50,8 @@ function cut(name) {
   return CORE_SRC.slice(start, end);
 }
 
-var NAMES = ['XRAY_BGP_CRITERIA', 'xrayBgpOriginChar', 'xrayBgpOriginRank', 'xrayBgpNum', 'xrayBgpNeighborAS',
-  'xrayBgpDecision', 'xrayBgpChainHtml', 'xrayBgpBracketEnabled', 'xrayBgpFrrReason', 'xrayBgpReasonHtml', '_xrayBgpKey',
+var NAMES = ['_escapeHtml', 'XRAY_BGP_CRITERIA', 'xrayBgpOriginChar', 'xrayBgpOriginRank', 'xrayBgpNum', 'xrayBgpNeighborAS',
+  '_xrayAsPathLen', '_xrayBgpTieText', 'xrayBgpDecision', 'xrayBgpChainHtml', 'xrayBgpBracketEnabled', 'xrayBgpFrrReason', 'xrayBgpReasonHtml', '_xrayBgpKey',
   '_XRAY_ECMP_COLORS', '_xrayEcmpIpNum', '_xrayEcmpColorMap', '_xrayEcmpOf', '_xrayEcmpJa', '_xrayEcmpReasonHtml'];
 var ctx = { window: {}, String: String, Number: Number, Math: Math, Object: Object, Array: Array, JSON: JSON, parseInt: parseInt, isNaN: isNaN };
 vm.createContext(ctx);
@@ -110,7 +110,7 @@ var CASES = [
   { f: 'weight',          step: 'Weight' },
   { f: 'local-pref',      step: 'Local Pref' },
   { f: 'local-route',     step: 'Local Route',
-    known: 'AS Path', why: 'no Local Route step: with equal weight the locally originated path wins by its empty AS_PATH in the view' },
+    known: 'AS Path', note: 'by design (nx_bestpath_fix): FRR gives a local route weight 32768, so the view names it by Weight / locally originated; with weights forced equal there is no Local Route step: with equal weight the locally originated path wins by its empty AS_PATH in the view' },
   { f: 'as-path',         step: 'AS Path' },
   { f: 'as-path-set',     step: 'AS Path (AS_SET counts as 1)' },
   { f: 'as-path-confed',  step: 'AS Path (confederation segments do not count)' },
@@ -119,15 +119,14 @@ var CASES = [
   { f: 'med-missing',     step: 'MED (missing MED = 0)' },
   { f: 'med-diff-as',     step: 'MED not compared (different neighbor AS) -> Older Path' },
   { f: 'med-three-paths', step: 'MED vs the same-AS path, Older Path vs the other-AS path',
-    known: 'MED', why: 'MED decides among the 65002 paths, so FRR\'s selectionReason (Older Path, against the 65003 path) is not shown' },
+    known: 'MED', note: 'by design (nx_bestpath_fix): FRR\'s selectionReason is the last pairwise comparison; the view explains the group: MED decides among the 65002 paths, so FRR\'s selectionReason (Older Path, against the 65003 path) is not shown' },
   { f: 'ebgp-over-ibgp',  step: 'Peer Type (eBGP over iBGP)' },
   { f: 'igp-metric',      step: 'IGP Metric' },
   { f: 'multipath',       step: 'multipath (ECMP), representative by Older Path' },
   { f: 'older-path',      step: 'Older Path' },
   { f: 'router-id',       step: 'Router ID' },
   { f: 'neighbor-ip',     step: 'Neighbor IP' },
-  { f: 'reason-in-bestpath-object', step: 'Router ID, given as bestpath.selectionReason',
-    known: '(generic tie-break text)', why: 'the collector reads only a top-level selectionReason, so bestpath: {overall, selectionReason} loses the reason' }
+  { f: 'reason-in-bestpath-object', step: 'Router ID, given as bestpath.selectionReason' }   /* nx_bestpath_fix: the collector reads bestpath.selectionReason too */
 ];
 
 test('every fixture has a test case and vice versa', function () {
@@ -144,7 +143,7 @@ CASES.forEach(function (c) {
     if (c.known) assert.strictEqual(x.shown, c.known, 'current decider text: ' + x.text);
     else assert.strictEqual(x.shown, x.frrReason, 'decider shown = FRR selectionReason; text: ' + x.text);
   });
-  if (c.known) {
+  if (c.known && c.why) {   /* nx_bestpath_fix: a known difference with a note (by design) has no todo test */
     test(c.f + ': decider matches FRR selectionReason', { todo: c.why }, function () {
       var x = explain(c.f);
       assert.strictEqual(x.shown, x.frrReason, 'text: ' + x.text);
@@ -180,15 +179,14 @@ test('eBGP path without locPrf compares as local preference 100 against an iBGP 
 });
 
 // AS_PATH length: FRR does not count confederation segments (RFC 5065); the step chain counts every token
-test('as-path-confed: the AS-Path step counts the confederation path as FRR does', { todo: 'the step chain counts "(65100 65101) 65002" as 3 hops (FRR: 1) and shows the step as unresolved (?); the reason line falls back to FRR\'s "AS Path"' }, function () {
+test('as-path-confed: the AS-Path step counts the confederation path as FRR does', function () {
   var x = explain('as-path-confed');
   assert.strictEqual(x.dec.kind, 'decided', 'text: ' + x.text);
   assert.strictEqual(x.dec.criterion.key, 'aspath');
 });
-test('as-path-confed: current step chain (pinned)', function () {
+test('as-path-confed: the confederation segment is not counted (RFC 5065) = 1 < 2', function () {   /* nx_bestpath_fix */
   var x = explain('as-path-confed');
-  assert.strictEqual(x.dec.kind, 'ambiguous');
-  assert.match(x.text, /AS-Path 3<2 \?/);
+  assert.match(x.text, /AS-Path 1<2/);
 });
 
 // with no selectionReason in the data the view falls back to its own text; for eBGP paths FRR's default order
@@ -200,9 +198,9 @@ function withoutReason(name) {
   var rows = viewRows(st.bgp_routes), dec = ctx.xrayBgpDecision(rows);
   return ctx.xrayBgpReasonHtml(ctx._xrayBgpKey(rows[0]), dec, rows).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/\s+/g, ' ');
 }
-test('older-path without selectionReason: fallback text names Older Path for eBGP paths', { todo: 'xray-core.js says "tiebreak by Router ID" (xray-api.js says "FRR breaks the tie by Older Path")' }, function () {
+test('older-path without selectionReason: fallback text names Older Path for eBGP paths', function () {   /* nx_bestpath_fix */
   assert.match(withoutReason('older-path'), /Older Path/);
 });
-test('older-path without selectionReason: current fallback text (pinned)', function () {
-  assert.match(withoutReason('older-path'), /all attributes equal — tiebreak by Router ID/);
+test('older-path without selectionReason: same words as xray-api.js', function () {   /* nx_bestpath_fix */
+  assert.match(withoutReason('older-path'), /all attributes equal — FRR breaks the tie by Older Path/);
 });

@@ -337,7 +337,7 @@ function parseBgpRoutes(j) {
         as_path: (r.path != null ? String(r.path).trim() : ''),
         local_pref: (r.locPrf != null ? r.locPrf : (r.localPref != null ? r.localPref : null)),
         weight: r.weight, metric: r.metric, origin: r.origin,
-        reason: r.selectionReason || '', multipath: !!r.multipath, valid: !!(r.valid || r.bestpath || r.bestPath || r.multipath) });   /* nx_ecmp: FRR marks every installed equal path multipath */   /* nx_frr_bgp_valid: FRR puts "valid": true on usable paths only (missing = invalid, e.g. inaccessible next hop); a best / multipath path is usable by definition (hand-made json without valid stays as before) */
+        reason: r.selectionReason || (r.bestpath && typeof r.bestpath === 'object' && r.bestpath.selectionReason) || '',   /* nx_bestpath_fix: per-prefix form */ multipath: !!r.multipath, valid: !!(r.valid || r.bestpath || r.bestPath || r.multipath) });   /* nx_ecmp: FRR marks every installed equal path multipath */   /* nx_frr_bgp_valid: FRR puts "valid": true on usable paths only (missing = invalid, e.g. inaccessible next hop); a best / multipath path is usable by definition (hand-made json without valid stays as before) */
     });
   });
   return out;

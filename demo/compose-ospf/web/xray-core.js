@@ -11917,7 +11917,7 @@ var XRAY_BGP_CRITERIA = [ {
   label: "AS-Path",
   dir: -1,
   val: function(r) {
-    return r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0;
+    return _xrayAsPathLen(r.as_path);   /* nx_bestpath_fix */
   }
 }, {
   key: "origin",
@@ -11960,6 +11960,17 @@ function xrayBgpNeighborAS(r) {
   return t.length ? t[0] : "";
 }
 
+/* nx_bestpath_fix (2026-11-02): AS_PATH length for the best-path step = what FRR / IOS count: a confederation segment
+   "( ... )" does not count (RFC 5065) and an AS_SET "{ ... }" counts as 1 (RFC 4271 9.1.2.2). */
+function _xrayAsPathLen(p) {
+  if (!p) return 0;
+  var s = String(p).replace(/\([^)]*\)/g, ' ').replace(/\{[^}]*\}/g, ' {set} ');
+  return s.split(/\s+/).filter(Boolean).length;
+}
+function _xrayBgpTieText() {   /* nx_bestpath_fix: same words as xray-api.js (FRR default = Older Path; IOS-XE: eBGP Older Path, iBGP Router ID) */
+  var st = typeof window !== "undefined" ? window._lastXrayState : null;
+  return st && /^ios/i.test(String(st.nos || "")) ? "IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)" : "FRR breaks the tie by <b>Older Path</b>";
+}
 function xrayBgpDecision(group) {
   if (!group || !group.length) return null;
   var best = null;
@@ -12093,7 +12104,7 @@ function xrayBgpTier3Href(prefix, grp) {
         attrs: {
           weight: xrayBgpNum(r.weight, 0),
           localpref: xrayBgpNum(r.locprf, 100),
-          aspathlen: r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0,
+          aspathlen: _xrayAsPathLen(r.as_path),   /* nx_bestpath_fix */
           origin: xrayBgpOriginChar(r.origin) || "i",   /* nx_bgp_origin_rank */
           med: xrayBgpNum(r.metric, 0),
           ebgp: false,
@@ -12212,8 +12223,8 @@ function xrayBgpReasonHtml(p, dec, grp) {
     if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all visible attributes equal — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
     return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
   }
-  if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>" + chainHtml;
-  if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all attributes equal — <b>tiebreak by Router ID</b></div>" + chainHtml;
+  if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — " + _xrayBgpTieText() + "</div>" + chainHtml;
+  if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all attributes equal — " + _xrayBgpTieText() + "</div>" + chainHtml;
   return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>no single decider</b> — lower-level tiebreak</div>" + chainHtml;
 }
 

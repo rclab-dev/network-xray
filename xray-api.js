@@ -82,7 +82,7 @@
   var _BGP_CRIT = [
     { key: 'weight', col: 'weight', label: 'Weight',  dir: 1,  val: function (r) { return _bnum(r.weight, 0); } },
     { key: 'locprf', col: 'locprf', label: 'LocPrf',  dir: 1,  val: function (r) { return _bnum(r.local_pref, 100); } },
-    { key: 'aspath', col: 'path',   label: 'AS-Path', dir: -1, val: function (r) { return r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0; } },
+    { key: 'aspath', col: 'path',   label: 'AS-Path', dir: -1, val: function (r) { return (typeof _xrayAsPathLen === 'function' ? _xrayAsPathLen(r.as_path) : (r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0))   /* nx_bestpath_fix */; } },
     { key: 'origin', col: 'path',   label: 'Origin',  dir: -1, val: function (r) { return _bgpOriginRank(r.origin); } },
     { key: 'metric', col: 'metric', label: 'MED',     dir: -1, val: function (r) { return _bnum(r.metric, 0); } }
   ];
@@ -200,7 +200,7 @@
       var routes = (grp || []).map(function (r, i) {
         return { id: String.fromCharCode(65 + i), via: 'via ' + (r.next_hop || r.nexthop || '?'), as: 'AS' + (_bNbrAS(r) || '?'),
           attrs: { weight: _bnum(r.weight, 0), localpref: _bnum(r.local_pref, 100),
-            aspathlen: r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0,
+            aspathlen: (typeof _xrayAsPathLen === 'function' ? _xrayAsPathLen(r.as_path) : (r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0))   /* nx_bestpath_fix */,
             origin: _bgpOriginChar(r.origin) || 'i', med: _bnum(r.metric, 0), ebgp: false,
             routerid: r.router_id || ('0.0.0.' + (i + 1)) } };
       });
