@@ -669,10 +669,22 @@ function mgmtAddr(lab, node) {
   } catch (e) { return { err: 'device' }; }
 }
 
+/* lab / node become docker label filters, the host becomes ssh's destination: plain names / addresses only
+   (nothing that starts with '-' and could be read as an ssh option) */
+var SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/, SAFE_HOST = /^(?:[A-Za-z0-9][A-Za-z0-9_.-]{0,252}|[0-9A-Fa-f:.]+)$/;
+// the askpass helper goes in a new private directory (mkdtemp, 0700) and is created only if absent ('wx'): another
+// local user cannot have put a file or a link there first. It holds no password (that is in its environment).
+function makeAskpass() {
+  var dir = _fs.mkdtempSync(_path.join(_os.tmpdir(), 'nx-ios-askpass-'));
+  var file = _path.join(dir, 'askpass');
+  _fs.writeFileSync(file, '#!/bin/sh\nprintf "%s\\n" "$NX_IOS_ASKPASS_VALUE"\n', { mode: 0o700, flag: 'wx' });
+  return { file: file, remove: function () { try { _fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} } };
+}
+
 function sshCollect(host) {
   var user = process.env.NX_IOS_USER || 'admin', pass = process.env.NX_IOS_PASSWORD || 'admin';
-  var ap = _path.join(_os.tmpdir(), 'nx-ios-askpass-' + process.pid + (typeof process.getuid === 'function' ? '-u' + process.getuid() : ''));
-  _fs.writeFileSync(ap, '#!/bin/sh\nprintf "%s\\n" "$NX_IOS_ASKPASS_VALUE"\n', { mode: 0o700 });
+  var askp = makeAskpass(), ap = askp.file;
+  var _exit = function (c) { askp.remove(); process.exit(c); };   // process.exit skips `finally`: remove the helper first
   try {
     var script = 'terminal length 0\nterminal width 0\n' + CMDS.map(function (c) { return c[1]; }).join('\n') + '\nexit\n';
     var r = _cp.spawnSync('ssh', ['-tt', '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'LogLevel=ERROR',
@@ -680,11 +692,11 @@ function sshCollect(host) {
       '-o', 'KexAlgorithms=+diffie-hellman-group14-sha1', '-o', 'HostKeyAlgorithms=+ssh-rsa', '-o', 'Ciphers=+aes128-cbc,aes256-cbc',
       user + '@' + host], { input: script, encoding: 'utf8', timeout: 60000,
       env: Object.assign({}, process.env, { SSH_ASKPASS: ap, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || ':0', NX_IOS_ASKPASS_VALUE: pass }) });
-    if (r.error && r.error.code === 'ETIMEDOUT') { process.stderr.write('NX_UNREAD timeout\n'); process.exit(124); }
+    if (r.error && r.error.code === 'ETIMEDOUT') { process.stderr.write('NX_UNREAD timeout\n'); _exit(124); }
     var out = splitByPrompt(r.stdout || '');
-    if (!Object.keys(out).length) { process.stderr.write('NX_UNREAD device (no IOS prompt from ' + host + ': ' + String(r.stderr || '').trim().slice(0, 200) + ')\n'); process.exit(3); }
+    if (!Object.keys(out).length) { process.stderr.write('NX_UNREAD device (no IOS prompt from ' + host + ': ' + String(r.stderr || '').trim().slice(0, 200) + ')\n'); _exit(3); }
     return out;
-  } finally { try { _fs.unlinkSync(ap); } catch (e) {} }
+  } finally { askp.remove(); }
 }
 
 function loadBuildState() {
@@ -826,6 +838,8 @@ function main() {
   if (arg('--from-dir')) {
     texts = {}; CMDS.forEach(function (c) { var f = _path.join(arg('--from-dir'), fileOf(c[1])); if (_fs.existsSync(f)) texts[c[0]] = _fs.readFileSync(f, 'utf8'); });
   } else {
+    if (!SAFE_NAME.test(node) || (lab != null && !SAFE_NAME.test(lab))) { console.error('!! --lab / --node must be plain names (letters, digits, _ . -)'); process.exit(2); }
+    if (arg('--host') != null && !SAFE_HOST.test(arg('--host'))) { console.error('!! --host must be a host name or an IP address'); process.exit(2); }
     var a = arg('--host') ? { ip: arg('--host') } : mgmtAddr(lab, node);
     if (a.err) { process.stderr.write('NX_UNREAD ' + a.err + '\n'); process.exit(3); }
     mgmtIp = a.ip;
@@ -844,5 +858,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseInterfaces: parseInterfaces, parseBridgeDomains: parseBridgeDomains, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
     parseBgpRoutes: parseBgpRoutes, parseAll: parseAll, collectFromIosxeText: collectFromIosxeText,
     normBgpState: normBgpState, parseOspfInterfaceDetail: parseOspfInterfaceDetail, parseOspfTraffic: parseOspfTraffic,
-    annotateOspfMismatch: annotateOspfMismatch, splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, CMDS: CMDS };
+    annotateOspfMismatch: annotateOspfMismatch, splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, CMDS: CMDS,
+    SAFE_NAME: SAFE_NAME, SAFE_HOST: SAFE_HOST, makeAskpass: makeAskpass,
+    run: run };   /* run(): a set of show outputs -> one state (the parser tests call it) */
 }

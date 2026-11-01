@@ -199,6 +199,8 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 <a id="security-notes"></a>
 **Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR and `sr_cli 'info from state …'` on SR Linux (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The page on port 8600 listens on all interfaces and has no login: anyone who can reach the machine can see the lab's state, so keep it on a trusted network (or block the port in front of it).
 
+**Security notes:** anyone who can use the Docker socket (the `-v /var/run/docker.sock` mount, or membership in the `docker` group) can run anything as root on the host. The page has no login: with `docker run` publish it as `-p 127.0.0.1:8600:8600` (this machine only), and with `containerlab graph` use `-s 127.0.0.1:8080` unless others must see it. For Cisco IOS-XE the collector does not check SSH host keys (lab routers get new keys on every deploy) — use it on the lab's management network only; the password comes from `NX_IOS_PASSWORD` and is not printed or written to the state. The collectors take names from the topology as data only (no shell; a name that is not a plain name is left out) and write only `xray-states.js` into the output directory; their per-node temporary files are in a directory only your user can open.
+
 <!-- nx_readme_iosxe (2026-10-29) / nx_readme_iosxe_w5 (2026-10-30) -->
 ## Cisco IOS-XE (IOL)
 
@@ -736,6 +738,8 @@ netlab を使わない場合 (動いている containerlab のラボなら何で
 **図の段:** netlab のラボはルータを段に並べて開きます — 上の段 = `provider` / `isp*` / `spine(s)` / `external` のような名前のグループ、下の段 = `leaf(s)` / `customer(s)` / `host(s)` など、その他は間 (`external` は最後に見ます: BGP Labs では「設定済みの機器」の意味なので、客のルータが上に来ることがあります — その時は次の指定で直せます)。段を自分で決めるには、ノードに containerlab の `graph-level` ラベルを付けます (1 = 上の段・グループ名より優先): netlab では `nodes.s1.clab.labels: { graph-level: 1 }` (この repository の tool の定義 = 上の `defaults.sources.extra` の行を使う時だけ。それが `clab.labels` を使えるようにしています。無いと netlab がその行で止まります)、containerlab の topology ではノードの下に `labels: { graph-level: 1 }`。Horizontal / Vertical で段のまま並べ直し、ドラッグした位置はこのブラウザが覚えます。 <!-- nx_netlab_tiers -->
 <a id="security-notes-ja"></a>
 **注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker のソケット (ホストの root と同じ強さ) を渡します**。ラボ用の機械でだけ使ってください。ポート 8600 の画面は全部の口で待ち受け、ログインがありません。その機械に届く人なら誰でもラボの状態を見られるので、信頼できるネットワークの中で使ってください (外に出すなら手前でポートを塞いでください)。
+
+**セキュリティの注意:** Docker のソケットを使える人 (`-v /var/run/docker.sock` のマウント、または `docker` グループ) は、ホストで root として何でも動かせます。画面にはログインがありません: `docker run` なら `-p 127.0.0.1:8600:8600` (この機械だけ)、`containerlab graph` なら他の人に見せる必要がなければ `-s 127.0.0.1:8080` にしてください。Cisco IOS-XE では collector は SSH のホスト鍵を確かめません (ラボのルータは起動のたびに鍵が変わるため) — ラボの管理網の中でだけ使ってください。パスワードは `NX_IOS_PASSWORD` から取り、表示も状態ファイルへの書き込みもしません。collector はトポロジの名前をデータとしてだけ使い (シェルを通さず、普通の名前でないものは外します)、出力先には `xray-states.js` だけを書きます。ノードごとの一時ファイルは自分のユーザーだけが開けるディレクトリに置きます。
 
 ## Cisco IOS-XE (IOL)
 
