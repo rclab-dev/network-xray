@@ -819,6 +819,24 @@ function buildState(opts) {
     s[p.name + '_ospf_full'] = !!(_on && _on.full);
     s[p.name + '_ospf_state'] = _on ? (_on.full ? 'Full' : _on.state) : (s.ospf_configured ? 'Down' : 'None');
   });
+  /* nx_ospf_if_all_nbrs: an interface with 2+ OSPF neighbors -> its state from all of them (good = Full, or 2-Way between DROthers) */
+  var _ifNbrs = {};
+  nei.list.forEach(function (n) { if (n.iface) (_ifNbrs[n.iface] = _ifNbrs[n.iface] || []).push(n); });
+  var _NBR_ORD = ['down', 'attempt', 'init', '2-way', 'exstart', 'exchange', 'loading', 'full'];
+  var _ifAll = function (ifn) {
+    var L = _ifNbrs[ifn]; if (!L || L.length < 2) return null;
+    var good = function (n) { var st = String(n.state || ''); return n.full || /^full/i.test(st) || (/^2-?way/i.test(st) && /drother/i.test(st)); };
+    if (L.every(good)) return { full: true, state: 'Full' };
+    var bad = L.filter(function (n) { return !good(n); }).map(function (n) { return String(n.state || 'Down').split('/')[0]; });
+    bad.sort(function (a, b) { return _NBR_ORD.indexOf(a.toLowerCase()) - _NBR_ORD.indexOf(b.toLowerCase()); });
+    return { full: false, state: bad[0] };
+  };
+  peers.forEach(function (p) {
+    if (p.reOnly || !p.iface || s[p.name + '_iface'] !== p.iface) return;
+    var a = _ifAll(p.iface); if (!a) return;
+    s[p.name + '_ospf_full'] = a.full; s[p.name + '_ospf_state'] = a.state;
+    if (proto !== 'bgp') { s[p.name + '_has_full'] = a.full; s[p.name + '_neighbor_state'] = a.state; }   // OSPF is the lab's protocol: the link's drawing follows it
+  });
   // nx_bgp_mode_ospf_hello (2026-10-01): --proto bgp skips the OSPF Hello maps above (`if (proto !== 'bgp')`),
   // so a BGP-collected node that ALSO runs OSPF (coexist / OSPF-only after BGP removal) drew no Hello at all.
   // Same rules as the ospf branch: OUT = local iface listed by `show ip ospf interface`; IN = this peer's
@@ -860,6 +878,8 @@ function buildState(opts) {
       ospf_full: !!(_lo && _lo.full), ospf_state: _lo ? (_lo.full ? 'Full' : _lo.state) : (s.ospf_configured ? 'Down' : 'None'),
       peer_ip: (_lp && _lp.ip) || (_lo && _lo.address) || ''
     });
+    var _pa = _ifAll(ifn);   /* nx_ospf_if_all_nbrs */
+    if (_pa) { var _pr = _plRows[_plRows.length - 1]; _pr.ospf_full = _pa.full; _pr.ospf_state = _pa.state; _pr.ospf_nbrs = _ifNbrs[ifn].map(function (n) { return { router_id: n.rid, state: n.state }; }); }
     if (_li.area != null) _plRows[_plRows.length - 1].area = _li.area;   /* nx_ospf_area */
     if (_li.vrf) _plRows[_plRows.length - 1].vrf = _li.vrf;   /* nx_vrf_all */
     if (_lp && _lp.overLo) _plRows[_plRows.length - 1].bgp_over_lo = true;  /* nx_collect_peer_map: the BGP state on this row is a loopback session to this peer, carried over this link */
@@ -1168,6 +1188,21 @@ function selfTestOspf6Vrf() {
     var c = collectFromJson({ node: 'dut', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'x1' }, { iface: 'eth2', peer: 'x2' }], ospfConfigured: true, ospfNeighbor: nb, ospfInterface: oi,
       interface: { eth1: Object.assign({ masterInterface: 'vlan500' }, up), eth2: Object.assign({ masterInterface: 'vlan500' }, up), vlan500: up } });
     _assert(c.x1_neighbor_state === 'Down' && c.x2_neighbor_state === 'Down' && c.ospf_neighbors[0].iface === 'vlan500', 'vlan_link: two link ports in one bridge -> unchanged (RE only): ' + JSON.stringify([c.x1_neighbor_state, c.x2_neighbor_state, c.ospf_neighbors[0].iface]));
+  })();
+  /* nx_ospf_if_all_nbrs */
+  (function () {
+    var nb = function (rid, st, addr) { return { priority: 1, state: st, address: addr, ifaceName: 'eth1', upTimeInMsec: 9000 }; };
+    var oi = { interfaces: { eth1: { ifUp: true, ospfEnabled: true, ipAddress: '172.16.0.1', ipAddressPrefixlen: 24, area: '0.0.0.0', timerMsecs: 10000 } } };
+    var rt = { '172.16.0.0/24': [{ prefix: '172.16.0.0/24', protocol: 'connected', selected: true, nexthops: [{ directlyConnected: true, interfaceName: 'eth1', active: true }] }] };
+    var run = function (L) { var o = { neighbors: {} }; L.forEach(function (x, i) { o.neighbors['10.0.0.' + (i + 2)] = [nb(null, x, '172.16.0.' + (i + 2))]; });
+      return collectFromJson({ node: 'dut', proto: 'ospf', adjacency: [{ iface: 'eth1', peer: 'sw1' }], ospfConfigured: true, ospfNeighbor: o, ospfInterface: oi, route: rt }); };
+    var a = run(['Full/DR', 'Exchange/DROther']);
+    _assert(a.sw1_ospf_state === 'Exchange' && a.sw1_ospf_full === false && a.sw1_neighbor_state === 'Exchange' && a.peer_links[0].ospf_state === 'Exchange' && a.peer_links[0].ospf_nbrs.length === 2 && a.full_count >= 1,
+      'if_all_nbrs: Full + Exchange on one LAN -> the link is Exchange (was the first = Full); full_count unchanged: ' + JSON.stringify([a.sw1_ospf_state, a.sw1_neighbor_state, a.peer_links[0].ospf_state, a.full_count]));
+    var b = run(['Full/DR', 'Full/Backup', '2-Way/DROther']);
+    _assert(b.sw1_ospf_full === true && b.sw1_ospf_state === 'Full' && b.peer_links[0].ospf_full === true, 'if_all_nbrs: Full, Full and 2-Way between DROthers -> Full: ' + JSON.stringify([b.sw1_ospf_state, b.peer_links[0].ospf_state]));
+    var c = run(['Init/-']);
+    _assert(c.sw1_ospf_state === 'Init/-' && !c.peer_links[0].ospf_nbrs, 'if_all_nbrs: one neighbor on the link -> as before: ' + JSON.stringify([c.sw1_ospf_state, c.peer_links[0].ospf_nbrs]));
   })();
   /* nx_frr_vlan_re_only */
   (function () {

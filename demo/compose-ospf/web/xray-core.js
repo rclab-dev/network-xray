@@ -2858,7 +2858,28 @@ function _xrayNbrTag(nb) {
 function _xrayOspfNbrSpan(st, role) { return '<span style="color:' + _xrayOspfNbrColor(st, role) + '">' + st + "</span>"; }
 /* One summary line that stays visible while the neighbor list is folded (only when Running). allowEmpty: emit "Neighbor: Down"
    for an empty list (only where the caller has no Neighbor line of its own). */
+/* nx_ospf_nbr_own_list: OSPF interfaces (iface_hellos = enabled, not passive; lo left out) with no row in the router's own neighbor list.
+   The peer on that interface's link is added (→ r3) when there is exactly one peer on it. */
+function _xrayOspfNoNbrIfs(s) {
+  if (!s || !s.iface_hellos || typeof s.iface_hellos !== 'object' || !Array.isArray(s.ospf_neighbors)) return [];
+  var L = s.ospf_neighbors, tn = s.target_node || '';
+  if (L.some(function (n) { return n && !n.iface; })) return [];   /* a state whose neighbor rows carry no interface cannot be matched */
+  return Object.keys(s.iface_hellos).filter(function (f) { return !/^(lo|loopback)/i.test(f) && !(s.interfaces && s.interfaces[f] && s.interfaces[f].up === false) /* a shut-down interface sends no Hello */ && !L.some(function (n) { return n.iface === f; }); }).map(function (f) {
+    var peers = Object.keys(s).filter(function (k) { var m = /^(.+)_iface$/.exec(k); return m && m[1] !== tn && s[k] === f && (s[m[1] + '_neighbor_state'] !== undefined || s[m[1] + '_ospf_state'] !== undefined); })
+      .map(function (k) { return k.replace(/_iface$/, ''); });
+    return _escapeHtml(f) + (peers.length === 1 ? ' (\u2192 ' + _escapeHtml(peers[0]) + ')' : '');
+  });
+}
 function _xrayOspfNbrSummaryPush(lines, s, allowEmpty, legacyAssume) {
+  var noNbr = _xrayOspfNoNbrIfs(s), n0 = lines.length;
+  _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume);
+  if (!noNbr.length || _xrayOspfHeadKind(s, legacyAssume) !== 'run') return;
+  for (var i = n0; i < lines.length; i++) if (/^> Neighbor: /.test(lines[i].text)) lines[i].text = lines[i].text.replace(/#39ff14/g, '#ff8c00');   /* something is missing: the heading is not all-green */
+  var ja = typeof document !== 'undefined' && ((document.documentElement.getAttribute('lang') || 'en') === 'ja' || window._xrayLang === 'ja');
+  var line = { text: '> ' + (ja ? 'Hello \u9001\u4fe1\u4e2d\u30fb\u76f8\u624b\u306a\u3057' : 'Hello sent, no neighbor') + ': <span style="color:#ff8c00">' + noNbr.join(', ') + '</span>' };
+  if (s.ospf_neighbors.length) lines.push(line); else lines._nxNoNbr = line;   /* nx_ospf_nbr_own_list (2): no rows -> after the caller's own Neighbor line */
+}
+function _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume) {
   if (_xrayOspfHeadKind(s, legacyAssume) !== "run") return;
   var L = Array.isArray(s.ospf_neighbors) ? s.ospf_neighbors : [];
   if (!L.length) { if (allowEmpty) lines.push({ text: "> Neighbor: " + _xrayOspfNbrSpan("Down") }); return; }
@@ -3017,6 +3038,7 @@ if (typeof window !== "undefined" && !window._xrayReOspfToggle) { window._xrayRe
    一覧にその IF の行が無いものを「<相手> Down」として写しに足す。OSPF 専用の <peer>_ospf_* があればそれを先に使う
    (OSS の同居では <peer>_neighbor_state が BGP の値)。iface_hellos が無い / 一覧の行に iface が無い state は何もしない。 */
 function _xrayOspfNbrAddMissing(s) {
+  if (s) return Array.isArray(s.ospf_neighbors) ? s.ospf_neighbors : null;   /* nx_ospf_nbr_own_list: the router's own list only (the old adding below is kept for reference, not reached) */
   var L = (s && Array.isArray(s.ospf_neighbors)) ? s.ospf_neighbors : null;
   if (!L || !L.length || !s.iface_hellos || typeof s.iface_hellos !== 'object') return L;   /* 空の一覧は触らない (三角の builder は空なら相手ごとの行 = Q9 の STATIC 行・Q12 を出す) */
   for (var i = 0; i < L.length; i++) { if (!L[i] || !L[i].iface) return L; }
@@ -3095,10 +3117,12 @@ function _xrayOspfRtSummaryLines(s) {
       var _pc = _xrayOspfNbrColor(_ps);
       lines.push({ text: "> Neighbor " + _pk + ': <span style="color:' + _pc + '">' + _ps + "</span>" });
     });
+    if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2) */
   } else {
     lines.push({
       text: '> Neighbor: <span style="color:' + nbrColor + '">' + nbrLabel + "</span>"
     });
+    if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2) */
   }
   // LSDB SYNCHRONIZED when the neighbor is Full AND (the state carries LSDB prefixes, OR this is a
   // topology-preview: clab-paste = OSS facade + no live routing_table, whose synthetic state has no
@@ -3604,6 +3628,7 @@ function xrayBgpDeepLines(s, opts) {
     } else {
     if (_reStat) lines.push({text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_reStat) + '">' + _reStat + '</span>'});
     if (_reStat === "Running") lines.push({text: '> Neighbor: ' + (_reFull ? '<span style="color:#39ff14">Full</span>' : _xrayOspfNbrSpan(_xrayOspfNbrWord(_reNbr)))});
+    if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2) */
     }
     if (_reStat === "Running") lines.push({text: '> LSDB: <span style="color:' + (_reFull ? "#39ff14" : "#888") + '">' + (_reFull ? "SYNCHRONIZED" : (_reCxSt.ospf_active_on_interface ? "SYNCING" : "\u2014")) + '</span>'});
   }
