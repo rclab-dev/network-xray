@@ -28,7 +28,7 @@
 (function (root) {
   'use strict';
 
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function num(v) { return (Math.round(v * 10) / 10); }
   // map a client (screen) pixel to SVG user units — honours the viewBox scale + xMidYMid centering
   function clientToSvg(svg, cx, cy) {

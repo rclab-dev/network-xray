@@ -199,7 +199,7 @@ window.__xrayGraphBoot = function () {
     var views = window.clabXray.deepViews(fullCfg, nodeId);   // ← bridge (b)
     if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
     if (views.length > 1) {
-      box.innerHTML='<span class="lbl">'+nodeId+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      box.innerHTML='<span class="lbl">'+escH(nodeId)+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
       views.forEach(function(v,idx){
         var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
         b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
@@ -209,6 +209,7 @@ window.__xrayGraphBoot = function () {
     renderView(views[0], nodeId);
   }
   window.__xrayShowNode = showNode;   // exposed for tests / external triggers
+  function escH(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }   // lab-supplied node names / kinds as HTML text
 
   // ---- draw overview ----
   var ov=document.getElementById('ov'); var svg='<svg viewBox="0 0 '+W+' '+H+'">'; var drawn={};
@@ -218,7 +219,7 @@ window.__xrayGraphBoot = function () {
   });}); svg+='</svg>'; ov.innerHTML=svg;
   NAMES.forEach(function(n){
     var b=document.createElement('div'); b.className='ov-node'; b.setAttribute('data-n',n);
-    b.innerHTML=n+(KIND[n]?'<span class="k">'+KIND[n]+'</span>':'');
+    b.innerHTML=escH(n)+(KIND[n]?'<span class="k">'+escH(KIND[n])+'</span>':'');
     b.style.left=POS[n][0]+'px'; b.style.top=POS[n][1]+'px';
     b.onclick=function(){ showNode(n); };
     ov.appendChild(b);

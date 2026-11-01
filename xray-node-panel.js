@@ -23,7 +23,7 @@
   'use strict';
 
   function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
   function panel(title, bodyHtml) {
     return '<div class="xnp-panel"><div class="xnp-title">' + esc(title) + '</div>' + bodyHtml + '</div>';
@@ -224,7 +224,7 @@
     s += '<text x="14" y="' + (H - 26) + '" fill="var(--xnp-ospf)" font-size="11" font-family="monospace">━ OSPF</text>' +
       '<text x="72" y="' + (H - 26) + '" fill="var(--xnp-bgp)" font-size="11" font-family="monospace">━ BGP tunnel</text>' +
       '<text x="14" y="' + (H - 11) + '" fill="var(--xnp-phys)" font-size="11" font-family="monospace">━ physical link</text>';
-    var cap = esc(state.target_node || 'node') + (sel ? '  ' + esc(sel) + (oif ? ' → ' + esc(oif) : '') : '');
+    var cap = (state.target_node || 'node') + (sel ? '  ' + sel + (oif ? ' → ' + oif : '') : '');
     s += '<text x="' + (W - 14) + '" y="' + (H - 11) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
     return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
@@ -237,7 +237,7 @@
       return panel('BGP Table', '<div class="xnp-dim">no routes (BGP session not established)</div>');
     }
     var v = bgpView(routes);
-    var tgt = state.target_node ? ' (' + esc(state.target_node) + ')' : '';
+    var tgt = state.target_node ? ' (' + state.target_node + ')' : '';
     return panel('BGP Table — show ip bgp' + tgt, v.table) +
       (v.decision ? panel('Best-Path Decision', v.decision) : '');
   }

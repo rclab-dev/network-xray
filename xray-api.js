@@ -135,11 +135,15 @@
     });
     return '<div class="bgp-chain">' + parts.join(' → ') + '</div>';
   }
+  function _esc(v) {   // router-supplied text (prefix, next hop, AS path, node name) -> HTML text / attribute value
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
   function _bgpReason(p, dec) {
     if (!dec) return '';
-    if (dec.kind === 'nobest') return '<div class="bgp-reason bgp-reason-note">◦ ' + p + ' → no valid path</div>';
-    if (dec.kind === 'single') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>only path</b> (no alternatives)</div>';
-    if (dec.kind === 'local') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>locally originated</b> (always preferred)</div>';
+    var pH = _esc(p);
+    if (dec.kind === 'nobest') return '<div class="bgp-reason bgp-reason-note">◦ ' + pH + ' → no valid path</div>';
+    if (dec.kind === 'single') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>only path</b> (no alternatives)</div>';
+    if (dec.kind === 'local') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>locally originated</b> (always preferred)</div>';
     var ch = _bgpChain(dec.chain);
     if (dec.kind === 'decided') {
       var op = dec.criterion.dir > 0 ? '>' : '<';
@@ -148,7 +152,7 @@
       var btn = '<span class="bgp-crit-btn" role="button" tabindex="0" data-bgp-crit>' + dec.criterion.label + '</span>';
       // pop is the IMMEDIATE next sibling of .bgp-reason (the delegated handler resolves it that way);
       // the inline chain summary follows the pop.
-      return '<div class="bgp-reason">★ ' + p + ' → best path by ' + btn + cmp + '</div>' + _bgpBracketPop(dec, href) + ch;
+      return '<div class="bgp-reason">★ ' + pH + ' → best path by ' + btn + cmp + '</div>' + _bgpBracketPop(dec, href) + ch;
     }
     // (iii) A visible-attribute tie is NOT decided by Router ID by default — FRR's real tie-breaker is
     //   Older Path (RFC 5004); Router ID applies only with `bgp bestpath compare-routerid`. The oldest
@@ -159,17 +163,17 @@
     //   (bgp_routes[].reason), name it instead of the generic tie-break rule. 'First path received' is not a decider.
     var _frB = dec.best || {}, _fr = (typeof _frB.reason === 'string' ? _frB.reason : (typeof _frB.sel_reason === 'string' ? _frB.sel_reason : '')).replace(/[<>&"']/g, '').trim();
     if (_fr && !/^first path received$/i.test(_fr)) {
-      if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
-      if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all visible attributes equal — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
-      return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
+      if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>MED not compared</b> (different neighbor AS) — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
+      if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
+      return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
     }
     var _rfc5004 = ' (<a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; Router ID only with compare-routerid)';
     // nos_wording (2026-10-06): an IOS-XE node (state.nos = 'ios-xe', set by the IOS-XE collector) names
     //   IOS-XE, whose Older Path step applies only between eBGP paths (iBGP ties go to Router ID). FRR text unchanged.
     var _tieBy = _bgpIsIos() ? 'IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)' : 'FRR breaks the tie by <b>Older Path</b>';
-    if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>MED not compared</b> (different neighbor AS) — ' + _tieBy + _rfc5004 + '</div>' + ch;
-    if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → all visible attributes equal — ' + _tieBy + _rfc5004 + '</div>' + ch;
-    return '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>no single decider</b> — lower-level tiebreak (Older Path / Router ID)</div>' + ch;
+    if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>MED not compared</b> (different neighbor AS) — ' + _tieBy + _rfc5004 + '</div>' + ch;
+    if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — ' + _tieBy + _rfc5004 + '</div>' + ch;
+    return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>no single decider</b> — lower-level tiebreak (Older Path / Router ID)</div>' + ch;
   }
   // --- Interactive decider: Tier2 popover (all decision steps) + Tier3 full-bracket link. ---
   // gallery is IIFE-private, so no inline onclick — the decision panel gets ONE delegated handler
@@ -337,7 +341,7 @@
         var isBest = _bIsBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
         var nh = rt.next_hop || rt.nexthop || '';
         var pathDisp = (rt.as_path || '') + (rt.origin ? ((rt.as_path ? ' ' : '') + rt.origin) : '');
-        var lpDisp = (rt.local_pref != null && rt.local_pref !== '') ? rt.local_pref : '<span class="bgp-default">100</span>';
+        var lpDisp = (rt.local_pref != null && rt.local_pref !== '') ? _esc(rt.local_pref) : '<span class="bgp-default">100</span>';
         // Only the selected prefix shows the amber decider-cell highlight (it ties to the shown decision).
         function cell(name, val) {   /* nx_bgp_path_sub: Path cell marked for _xrayBgpFitPath (xray-core); Metric left out when empty for every route */
           if (name === 'metric' && noMet) return '';
@@ -347,12 +351,12 @@
         var _ecC = _ec && _ec[nh];   /* nx_ecmp */
         if (_ecC) cls += ' bgp-ecmp' + (isBest && isSel ? ' bgp-ecmp-repd' : '');
         var chev = (gi === 0) ? (isSel ? '▾' : '▸') : '';   // affordance on the group's first row
-        html += '<tr class="' + cls.replace(/^\s+/, '') + '"' + (_ecC ? ' style="--nx-ecmp:' + _ecC + ';--nx-ecmp-bg:' + _xrayEcmpRgba(_ecC, 0.08) + '"' : '') + ' data-bgp-prefix="' + p + '">' +
-          '<td><span class="bgp-st">' + (_ecC ? (isBest ? '*&gt;' : '*=') : (rt.status || (rt.best ? '*>' : '* '))) + '</span>' +
+        html += '<tr class="' + cls.replace(/^\s+/, '') + '"' + (_ecC ? ' style="--nx-ecmp:' + _ecC + ';--nx-ecmp-bg:' + _xrayEcmpRgba(_ecC, 0.08) + '"' : '') + ' data-bgp-prefix="' + _esc(p) + '">' +
+          '<td><span class="bgp-st">' + (_ecC ? (isBest ? '*&gt;' : '*=') : _esc(rt.status || (rt.best ? '*>' : '* '))) + '</span>' +
             (_ecC && isBest && isSel ? '<span class="bgp-ecmp-rep">' + (_bgpLang() === 'ja' ? '代表' : 'rep.') + '</span>' : '') + '</td>' +
-          '<td>' + _bPfx(rt) + '</td>' +
-          '<td>' + nh + '</td>' +
-          cell('metric', rt.metric || '') + cell('locprf', lpDisp) + cell('weight', w) + cell('path', pathDisp) +
+          '<td>' + _esc(_bPfx(rt)) + '</td>' +
+          '<td>' + _esc(nh) + '</td>' +
+          cell('metric', _esc(rt.metric || '')) + cell('locprf', lpDisp) + cell('weight', _esc(w)) + cell('path', _esc(pathDisp)) +
           '<td class="de-bgp-cx">' + chev + '</td>' +
           '</tr>';
       });
@@ -470,7 +474,7 @@
     } else {
       var view = _bgpBuildView(rows); body = view.table; legend = view.legend;   // table + inline decision
     }
-    panel.innerHTML = '<div class="de-title">BGP Table (' + tgt + ')<span class="xbgp-fs-ctl">'
+    panel.innerHTML = '<div class="de-title">BGP Table (' + _esc(tgt) + ')<span class="xbgp-fs-ctl">'
       + '<button data-fs="dn" title="smaller text">A−</button><button data-fs="up" title="larger text">A+</button></span></div>'
       + '<div class="de-bgp-rows">' + body + '</div>'
       + (legend ? '<div class="de-bgp-legend-host">' + legend + '</div>' : '');

@@ -169,7 +169,11 @@ function xraySetSkin(skin) {
 }
 
 function _escapeHtml(text) {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(text == null ? "" : text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+/* a value as a quoted JS string literal for an inline on* handler attribute (JSON quoting, then HTML-escaped) */
+function _xrayJsArg(v) {
+  return _escapeHtml(JSON.stringify(String(v == null ? "" : v)));
 }
 
 if (typeof window._getIface !== "function") {
@@ -1054,7 +1058,7 @@ function xrayUpdateNonTargetLogic() {
           });
           var _ipH = _rows.map(function(r) {
             var _ipShow = (r.ip || "...").replace(/\/\d+$/, "");
-            return '<div class="xr-if-row"><span class="label">' + r.lbl + ':</span> <span class="ip">' + _ipShow + "</span></div>";
+            return '<div class="xr-if-row"><span class="label">' + _escapeHtml(r.lbl) + ':</span> <span class="ip">' + _escapeHtml(_ipShow) + "</span></div>";
           }).join("");
           box.querySelectorAll(".xray-logic.xray-initial, .xray-logic.xray-cleared").forEach(function(sl) {
             sl.innerHTML = _ipH;
@@ -1117,7 +1121,7 @@ function _xrayIspLines(nodeId, nodeIfaces, pingTarget) {
   });
   var inName = inIface ? inIface.name : "...";
   return [ {
-    text: "IN: " + inName
+    text: "IN: " + _escapeHtml(inName)
   }, {
     text: "DST: " + (pingTarget || "...")
   }, {
@@ -1160,12 +1164,12 @@ function _xrayPeerRouterLines(nodeId, nodeIfaces, s) {
       return i.name === "lo";
     });
     if (lo) lines.push({
-      text: "Lo: " + lo.ip
+      text: "Lo: " + _escapeHtml(lo.ip)
     });
     var area = s[nodeId + "_area"] || s.r2_area;
     if (area !== undefined && area !== null) {
       lines.push({
-        text: "area " + area,
+        text: "area " + _escapeHtml(area),
         cls: "dim"
       });
     }
@@ -1179,14 +1183,14 @@ function _xrayPeerRouterLines(nodeId, nodeIfaces, s) {
       return i.name === "lo";
     });
     if (lo) lines.push({
-      text: "Lo: " + lo.ip
+      text: "Lo: " + _escapeHtml(lo.ip)
     });
   } else {
     nodeIfaces.forEach(function(iface) {
       if (iface.name === "lo") return;
       var st = _xrayEffectiveIfaceState(nodeId, iface.name, iface.state);
       lines.push({
-        text: iface.name + ": " + st,
+        text: _escapeHtml(iface.name) + ": " + _escapeHtml(st),
         cls: st === "UP" ? "hl" : "warn"
       });
     });
@@ -2195,11 +2199,11 @@ function xrayUpdateLsdb(s, opts) {
     }
     if (synced && (rr.resolved || s.lsa_in_db) && rr.matched_prefix) {
       var alreadyHas = rows.some(function(r) {
-        return r.text === rr.matched_prefix;
+        return r.text === _escapeHtml(rr.matched_prefix);
       });
       if (!alreadyHas) {
         rows.push({
-          text: rr.matched_prefix,
+          text: _escapeHtml(rr.matched_prefix),
           own: false
         });
       }
@@ -2782,7 +2786,7 @@ function xrayStaticLogicLines(s, opts) {
   Object.keys(ifaces).forEach(function(name) {
     var info = ifaces[name];
     lines.push({
-      text: name + ": " + (info.up ? "UP" : "DOWN") + (info.ip ? " (" + info.ip.split("/")[0] + ")" : ""),
+      text: _escapeHtml(name) + ": " + (info.up ? "UP" : "DOWN") + (info.ip ? " (" + _escapeHtml(info.ip.split("/")[0]) + ")" : ""),
       cls: info.up ? "hl" : "warn"
     });
   });
@@ -2938,7 +2942,7 @@ function xrayStaticDeepLines(s, opts) {
     Object.keys(_reIf).forEach(function(_n) {
       var _i = _reIf[_n], _c = _i.up ? "#39ff14" : "#ff4444";
       _reL.push({
-        text: "> " + _n + ': <span style="color:' + _c + '">' + (_i.up ? "UP" : "DOWN") + "</span>" + (_i.ip ? ' <span class="de-dim">' + _i.ip + "</span>" : ""),
+        text: "> " + _escapeHtml(_n) + ': <span style="color:' + _c + '">' + (_i.up ? "UP" : "DOWN") + "</span>" + (_i.ip ? ' <span class="de-dim">' + _escapeHtml(_i.ip) + "</span>" : ""),
         style: _i.up ? "" : "color:#ff6b35;font-weight:700"
       });
     });
@@ -2961,7 +2965,7 @@ function xrayStaticDeepLines(s, opts) {
     var info = ifaces[name];
     var color = info.up ? "#39ff14" : "#ff4444";
     _ifaceLines.push({
-      text: "> " + name + ': <span style="color:' + color + '">' + (info.up ? "UP" : "DOWN") + "</span>" + ((info.ip || _xrayIfTag(info)) ? ' <span class="de-dim">' + (info.ip || "") + _xrayIfTag(info) + "</span>" : ""),   /* nx_if_tag */
+      text: "> " + _escapeHtml(name) + ': <span style="color:' + color + '">' + (info.up ? "UP" : "DOWN") + "</span>" + ((info.ip || _xrayIfTag(info)) ? ' <span class="de-dim">' + _escapeHtml(info.ip || "") + _xrayIfTag(info) + "</span>" : ""),   /* nx_if_tag */
       style: info.up ? "" : "color:#ff6b35;font-weight:700"
     });
   });
@@ -2984,7 +2988,7 @@ function xrayStaticDeepLines(s, opts) {
   }
   if (rr.resolved) {
     lines.push({
-      text: '> Route: <span class="de-hl">' + (rr.protocol || "static") + " " + (rr.matched_prefix || rr.target || target) + "</span>"
+      text: '> Route: <span class="de-hl">' + (rr.protocol || "static") + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
     });
     var nhReachable = typeof s.nh_reachable === "boolean" ? s.nh_reachable : s.r1_ping_ok !== false;
     if (nhReachable) {
@@ -2998,7 +3002,7 @@ function xrayStaticDeepLines(s, opts) {
       });
     }
     lines.push({
-      text: '> Out: <span class="de-hl">' + (rr.out_iface || "?") + "</span>"
+      text: '> Out: <span class="de-hl">' + _escapeHtml(rr.out_iface || "?") + "</span>"
     });
   } else {
     var cfgNh = s.config_next_hop || "";
@@ -3106,7 +3110,7 @@ function _xrayOspfRtSummaryLines(s) {
     var _osHide = window._reOspfOpen ? "" : "display:none";
     lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;neighbor</span>', cls: "re-ospf-nbr", style: _osHide });
     s.ospf_neighbors.forEach(function (_nb) {
-      var _lbl = _nb.router_id || _nb.address || _nb.ip || "?";
+      var _lbl = _escapeHtml(_nb.router_id || _nb.address || _nb.ip || "?");
       var _st = _nb.full ? "Full" : _xrayOspfNbrWord(_nb.state);
       var _sc = _xrayOspfNbrColor(_st, _nb.role);
       lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + _xrayNbrTag(_nb) /* nx_if_tag */ + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _st + '</span>', cls: "re-ospf-nbr", style: _osHide });
@@ -3115,7 +3119,7 @@ function _xrayOspfRtSummaryLines(s) {
     _osPeers.forEach(function(_pk) {
       var _ps = _xrayOspfNbrWord(s[_pk + "_neighbor_state"] || "None");
       var _pc = _xrayOspfNbrColor(_ps);
-      lines.push({ text: "> Neighbor " + _pk + ': <span style="color:' + _pc + '">' + _ps + "</span>" });
+      lines.push({ text: "> Neighbor " + _escapeHtml(_pk) + ': <span style="color:' + _pc + '">' + _ps + "</span>" });
     });
     if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2) */
   } else {
@@ -3169,7 +3173,7 @@ function _xrayOspfRtSummaryLines(s) {
   var _ifsR = s.interfaces || {};
   Object.keys(_ifsR).forEach(function (ifn) {
     var info = _ifsR[ifn] || {};
-    lines.push({ text: "> " + ifn + (info.via ? " (" + info.via + ")" : "") /* nx_re_via */ + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + _xrayIfTag(info) /* nx_if_tag */ + "</span>" });
+    lines.push({ text: "> " + _escapeHtml(ifn) + (info.via ? " (" + _escapeHtml(info.via) + ")" : "") /* nx_re_via */ + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + _escapeHtml(info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + _xrayIfTag(info) /* nx_if_tag */ + "</span>" });
   });
 
   lines = lines.map(function (_l) { if (_l && typeof _l.text === "string") { _l.text = _l.text.replace(/^&gt; /, "\u30fb ").replace(/^> /, "\u30fb "); } return _l; });
@@ -3237,7 +3241,7 @@ function xrayOspfDeepLines(s, opts) {
   if (ospfRunning && (showAll || !init.area_match || currAreaOk !== !!init.area_match)) {
     var areaColor = currAreaOk ? "#39ff14" : "#ff4444";
     lines.push({
-      text: "> Area: r1=" + (s.r1_area || "?") + " r2=" + (s.r2_area || "?") + ' <span style="color:' + areaColor + '">' + (currAreaOk ? "MATCH" : "MISMATCH") + "</span>"
+      text: "> Area: r1=" + _escapeHtml(s.r1_area || "?") + " r2=" + _escapeHtml(s.r2_area || "?") + ' <span style="color:' + areaColor + '">' + (currAreaOk ? "MATCH" : "MISMATCH") + "</span>"
     });
   }
   var currPassiveOk = !s.is_passive;
@@ -3302,7 +3306,7 @@ function xrayOspfDeepLines(s, opts) {
       cls: "dim"
     });
     lines.push({
-      text: '> Route: <span style="color:#ff4444">STATIC ' + (rr.matched_prefix || target) + "</span> (AD=1, best)",
+      text: '> Route: <span style="color:#ff4444">STATIC ' + _escapeHtml(rr.matched_prefix || target) + "</span> (AD=1, best)",
       style: "color:#ff6b35;font-weight:700"
     });
     if (rr.next_hop) {
@@ -3320,7 +3324,7 @@ function xrayOspfDeepLines(s, opts) {
     }
   } else if (rr.resolved) {
     lines.push({
-      text: '> Route: <span class="de-hl">' + (rr.protocol || "ospf").toUpperCase() + " " + (rr.matched_prefix || rr.target || target) + "</span>"
+      text: '> Route: <span class="de-hl">' + (rr.protocol || "ospf").toUpperCase() + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
     });
     if (rr.next_hop) lines.push({
       text: '> Next-Hop: <span class="de-hl">' + rr.next_hop + "</span>"
@@ -3439,6 +3443,7 @@ function xrayTriDeepLines(s, opts) {
   var sFull = !!opts.secondaryFull;
   var sState = opts.secondaryState || "None";
   function _linkLine(linkName, nodeId, hasFull, nbrState, isStatic) {
+    linkName = _escapeHtml(linkName);
     var ifName = s[nodeId + "_iface"] || "";
     var ifInfo = ifName ? ifaces[ifName] : null;
     var ifDown = ifInfo && !ifInfo.up;
@@ -3479,7 +3484,7 @@ function xrayTriDeepLines(s, opts) {
       var _tgtHello = s.target_hello || s.r1_hello || "?";
       var _peerHello = s.peer_hello || s.r2_hello || "?";
       lines.push({
-        text: "> Hello: " + tName + "=" + _tgtHello + "s " + _peerLbl + "=" + _peerHello + 's <span style="color:' + tmColor + '">' + (s.timer_match ? "MATCH" : "MISMATCH") + "</span>"
+        text: "> Hello: " + _escapeHtml(tName) + "=" + _escapeHtml(_tgtHello) + "s " + _escapeHtml(_peerLbl) + "=" + _escapeHtml(_peerHello) + 's <span style="color:' + tmColor + '">' + (s.timer_match ? "MATCH" : "MISMATCH") + "</span>"
       });
     }
     if (s.area_match !== undefined) {
@@ -3487,7 +3492,7 @@ function xrayTriDeepLines(s, opts) {
       var _tgtArea = s.target_area || s.r1_area || "?";
       var _peerArea = s.peer_area || s.r2_area || "?";
       lines.push({
-        text: "> Area: " + tName + "=" + _tgtArea + " " + _peerLbl + "=" + _peerArea + ' <span style="color:' + aColor + '">' + (s.area_match ? "MATCH" : "MISMATCH") + "</span>"
+        text: "> Area: " + _escapeHtml(tName) + "=" + _escapeHtml(_tgtArea) + " " + _escapeHtml(_peerLbl) + "=" + _escapeHtml(_peerArea) + ' <span style="color:' + aColor + '">' + (s.area_match ? "MATCH" : "MISMATCH") + "</span>"
       });
     }
     if (s.is_passive !== undefined && s.is_passive) {
@@ -3503,12 +3508,12 @@ function xrayTriDeepLines(s, opts) {
   Object.keys(ifaces).forEach(function(ifn) {
     var info = ifaces[ifn];
     lines.push({
-      text: "> " + ifn + (info.via ? " (" + info.via + ")" : "") /* nx_re_via */ + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + _xrayIfTag(info) /* nx_if_tag */ + "</span>"
+      text: "> " + _escapeHtml(ifn) + (info.via ? " (" + _escapeHtml(info.via) + ")" : "") /* nx_re_via */ + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + _escapeHtml(info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + _xrayIfTag(info) /* nx_if_tag */ + "</span>"
     });
   });
   if (rr.resolved) {
     lines.push({
-      text: '> Route: <span class="de-hl">' + (rr.protocol || "ospf").toUpperCase() + " " + (rr.matched_prefix || target) + "</span>"
+      text: '> Route: <span class="de-hl">' + (rr.protocol || "ospf").toUpperCase() + " " + _escapeHtml(rr.matched_prefix || target) + "</span>"
     });
     if (rr.next_hop) {
       var _nhIfUp = !rr.out_iface || ifaces[rr.out_iface] && ifaces[rr.out_iface].up;
@@ -3589,7 +3594,7 @@ function xrayBgpDeepLines(s, opts) {
     s.bgp_neighbors.forEach(function (_nb) {
       var _kind = _nb.ibgp ? "iBGP" : "eBGP";
       var _kc = _nb.ibgp ? "#7facc9" : "#ffb74d";
-      lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.ip + '&nbsp;&nbsp;AS ' + _nb.remote_as + ' </span><span style="color:' + _kc + '">(' + _kind + ')</span>', cls: "re-bgp-nbr", style: _nbHide });
+      lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _escapeHtml(_nb.ip) + '&nbsp;&nbsp;AS ' + _escapeHtml(_nb.remote_as) + ' </span><span style="color:' + _kc + '">(' + _kind + ')</span>', cls: "re-bgp-nbr", style: _nbHide });
       if (_nb.state) { var _sc = /establ/i.test(_nb.state) ? "#a855f7" : "#ffb74d"; var _ud = (_nb.up_down != null ? '&nbsp;&nbsp;<span style="color:#9ab">Up/Down</span> ' + _nb.up_down : '') + (_nb.pfx_rcvd != null ? '&nbsp;&nbsp;<span style="color:#9ab">PfxRcd</span> ' + _nb.pfx_rcvd : ''); /* nx_bgp_nbr_fold_any_state */ lines.push({ text: '<span style="color:' + _sc + '">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.state + '</span>', cls: "re-bgp-nbr", style: _nbHide }); if (_ud) lines.push({ text: '&nbsp;&nbsp;&nbsp;' + _ud, cls: "re-bgp-nbr", style: _nbHide }); /* nx_bgp_nbr_detail_line2 (2026-10-06): Up/Down + PfxRcd on their own indented line = no wrap to the left edge */ }
     });
   }
@@ -3619,7 +3624,7 @@ function xrayBgpDeepLines(s, opts) {
         var _cxHide = window._reOspfOpen ? "" : "display:none";
         lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;neighbor</span>', cls: "re-ospf-nbr", style: _cxHide });
         _reCxSt.ospf_neighbors.forEach(function (_nb) {
-          var _lbl = _nb.router_id || _nb.address || _nb.ip || "?";
+          var _lbl = _escapeHtml(_nb.router_id || _nb.address || _nb.ip || "?");
           var _st = _nb.full ? "Full" : _xrayOspfNbrWord(_nb.state);
           var _sc = _xrayOspfNbrColor(_st, _nb.role);
           lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + _xrayNbrTag(_nb) /* nx_if_tag */ + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _st + '</span>', cls: "re-ospf-nbr", style: _cxHide });
@@ -3636,7 +3641,7 @@ function xrayBgpDeepLines(s, opts) {
     var info = ifaces[name];
     if (!info.up && !info.ip) return;
     lines.push({
-      text: "> " + name + (info.via ? " (" + info.via + ")" : "") /* nx_re_via */ + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + (info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + _xrayIfTag(info) /* nx_if_tag */ + "</span>"
+      text: "> " + _escapeHtml(name) + (info.via ? " (" + _escapeHtml(info.via) + ")" : "") /* nx_re_via */ + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + _escapeHtml(info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + _xrayIfTag(info) /* nx_if_tag */ + "</span>"
     });
   });
   var init = window._xrayInitialState || s;
@@ -3709,7 +3714,7 @@ function xrayBgpDeepLines(s, opts) {
   if (!((typeof window !== "undefined" && window.xrayCore) || (s.routing_table && s.routing_table.length))) {
     if (rr.resolved) {
       lines.push({
-        text: '> Route: <span class="de-hl">' + (rr.protocol || "bgp").toUpperCase() + " " + (rr.matched_prefix || rr.target || target) + "</span>"
+        text: '> Route: <span class="de-hl">' + (rr.protocol || "bgp").toUpperCase() + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
       });
       if (rr.next_hop) lines.push({
         text: '> Next-Hop: <span class="de-hl">' + rr.next_hop + "</span>"
@@ -3843,26 +3848,26 @@ function xrayRenderTopology(config) {
     var n = nodes[i];
     var cls = n.type === "server" ? "server" : n.type === "isp" ? "isp" : "router";
     if (n.target) cls += " target";
-    var nodeId = n.id;
+    var nodeId = _escapeHtml(n.id);
     html += '<div class="topo-node" id="topo-node-' + nodeId + '">';
     var _dotHtml = !n.target ? ' <span class="xray-link-dot" data-node="' + nodeId + '" style="width:8px;height:8px;border-radius:50%;margin-left:6px;vertical-align:middle;background:#39ff14;box-shadow:0 0 4px rgba(57,255,20,0.6)"></span>' : "";
     if (n.readonly) {
       html += '<div class="topo-box ' + cls + '" style="position:relative" data-name="' + nodeId + '">';
       html += "<h4>" + nodeId + "</h4>";
-      html += '<div class="role">' + (n.role || "") + "</div>";
+      html += '<div class="role">' + _escapeHtml(n.role || "") + "</div>";
       if (n.loopback) {
-        html += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + n.loopback + "</span>" + _dotHtml + "</div>";
+        html += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + _escapeHtml(n.loopback) + "</span>" + _dotHtml + "</div>";
       }
       html += '<div class="topo-iface"><span class="label">...</span>' + _dotHtml + "</div>";
       html += '<div class="terminal-hint" style="color:#e74c3c">🔒 アクセス不可</div>';
     } else {
-      var ttydPath = n.ttyd_path || nodeId;
+      var ttydPath = n.ttyd_path ? _escapeHtml(n.ttyd_path) : nodeId;
       html += '<a href="ttyd/' + ttydPath + '/" target="_blank" class="topo-box-link" id="' + nodeId + '-box-link">';
       html += '<div class="topo-box ' + cls + '" style="position:relative" data-name="' + nodeId + '">';
       html += "<h4>" + nodeId + "</h4>";
-      html += '<div class="role">' + (n.role || "") + "</div>";
+      html += '<div class="role">' + _escapeHtml(n.role || "") + "</div>";
       if (n.loopback) {
-        html += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + n.loopback + "</span>" + _dotHtml + "</div>";
+        html += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + _escapeHtml(n.loopback) + "</span>" + _dotHtml + "</div>";
       }
       html += '<div class="topo-iface"><span class="label">...</span>' + _dotHtml + "</div>";
       html += '<div class="terminal-hint">Click to open terminal</div>';
@@ -3884,7 +3889,7 @@ function xrayRenderTopology(config) {
     if (i < nodes.length - 1) {
       var _nets = config.networks || config.topology && config.topology.networks || [];
       var linkName = "net-link";
-      var _n1 = nodeId, _n2 = nodes[i + 1].id;
+      var _n1 = n.id, _n2 = nodes[i + 1].id;
       for (var _li = 0; _li < _nets.length; _li++) {
         var _members = (_nets[_li].members || []).map(function(m) {
           return m.node || m;
@@ -3894,7 +3899,8 @@ function xrayRenderTopology(config) {
           break;
         }
       }
-      if (linkName === "net-link" && nodes.length > 2) linkName = "net-" + nodeId + nodes[i + 1].id;
+      if (linkName === "net-link" && nodes.length > 2) linkName = "net-" + n.id + nodes[i + 1].id;
+      linkName = _escapeHtml(linkName);
       html += '<div class="topo-link" data-net="' + linkName + '">';
       html += '<div class="topo-link-line"></div>';
       html += '<div class="topo-link-pipe" data-net="' + linkName + '"></div>';
@@ -3931,7 +3937,7 @@ function xrayRenderTopology(config) {
   }) || nodes[0];
   var _holoProto = xray.protocol === "static" ? "Routing Engine" : xray.protocol === "bgp" ? "BGP Process" : "OSPF Process";
   html += '<div class="xray-holo-panel" id="xray-holo-panel">';
-  html += '<div class="title">[' + _holoProto + " &#8212; " + targetNode.id + "]</div>";
+  html += '<div class="title">[' + _holoProto + " &#8212; " + _escapeHtml(targetNode.id) + "]</div>";
   html += '<div id="xray-holo-body"></div>';
   html += "</div>";
   html += '<div class="xray-fib-entry" id="xray-fib-entry"></div>';
@@ -3946,25 +3952,25 @@ function _xrayRenderTriangleTopology(config) {
   function nodeHtml(n) {
     var cls = "router";
     if (n.target) cls += " target";
-    var nodeId = n.id;
+    var nodeId = _escapeHtml(n.id);
     var h = '<div class="topo-node" id="topo-node-' + nodeId + '">';
     if (n.readonly) {
       h += '<div class="topo-box ' + cls + '" style="position:relative" data-name="' + nodeId + '">';
       h += "<h4>" + nodeId + "</h4>";
-      h += '<div class="role">' + (n.role || "") + "</div>";
-      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + n.loopback + "</span></div>";
+      h += '<div class="role">' + _escapeHtml(n.role || "") + "</div>";
+      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + _escapeHtml(n.loopback) + "</span></div>";
       h += '<div class="topo-iface"><span class="label">...</span></div>';
       h += '<div class="terminal-hint" style="color:#e74c3c">🔒 参照専用</div>';
       h += '<div class="xray-ospf-unit"><div class="xray-ospf-dot"></div></div>';
       h += '<div class="xray-logic"></div>';
       h += "</div>";
     } else {
-      var ttydPath = n.ttyd_path || nodeId;
+      var ttydPath = n.ttyd_path ? _escapeHtml(n.ttyd_path) : nodeId;
       h += '<a href="ttyd/' + ttydPath + '/" target="_blank" class="topo-box-link" id="' + nodeId + '-box-link">';
       h += '<div class="topo-box ' + cls + '" style="position:relative" data-name="' + nodeId + '">';
       h += "<h4>" + nodeId + "</h4>";
-      h += '<div class="role">' + (n.role || "") + "</div>";
-      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + n.loopback + "</span></div>";
+      h += '<div class="role">' + _escapeHtml(n.role || "") + "</div>";
+      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + _escapeHtml(n.loopback) + "</span></div>";
       h += '<div class="topo-iface"><span class="label">...</span></div>';
       h += '<div class="terminal-hint">Click to open terminal</div>';
       h += '<div class="xray-ospf-unit"><div class="xray-ospf-dot"></div></div>';
@@ -11651,7 +11657,7 @@ function xrayEnsureBgpTableBox(config) {
     var box = document.createElement("div");
     box.className = "de-panel de-bgp-panel";
     box.id = "de-bgp-panel";
-    box.innerHTML = '<div class="de-title">BGP Table — show ip bgp (<span class="de-bgp-tgt">' + tgt + "</span>)" + '<span class="de-bgp-fs-ctl"><button type="button" style="pointer-events:auto!important" onclick="deBgpFontZoom(event,-1)" title="文字を小さく">A&#8722;</button><button type="button" style="pointer-events:auto!important" onclick="deBgpFontZoom(event,1)" title="文字を大きく">A+</button></span></div>' + '<div class="de-bgp-rows"><div class="de-dim">Loading...</div></div>';
+    box.innerHTML = '<div class="de-title">BGP Table — show ip bgp (<span class="de-bgp-tgt">' + _escapeHtml(tgt) + "</span>)" + '<span class="de-bgp-fs-ctl"><button type="button" style="pointer-events:auto!important" onclick="deBgpFontZoom(event,-1)" title="文字を小さく">A&#8722;</button><button type="button" style="pointer-events:auto!important" onclick="deBgpFontZoom(event,1)" title="文字を大きく">A+</button></span></div>' + '<div class="de-bgp-rows"><div class="de-dim">Loading...</div></div>';
     re.parentElement.appendChild(box);
   } else {
     var _tSpan0 = document.querySelector("#de-bgp-panel .de-bgp-tgt");
@@ -12179,9 +12185,10 @@ function xrayBgpReasonHtml(p, dec, grp) {
   if (!dec) return "";
   var _ec = _xrayEcmpOf(grp);   /* nx_ecmp: ECMP -> "all used, > is the representative" instead of "best path by ..." */
   if (_ec) return _xrayEcmpReasonHtml(p, dec, grp, _ec);
-  if (dec.kind === "nobest") return '<div class="bgp-reason bgp-reason-note">◦ ' + p + " → no valid path</div>";
-  if (dec.kind === "single") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>only path</b> (no alternatives)</div>";
-  if (dec.kind === "local") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>locally originated</b> (always preferred)</div>";
+  var pH = _escapeHtml(p);
+  if (dec.kind === "nobest") return '<div class="bgp-reason bgp-reason-note">◦ ' + pH + " → no valid path</div>";
+  if (dec.kind === "single") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>only path</b> (no alternatives)</div>";
+  if (dec.kind === "local") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>locally originated</b> (always preferred)</div>";
   var chainHtml = xrayBgpChainHtml(dec.chain);
   if (dec.kind === "decided") {
     var op = dec.criterion.dir > 0 ? ">" : "<";
@@ -12195,19 +12202,19 @@ function xrayBgpReasonHtml(p, dec, grp) {
         var _saJa = (document.documentElement.getAttribute("lang") || "en") === "ja";
         _seeAll = '<a class="bp-more" href="' + _href + '" target="_blank" rel="noopener" onclick="event.preventDefault();event.stopPropagation();window.open(this.href,\'_blank\',\'noopener\');">' + (_saJa ? "判定の全ステップを見る" : "See all decision steps") + " ⧉</a>";
       }
-      return '<div class="bgp-reason">★ ' + p + " → best path by " + _btn + cmp + "</div>" + chainHtml + _seeAll + xrayBgpBracketPopHtml(dec, _href);
+      return '<div class="bgp-reason">★ ' + pH + " → best path by " + _btn + cmp + "</div>" + chainHtml + _seeAll + xrayBgpBracketPopHtml(dec, _href);
     }
-    return '<div class="bgp-reason">★ ' + p + " → best path by <b>" + dec.criterion.label + "</b>" + cmp + "</div>" + chainHtml;
+    return '<div class="bgp-reason">★ ' + pH + " → best path by <b>" + dec.criterion.label + "</b>" + cmp + "</div>" + chainHtml;
   }
   var _fr = xrayBgpFrrReason(dec, grp);   /* nx_frr_reason_small */
   if (_fr) {
-    if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>MED not compared</b> (different neighbor AS) — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
-    if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → all visible attributes equal — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
-    return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
+    if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
+    if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all visible attributes equal — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
+    return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
   }
-  if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>" + chainHtml;
-  if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → all attributes equal — <b>tiebreak by Router ID</b></div>" + chainHtml;
-  return '<div class="bgp-reason bgp-reason-note">★ ' + p + " → <b>no single decider</b> — lower-level tiebreak</div>" + chainHtml;
+  if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>" + chainHtml;
+  if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all attributes equal — <b>tiebreak by Router ID</b></div>" + chainHtml;
+  return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>no single decider</b> — lower-level tiebreak</div>" + chainHtml;
 }
 
 /* click-reveal: clicking a best (*>) row brings that prefix's Best-Path Decision to front. */
@@ -12368,8 +12375,8 @@ function _xrayEcmpRowHtml(p, rt, isBest, color, cells) {
   var ja = _xrayEcmpJa(), sel = (p === window._xrayBgpSelPrefix);
   var rep = (sel && isBest) ? '<span class="bgp-ecmp-rep">' + (ja ? "代表" : "rep.") + "</span>" : "";
   return '<tr class="bgp-ecmp' + (isBest ? " bgp-best" : "") + (rep ? " bgp-ecmp-repd" : "") + '" style="--nx-ecmp:' + color + ";--nx-ecmp-bg:" + _xrayEcmpRgba(color, 0.08) + '"' +
-    ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(&quot;' + p + '&quot;)">' +
-    '<td><span class="bgp-st">' + (isBest ? "*&gt;" : "*=") + "</span>" + rep + "</td><td>" + p + "</td><td>" + (rt.nexthop || "") + "</td>" + cells.join("") + "</tr>";
+    ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(' + _xrayJsArg(p) + ')">' +
+    '<td><span class="bgp-st">' + (isBest ? "*&gt;" : "*=") + "</span>" + rep + "</td><td>" + _escapeHtml(p) + "</td><td>" + _escapeHtml(rt.nexthop || "") + "</td>" + cells.join("") + "</tr>";
 }
 function _xrayEcmpLegendHtml(selected, n, mix) {   /* nx_ecmp_polish: mix = the ECMP prefixes differ in size */
   var ja = _xrayEcmpJa(), sw = "";
@@ -12387,7 +12394,7 @@ function _xrayEcmpReasonHtml(p, dec, grp, cmap) {
   var ifOf = function (nh) { try { return (typeof _xrayCfIfaceForNh === "function" && _xrayCfIfaceForNh(nh)) || ""; } catch (e) { return ""; } };
   var nhs = Object.keys(cmap);
   nhs.sort(function (x, y) { return _xrayEcmpIpNum(x) - _xrayEcmpIpNum(y); });
-  var list = nhs.map(function (nh) { var i = ifOf(nh); return '<span style="color:' + cmap[nh] + '">' + nh + (i ? " (" + i + ")" : "") + "</span>"; });
+  var list = nhs.map(function (nh) { var i = ifOf(nh); return '<span style="color:' + cmap[nh] + '">' + _escapeHtml(nh) + (i ? " (" + _escapeHtml(i) + ")" : "") + "</span>"; });
   var n = list.length;
   var joined = ja ? list.join(" と ") : (n === 2 ? list.join(" and ") : list.slice(0, -1).join(", ") + " and " + list[n - 1]);
   var fr = "";
@@ -12398,7 +12405,7 @@ function _xrayEcmpReasonHtml(p, dec, grp, cmap) {
   var by = fr
     ? (ja ? ' は <b style="color:#ffd54f">' + fr + "</b> (FRR の最後の決め手) で選んだ。" : ' was picked by <b style="color:#ffd54f">' + fr + "</b> (FRR's last tie-breaker).")
     : (ja ? " は FRR が選んだ。" : " was picked by FRR.");
-  var line = '<div class="bgp-reason bgp-reason-note">★ ' + p + (ja
+  var line = '<div class="bgp-reason bgp-reason-note">★ ' + _escapeHtml(p) + (ja
     ? " → ECMP: " + n + " 本とも使う。代表 (<b>&gt;</b> = 隣に広告する 1 本)" + by
     : " → ECMP: " + (n === 2 ? "both paths are" : "all " + n + " paths are") + " used. The representative (<b>&gt;</b>, advertised to neighbors)" + by) + "</div>";
   var chain = (dec && dec.chain && typeof xrayBgpChainHtml === "function") ? xrayBgpChainHtml(dec.chain) : "";
@@ -12667,7 +12674,7 @@ function xrayBuildBgpView(routes) {
       var isBest = st.indexOf(">") !== -1;
       var w = rt.weight === 0 || rt.weight ? rt.weight : "";
       var pathDisp = (rt.as_path || "") + (rt.origin ? (rt.as_path ? " " : "") + rt.origin : "");
-      var lpDisp = (rt.locprf || "") !== "" ? rt.locprf : '<span class="bgp-default">100</span>';
+      var lpDisp = (rt.locprf || "") !== "" ? _escapeHtml(rt.locprf) : '<span class="bgp-default">100</span>';
       function cell(colName, val) {   /* nx_bgp_path_sub: the Path cell is marked for _xrayBgpFitPath; Metric left out when empty for every route */
         if (colName === "metric" && _noMet) return "";
         var _c = (isBest && decCol === colName ? "bgp-decider" : "") + (colName === "path" ? " de-bgp-pathc" : "");
@@ -12677,21 +12684,21 @@ function xrayBuildBgpView(routes) {
       if (!isBest && rt.valid !== false && dec && dec.kind === "decided" && dec.criterion && rt.nexthop && !(_ecmp && _ecmp[rt.nexthop])) {   /* nx_bgp_invalid_view: an unusable path is not a loser */   /* nx_ecmp: a multipath path is not a loser */
         window._xrayCfRows[p + "|" + rt.nexthop] = { reason: dec.criterion.label + " " + dec.cmpVal + " " + (dec.criterion.dir > 0 ? "<" : ">") + " " + dec.bestVal + " \u2715", bestNh: _cfBestNh };
         var _cfOn = window._xrayCf && window._xrayCf.kind === "loser" && window._xrayCf.pfx === p && window._xrayCf.nh === rt.nexthop;
-        _cfTr = ' class="de-bgp-loser' + (_cfOn ? ' cf-on' : '') + '" onclick="event.stopPropagation();if(window.xrayCfToggle)window.xrayCfToggle(this,\'' + p + '\',\'' + rt.nexthop + '\')"';
+        _cfTr = ' class="de-bgp-loser' + (_cfOn ? ' cf-on' : '') + '" onclick="event.stopPropagation();if(window.xrayCfToggle)window.xrayCfToggle(this,' + _xrayJsArg(p) + ',' + _xrayJsArg(rt.nexthop) + ')"';
       }
-      var _nxRow = (_ecmp && _ecmp[rt.nexthop]) ? _xrayEcmpRowHtml(p, rt, isBest, _ecmp[rt.nexthop], [cell("metric", rt.metric || ""), cell("locprf", lpDisp), cell("weight", w), cell("path", pathDisp)]) : "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"' : _cfTr) + ">" + '<td><span class="bgp-st">' + st + "</span></td>" + "<td>" + p + "</td>" + "<td>" + (rt.nexthop || "") + "</td>" + cell("metric", rt.metric || "") + cell("locprf", lpDisp) + cell("weight", w) + cell("path", pathDisp) + "</tr>";   /* nx_bgp_invalid_view: mark an unusable path's row */
+      var _nxRow = (_ecmp && _ecmp[rt.nexthop]) ? _xrayEcmpRowHtml(p, rt, isBest, _ecmp[rt.nexthop], [cell("metric", _escapeHtml(rt.metric || "")), cell("locprf", lpDisp), cell("weight", _escapeHtml(w)), cell("path", _escapeHtml(pathDisp))]) : "<tr" + (isBest ? ' class="bgp-best' + (p === window._xrayBgpSelPrefix ? ' de-bgp-pfx-active' : '') + '"' + ' onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(' + _xrayJsArg(p) + ')"' : _cfTr) + ">" + '<td><span class="bgp-st">' + _escapeHtml(st) + "</span></td>" + "<td>" + _escapeHtml(p) + "</td>" + "<td>" + _escapeHtml(rt.nexthop || "") + "</td>" + cell("metric", _escapeHtml(rt.metric || "")) + cell("locprf", lpDisp) + cell("weight", _escapeHtml(w)) + cell("path", _escapeHtml(pathDisp)) + "</tr>";   /* nx_bgp_invalid_view: mark an unusable path's row */
       if (rt.valid === false) {   /* nx_bgp_invalid_final (10-30 owner): pale red, St as the router prints it, click -> the reason card */
-        _nxRow = _nxRow.replace(/^<tr/, '<tr data-nx-invalid="1" onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(\'' + p + '\')"');
-        if (rt.status_raw != null) _nxRow = _nxRow.replace('<span class="bgp-st">' + st + '</span>', '<span class="bgp-st">' + String(rt.status_raw).replace(/[<>&"]/g, '') + '</span>');
+        _nxRow = _nxRow.replace(/^<tr/, function () { return '<tr data-nx-invalid="1" onclick="event.stopPropagation();if(window.xrayBgpShowDecision)window.xrayBgpShowDecision(' + _xrayJsArg(p) + ')"'; });
+        if (rt.status_raw != null) _nxRow = _nxRow.replace('<span class="bgp-st">' + _escapeHtml(st) + '</span>', '<span class="bgp-st">' + String(rt.status_raw).replace(/[<>&"]/g, '') + '</span>');
       }
       html += _nxRow;
     });
     if (p === window._xrayBgpSelPrefix) {   /* nx_bgp_invalid_view: reason from the usable paths + one line per unusable path */
       var _nxJa = (document.documentElement.getAttribute("lang") || "en") === "ja" || window._xrayLang === "ja";
-      if (dec && dec.kind === "single" && _nxBad.length) reasons += '<div class="bgp-reason bgp-reason-note">★ ' + p + ' → <b>' + (_nxJa ? '使える道は 1 本だけ' : 'only usable path') + '</b></div>';
+      if (dec && dec.kind === "single" && _nxBad.length) reasons += '<div class="bgp-reason bgp-reason-note">★ ' + _escapeHtml(p) + ' → <b>' + (_nxJa ? '使える道は 1 本だけ' : 'only usable path') + '</b></div>';
       else if (dec) reasons += xrayBgpReasonHtml(p, dec, _nxOk);
-      else if (_nxBad.length) reasons += '<div class="bgp-reason bgp-reason-note">◦ ' + p + ' → ' + (_nxJa ? '使える道が無い' : 'no usable path') + '</div>';
-      _nxBad.forEach(function(r) { reasons += '<div class="bgp-reason bgp-reason-note nx-bgp-invalid-note">✕ ' + p + ' via ' + String(r.nexthop || '?').replace(/[<>&"]/g, '') + ' → ' + (_nxJa ? '使えない (next hop に届かない)' : 'not usable (next hop unreachable)') + '</div>'; });
+      else if (_nxBad.length) reasons += '<div class="bgp-reason bgp-reason-note">◦ ' + _escapeHtml(p) + ' → ' + (_nxJa ? '使える道が無い' : 'no usable path') + '</div>';
+      _nxBad.forEach(function(r) { reasons += '<div class="bgp-reason bgp-reason-note nx-bgp-invalid-note">✕ ' + _escapeHtml(p) + ' via ' + String(r.nexthop || '?').replace(/[<>&"]/g, '') + ' → ' + (_nxJa ? '使えない (next hop に届かない)' : 'not usable (next hop unreachable)') + '</div>'; });
     }   /* decision only for the currently selected prefix (hidden by default) */
   });
   html += "</tbody></table>";

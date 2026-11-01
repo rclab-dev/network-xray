@@ -17,6 +17,8 @@
 (function (root) {
   'use strict';
 
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
   var PRESETS = {
     cinema: { engineShape: 'rect',     processGlyph: 'outside', arrowMode: 'proto', tunnelMode: 'concentric', panelContent: 'full', protocolOrder: 'bgp-top' },
     // light also uses tunnelMode:'concentric': co-location truth (concentric 2 layers) is kept even in the calm mode.
@@ -122,7 +124,7 @@
         var base = pt(a, R), lx = (base[0] + _co * 8).toFixed(1);
         var anc = _co > 0.35 ? 'start' : (_co < -0.35 ? 'end' : 'middle');
         var _lyR = (shape === 'rect' ? CY + HH : CY + RER) + 16;   // 16px below the box/circle bottom edge
-        s += '<text x="' + lx + '" y="' + (_lyR + (L.pk || 0) * 16).toFixed(1) + '" fill="var(--xto-link,#00e5ff)" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + L.iface + (L.peer ? ' - ' + L.peer : '') + '</text>';
+        s += '<text x="' + lx + '" y="' + (_lyR + (L.pk || 0) * 16).toFixed(1) + '" fill="var(--xto-link,#00e5ff)" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + esc(L.iface) + (L.peer ? ' - ' + esc(L.peer) : '') + '</text>';
       }
     });
 
@@ -170,7 +172,7 @@
         order.forEach(function (p, i) {
           var up = !!upset[p], col = up ? protoCol(p) : 'var(--xto-pale,#8aa0ab)', ly = topY + 15 + i * 14, lx = leftX + 9;
           s += '<circle cx="' + lx.toFixed(1) + '" cy="' + (ly - 3).toFixed(1) + '" r="4" fill="' + col + '"' + (up ? '' : ' opacity="0.6"') + '/>';
-          s += '<text x="' + (lx + 8).toFixed(1) + '" y="' + ly.toFixed(1) + '" fill="' + col + '" font-size="10.5" font-family="monospace"' + (up ? '' : ' opacity="0.7"') + '>' + p.toUpperCase() + '</text>';
+          s += '<text x="' + (lx + 8).toFixed(1) + '" y="' + ly.toFixed(1) + '" fill="' + col + '" font-size="10.5" font-family="monospace"' + (up ? '' : ' opacity="0.7"') + '>' + esc(String(p).toUpperCase()) + '</text>';
         });
       } else { // outside: place the legend in the largest angular gap with no link (empty sector) = neither arrows nor beams cross it (dynamic,
         //   topology-independent). Even with 3+ radial peers the legend auto-escapes into the link gap (no link crossing).
@@ -185,7 +187,7 @@
         order.forEach(function (p, i) {
           var up = !!upset[p], col = up ? protoCol(p) : 'var(--xto-pale,#8aa0ab)', ly = anc[1] - totalH / 2 + 10 + i * 14, lx = anc[0] - 14;
           s += '<circle cx="' + lx.toFixed(1) + '" cy="' + (ly - 3).toFixed(1) + '" r="4" fill="' + col + '"' + (up ? '' : ' opacity="0.6"') + '/>';
-          s += '<text x="' + (lx + 8).toFixed(1) + '" y="' + ly.toFixed(1) + '" fill="' + col + '" font-size="10.5" font-family="monospace"' + (up ? '' : ' opacity="0.7"') + '>' + p.toUpperCase() + '</text>';
+          s += '<text x="' + (lx + 8).toFixed(1) + '" y="' + ly.toFixed(1) + '" fill="' + col + '" font-size="10.5" font-family="monospace"' + (up ? '' : ' opacity="0.7"') + '>' + esc(String(p).toUpperCase()) + '</text>';
         });
       }
     }
@@ -239,7 +241,7 @@
     }
 
     // ── (5) node label (small, below the body) ──
-    s += '<text x="' + CX + '" y="' + (CY + (shape === 'rect' ? HH : RER) - 6).toFixed(1) + '" fill="var(--xto-muted,#5f7d8a)" font-size="9" font-family="monospace" text-anchor="middle">' + node.target + '</text>';
+    s += '<text x="' + CX + '" y="' + (CY + (shape === 'rect' ? HH : RER) - 6).toFixed(1) + '" fill="var(--xto-muted,#5f7d8a)" font-size="9" font-family="monospace" text-anchor="middle">' + esc(node.target) + '</text>';
     s += '</svg>';
     return s;
   }

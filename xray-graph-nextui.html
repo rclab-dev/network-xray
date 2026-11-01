@@ -371,7 +371,7 @@ window.__xrayGraphBoot = function () {
     var views = window.clabXray.deepViews(fullCfg, nodeId, { state: window.LIVE_STATES && window.LIVE_STATES[nodeId], focusPrefix: window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.prefix });   /* nx_default_pair */
     if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
     if (views.length > 1) {
-      box.innerHTML='<span class="lbl">'+nodeId+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      box.innerHTML='<span class="lbl">'+escH(nodeId)+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
       views.forEach(function(v,idx){
         var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
         b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
@@ -382,6 +382,7 @@ window.__xrayGraphBoot = function () {
     renderView(views[0], nodeId);
   }
   window.__xrayShowNode = showNode;
+  function escH(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }   // lab-supplied node names / kinds as HTML text
   window.__xrayNames = NAMES; window.__xrayADJ = ADJ;
 
   // ---- live layout follow: overview node positions -> DeepDive link angles ----

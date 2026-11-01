@@ -215,9 +215,9 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
     document.querySelectorAll('.ov-node').forEach(function (e) { e.classList.toggle('sel', e.getAttribute('data-n') === nodeId); });
     var box = document.getElementById('peers'); box.innerHTML = '';
     var views = window.clabXray.deepViews(fullCfg, nodeId);
-    if (!views.length) { showErr(nodeId + ' has no links to inspect.'); return; }
+    if (!views.length) { showErr(escH(nodeId) + ' has no links to inspect.'); return; }
     if (views.length > 1) {
-      box.innerHTML = '<span class="lbl">' + nodeId + ' has ' + (ADJ[nodeId] || []).length + ' neighbors — inspect peer-pair:</span>';
+      box.innerHTML = '<span class="lbl">' + escH(nodeId) + ' has ' + (ADJ[nodeId] || []).length + ' neighbors — inspect peer-pair:</span>';
       views.forEach(function (v, idx) {
         var b = document.createElement('button'); b.textContent = (v.peers || []).join(' ↔ ');
         b.onclick = function () { box.querySelectorAll('button').forEach(function (e) { e.classList.remove('cur'); }); b.classList.add('cur'); renderView(v, nodeId); };
@@ -227,6 +227,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
     renderView(views[0], nodeId);
   }
   window.__xrayShowNode = showNode;
+  function escH(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }   // lab-supplied node names / kinds as HTML text
 
   // ---- draw the coordinate overview (links + draggable node cards) ----
   function linksSvg() {
@@ -243,7 +244,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
     ov.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '">' + linksSvg() + '</svg>';
     NAMES.forEach(function (n) {
       var b = document.createElement('div'); b.className = 'ov-node'; b.setAttribute('data-n', n);
-      b.innerHTML = n + (KIND[n] ? '<span class="k">' + KIND[n] + '</span>' : '');
+      b.innerHTML = escH(n) + (KIND[n] ? '<span class="k">' + escH(KIND[n]) + '</span>' : '');
       b.style.left = POS[n][0] + 'px'; b.style.top = POS[n][1] + 'px';
       b.addEventListener('mousedown', function (ev) {
         ev.preventDefault();
@@ -296,7 +297,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
   }
   function setInfoMoved(nodeId, gx, gy) {
     var el = document.getElementById('info');
-    el.innerHTML = 'Moved <b>' + nodeId + '</b> &rarr; graph-pos <b>' + gx + ', ' + gy + '</b> — the textarea is updated; press Render to re-fit or Copy .clab.yml.';
+    el.innerHTML = 'Moved <b>' + escH(nodeId) + '</b> &rarr; graph-pos <b>' + gx + ', ' + gy + '</b> — the textarea is updated; press Render to re-fit or Copy .clab.yml.';
   }
 
   window.__copyClab = function () {
@@ -371,7 +372,7 @@ xrayCore.openDeepDiveFor(nodeId, state);             <span class="c">// inside t
     } catch (e) {
       showErr('<b>Could not parse this topology.</b><br>The YAML parser handles the common clab subset; ' +
         'for complex YAML, export JSON (<code>--json</code>) and tick "input is JSON".' +
-        '<br><span style="opacity:.6;font-size:11px">(' + (e && e.message ? e.message : e) + ')</span>');
+        '<br><span style="opacity:.6;font-size:11px">(' + escH(e && e.message ? e.message : e) + ')</span>');
       if (window.console) console.error(e);
     }
   };
