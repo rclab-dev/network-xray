@@ -15,7 +15,8 @@
 # containerlab needs root for netns/bridges; override the privilege prefix with SUDO=
 #   e.g. rootless docker:  SUDO= ./xray.sh
 set -euo pipefail
-HERE="$(cd "$(dirname "$0")" && pwd)"
+unset CDPATH   # a CDPATH from the environment would make the cd below print a path or pick another folder
+HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
 YML="${1:-$HERE/examples/q21-bgp-lp/q21.clab.yml}"
 PORT="${2:-8080}"
 TEMPLATE="${3:-xray-graph-nextui.html}"
@@ -24,7 +25,12 @@ SUDO="${SUDO-sudo}"
 command -v containerlab >/dev/null 2>&1 || { echo "containerlab not found - https://containerlab.dev/install/"; exit 1; }
 command -v node >/dev/null 2>&1 || { echo "node.js not found (needed to collect router state)"; exit 1; }
 [ -f "$YML" ] || { echo "topology not found: $YML"; exit 1; }
-YML="$(cd "$(dirname "$YML")" && pwd)/$(basename "$YML")"
+[ -f "$TEMPLATE" ] || { echo "template not found: $TEMPLATE"; exit 1; }
+# the port is used in the port check and in containerlab's listen address: digits only
+case "$PORT" in ''|*[!0-9]*) PORT=x ;; esac
+[ "$PORT" != x ] && [ ${#PORT} -le 5 ] && PORT=$((10#$PORT)) && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] \
+  || { echo "port must be a number from 1 to 65535: ${2-}"; exit 1; }
+YML="$(cd -- "$(dirname -- "$YML")" && pwd)/$(basename -- "$YML")"
 LABDIR="$(dirname "$YML")"
 LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$YML" | head -1)"
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $YML"; exit 1; }
@@ -33,9 +39,9 @@ case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $YML i
 
 # nx_port_free_check: the graph port must be free, otherwise `containerlab graph` stops right after "==> open"
 # (checked before deploy, so nothing is left running). Same check as .devcontainer/start-demo.sh.
-if timeout 2 bash -c "exec 3<>/dev/tcp/127.0.0.1/${PORT}" 2>/dev/null; then
+if timeout 2 bash -c 'exec 3<>"/dev/tcp/127.0.0.1/$1"' _ "$PORT" 2>/dev/null; then
   echo "port ${PORT} is already in use (another graph is running there?)."
-  echo "  add a port:  ./xray.sh ${1:-examples/q21-bgp-lp/q21.clab.yml} $((PORT + 1))   - or stop the other one."
+  echo "  add a port:  ./xray.sh $(printf '%q' "${1:-examples/q21-bgp-lp/q21.clab.yml}") $((PORT + 1))   - or stop the other one."
   exit 1
 fi
 
@@ -49,10 +55,23 @@ elif grep -qsE '^router ospf' "$LABDIR"/*/frr.conf "$LABDIR"/*.cfg "$LABDIR"/*/*
 # nx_demo_pj_cleanup: xray.sh only touches a link it made (one into examples/ left by an earlier run, or the one made
 # now); a problem.json you put there yourself is left alone. The link is removed again when xray.sh stops.
 PJ="$HERE/problem.json"; PJ_MADE=""; CPID=""
+# one xray.sh per checkout: every run writes the same xray-states.js and problem.json link in $HERE.
+# The lock folder holds the pid; a lock whose pid is gone (xray.sh was killed) is taken over.
+LOCK="$HERE/.xray.lock"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  LPID="$(cat "$LOCK/pid" 2>/dev/null || true)"
+  if [ -n "$LPID" ] && kill -0 "$LPID" 2>/dev/null; then
+    echo "another xray.sh (pid $LPID) is already running from $HERE - stop it first."
+    echo "  (if it is not running, remove $LOCK)"
+    exit 1
+  fi
+  rm -rf "$LOCK"; mkdir "$LOCK" || { echo "could not create $LOCK"; exit 1; }
+fi
+echo $$ > "$LOCK/pid"
 pj_ours() { [ -L "$PJ" ] && case "$(readlink "$PJ")" in "$HERE"/examples/*/problem.json) return 0 ;; esac; return 1; }
 pj_cleanup() { [ -n "$PJ_MADE" ] && [ -L "$PJ" ] && [ "$(readlink "$PJ")" = "$PJ_MADE" ] && rm -f "$PJ"; return 0; }
 # nx_demo_trap_true: set +e first - a failing step (e.g. the collector already ended on Ctrl-C) must not cut the clean-up short
-trap 'set +e; pj_cleanup; [ -n "$CPID" ] && kill $CPID 2>/dev/null || true; echo; echo "stopped. remove the lab with:  sudo containerlab destroy -t $YML --cleanup"' EXIT
+trap 'set +e; pj_cleanup; [ -n "$CPID" ] && kill "$CPID" 2>/dev/null; rm -rf "$LOCK"; echo; echo "stopped. remove the lab with:  ${SUDO:+$SUDO }containerlab destroy -t $(printf '"'"'%q'"'"' "$YML") --cleanup"' EXIT
 if pj_ours; then rm -f "$PJ"; fi   # left by an earlier xray.sh that was killed
 if [ -f "$LABDIR/problem.json" ]; then
   if [ -e "$PJ" ] || [ -L "$PJ" ]; then echo "==> $PJ was not made by xray.sh - left as is (the problem band shows that file)"
