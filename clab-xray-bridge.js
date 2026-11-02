@@ -248,7 +248,46 @@
     return views;
   }
 
-  var api = { toScene: toScene, deepViews: deepViews };
+  /* nx_synthetic_badge: is the state a page shows for nodeId synthesized (the scene's states.normal, built from the topology
+     with every adjacency assumed up) rather than collected from the router? Same test the graph pages use to pick the state:
+     no truthy liveStates[nodeId] -> synthesized. Pages then show SYNTHETIC_BADGE and draw the adjacencies as unknown. */
+  function isSynthesizedState(liveStates, nodeId) {
+    return !(liveStates && typeof liveStates === 'object' && liveStates[nodeId]);
+  }
+  var SYNTHETIC_BADGE = {
+    en: { title: 'Sample view — not connected to the routers',
+          body: 'Only the shape is drawn, from the topology file. Colors, lines and states are not real. To see the real state, start the lab and open it with ./xray.sh <lab>.clab.yml.',
+          paste: 'Only the shape is drawn, from the topology file. Colors, lines and states are not real. To see the real state, start the lab and open it with xray.sh (this page never connects to routers).' },
+    ja: { title: '見本の図 — ルータにはつないでいません',
+          body: 'トポロジのファイルから形だけを描いています。色・線・状態は実物ではありません。実物を見るには、ラボを立てて ./xray.sh <ラボ>.clab.yml で開いてください。',
+          paste: 'トポロジのファイルから形だけを描いています。色・線・状態は実物ではありません。実物を見るには、ラボを立てて xray.sh で開いてください (このページはルータにつながりません)。' }
+  };
+  // the short tag put after the DeepDive panel titles while the view is a sample (same word as the badge)
+  var SYNTHETIC_TAG = { en: '(sample)', ja: '(見本)' };
+  /* the one place the pages switch the sample look on / off: body.nx-synthetic (the CSS in each page greys the figure),
+     the badge (title + one line) and the panel tag (--nx-synth-tag) in the page's language.
+     lang: 'en' / 'ja' (else the saved nx-lang). variant: 'paste' for the paste page (remembered for a later language switch). */
+  function markSynthetic(on, lang, variant) {
+    if (typeof document === 'undefined' || !document.body) return;
+    document.body.classList.toggle('nx-synthetic', !!on);
+    if (!on) return;
+    if (variant) document.body.setAttribute('data-nx-synth-variant', variant);
+    var v = document.body.getAttribute('data-nx-synth-variant') === 'paste' ? 'paste' : 'body';
+    var l = lang;
+    if (!SYNTHETIC_BADGE[l]) { try { l = localStorage.getItem('nx-lang'); } catch (e) { l = null; } }
+    if (!SYNTHETIC_BADGE[l]) l = 'en';
+    var el = document.getElementById('nx-synth-badge');
+    if (el) {
+      el.textContent = '';
+      var t = document.createElement('b'); t.className = 'nx-synth-title'; t.textContent = SYNTHETIC_BADGE[l].title;
+      var d = document.createElement('span'); d.className = 'nx-synth-body'; d.textContent = SYNTHETIC_BADGE[l][v];
+      el.appendChild(t); el.appendChild(d);
+    }
+    document.documentElement.style.setProperty('--nx-synth-tag', JSON.stringify(' ' + SYNTHETIC_TAG[l]));
+  }
+
+  var api = { toScene: toScene, deepViews: deepViews, isSynthesizedState: isSynthesizedState, markSynthetic: markSynthetic,
+              SYNTHETIC_BADGE: SYNTHETIC_BADGE, SYNTHETIC_TAG: SYNTHETIC_TAG };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.clabXray = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -139,6 +139,21 @@
   #nx-validate .nxv-row.pending .nxv-ttl,#nx-validate .nxv-row.settling .nxv-ttl,#nx-validate .nxv-row.unsupported .nxv-ttl,#nx-validate .nxv-row.skip .nxv-ttl{color:#90a4ae}
   #nx-validate .nxv-note{font-size:12px;color:#78909c;margin-top:6px}
   #nx-validate code{color:#ffd54f}
+  /* nx_synthetic_badge: no collected state for the shown node -> say so, and draw its adjacencies as unknown (grey dashed),
+     not as healthy. body.nx-synthetic is set only then; with collected state nothing here applies. */
+  .nx-synth-badge{display:none;max-width:760px;box-sizing:border-box;margin:8px auto 0;padding:8px 14px;border-radius:8px;
+    background:#263238;border:1px dashed #90a4ae;color:#cfd8dc;font-size:13px;line-height:1.6;text-align:left}
+  .nx-synth-badge .nx-synth-title{display:block;font-size:14px;color:#eceff1}
+  body.nx-synthetic .nx-synth-badge{display:block}
+  /* everything in the figure is a sample: no green / orange / red / purple anywhere (process balls, panels, LSDB, tunnels,
+     interface names, the overview), so nothing reads as "working" or "broken". Links stay drawn as solid grey lines:
+     the shape is real (it is in the topology file); a dashed line would read as "not established". */
+  html body.nx-synthetic .xray-deep-engine,html body.nx-synthetic #ov,html body.nx-synthetic .topo-diagram{filter:grayscale(1) brightness(.9)}
+  html body.nx-synthetic .xray-deep-engine .de-panel .de-title::after{content:var(--nx-synth-tag,"");font-weight:400}
+  html body.nx-synthetic .xray-deep-engine .de-energy,html body.nx-synthetic .xray-deep-engine .de-hello-probe,
+  html body.nx-synthetic .xray-deep-engine .de-lsa-container,
+  html body.nx-synthetic .xray-deep-engine .de-hello-orb{display:none!important;visibility:hidden!important;animation:none!important}   /* moving light reads as traffic: off (visibility too: the engine forces display:block on some of them) */
+  html body.nx-synthetic .xray-deep-engine *{animation-play-state:paused!important}
 </style>
 </head>
 <body class="is-xray-mode">
@@ -163,6 +178,7 @@
   <p class="hint" data-i18n="hint">▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
 
   <div id="peers"></div>
+  <div class="nx-synth-badge" id="nx-synth-badge" role="status">Sample view — not connected to the routers</div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
   <div class="err" id="err"></div>
 
@@ -207,6 +223,7 @@
     var btn = document.getElementById('lang-toggle');
     if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
     try { localStorage.setItem('nx-lang', lang); } catch(e){}
+    if (window.clabXray && window.clabXray.markSynthetic && document.body.classList.contains('nx-synthetic')) window.clabXray.markSynthetic(true, lang);   /* nx_synthetic_badge */
     if (window.__nxPaintProblem) window.__nxPaintProblem(lang);   /* nx_problem_band */
     if (window.__nxValidateTick) { window.__nxValidateSig = ''; window.__nxValidateTick(); }   /* nx_netlab_validate */
   }
@@ -299,7 +316,10 @@ window.__xrayGraphBoot = function () {
 
   // ================= render one deepView (verbatim from xray-graph.html) =================
   function renderView(v, nodeId){
-    var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    // nx_synthetic_badge: a synthesized state gets the badge + unknown (grey dashed) adjacencies; collected state: unchanged.
+    var _synth = window.clabXray.isSynthesizedState(window.LIVE_STATES, nodeId);
+    window.clabXray.markSynthetic(_synth);   // badge text + tag from the bridge (one place)
+    var _st = _synth ? v.scene.states.normal : window.LIVE_STATES[nodeId];
     var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
     if (_st && (_st.bgp_configured || _st.protocol === 'bgp')) {  /* presence-drive */
       _cfg.xray.protocol = 'bgp';
@@ -754,6 +774,7 @@ window.__initNeXtOverview = function (data) {
       // only when the protocol structure is unchanged; otherwise rebuild so the structure follows live state.
       if (window.__nxUnreadMarks) window.__nxUnreadMarks();   /* nx_unread */
       if (st && (st.nx_unread || window.__nxCurUnread)) _structChanged = true;   /* nx_unread: note on / off -> rebuild */
+      if (st && document.body.classList.contains('nx-synthetic')) _structChanged = true;   /* nx_synthetic_badge: example -> collected: rebuild (badge off) */
       if (st && !_structChanged && document.body.classList.contains("is-xray-deep") && typeof window.applyXrayState === "function") {
         window._lastXrayState = st; window.applyXrayState(st);
       } else if (cur && window.__xrayShowNode) { window.__xrayShowNode(cur); }   // structure changed / DeepDive closed / other node -> rebuild

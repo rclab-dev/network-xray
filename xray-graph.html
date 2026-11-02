@@ -51,6 +51,21 @@
   .rcl-footer{margin:18px 0 4px;padding-top:12px;border-top:1px solid #24323e;font-size:12px;color:#6f8291;text-align:center;line-height:1.7}
   .rcl-footer a{color:#26c6da;text-decoration:none}
   .rcl-footer a:hover{text-decoration:underline}
+  /* nx_synthetic_badge: no collected state for the shown node -> say so, and draw its adjacencies as unknown (grey dashed),
+     not as healthy. body.nx-synthetic is set only then; with collected state nothing here applies. */
+  .nx-synth-badge{display:none;max-width:760px;box-sizing:border-box;margin:8px auto 0;padding:8px 14px;border-radius:8px;
+    background:#263238;border:1px dashed #90a4ae;color:#cfd8dc;font-size:13px;line-height:1.6;text-align:left}
+  .nx-synth-badge .nx-synth-title{display:block;font-size:14px;color:#eceff1}
+  body.nx-synthetic .nx-synth-badge{display:block}
+  /* everything in the figure is a sample: no green / orange / red / purple anywhere (process balls, panels, LSDB, tunnels,
+     interface names, the overview), so nothing reads as "working" or "broken". Links stay drawn as solid grey lines:
+     the shape is real (it is in the topology file); a dashed line would read as "not established". */
+  html body.nx-synthetic .xray-deep-engine,html body.nx-synthetic #ov,html body.nx-synthetic .topo-diagram{filter:grayscale(1) brightness(.9)}
+  html body.nx-synthetic .xray-deep-engine .de-panel .de-title::after{content:var(--nx-synth-tag,"");font-weight:400}
+  html body.nx-synthetic .xray-deep-engine .de-energy,html body.nx-synthetic .xray-deep-engine .de-hello-probe,
+  html body.nx-synthetic .xray-deep-engine .de-lsa-container,
+  html body.nx-synthetic .xray-deep-engine .de-hello-orb{display:none!important;visibility:hidden!important;animation:none!important}   /* moving light reads as traffic: off (visibility too: the engine forces display:block on some of them) */
+  html body.nx-synthetic .xray-deep-engine *{animation-play-state:paused!important}
 </style>
 </head>
 <body class="is-xray-mode">
@@ -63,6 +78,7 @@
     OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.</p>
   <div class="ov" id="ov"></div>
   <div id="peers"></div>
+  <div class="nx-synth-badge" id="nx-synth-badge" role="status">Sample view — not connected to the routers</div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
   <div class="err" id="err"></div>
 
@@ -93,6 +109,7 @@
     document.documentElement.setAttribute('lang', lang);
     var btn = document.getElementById('lang-toggle'); if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
     try { localStorage.setItem('nx-lang', lang); } catch(e){}
+    if (window.clabXray && window.clabXray.markSynthetic && document.body.classList.contains('nx-synthetic')) window.clabXray.markSynthetic(true, lang);   /* nx_synthetic_badge */
   }
   function init(){ apply(pickLang()); var btn = document.getElementById('lang-toggle'); if (btn) btn.addEventListener('click', function(){ apply(pickLang() === 'en' ? 'ja' : 'en'); }); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
@@ -191,7 +208,10 @@ window.__xrayGraphBoot = function () {
   function renderView(v, nodeId){
     // Prefer the REAL collected state for this node (xray-states.js) when present; otherwise use the
     // topology-derived synthetic scaffold from the bridge.
-    var _st = (window.LIVE_STATES && window.LIVE_STATES[nodeId]) ? window.LIVE_STATES[nodeId] : v.scene.states.normal;
+    // nx_synthetic_badge: a synthesized state gets the badge + unknown (grey dashed) adjacencies; collected state: unchanged.
+    var _synth = window.clabXray.isSynthesizedState(window.LIVE_STATES, nodeId);
+    window.clabXray.markSynthetic(_synth);   // badge text + tag from the bridge (one place)
+    var _st = _synth ? v.scene.states.normal : window.LIVE_STATES[nodeId];
     var _cfg = v.scene.config; _cfg.xray = _cfg.xray || {};
     // Protocol: the collector marks BGP states (s.protocol==='bgp'). Switch the scene to BGP so the
     // panel, tunnels and direction render as BGP instead of the bridge's OSPF default.
@@ -235,8 +255,8 @@ window.__xrayGraphBoot = function () {
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }
 
-  /* nx_xss_graph (2026-11-02): node names from the topology go into innerHTML -> escape. Defined here, outside showNode,
-     because the overview below uses it too (inside showNode the overview could not see it and stopped with a ReferenceError). */
+  /* nx_xss_graph (2026-11-02): node names from the topology go into innerHTML -> escape. Defined here (not inside
+     showNode) because the overview below uses it too. */
   function _nxEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
   // ================= node click → deepViews (one view with all of the node's links) =================
@@ -262,7 +282,9 @@ window.__xrayGraphBoot = function () {
   var ov=document.getElementById('ov'); var svg='<svg viewBox="0 0 '+W+' '+H+'">'; var drawn={};
   NAMES.forEach(function(n){ (ADJ[n]||[]).forEach(function(m){
     var k=[n,m].sort().join('|'); if(drawn[k]||!POS[m])return; drawn[k]=1;
-    svg+='<line x1="'+POS[n][0]+'" y1="'+POS[n][1]+'" x2="'+POS[m][0]+'" y2="'+POS[m][1]+'" stroke="#455a64" stroke-width="2"/>';
+    // nx_synthetic_badge: a link with no collected state at either end was not observed -> drawn lighter (still drawn: the shape stays)
+    var _unk=window.clabXray.isSynthesizedState(window.LIVE_STATES,n)&&window.clabXray.isSynthesizedState(window.LIVE_STATES,m);
+    svg+='<line x1="'+POS[n][0]+'" y1="'+POS[n][1]+'" x2="'+POS[m][0]+'" y2="'+POS[m][1]+'" stroke="#455a64" stroke-width="2"'+(_unk?' stroke-opacity="0.6"':'')+'/>';
   });}); svg+='</svg>'; ov.innerHTML=svg;
   NAMES.forEach(function(n){
     var b=document.createElement('div'); b.className='ov-node'; b.setAttribute('data-n',n);
@@ -346,7 +368,8 @@ window.__xrayGraphBoot = function () {
           if (cur !== window.__xrayLastStates) {
             window.__xrayLastStates = cur;
             var n = window.__xrayCurNode, st = n && window.LIVE_STATES && window.LIVE_STATES[n];
-            if (st && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
+            // nx_synthetic_badge: an open example (synthesized) view that now has collected state is rebuilt, not patched
+            if (st && !document.body.classList.contains('nx-synthetic') && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
               try { window.xrayCore.applyState(st); window._xrayArrowFollow(st); } catch (e) { if (window.__xrayShowNode) window.__xrayShowNode(n); }
             } else if (n && window.__xrayShowNode) { window.__xrayShowNode(n); }
           }
