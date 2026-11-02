@@ -1,13 +1,13 @@
 # network-xray
 
-**Why did BGP pick this path?** network-xray shows the candidate routes and the reason the router chose one. It reads the routers' live state in your containerlab or netlab lab and draws it in the browser.
+**Why did BGP pick this path?** network-xray shows, for a network lab, which path each router chose, what the other candidates were, and why. It reads the routers' live state in your containerlab or netlab lab and draws it in the browser.
 
 *English | [日本語](#日本語)*
 
 <!-- nx_readme_entry (2026-10-20) -->
-![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
+![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
-### ▶ [Open the Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — no install
+### ▶ [Open the recorded Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — no routers needed
 
 Recorded from a real FRR / containerlab lab and replayed in the browser. Three things to look at:
 1. Click **r1** to look inside it.
@@ -15,18 +15,22 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
 3. Read the **Best-Path Decision** panel: why the winner won (here, Local Preference).
 
 <!-- nx_readme_three_ways (2026-10-28) -->
-**Three ways in:**
-1. **Just look** — the recorded demo above (no install), or a [30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) of a real lab: change one Local Preference and watch the best path move.
-2. **Your running containerlab lab** — one line, run in the lab's folder, then open <http://localhost:8600/>:
+**Two ways to start:**
+1. **Recorded** — the recorded demo above (no routers needed), or a [recorded 30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) showing the best path move after one Local Preference change.
+2. **Live: your own running containerlab lab** — run in the lab's folder, then open <http://localhost:8600/>:
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
    It only runs `show` commands, but the container is given the Docker socket (root-equivalent on the host) — lab machines only. [More](#security-notes)
-3. **An example lab** — `git clone` this repository and run `./demo.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab)).
+   You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>`; see the [release page](https://github.com/rclab-dev/network-xray/releases/latest).
 
-Using netlab? Add one line to your topology instead: [netlab tool](#netlab-tool).
+Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab-defaults.yml` through `defaults.sources.extra`: [netlab tool](#netlab-tool).
 
-### ▶ Change a real lab yourself — GitHub Codespaces
+## Other ways to try it
+
+**Live example lab** — clone this repository and run `./demo.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab); `demo.sh` listens on all interfaces and has no login; see the [security notes](#security-notes)).
+
+### ▶ Live lab — GitHub Codespaces
 
 Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FRR lab where you can change the config and watch the picture follow.
 
@@ -40,7 +44,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 **Next:** [your own containerlab lab](#quick-start-run-a-lab-in-containerlab) · [netlab](#netlab-tool) · [what it supports](#scope--maintenance)
 
-**Want hints and explanations too?** The same X-Ray runs in hosted labs on RouteCrushLab — [try Q21 as a guest](https://routecrushlab.com/lab/tl/q21?try=guest&lang=en&ref=oss) (no sign-up; the lab is ready in under a minute).
+**Live hosted lab with hints and explanations:** The same X-Ray runs on RouteCrushLab — [try Q21 as a guest](https://routecrushlab.com/lab/tl/q21?try=guest&lang=en&ref=oss) (no sign-up; the lab is ready in under a minute).
 
 ## When to use
 
@@ -64,6 +68,10 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 | netlab | 26.10 |
 | Node.js | 18 (for `demo.sh` / the collector without the image) |
 
+<a id="maintenance-policy"></a>
+Issues with the raw output attached are welcome and fixes are made here; pull requests are not merged.
+A single copyright holder is kept so the project can be relicensed later. Issues carry no SLA; forks are welcome.
+
 **Walkthrough:** [See why BGP picked that path — a browser X-ray for your containerlab lab](https://dev.to/routecrushlab/see-why-bgp-picked-that-path-a-browser-x-ray-for-your-containerlab-lab-3e) (dev.to)
 
 **See *why* a router chose its path.** `network-xray` turns a router's live state (`show` / JSON) into a picture of the forwarding decision — which route won, which lost, and why. The gallery pages (below) are zero-install, browser-only.
@@ -75,26 +83,26 @@ DeepDive cylinder** (forwarding plane, OSPF/BGP processor, hello & LSDB sync, th
 You control it with a few calls through the `xrayCore` API.
 
 > This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en)**,
-> not a fork — extracted as a shared module so there is no drift.
+> not a fork — extracted as a shared module to keep them from drifting apart.
 
 It runs **on top of your execution engine** — paste a **containerlab** topology, replay a recorded lab,
-or point it at live FRR / SR Linux — the **"why"** layer above the "what".
+or point it at live FRR / SR Linux / Cisco IOS-XE (IOL) — the **"why"** layer above the "what".
 
-It is **descriptive**, not a simulator: it draws the real state your feed reports. And it is
+It is **descriptive**, not a simulator: it draws the state your feed reports. And it is
 **vendor-neutral** — every field it reads is a standard `show`-command concept. FRRouting,
 **Nokia SR Linux** and **Cisco IOS-XE (IOL)** are implemented today (a mixed lab renders uniformly);
 Arista and others would need a small adapter of the same kind.
 
 **Status:** network-xray supports containerlab with FRR, SR Linux and Cisco IOL (IOS-XE).
 
-**Not a config verifier.** network-xray reads **live state** (`show` / JSON = reality) to show *why* a
+**Not a config verifier.** network-xray reads **live state** (`show` / JSON = the state the device reports) to show *why* a
 router decided as it did — it is **not** a config checker. For pre-deployment simulation from config
 (intent), use **Batfish**. Different input (state vs config), different question.
 
 **On CLI parsing.** CLI parsing is best-effort and version-fragile; the robust path is **structured
 input** (`show … json`, or the collector reading device state directly — the FRR collector already
 reads `vtysh … json`). Screen-scraped CLI is a convenience fallback — **for a vendor or version it does not read,
-please open an issue with the raw output (`show … json`) attached as a fixture** (pull requests are not accepted, see [Scope & maintenance](#scope--maintenance)).
+please open an issue with the raw output (`show … json`) attached as a fixture**.
 
 ## Why
 
@@ -115,22 +123,22 @@ lab and the best path flips **in place, no reload** (via r3 at 100 ⇄ via r2 at
 real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path FRR itself marked best** (`bestpath`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
 version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
-![BGP Best-Path Decision, live — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
+![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
-**Also an OSPF lab** — OSPF goes Full (green tunnels, full LSDB), a link drops and a router is isolated
+**Also a recorded OSPF lab** — OSPF goes Full (green tunnels, LSDB sync indicator), a link drops and a router is isolated
 (route lost, packet dropped), then it recovers and re-converges:
 
 ![OSPF adjacency goes Full, a link drops and the route is lost, then it recovers — recorded from a real FRR/containerlab lab](docs/ospf-fail-recover.gif)
 
-**Inside the router — the DeepDive cylinder** (an OSPF adjacency at Full: hello, synced LSDB, the route it installs):
+**Inside the router — the DeepDive cylinder** (an OSPF adjacency at Full: hello, LSDB sync indicator based on neighbor state, the reported installed route):
 
 ![Inside the router — the DeepDive cylinder](docs/deepdive.png)
 
-**▶ Try it live — no install:** paste a router's `show` output → it draws the topology, then click a
+**▶ Paste reported state — no install:** paste a router's `show` output → it draws the topology, then click a
 router to look inside. **<https://rclab-dev.github.io/network-xray/>** (or jump straight to
 [paste-your-output](https://rclab-dev.github.io/network-xray/frr-paste.html)).
 
-**▶ Or watch a real lab converge & recover** — frames captured from a running FRR/containerlab lab,
+**▶ Watch a recorded lab converge & recover** — frames captured from a running FRR/containerlab lab,
 replayed in the browser with no backend (steady → link down / router isolated → re-forms → converged):
 **[Best-Path Decision](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html)** (eBGP: competing LocPref → why one path wins) ·
 **[OSPF replay](https://rclab-dev.github.io/network-xray/demo/)** ·
@@ -139,11 +147,11 @@ replayed in the browser with no backend (steady → link down / router isolated 
 <!-- nx_readme_quickstart (2026-10-07) -->
 ## Quick start: run a lab in containerlab
 
-![Quick start: git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
+![Recorded quick start: git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
 
 **You need:** Linux (or Windows with **WSL2**, or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container).
 
-> **Before you start:** use a lab machine — containerlab runs with `sudo`. The page (port 8080) listens on all interfaces and has no login: anyone who can reach the machine can see the lab, so keep it on a trusted network. [More](#security-notes)
+> **Before you start:** use a lab machine — containerlab runs with `sudo`. `demo.sh` serves the page on all interfaces (`0.0.0.0`, port 8080 by default; there is no bind-address option) with no login: anyone who can reach the machine can see the lab, so keep it on a trusted network. For this machine only, deploy the lab with `sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` and use the manual collector / graph commands below. [More](#security-notes)
 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
@@ -168,18 +176,18 @@ No git? Download one problem as a folder from the **[Releases](https://github.co
 
 **Labs started another way (e.g. with netlab):** `demo.sh` redeploys the lab, which would wipe the configuration netlab pushed, so don't use it there. Start the lab as usual (`netlab up`), then, in the lab folder, run the collector and the graph yourself:
 
-> **Before you start:** the graph below listens on all interfaces (`0.0.0.0:8080`) with no login — keep the machine on a trusted network. [More](#security-notes)
+> **Before you start:** the graph below binds to `127.0.0.1:8080`. If you change it to `0.0.0.0:8080` for remote access, it has no login — keep the machine on a trusted network. [More](#security-notes)
 
 ```bash
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
-containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 0.0.0.0:8080
+containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
-Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `demo.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://<host>:8080/`. To stop: Ctrl-C, then `kill %1` for the collector.
+Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `demo.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://localhost:8080/`. The path display is inferred from the routing table each router reports. To stop: Ctrl-C, then `kill %1` for the collector.
 If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
 
 <a id="netlab-tool"></a>
 
-> **Before you start (netlab tool / `docker run`):** the container is given the **Docker socket (root-equivalent on the host)** — lab machines only. Its page (port 8600) listens on all interfaces and has no login. With netlab, `network-xray.json` holds the lab's values, passwords included, while the lab is up (with network-xray's `netlab-defaults.yml`, `netlab down` removes it). With `docker run`, `-p 127.0.0.1:8600:8600` (instead of `-p 8600:8600`) opens the page to this machine only. [More](#security-notes)
+> **Before you start (netlab tool / `docker run`):** the container is given the **Docker socket (root-equivalent on the host)** — lab machines only. Its page has no login: the `docker run` example below publishes it on this machine only (`127.0.0.1`), while the netlab defaults file publishes it on all host interfaces. With netlab, `network-xray.json` holds the lab's values, passwords included, while the lab is up (with network-xray's `netlab-defaults.yml`, `netlab down` removes it). With `docker run`, `-p 127.0.0.1:8600:8600` (instead of `-p 8600:8600`) opens the page to this machine only. [More](#security-notes)
 
 **netlab tool (Docker image):** network-xray also comes as a container that **netlab starts for you** next to the lab. In your netlab topology, add <!-- nx_netlab_tool -->
 ```yaml
@@ -187,17 +195,19 @@ defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]   # the to
 tools:
   network_xray:
 ```
+The bundled defaults file publishes the page on all host interfaces (`-p 8600:8600`, so you can open it from another machine) and the page has no login — use it on a trusted network only. To keep it on the lab host only, change that `-p` line in your copy of `docker/netlab-defaults.yml` to `-p 127.0.0.1:…`. You can also pin the image there as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (see the [release page](https://github.com/rclab-dev/network-xray/releases/latest)). [Security notes](#security-notes)
+
 In netlab the tool is named `network_xray` (underscore), because tool names are also used in environment variable names; the product, repository and image keep the name network-xray.
 netlab's development branch also has its own `network_xray` tool definition (merged after 26.10; not in 26.10). Once that is in a netlab release, `tools: network_xray:` alone starts network-xray (graph and DeepDive). That definition does not write `network-xray.json`: the `validate:` band below does not appear, and a `network-xray.json` you write yourself is not removed by `netlab down`. For the band, keep the `defaults.sources.extra` line above (its tool definition also removes the file on `netlab down`). <!-- nx_readme_builtin_tool -->
-(if your topology already has a `defaults.sources.extra` list — the BGP Labs do — add the file to that list instead of a second line), then `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://<host>:8600/`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR and SR Linux only: other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
-Without netlab (any running containerlab lab): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (the page opens on this machine only; use `-p 8600:8600` to open it to other machines) — for the example labs (`examples/`) the problem band and **✓ Solved** show too (from the `problem.json` next to the topology); a lab without one has no band. The image is built for linux/amd64 and linux/arm64.
+(if your topology already has a `defaults.sources.extra` list — the BGP Labs do — add the file to that list instead of a second line), then `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://<host>:8600/`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR, SR Linux and Cisco IOS-XE (containerlab kind `cisco_iol`): other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
+Without netlab (any running containerlab lab): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (the page opens on this machine only; use `-p 8600:8600` to open it to other machines) — the page has no login, so use a trusted network for remote access. You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (see the [release page](https://github.com/rclab-dev/network-xray/releases/latest)). For the example labs (`examples/`) the problem band and **✓ Solved** show too (from the `problem.json` next to the topology); a lab without one has no band. The image is built for linux/amd64 and linux/arm64.
 If `netlab up` says the lab is already running, a lab with the same name is still up from another folder (`netlab status --all`): run `netlab down` there first.
 
 **netlab validate tests on the page:** if the lab has `validate:` tests (the ipSpace BGP Labs do), the page shows them as a band above the graph — "3 / 12", one line per test (done = green ✓), **✓ Solved** when all pass — and colours the BGP session or the router a failing test is about. network-xray judges the tests itself every few seconds (FRR routers, `bgp_neighbor` and `bgp_prefix`, the same rules and messages as `netlab validate`), so the band follows you while you configure. Tests it does not read (ping, OSPF, `show`/`valid`, other devices) stay grey and keep ✓ Solved off — run `netlab validate` for those. Right after the lab starts the band waits instead of judging too early: no ✓ Solved for 60 s, a check that a route is *not* there waits until the router's BGP sessions have been up for 30 s (or the test's `wait:`), and ✓ Solved needs all checks to keep passing for 20 s. BGP Labs: use a copy from 2026-10-15 or later (bgplab commit 02b8860) — with an older copy `netlab validate` cannot run the tests that use `bgp.originate` on netlab 26.x. <!-- nx_v105_readme_final --> The tool definition makes `netlab create` / `netlab up` also write `network-xray.json` (the lab data the tests refer to) for this. While the lab is up, that file holds what netlab writes about the lab, passwords in the topology included (it is not shown on the page); `netlab down` removes it — stop the lab with `netlab down` (not only `docker kill` or a power-off), or delete the file yourself. If `netlab up` fails part-way, the tool's clean-up does not run either: delete `network-xray.json` yourself. <!-- nx_review_1017 --> <!-- nx_netlab_validate -->
 
 **Rows in the graph:** a netlab lab opens with its routers in rows — top row = groups named like `provider` / `isp*` / `spine(s)` / `external`, bottom row = `leaf(s)` / `customer(s)` / `host(s)` …, the rest in between (`external` is looked at last: in the BGP Labs it means "pre-configured", so a customer router in it can land on top — set the rows as below). To set the rows yourself, give nodes containerlab's `graph-level` label (1 = top row; it wins over the group names): in netlab `nodes.s1.clab.labels: { graph-level: 1 }` (only with this repository's tool definition — the `defaults.sources.extra` line above — which allows `clab.labels`; without it netlab stops at that line), in a containerlab topology `labels: { graph-level: 1 }` under the node. Horizontal / Vertical re-arrange the rows; nodes you drag keep their place in this browser. <!-- nx_netlab_tiers -->
 <a id="security-notes"></a>
-**Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR and `sr_cli 'info from state …'` on SR Linux (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The page on port 8600 listens on all interfaces and has no login: anyone who can reach the machine can see the lab's state, so keep it on a trusted network (or block the port in front of it).
+**Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR, `sr_cli 'info from state …'` on SR Linux and SSH `show` commands on Cisco IOS-XE (IOL) (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The `docker run` examples publish port 8600 on this machine only (`127.0.0.1`); the netlab defaults file publishes it on all host interfaces. If you publish it more widely, anyone who can reach the port can see the lab's state without a login — use a trusted network.
 
 **Security notes:** anyone who can use the Docker socket (the `-v /var/run/docker.sock` mount, or membership in the `docker` group) can run anything as root on the host. The page has no login: with `docker run` publish it as `-p 127.0.0.1:8600:8600` (this machine only), and with `containerlab graph` use `-s 127.0.0.1:8080` unless others must see it. For Cisco IOS-XE the collector does not check SSH host keys (lab routers get new keys on every deploy) — use it on the lab's management network only; the password comes from `NX_IOS_PASSWORD` and is not printed or written to the state. The collectors take names from the topology as data only (no shell; a name that is not a plain name is left out) and write only `xray-states.js` into the output directory; their per-node temporary files are in a directory only your user can open.
 
@@ -232,14 +242,14 @@ can mix FRR, SR Linux and IOL. Example labs: `examples/q5-ospf-iol`, `examples/q
 | `address already in use` / `port 8080 is already in use` | Another graph is on 8080. Add a port: `./demo.sh <lab.clab.yml> 8081`, or stop the other one. |
 | The page does not open from another PC | Use the machine's IP (`http://<host-ip>:8080/`), and allow the port in its firewall. On WSL2, open `http://localhost:8080/` from Windows. |
 | The first start is slow | It pulls the FRR image once — **FRR 8.4** from Docker Hub `frrouting/frr`, pinned by digest so everyone runs the same build (moving to FRR 10.x from quay.io is planned). You can pull it beforehand: `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce`. |
-| The collector feels heavy on a large lab (5+ nodes) | `demo.sh` always runs the collector every 1 s and takes no `--interval` option. To collect less often, run the two steps yourself from the repo folder with `--interval 2` (seconds): `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (use `ospf` for an OSPF-only lab, `static` for neither, as `demo.sh` would) and then `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 0.0.0.0:8080`. The page then updates a little later. The `docker run` / netlab container collects every 2 s by default; pass `--interval N` after `--topo …` to change it. |
+| The collector feels heavy on a large lab (5+ nodes) | `demo.sh` always runs the collector every 1 s and takes no `--interval` option. To collect less often, run the two steps yourself from the repo folder with `--interval 2` (seconds): `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (use `ospf` for an OSPF-only lab, `static` for neither, as `demo.sh` would) and then `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 127.0.0.1:8080`. The page then updates a little later. The `docker run` / netlab container collects every 2 s by default; pass `--interval N` after `--topo …` to change it. |
 | `docker pull` fails with "toomanyrequests" / rate limit | Docker Hub limits pulls without a login, counted per IP address — a classroom or office behind one connection can hit it when many people start at once. Run `docker login` first (a free Docker account raises the limit). |
 | `zebra is not running` / a router has no IP address or routes right after start | Occasionally (in our tests a few in 100 router starts with FRR 8.4), zebra crashes right after the container starts — sometimes without any message — and the router is left without its IP addresses and routes. This is an FRR start-up issue, not something you did. The example labs restart FRR by themselves when this happens (up to 3 times, also with a plain `containerlab deploy`), and so do `run.sh` / `demo.sh`. With packages from v1.0.0 / v1.0.1 or your own labs, fix it by hand: `docker exec clab-<lab>-<node> /usr/lib/frr/watchfrr.sh restart all`. |
 | A router shows nothing / routes do not appear | Give it 30–60 seconds (OSPF/BGP need time to come up). If it stays empty, check `docker ps` (the router is running) and `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`. Then ask the router directly: `docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'` (or `show ip ospf neighbor json`) — if that is empty too, the router has nothing yet; if it answers but the page stays empty, look at the log (`docker logs <network-xray container> 2>&1 | tail -30`: it names the containers it reads, `clab-<lab>-*`) and open an issue with both. |
 | A previous lab is still running | `sudo containerlab inspect --all` lists the labs; `sudo containerlab destroy -t <lab.clab.yml> --cleanup` removes one. |
 | WSL2 | Docker Desktop with the WSL2 backend (or Docker inside the WSL2 distro) is fine. Run everything inside the Linux shell, not in PowerShell. |
 | My fix is gone after restarting the lab | A fix lives only inside the running containers. Redeploying the lab (`./demo.sh`, `containerlab deploy`) starts again from the broken config — and restarting only FRR inside a router can bring the original config back too, even after `write memory`. |
-| A lab that advertises a BGP default route (e.g. netlab): `0.0.0.0/0` is never selected | Expected. The router's management interface brings its own default route, which beats a BGP-learned `0.0.0.0/0`, so the router really forwards with the management route — X-Ray shows what the routing table actually uses. |
+| A lab advertises a BGP default route (e.g. netlab), but `0.0.0.0/0` is not selected | In labs where the management interface brings its own default route, that route may beat the BGP-learned default. X-Ray infers the path from the routing table the router reports; management routes may be hidden by `--exclude-mgmt`. |
 
 **Coming from Cisco IOS?** The routers are FRR. Common differences:
 
@@ -266,7 +276,7 @@ Two ISPs advertise the same route — watch why traffic takes the slow one, then
 ## Run it
 
 Open **`index.html`** in a browser — no build, no server, no install. (Or
-`python -m http.server` then `http://localhost:8000/`.)
+`python -m http.server --bind 127.0.0.1` then `http://localhost:8000/`.)
 
 ## Quickstart (embed the engine)
 
@@ -294,8 +304,8 @@ Open `index.html` for the gallery, or open a page directly:
 | **`bgp-paste.html`** | Paste your own `show bgp summary` + `show ip bgp` → it draws your eBGP neighbors, the session state, and the prefixes you learned; the cylinder shows the BGP processor + table. *Small eBGP, bring your own data.* |
 | **`clab-paste.html`** | Paste a **containerlab** `.clab.yml` → it maps your lab's nodes & links to an X-Ray diagram (OSPF state, fault, DeepDive). *Small FRR labs: 2–3 nodes (link / path / triangle).* |
 | **`srl-paste.html`** | Paste a **Nokia SR Linux** node's `info from state … \| as json` → it draws that node's OSPF/BGP DeepDive. *Same X-Ray view as FRR, from real `sr_cli` state.* |
-| **`xray-graph.html`** | A **containerlab `graph --template`** drop-in: render your *live* lab as a topology view of **any size**, then click any node for its X-Ray DeepDive. *See [containerlab graph template](#containerlab-graph-template) below.* |
-| **`ccna-ospf.html`** | Step the OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (RFC 2328 §10.1 accurate.) |
+| **`xray-graph.html`** | A **containerlab `graph --template`** drop-in: render your *live* lab as a topology view with no fixed limit on nodes or links (speed depends on lab size), then click any node for its X-Ray DeepDive. *See [containerlab graph template](#containerlab-graph-template) below.* |
+| **`ccna-ospf.html`** | Step the OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (Shows the neighbor states described in RFC 2328 §10.1.) |
 | **`bgp-session.html`** | Step the eBGP FSM (Idle→Established) between two ASes. DeepDive shows the BGP processor and the session tunnel; at Established it learns `203.0.113.0/24`. (RFC 4271 §8.) |
 | **`noc-live.html`** | Wire `startPolling()` to telemetry; the view updates itself in real time. |
 | **`failover.html`** | A redundant OSPF triangle: cut the shortest path → detour, cut the backup → isolation. |
@@ -303,41 +313,42 @@ Open `index.html` for the gallery, or open a page directly:
 ## containerlab graph template
 
 Already running a **[containerlab](https://containerlab.dev)** lab? `xray-graph.html` is a drop-in for
-`containerlab graph --template`. It renders your live topology as a topology view of **any size** (the
+`containerlab graph --template`. It renders your live topology as a topology view with no fixed limit on nodes or links (speed depends on lab size) (the
 layout is basic — it does not try to compete with NeXt UI), and then **clicking any node opens
-that node's X-Ray DeepDive**: OSPF/BGP adjacencies, the LSDB (every prefix the node learned — its own
-networks and the remote loopbacks, own vs learned), and the route it installs. However many neighbors
+that node's X-Ray DeepDive**: reported OSPF/BGP adjacencies, the LSDB display (prefixes from reported
+OSPF/OSPFv3 routes; a local interface subnet and the resolved target prefix are used as a fallback, not a full LSDB read), and the reported installed route. However many neighbors
 a node has, the DeepDive draws **all of its links at once**, each tunnel coming from the direction that
 neighbor sits in the topology view (link labels are shown only where they fit).
 
-![containerlab deploy, then `graph --template xray-graph.html` — click any node to look inside the router (OSPF/BGP, LSDB, installed route), live. Recorded from a real containerlab/FRR lab.](docs/clab-workflow.gif)
+![containerlab deploy, then `graph --template xray-graph.html` — click any node to look inside the router (OSPF/BGP, LSDB, installed route), recorded. Recorded from a real containerlab/FRR lab.](docs/clab-workflow.gif)
 
 ```
 containerlab graph \
   --topo lab.clab.yml \
   --template xray-graph.html \
-  --static-dir <this gallery dir>   # serves xray-core.js, xray-api.js, clab-xray-bridge.js
+  --static-dir <this gallery dir> \
+  -s 127.0.0.1:8080   # serves xray-core.js, xray-api.js, clab-xray-bridge.js
 ```
 
 Clone this repo and point `--static-dir` at it. The topology view comes from clab's own
-`{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so node/link count is unbounded — X-Ray adds
+`{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so there is no fixed limit on nodes or links; speed depends on lab size — X-Ray adds
 the per-node DeepDive on top.
 
-### Interactive topology view — `xray-graph-nextui.html` (opt-in)
+### Interactive topology view — `xray-graph-nextui.html`
 
-The default `xray-graph.html` keeps a **static, zero-dependency** SVG topology view (plain DOM + SVG, MIT).
-Prefer an **interactive** graph — drag nodes, pan/zoom, and watch the open DeepDive's link angles
-follow the drag live? Swap the template:
+`demo.sh`, the Docker image and the netlab tool use `xray-graph-nextui.html` by default. Explicitly selecting `xray-graph.html` gives a **static, zero-dependency** SVG topology view (plain DOM + SVG, MIT).
+The **interactive** graph lets you drag nodes, pan/zoom, and watch the open DeepDive's link angles
+follow the drag. To select it explicitly:
 
 ```
-containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --static-dir <this gallery dir>
+containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --static-dir <this gallery dir> -s 127.0.0.1:8080
 ```
 
-![NeXt UI interactive graph — drag a node and the open DeepDive's tunnels re-angle live; click any node to look inside the router.](docs/nextui-deepdive.gif)
+![Recorded NeXt UI interactive graph — drag a node and the open DeepDive's tunnels re-angle live; click any node to look inside the router.](docs/nextui-deepdive.gif)
 
 Same DeepDive engine (skin, routing table, Best-Path Decision) — only the topology view differs. The
 variant bundles the NeXt UI Toolkit (**EPL-1.0**, kept in `js/` `css/` `fonts/` and attributed in
-`THIRD_PARTY_NOTICES.md`); the default `xray-graph.html` stays pure MIT.
+`THIRD_PARTY_NOTICES.md`); `xray-graph.html` stays pure MIT.
 
 Want it as a panel inside your own GUI instead of a standalone graph? → see
 [Embed the DeepDive in your own tool](#embed-the-deepdive-in-your-own-tool).
@@ -345,7 +356,7 @@ Want it as a panel inside your own GUI instead of a standalone graph? → see
 **Live state (optional):** `clab-collect.js` is a small Node tool that reads ONE node's real FRR
 state from a running lab (`docker exec clab-<lab>-<node> vtysh -c "show … json"`) and emits a `state`
 object you feed straight to the DeepDive — so the cylinder shows the *actual* OSPF/BGP adjacency,
-LSDB and installed route, not a synthesized one:
+prefixes used for the LSDB display and the reported installed route:
 
 ```
 node clab-collect.js --lab <lab> --node <node> --adj eth0:peerA,eth1:peerB > state.json
@@ -363,18 +374,19 @@ assumed-healthy adjacencies.)*
 **Auto-wire the whole graph (optional):** `clab-xray-collect.js` does the above for *every* node in
 one step — it derives each node's adjacency from the topology links, runs `clab-collect.js` per node,
 and writes `xray-states.js` (`window.LIVE_STATES`) next to the assets. `xray-graph.html` loads it
-automatically when present, so every node's DeepDive shows its **real** state; if it's absent the graph
+automatically when present, so every node's DeepDive shows its **reported** state; if it's absent the graph
 falls back to the synthetic scaffold (so this step is purely additive):
 
 ```
 node clab-xray-collect.js lab.clab.yml <this gallery dir>     # writes <dir>/xray-states.js
-containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
+containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir> -s 127.0.0.1:8080
 ```
 
-**Mixed FRR + SR Linux labs:** `clab-xray-collect.js` dispatches by node `kind` — `nokia_srlinux`
-nodes go to `clab-srl-collect.js` (which reads `sr_cli "info from state … | as json"`), every other
-node to `clab-collect.js` (FRR `vtysh`). Both emit the **same** `state` shape, so a lab that mixes FRR
-and SR Linux renders uniformly in one `window.LIVE_STATES`. To bring a single SR Linux node by hand,
+**Mixed FRR + SR Linux + Cisco IOS-XE (IOL) labs:** `clab-xray-collect.js` uses its `VENDORS` table:
+SR Linux kinds go to `clab-srl-collect.js` (`sr_cli`), `cisco_iol` to `clab-iosxe-collect.js` (SSH),
+and every other node is tried with `clab-collect.js` (FRR `vtysh`); a node that does not answer like FRR
+(for example a Linux host) is drawn but not read. All three collectors emit the **same** `state`
+shape in one `window.LIVE_STATES`. To bring a single SR Linux node by hand,
 `srl-paste.html` takes the same `sr_cli … | as json` output directly.
 
 **Live mode (optional):** add `--watch` and the collector keeps re-collecting on an interval, only
@@ -385,7 +397,7 @@ polls, so this is purely opt-in:
 
 ```
 node clab-xray-collect.js lab.clab.yml <this gallery dir> --watch &
-containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir>
+containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <this gallery dir> -s 127.0.0.1:8080
 # shut a link in the lab → the open node's DeepDive updates within a few seconds.
 ```
 
@@ -434,7 +446,7 @@ node, you drop that node's state in and get the "inside the router" view the gra
 - **Data:** `routing_table`, `bgp_routes`, `route_resolution` from `clab-collect.js` (already emitted).
 - **Themeable:** every colour is a CSS variable (`--xnp-bg`, `--xnp-accent`, `--xnp-ok`, …) with a dark
   default — override them on `.xnp-root` to match your UI, e.g. `--xnp-bg: var(--vscode-editor-background)`.
-- **Live example:** open `node-panel.html` (node picker + theme picker + the panel, no backend).
+- **Interactive example:** open `node-panel.html` (node picker + theme picker + the panel, no backend).
 
 ## Topology overlay — the whole graph, live
 
@@ -444,10 +456,10 @@ picture (the single-node panel looks *inside* one router; this one looks *across
 1. **Every link is coloured by its adjacency** — OSPF Full = green tunnel, BGP Established = purple
    tunnel, no session = a dashed gray wire. You watch a lab converge, or a link break, at a glance.
 2. **Trace a prefix across the graph** — pick a destination and click a source node, and the
-   **forwarding path lights up hop by hop** with arrows, each router consulting *its own* routing table
+   **inferred path lights up hop by hop** with arrows, using each router’s reported routing table
    (longest-prefix match). A router with no route shows a **✕ DROP**; when the last hop delivers the
    packet off a connected (leaf) interface, the **destination network is drawn as a stub node** and the
-   final arrow lands on it — a **DELIVERED** verdict. Break a link and the path re-routes — because the
+   final arrow lands on it — a **DELIVERED** verdict (inferred from the reported routing tables, not a packet test). Break a link and the path re-routes — because the
    collected state changed.
 
 ```html
@@ -462,14 +474,14 @@ picture (the single-node panel looks *inside* one router; this one looks *across
 
 - **Drop-in & zero-deps:** plain DOM + SVG, no D3. Derives the graph from each node's `<peer>_iface`
   fields, so you only pass the per-node states the collector already emits — no separate edge list.
-- **Real forwarding, not a sim:** the trace follows `routing_table` (longest-prefix), so what lights
-  up is what the routers actually installed — including reroute after a failure.
+- **Inferred path:** the trace follows the routing table each router reports (`routing_table`, longest-prefix
+  match). It updates when the collected routes change, including after a failure.
 - **Themeable:** every colour is a CSS variable (`--xto-ospf`, `--xto-bgp`, `--xto-trace`, …) on
   `.xto-root`, the same hook as the node panel — map them to your UI / VS Code theme vars.
 - **`{ draggable: true }`:** drag nodes to reposition them (like the containerlab TopoViewer) — a
   click that doesn't move still just re-sources the trace. Pass `onMove(name, {x,y})` to persist the
   new coordinate back into your topology annotations. Touch works too (pointer events).
-- **Live example:** open `topo-overlay.html` (scenario + theme picker, a one-click link-break button,
+- **Interactive example:** open `topo-overlay.html` (scenario + theme picker, a one-click link-break button,
   draggable nodes).
 
 ### Click a node → look inside it (the two modules composed)
@@ -496,7 +508,7 @@ and the topology view becomes a **click-through explorer** — the graph on the 
 
 The same `clab-collect.js` states drive both, so there's nothing to keep in sync. Add
 `onMoving(name, {x,y})` (fires continuously while dragging) and re-render the detail from it, and the
-figure's **interface link angles follow the layout live** as you drag nodes around. **Live example:**
+figure's **interface link angles follow the layout live** as you drag nodes around. **Interactive example:**
 open `topo-explorer.html` (topology view + detail side by side, draggable with live follow, link-break scenario).
 
 ## What people build with it
@@ -616,15 +628,13 @@ topology view; it doesn't replace it.
 - **Vendor-neutral via adapter** — map your router OS's `show` output to the documented shapes
   (`frr-parse.js` is the template; DATA-CONTRACT has the mapping).
 - **Browser-only / private** — the paste demo sends nothing to a server.
-- **Maintained minimally / single maintainer.** Issues are read but carry no SLA, and
-  **pull requests are not accepted** (a single copyright holder is kept so the project can be
-  relicensed later). **Forking is welcome** under the license below.
+- **Minimal maintenance / single maintainer:** see the [policy after Tested with](#maintenance-policy).
 
 ## License
 
 [MIT](./LICENSE) — Copyright (c) 2026 RouteCrushLab (@routecrushlab).
 
-Third-party: the opt-in NeXt UI variant bundles the NeXt UI Toolkit (EPL-1.0) — see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
+Third-party: the NeXt UI view bundles the NeXt UI Toolkit (EPL-1.0) — see [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You're free to remove it (MIT): add `.rcl-fb-badge { display: none !important; }` to your page's CSS, or delete the `_xrayEnsureFbBadge()` call in `xray-core.js`.
 
@@ -634,17 +644,32 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 
 *[English](#network-xray) | 日本語*
 
-**BGP はなぜこの経路を選んだのか。** network-xray は、containerlab / netlab のラボのルータの今の状態を読み、候補の経路と、ルータがそれを選んだ理由をブラウザに描きます。
+**BGP はなぜこの経路を選んだのか。** network-xray は、ネットワークのラボで各ルータが選んだ経路、ほかの候補、その経路を選んだ理由を表示します。containerlab / netlab のラボのルータの今の状態を読み、ブラウザに描きます。
 
 <!-- nx_readme_entry (2026-10-20) -->
-### ▶ [Best-Path Decision のデモを開く](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — インストール不要
+### ▶ [記録済み (recorded) Best-Path Decision デモを開く](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — ルータ不要
 
 本物の FRR / containerlab のラボで記録した物を、ブラウザで再生します。見るところは 3 つ:
 1. **r1** をクリックして中を見る。
 2. BGP の表で、`8.8.8.0/24` の 2 つの候補を比べる。
 3. **Best-Path Decision** の欄で、勝った方が勝った理由を読む (この例では Local Preference)。
 
-### ▶ 本物のラボを自分で変える — GitHub Codespaces
+**最初の選択肢は 2 つ:**
+1. **記録済み (recorded)** — 上のデモ (ルータ不要)、または [記録済みの 30 秒動画](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB)。Local Preference を変えると最良経路が変わる様子を見られます。
+2. **ライブ (live): 自分の稼働中の containerlab ラボ** — ラボのフォルダで実行し、<http://localhost:8600/> を開きます:
+   ```bash
+   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
+   ```
+   読む命令だけですが、Docker のソケット (ホストの root と同じ強さ) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
+   イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` で固定できます。[リリースページ](https://github.com/rclab-dev/network-xray/releases/latest) を参照してください。
+
+netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` での `docker/netlab-defaults.yml` の読み込みが必要です。[netlab tool](#netlab-tool-ja) を参照してください。
+
+## ほかの試し方
+
+**ライブ (live) の例題ラボ** — clone して `./demo.sh examples/q21-bgp-lp/q21.clab.yml` を実行します ([クイックスタート](#クイックスタート-containerlab-で例題を動かす)。`demo.sh` は全インターフェースで待ち受け、ログインはありません。[セキュリティ](#security-notes-ja) を参照してください)。
+
+### ▶ ライブ (live) ラボ — GitHub Codespaces
 
 GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3 台の本物のラボで、設定を変えると図が追いかけます。
 
@@ -652,7 +677,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 **次に:** [自分の containerlab のラボで](#クイックスタート-containerlab-で例題を動かす) · [netlab で](#netlab-tool-ja) · [対応範囲](#スコープと保守)
 
-**ヒントと解説も欲しい方へ:** 同じ X-Ray が RouteCrushLab のラボで動きます — [Q21 をゲストで試す](https://routecrushlab.com/lab/tl/q21?try=guest&lang=ja&ref=oss) (登録不要・1 分以内にラボが立ちます)
+**ヒントと解説付きのライブ (live) ラボ:** 同じ X-Ray が RouteCrushLab で動きます — [Q21 をゲストで試す](https://routecrushlab.com/lab/tl/q21?try=guest&lang=ja&ref=oss) (登録不要・1 分以内にラボが立ちます)
 
 ## いつ使うか
 
@@ -667,6 +692,21 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 **ブラウザで試す** — 一番上の **Open in GitHub Codespaces** ボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。
 - ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。** コンテナのノード (FRR など) だけ動きます (Codespaces では入れ子の仮想化ができないため)。
 
+**動作確認した版** (これらだけ確認済み。ほかの版も動く可能性があります):
+
+| | 版 |
+|---|---|
+| containerlab | 0.81.0 (ホスト)・0.82.0 (イメージ内) |
+| FRR | 8.4 (例題、固定)・10.7.1 (netlab 26.10 の既定) |
+| SR Linux | 26.3.3 (containerlab で直接収集)・26.7.2 (netlab の BGP テスト対象、隣の FRR から判定) |
+| Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`、vrnetlab で構築したイメージ) |
+| netlab | 26.10 |
+| Node.js | 18 (`demo.sh` / イメージを使わない collector) |
+
+<a id="maintenance-policy-ja"></a>
+生の出力を添えた issue を歓迎します。修正はここで行い、Pull Request はマージしません。
+将来の再ライセンスのため著作権者を単一に保ちます。Issue に SLA はありません。フォークは歓迎します。
+
 **解説記事:** [network-xray の紹介 (Zenn)](https://zenn.dev/routecrushlab/articles/network-xray-oss)
 
 **ルータが *なぜ* その経路を選んだかを見る。** `network-xray` は、ルータの生きた状態(`show` / JSON)を転送判断の絵にします — どの経路が勝ち、どれが負け、なぜか。ギャラリーはインストール不要・ブラウザだけ。
@@ -678,24 +718,24 @@ OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストール�
 `xrayCore` ファサード越しの数行だけ。
 
 > これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss) を動かしているのと同じ描画コア**で、
-> フォークではありません — 共有モジュールとして切り出し、本体とドリフトしない構成です。
+> フォークではありません — 共有モジュールとして切り出し、本体と食い違わないようにしています。
 
 **実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの
-FRR・SR Linux に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
+FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
 
-**シミュレータではなく記述的(descriptive)**:与えられた実際の状態を描くだけで、経路計算もプロトコル実行も
+**シミュレータではなく記述的(descriptive)**:与えられた報告状態を描くだけで、経路計算もプロトコル実行も
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
 FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (混ざったラボも同じように描けます)。Arista … も同じ小さなアダプタの形で載せられます。
 
 **現状:** containerlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。
 
-**コンフィグ検証ツールではありません。** network-xray は**生きた状態**(`show` / JSON = 現実)を読み、
+**コンフィグ検証ツールではありません。** network-xray は**生きた状態**(`show` / JSON = 機器が報告する状態)を読み、
 ルータが *なぜ* そう判断したかを示します — コンフィグ(意図)からの事前シミュレーションには **Batfish** を。
 入力が違い(状態 vs コンフィグ)、問いが違います。
 
 **CLI パースについて。** CLI パースはベストエフォートでバージョン依存に脆く、堅牢な経路は**構造化入力**
 (`show … json`、またはコレクタがデバイス状態を直接読む — FRR コレクタは既に `vtysh … json` を読みます)。
-画面スクレイプの CLI は簡便なフォールバック — **読めないベンダー／版は、生の出力 (`show … json`) を fixture として issue に付けてください** (Pull Request は受け付けません)。
+画面スクレイプの CLI は簡便なフォールバック — **読めないベンダー／版は、生の出力 (`show … json`) を fixture として issue に付けてください** 。
 
 ## なぜ
 
@@ -710,19 +750,19 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 
 ![ルータの中 — DeepDive 円柱](docs/deepdive.png)
 
-**DeepDive 円柱**(OSPF 隣接が Full:hello・LSDB 同期・学習した経路)。
-**▶ ライブで試す(インストール不要)**:ルータの `show` 出力を貼る → トポロジが描かれ、ルータをクリックすると
+**DeepDive 円柱**(OSPF 隣接が Full:hello・ネイバー状態からの LSDB 同期表示・報告された経路)。
+**▶ 報告された状態を貼って試す(インストール不要)**:ルータの `show` 出力を貼る → トポロジが描かれ、ルータをクリックすると
 中が見える — **<https://rclab-dev.github.io/network-xray/>**(貼って試すなら
 [frr-paste.html](https://rclab-dev.github.io/network-xray/frr-paste.html))。
 
 <!-- nx_readme_quickstart (2026-10-07) -->
 ## クイックスタート: containerlab で例題を動かす
 
-![クイックスタート: git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
+![記録済みのクイックスタート: git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
 
 **必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)。
 
-> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。画面 (ポート 8080) は全部の口で待ち受け、ログインがありません。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で。[詳しく](#security-notes-ja)
+> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`demo.sh` は画面を全部の口 (`0.0.0.0`・既定のポートは 8080・アドレスを変えるオプションはありません) で、ログインなしで開きます。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で使ってください。この機械の中だけにしたい時は、`sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` でラボを立て、下の collector / graph の手動の命令を使います。[詳しく](#security-notes-ja)
 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
@@ -747,18 +787,18 @@ git を使わない場合は **[Releases](https://github.com/rclab-dev/network-x
 
 **別の方法で立てたラボ (netlab など):** `demo.sh` はラボを作り直すので、netlab が入れた設定が消えます。こちらは使わず、いつもどおり (`netlab up`) ラボを立ててから、ラボのフォルダで collector と図を手で起動してください:
 
-> **始める前に:** 下の図は全部の口 (`0.0.0.0:8080`) で待ち受け、ログインがありません — 信頼できるネットワークの中で。[詳しく](#security-notes-ja)
+> **始める前に:** 下の図は `127.0.0.1:8080` で待ち受けます。ほかの機械から開くため `0.0.0.0:8080` に変える場合、ログインはないため信頼できるネットワークの中で使ってください。[詳しく](#security-notes-ja)
 
 ```bash
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
-containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 0.0.0.0:8080
+containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
-OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://<ホスト>:8080/` を開きます。止める時は Ctrl-C のあと `kill %1` (collector)。
+OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://localhost:8080/` を開きます。パス表示は各ルータが報告する経路表から推定します。OSPF と BGP の両方があるラボでは `bgp` を使ってください (OSPF の隣接も読みます。コンテナと `demo.sh` は自動で選びます)。止める時は Ctrl-C のあと `kill %1` (collector)。
 `<network-xray>` に `problem.json` が残っていたら (古い `demo.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
 
 <a id="netlab-tool-ja"></a>
 
-> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker のソケット (ホストの root と同じ強さ)** を渡します — ラボ用の機械でだけ。画面 (ポート 8600) は全部の口で待ち受け、ログインがありません。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (network-xray の `netlab-defaults.yml` を使う時は `netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
+> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker のソケット (ホストの root と同じ強さ)** を渡します — ラボ用の機械でだけ。画面にはログインがありません。下の `docker run` の例はこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストの全部の口に公開します。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (network-xray の `netlab-defaults.yml` を使う時は `netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
 
 **netlab の tool として (Docker のイメージ):** network-xray はコンテナとしても動き、**netlab がラボと一緒に起動**します。netlab の topology に次を足して
 ```yaml
@@ -766,17 +806,19 @@ defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]   # tool �
 tools:
   network_xray:
 ```
+同梱の defaults ファイルは画面をホストの全部の口に公開します (`-p 8600:8600`・ほかの機械から開けます)。ログインはないため、信頼できるネットワークの中で使ってください。ラボの機械の中だけにしたい時は、手元の `docker/netlab-defaults.yml` の `-p` の行を `-p 127.0.0.1:…` に変えます。イメージもそこで `ghcr.io/rclab-dev/network-xray@sha256:<digest>` に固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。[セキュリティ](#security-notes-ja)
+
 netlab では tool の名前は `network_xray` (下線) です。netlab の tool の名前は環境変数の名前にも使われるためです。製品・リポジトリ・イメージの名前は network-xray のままです。
 netlab の開発中の枝には、netlab 自身の `network_xray` の tool の定義も入っています (26.10 の後に入った・26.10 には入っていません)。それが netlab の版に入ると、`tools: network_xray:` だけで network-xray が起動します (図と DeepDive)。ただしこの定義は `network-xray.json` を書きません。下の `validate:` の帯は出ず、自分で書いた `network-xray.json` は `netlab down` で消えません。帯を出すには、上の `defaults.sources.extra` の 1 行を残してください (その tool の定義は `netlab down` でファイルも消します)。<!-- nx_readme_builtin_tool -->
-(topology に `defaults.sources.extra` の一覧が既にある時 — BGP Labs はそう — は、2 行目を作らずその一覧に足してください)。`netlab up` すると、ラボの設定が終わった後に netlab が `ghcr.io/rclab-dev/network-xray:1` を起動し、`Open http://<host>:8600/` と案内します。OSPF / BGP は自分で見分けます (後から BGP を足しても追いかけます)。`netlab down` で一緒に片付きます。`multilab` プラグイン (`plugin: [ multilab ]`・`defaults.multilab.id: N`) を使うと、ラボごとに 8600 + N の番号になります (プラグインが要ります。無いとラボどうしの管理用の IP がぶつかります)。netlab の tool として確かめたのは FRR のラボ (ipSpace の BGP Labs の 3-rr・OSPF の例)。SR Linux も読めます (containerlab で確かめ済)。network-xray が中を読むのは FRR と SR Linux だけです。ほかの機器 (Linux のホスト・cEOS など) は全体図に出て、DeepDive にもそう出ます。止まっている・応答の無いルータは理由を添えて灰色で出ます。応答が無くなったルータは最後に読めた状態を「古い」と印を付けて残し、ほかのルータは書き換わり続けます。
-netlab を使わない場合 (動いている containerlab のラボなら何でも): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (画面はこの機械の中からだけ開けます。ほかの機械から開く時は `-p 8600:8600`) — 例題 (`examples/`) なら問題の帯と **✓ Solved** も出ます (topology の隣の `problem.json` から)。それが無いラボには帯は出ません。image は linux/amd64 と linux/arm64 です。
+(topology に `defaults.sources.extra` の一覧が既にある時 — BGP Labs はそう — は、2 行目を作らずその一覧に足してください)。`netlab up` すると、ラボの設定が終わった後に netlab が `ghcr.io/rclab-dev/network-xray:1` を起動し、`Open http://<host>:8600/` と案内します。OSPF / BGP は自分で見分けます (後から BGP を足しても追いかけます)。`netlab down` で一緒に片付きます。`multilab` プラグイン (`plugin: [ multilab ]`・`defaults.multilab.id: N`) を使うと、ラボごとに 8600 + N の番号になります (プラグインが要ります。無いとラボどうしの管理用の IP がぶつかります)。netlab の tool として確かめたのは FRR のラボ (ipSpace の BGP Labs の 3-rr・OSPF の例)。SR Linux も読めます (containerlab で確かめ済)。network-xray が中を読むのは FRR・SR Linux・Cisco IOS-XE (containerlab の kind `cisco_iol`) です。ほかの機器 (Linux のホスト・cEOS など) は全体図に出て、DeepDive にもそう出ます。止まっている・応答の無いルータは理由を添えて灰色で出ます。応答が無くなったルータは最後に読めた状態を「古い」と印を付けて残し、ほかのルータは書き換わり続けます。
+netlab を使わない場合 (動いている containerlab のラボなら何でも): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (画面はこの機械の中からだけ開けます。ほかの機械から開く時は `-p 8600:8600`) — ログインはないため、ほかの機械に公開する時は信頼できるネットワークで使ってください。イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` で固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。例題 (`examples/`) なら問題の帯と **✓ Solved** も出ます (topology の隣の `problem.json` から)。それが無いラボには帯は出ません。image は linux/amd64 と linux/arm64 です。
 `netlab up` が「already running」と言う時は、同じ名前のラボが別のフォルダで動いたままです (`netlab status --all`)。先にそこで `netlab down` してください。
 
 **netlab validate の検査をページに:** ラボに `validate:` の検査がある時 (ipSpace の BGP Labs はある)、図の上に帯で出します — 「3 / 12」・検査ごとに 1 行 (済んだ物は緑の ✓)・全部通ると **✓ Solved**。落ちている検査の BGP セッションやルータにも色が付きます。network-xray が数秒ごとに自分で判定するので (FRR のルータ・`bgp_neighbor` と `bgp_prefix`・`netlab validate` と同じ規則と文)、設定している間も帯が追いかけます。network-xray が読まない検査 (ping・OSPF・`show`/`valid`・ほかの機器) は灰色のままで ✓ Solved を出しません — それは `netlab validate` で確かめてください。ラボを立てた直後は、早すぎる判定をしないよう帯が待ちます: 60 秒は ✓ Solved を出さず、経路が「無い」ことの検査はそのルータの BGP が張れて 30 秒 (検査に `wait:` があればその秒数) たってから判定し、✓ Solved は全部の合格が 20 秒続いた時だけ出します。BGP Labs は 2026-10-15 以降の写し (bgplab の commit 02b8860 以降) を使ってください — それより古い写しでは、netlab 26.x の `netlab validate` が `bgp.originate` を使う検査を実行できません。このため tool の定義は `netlab create` / `netlab up` に `network-xray.json` (検査が参照するラボの値) も書かせます。ラボを立てている間、このファイルには netlab が書くラボの値がそのまま入ります (topology のパスワードも。画面には出ません)。`netlab down` で消えます — ラボは `netlab down` で止めてください (`docker kill` や電源断だけだと残ります。その時は手で消してください)。`netlab up` が途中で失敗した時も片付けは走らないので、`network-xray.json` を手で消してください。 <!-- nx_netlab_validate -->
 
 **図の段:** netlab のラボはルータを段に並べて開きます — 上の段 = `provider` / `isp*` / `spine(s)` / `external` のような名前のグループ、下の段 = `leaf(s)` / `customer(s)` / `host(s)` など、その他は間 (`external` は最後に見ます: BGP Labs では「設定済みの機器」の意味なので、客のルータが上に来ることがあります — その時は次の指定で直せます)。段を自分で決めるには、ノードに containerlab の `graph-level` ラベルを付けます (1 = 上の段・グループ名より優先): netlab では `nodes.s1.clab.labels: { graph-level: 1 }` (この repository の tool の定義 = 上の `defaults.sources.extra` の行を使う時だけ。それが `clab.labels` を使えるようにしています。無いと netlab がその行で止まります)、containerlab の topology ではノードの下に `labels: { graph-level: 1 }`。Horizontal / Vertical で段のまま並べ直し、ドラッグした位置はこのブラウザが覚えます。 <!-- nx_netlab_tiers -->
 <a id="security-notes-ja"></a>
-**注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker のソケット (ホストの root と同じ強さ) を渡します**。ラボ用の機械でだけ使ってください。ポート 8600 の画面は全部の口で待ち受け、ログインがありません。その機械に届く人なら誰でもラボの状態を見られるので、信頼できるネットワークの中で使ってください (外に出すなら手前でポートを塞いでください)。
+**注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'`、Cisco IOS-XE (IOL) を SSH の `show` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker のソケット (ホストの root と同じ強さ) を渡します**。ラボ用の機械でだけ使ってください。`docker run` の例はポート 8600 をこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストの全部の口に公開します。広く公開すると、そのポートに届く人ならログインなしでラボの状態を見られます。信頼できるネットワークで使ってください。
 
 **セキュリティの注意:** Docker のソケットを使える人 (`-v /var/run/docker.sock` のマウント、または `docker` グループ) は、ホストで root として何でも動かせます。画面にはログインがありません: `docker run` なら `-p 127.0.0.1:8600:8600` (この機械だけ)、`containerlab graph` なら他の人に見せる必要がなければ `-s 127.0.0.1:8080` にしてください。Cisco IOS-XE では collector は SSH のホスト鍵を確かめません (ラボのルータは起動のたびに鍵が変わるため) — ラボの管理網の中でだけ使ってください。パスワードは `NX_IOS_PASSWORD` から取り、表示も状態ファイルへの書き込みもしません。collector はトポロジの名前をデータとしてだけ使い (シェルを通さず、普通の名前でないものは外します)、出力先には `xray-states.js` だけを書きます。ノードごとの一時ファイルは自分のユーザーだけが開けるディレクトリに置きます。
 
@@ -805,14 +847,14 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 | `address already in use` / `port 8080 is already in use` | 別の graph が 8080 を使っている。末尾にポート: `./demo.sh <lab.clab.yml> 8081`、または前のものを止める。 |
 | 別の PC から開けない | そのマシンの IP で開く (`http://<IP>:8080/`)・ファイアウォールでポートを許可。WSL2 なら Windows から `http://localhost:8080/`。 |
 | 初回の起動が遅い | FRR のイメージを 1 回取得している — Docker Hub の `frrouting/frr` の **FRR 8.4** を digest で固定 (誰でも同じ版で動く・quay.io の FRR 10.x への移行は今後)。先に `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce` しておくと早い。 |
-| ノードの多いラボで collector が重い (5 台以上) | `demo.sh` は collector を常に 1 秒ごとに動かし、`--interval` は渡せません。間隔を空けたい時は repo のフォルダで 2 つの手順を自分で動かし、`--interval 2` (秒) を付けてください: `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (OSPF だけのラボは `ospf`・どちらも無ければ `static` = `demo.sh` が選ぶのと同じ) の後に `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 0.0.0.0:8080`。画面への反映は少し遅くなります。`docker run` / netlab のコンテナは既定で 2 秒ごとです。変える時は `--topo …` の後に `--interval N` を付けてください。 |
+| ノードの多いラボで collector が重い (5 台以上) | `demo.sh` は collector を常に 1 秒ごとに動かし、`--interval` は渡せません。間隔を空けたい時は repo のフォルダで 2 つの手順を自分で動かし、`--interval 2` (秒) を付けてください: `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (OSPF だけのラボは `ospf`・どちらも無ければ `static` = `demo.sh` が選ぶのと同じ) の後に `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 127.0.0.1:8080`。画面への反映は少し遅くなります。`docker run` / netlab のコンテナは既定で 2 秒ごとです。変える時は `--topo …` の後に `--interval N` を付けてください。 |
 | `docker pull` が "toomanyrequests" (回数の上限) で失敗する | Docker Hub はログインなしの pull に回数の上限があり、IP アドレスごとに数える — 教室や会社など、同じ回線から大勢が一斉に始めると当たることがある。先に `docker login` しておく (無料のアカウントで上限が上がる)。 |
 | 起動直後に `zebra is not running` / ルータに IP や経路が無い | まれに (FRR 8.4 の試しでルータの起動 100 回に数回)、コンテナの起動直後に zebra が落ちて (何も出さずに落ちることもある)、ルータに IP アドレスや経路が入らないまま残ることがあります。FRR の起動時の不具合で、操作の誤りではありません。例題のラボはこの時に自分で FRR を立て直します (最大 3 回・`containerlab deploy` だけで立てた時も)。`run.sh` / `demo.sh` も立て直します。v1.0.0 / v1.0.1 のパッケージや自分で作ったラボでは、手で `docker exec clab-<ラボ名>-<ノード> /usr/lib/frr/watchfrr.sh restart all`。 |
 | ルータの中が空 / 経路が出ない | 30〜60 秒待つ (OSPF/BGP は立ち上がりに時間がかかる)。空のままなら `docker ps` (ルータが動いているか) と `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`。 |
 | 前のラボが残っている | `sudo containerlab inspect --all` で一覧、`sudo containerlab destroy -t <lab.clab.yml> --cleanup` で消す。 |
 | WSL2 | Docker Desktop (WSL2 バックエンド) か WSL2 の中の Docker で動く。PowerShell ではなく Linux のシェルで打つ。 |
 | ラボを立て直したら直しが消えた | 直しは動いているコンテナの中だけに残る。ラボを立て直す(`./demo.sh`・`containerlab deploy`)と壊れた初期の設定から始まる。ルータの中で FRR だけを立て直しても、`write memory` の後でも初期の設定に戻ることがある。 |
-| BGP で既定経路を流すラボ(netlab など)で `0.0.0.0/0` が選ばれない | 正常。ルータの管理インターフェースに既定経路があり、BGP で受けた `0.0.0.0/0` より強いので、ルータは実際に管理網の経路で転送する — X-Ray は経路表が実際に使っている方を出す。 |
+| BGP で既定経路を流すラボ(netlab など)で `0.0.0.0/0` が選ばれない | 管理インターフェースが独自の既定経路を持つラボでは、それが BGP で学習した既定経路より優先される場合があります。X-Ray はルータが報告する経路表からパスを推定します。`--exclude-mgmt` で管理用の経路が非表示になる場合もあります。 |
 
 **Cisco IOS に慣れている人へ:** ルータは FRR です。よくある違い:
 
@@ -830,7 +872,7 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 ## 動かす
 
 ブラウザで **`index.html`** を開くだけ — ビルド・サーバ・インストール不要
-(または `python -m http.server` → `http://localhost:8000/`)。
+(または `python -m http.server --bind 127.0.0.1` → `http://localhost:8000/`)。
 
 ## クイックスタート (エンジンを組み込む)
 
@@ -858,8 +900,8 @@ view.openDeepDive();                                      // ルータの中へ
 | **`bgp-paste.html`** | 自分の `show bgp summary` + `show ip bgp` を貼る → eBGP 隣接・セッション状態・学習プレフィックスを描画。円柱で BGP プロセッサ + テーブルを表示。*小規模 eBGP・データ持ち込み。* |
 | **`clab-paste.html`** | **containerlab** の `.clab.yml` を貼る → ラボのノード/リンクを X-Ray 図にマップ(OSPF 状態・障害・DeepDive)。*小規模 FRR ラボ: 2〜3 ノード(link / path / triangle)。* |
 | **`srl-paste.html`** | **Nokia SR Linux** のノードの `info from state … \| as json` を貼る → そのノードの OSPF/BGP の DeepDive を描画。*FRR と同じ X-Ray の見た目を、実際の `sr_cli` の状態から。* |
-| **`xray-graph.html`** | **containerlab `graph --template`** の drop-in:稼働中ラボを**任意サイズ**の全体図で描き、ノードをクリックでそのノードの X-Ray DeepDive。*下記 [containerlab graph テンプレート](#containerlab-graph-テンプレート) 参照。* |
-| **`ccna-ospf.html`** | OSPF のネイバー状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 準拠)。 |
+| **`xray-graph.html`** | **containerlab `graph --template`** の drop-in:稼働中ラボをノード数・リンク数に固定上限のない全体図で描き、ノードをクリックでそのノードの X-Ray DeepDive (速度はラボの規模によります)。*下記 [containerlab graph テンプレート](#containerlab-graph-テンプレート) 参照。* |
+| **`ccna-ospf.html`** | OSPF のネイバー状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 に記載されたネイバー状態を表示)。 |
 | **`bgp-session.html`** | eBGP の FSM(Idle→Established)を2つの AS 間で1歩ずつ。DeepDive で BGP プロセッサとセッショントンネルを表示し、Established で `203.0.113.0/24` を学習(RFC 4271 §8)。 |
 | **`noc-live.html`** | `startPolling()` をテレメトリに繋ぐと、ビューが自分でリアルタイム更新。 |
 | **`failover.html`** | 冗長 OSPF 三角形:最短路を切る→迂回、バックアップも切る→孤立。 |
@@ -867,41 +909,44 @@ view.openDeepDive();                                      // ルータの中へ
 ## containerlab graph テンプレート
 
 すでに **[containerlab](https://containerlab.dev)** でラボを動かしているなら、`xray-graph.html` が
-`containerlab graph --template` の drop-in です。稼働中トポロジを**任意サイズ**の全体図で描き
+`containerlab graph --template` の drop-in です。稼働中トポロジをノード数・リンク数に固定上限のない全体図で描き
 (レイアウトは commodity — NeXt UI と描画品質を競わない)、**ノードをクリックするとその
-ノードの X-Ray DeepDive** が開きます:OSPF/BGP 隣接・LSDB・インストールされる経路。隣が何台あっても、
+ノードの X-Ray DeepDive** が開きます:報告された OSPF/BGP 隣接・LSDB 表示・インストール経路。LSDB 表示は報告された OSPF/OSPFv3 経路のプレフィックスを使い、無ければローカルのインターフェースのサブネットと解決した宛先を使います。LSDB 全体を読んではいません。隣が何台あっても、
 そのノードの**リンクを全部いっぺんに**描き、どのトンネルも全体図でその相手がいる向きから入ります(リンクの名前は置ける所だけに出します)。
 
 ```
 containerlab graph \
   --topo lab.clab.yml \
   --template xray-graph.html \
-  --static-dir <この gallery ディレクトリ>   # xray-core.js / xray-api.js / clab-xray-bridge.js を serve
+  --static-dir <この gallery ディレクトリ> \
+  -s 127.0.0.1:8080   # xray-core.js / xray-api.js / clab-xray-bridge.js を serve
 ```
 
 このリポジトリを clone して `--static-dir` をそこへ向けるだけ。全体図は clab 自身の
-`{{ .Name }}` / `{{ .Data }}`(nodes + links)注入から作るのでノード/リンク数は無制限 — X-Ray は
+`{{ .Name }}` / `{{ .Data }}`(nodes + links)注入から作るのでノード数・リンク数に固定上限はありません (速度はラボの規模によります) — X-Ray は
 その上に per-node DeepDive を足します。
 
-### インタラクティブな全体図 — `xray-graph-nextui.html`(opt-in)
+### インタラクティブな全体図 — `xray-graph-nextui.html`
 
-既定の `xray-graph.html` は**静的・依存ゼロ**の SVG 全体図(素の DOM + SVG・MIT)です。
+`demo.sh`・Docker イメージ・netlab tool の既定は `xray-graph-nextui.html` です。`xray-graph.html` を明示すると**静的・依存ゼロ**の SVG 全体図(素の DOM + SVG・MIT)になります。
 **インタラクティブ**なグラフ(ノードをドラッグ・パン/ズームし、開いた DeepDive のリンク角度が
-ドラッグに**ライブ追随**する)が欲しければ、テンプレートを差し替えます:
+ドラッグに追随する)を明示的に選ぶには:
 
 ```
-containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --static-dir <この gallery ディレクトリ>
+containerlab graph --topo lab.clab.yml --template xray-graph-nextui.html --static-dir <この gallery ディレクトリ> -s 127.0.0.1:8080
 ```
 
-![NeXt UI インタラクティブグラフ — ノードをドラッグすると開いた DeepDive のトンネルがライブで角度追随・ノードクリックでルータの中を見る。](docs/nextui-deepdive.gif)
+![記録済みの NeXt UI インタラクティブグラフ — ノードをドラッグすると開いた DeepDive のトンネルがライブで角度追随・ノードクリックでルータの中を見る。](docs/nextui-deepdive.gif)
 
 DeepDive エンジン(skin・routing table・Best-Path Decision)は共通で、違いは全体図だけ。変種は
 NeXt UI Toolkit(**EPL-1.0**・`js/` `css/` `fonts/` に同梱し `THIRD_PARTY_NOTICES.md` に帰属明記)を bundle します。
-既定の `xray-graph.html` は純 MIT のままです。
+`xray-graph.html` は純 MIT のままです。
+
+**混在ラボ:** `clab-xray-collect.js` は `VENDORS` 表で振り分けます。SR Linux の kind は `clab-srl-collect.js` (`sr_cli`)、`cisco_iol` は `clab-iosxe-collect.js` (SSH)、残りのノードは FRR 用の `clab-collect.js` (`vtysh`) で読もうとします。FRR の様に答えないノード (Linux のホストなど) は図には出ますが、読みません。3 つの collector は同じ `state` の形を使い、1 つの `window.LIVE_STATES` に入ります。SR Linux 1 台を手で渡すには `srl-paste.html` に `sr_cli … | as json` の出力を貼れます。
 
 **live state(任意):** `clab-collect.js` は、稼働中ラボの1ノードの実 FRR 状態を読み
 (`docker exec clab-<lab>-<node> vtysh -c "show … json"`)、DeepDive にそのまま渡せる `state` を出す
-小さな Node ツールです。円柱に「実際の」OSPF/BGP 隣接・LSDB・インストール経路が出ます(合成でなく):
+小さな Node ツールです。円柱には報告された OSPF/BGP 隣接・LSDB 表示用のプレフィックス・インストール経路が出ます:
 
 ```
 node clab-collect.js --lab <lab> --node <node> --adj eth0:peerA,eth1:peerB > state.json
@@ -958,13 +1003,12 @@ ping/パケットのアニメはこれらのデモでは非表示(通信内容�
 - **アダプタでベンダー中立** — 自分のルータ OS の `show` 出力をドキュメントの形に対応付ける
   (`frr-parse.js` が雛形、DATA-CONTRACT に対応表)。
 - **ブラウザ完結・プライベート** — 貼るデモはサーバへ何も送らない。
-- **最小限の保守・単独メンテナ。** Issue は読みますが SLA はなく、**Pull Request は受け付けません**
-  (将来の再ライセンスのため著作権者を単一に保つ方針)。**フォークは歓迎**します(下記ライセンス)。
+- **最小限の保守・単独メンテナ:** [動作確認した版の直後の方針](#maintenance-policy-ja) を参照してください。
 
 ## ライセンス
 
 [MIT](./LICENSE) — Copyright (c) 2026 RouteCrushLab (@routecrushlab)。
 
-第三者のライセンス: NeXt UI 版(任意)は NeXt UI Toolkit(EPL-1.0)を同梱しています — [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) を参照。
+第三者のライセンス: NeXt UI 版は NeXt UI Toolkit(EPL-1.0)を同梱しています — [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) を参照。
 
 DeepDive の右下に、小さな「Powered by RCL」のリンクが出ます。外してもかまいません(MIT)。ページの CSS に `.rcl-fb-badge { display: none !important; }` を足すか、`xray-core.js` の `_xrayEnsureFbBadge()` を呼ぶ行を消してください。
