@@ -159,7 +159,7 @@ cd network-xray
 ./demo.sh examples/q21-bgp-lp/q21.clab.yml     # deploy -> keep collecting -> serve the graph
 ```
 
-1. Wait for `==> open http://<this machine>:8080/` (the first run pulls the FRR image — this can take a few minutes).
+1. Wait for `==> open  http://<this machine>:8080/` (the first run pulls the FRR image — this can take a few minutes).
 2. Open **http://localhost:8080/** (from another machine: `http://<host-ip>:8080/`).
 3. The **problem** is the band at the top (English / 日本語 toggle at the top right). Below it: the **topology view** (the whole lab) — click a router to open its **DeepDive** (Routing Engine, Routing table, BGP Table / LSDB, Best-Path Decision).
 4. Fix the lab in a router's shell — the picture follows within a few seconds:
@@ -367,7 +367,9 @@ It maps each neighbor to its clab peer by interface (so it works on any IP plan)
 OSPF and BGP. The collector is live-verified end-to-end against a real containerlab FRR 8.4 lab
 (0 field mismatches, live state drives the DeepDive), and its JSON shapes are also checked against FRR 10.7.1
 (netlab 26.10's default — see **Tested with** above). If your FRR version's `… json` keys
-differ, collect the json yourself and pass `--fixtures <dir>`,
+differ, collect the json yourself and pass `--fixtures <dir>` (one file per command: `ospf-neighbor.json`,
+`ospf-interface.json`, `interface.json`, `route.json`, `bgp-summary.json`, `bgp.json` — not the `show_ip_….json`
+names of `frr-collect.js --from-dir`; a file with another name is read as absent),
 and please open an issue with the raw output. *(Without the collector, the template renders a synthesized state — correct topology,
 assumed-healthy adjacencies.)*
 
@@ -770,7 +772,7 @@ cd network-xray
 ./demo.sh examples/q21-bgp-lp/q21.clab.yml     # deploy → 状態を集め続ける → graph を配信
 ```
 
-1. `==> open http://<this machine>:8080/` が出るまで待つ (初回は FRR のイメージを取得するので数分かかることがある)。
+1. `==> open  http://<this machine>:8080/` が出るまで待つ (初回は FRR のイメージを取得するので数分かかることがある)。
 2. ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。
 3. **問題文**は上の帯 (右上の 日本語 / English で切り替え)。その下が **全体図** (ラボ全体)。ルータをクリックすると **DeepDive** (Routing Engine・Routing table・BGP Table / LSDB・Best-Path Decision) が開く。
 4. ルータのシェルでラボを直す。数秒で図が追いかける:
@@ -956,7 +958,9 @@ node clab-collect.js --lab <lab> --node <node> --adj eth0:peerA,eth1:peerB > sta
 neighbor を interface で clab ピアにマップする(任意 IP プランで動く)・OSPF/BGP 対応。collector は
 実 containerlab FRR 8.4 ラボに対し live で end-to-end 検証済(field mismatch 0・live state が
 DeepDive を駆動)。JSON の形は FRR 10.7.1 (netlab 26.10 の既定) でも確かめています。それ以外の FRR で `… json` のキーが違う
-場合は自分で json を集め `--fixtures <dir>` で渡し、raw 出力を issue で報告ください。*(collector 無しでもテンプレは合成 state で
+場合は自分で json を集め `--fixtures <dir>` で渡し (コマンドごとに 1 ファイル: `ospf-neighbor.json`・`ospf-interface.json`・
+`interface.json`・`route.json`・`bgp-summary.json`・`bgp.json`。`frr-collect.js --from-dir` の `show_ip_….json` の名前ではありません。
+ほかの名前のファイルは無いものとして読みます)、raw 出力を issue で報告ください。*(collector 無しでもテンプレは合成 state で
 描画します — トポロジは正しく、隣接は健全と仮定。)*
 
 ## 何に使えるか
