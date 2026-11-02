@@ -15,7 +15,7 @@ body:
       options:
         - netlab tool (tools.network_xray)
         - docker run with a containerlab lab
-        - demo.sh / run.sh (examples or a release package)
+        - xray.sh / run.sh (examples or a release package)
         - GitHub Codespaces
         - Other (say below)
     validations:

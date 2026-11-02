@@ -15,4 +15,4 @@ This is an **advanced showcase** and is **not** the RouteCrushLab Q21 lab. For t
 Q21-faithful single-prefix Local-Preference demo (matching routecrushlab.com/lab/tl/q21
 and the Zenn article), see `../q21-bgp-lp/`.
 
-Deploy: `./demo.sh examples/bgp-bestpath-multiprefix/multiprefix.clab.yml 8080`
+Deploy: `./xray.sh examples/bgp-bestpath-multiprefix/multiprefix.clab.yml 8080`

@@ -67,14 +67,14 @@ production monitoring. See [Scope & maintenance](../README.md#scope--maintenance
 
 ### How often does it re-read the routers?
 
-`demo.sh` and `clab-xray-collect.js --watch` read every 1 second by default. The `docker run` / netlab container reads
+`xray.sh` and `clab-xray-collect.js --watch` read every 1 second by default. The `docker run` / netlab container reads
 every 2 seconds (change it with `--interval N`). Cisco IOL nodes are read every 10 seconds, because each read is an SSH
 login and several `show` commands (change it with `NX_IOS_INTERVAL`). See
 [FAQ / Troubleshooting](../README.md#faq--troubleshooting) and [Cisco IOS-XE (IOL)](../README.md#cisco-ios-xe-iol).
 
 ### How quickly does the page follow a change in the lab?
 
-The page used by `demo.sh`, the container and the netlab tool (`xray-graph-nextui.html`) checks for new state every
+The page used by `xray.sh`, the container and the netlab tool (`xray-graph-nextui.html`) checks for new state every
 second (the static `xray-graph.html` every 3 seconds) and redraws only when it changed, so a change shows up within a few seconds.
 The protocol itself still has to converge first: an OSPF adjacency or BGP session needs its own time to come up or go
 down. See [Quick start](../README.md#quick-start-run-a-lab-in-containerlab).
@@ -115,7 +115,7 @@ does not guess. If a router answers but the page stays empty, the steps in
 
 ### Does the page have a login?
 
-No. Anyone who can reach the port can see the lab's state. `demo.sh` and `containerlab graph … -s 0.0.0.0:8080` listen
+No. Anyone who can reach the port can see the lab's state. `xray.sh` and `containerlab graph … -s 0.0.0.0:8080` listen
 on all interfaces, so keep the machine on a trusted network, or use `-s 127.0.0.1:8080`. See
 [Security notes](../README.md#security-notes).
 

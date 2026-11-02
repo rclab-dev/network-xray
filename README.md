@@ -28,7 +28,7 @@ Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab
 
 ## Other ways to try it
 
-**Live example lab** — clone this repository and run `./demo.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab); `demo.sh` listens on all interfaces and has no login; see the [security notes](#security-notes)).
+**Live example lab** — clone this repository and run `./xray.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab); `xray.sh` listens on all interfaces and has no login; see the [security notes](#security-notes)).
 
 ### ▶ Live lab — GitHub Codespaces
 
@@ -66,7 +66,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 | SR Linux | 26.3.3 (read directly, containerlab) · 26.7.2 (as the device under test in netlab's BGP tests, judged from its FRR neighbors) |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`, image built with vrnetlab) |
 | netlab | 26.10 |
-| Node.js | 18 (for `demo.sh` / the collector without the image) |
+| Node.js | 18 (for `xray.sh` / the collector without the image) |
 
 <a id="maintenance-policy"></a>
 Issues with the raw output attached are welcome and fixes are made here; pull requests are not merged.
@@ -147,17 +147,18 @@ replayed in the browser with no backend (steady → link down / router isolated 
 <!-- nx_readme_quickstart (2026-10-07) -->
 ## Quick start: run a lab in containerlab
 
-![Recorded quick start: git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
+![Recorded quick start (recorded with the old name demo.sh): git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
 
 **You need:** Linux (or Windows with **WSL2**, or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container).
 
-> **Before you start:** use a lab machine — containerlab runs with `sudo`. `demo.sh` serves the page on all interfaces (`0.0.0.0`, port 8080 by default; there is no bind-address option) with no login: anyone who can reach the machine can see the lab, so keep it on a trusted network. For this machine only, deploy the lab with `sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` and use the manual collector / graph commands below. [More](#security-notes)
+> **Before you start:** use a lab machine — containerlab runs with `sudo`. `xray.sh` serves the page on all interfaces (`0.0.0.0`, port 8080 by default; there is no bind-address option) with no login: anyone who can reach the machine can see the lab, so keep it on a trusted network. For this machine only, deploy the lab with `sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` and use the manual collector / graph commands below. [More](#security-notes)
 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
 cd network-xray
-./demo.sh examples/q21-bgp-lp/q21.clab.yml     # deploy -> keep collecting -> serve the graph
+./xray.sh examples/q21-bgp-lp/q21.clab.yml     # deploy -> keep collecting -> serve the graph
 ```
+`xray.sh` was called `demo.sh` before; `./demo.sh` still works (it runs `xray.sh`).
 
 1. Wait for `==> open  http://<this machine>:8080/` (the first run pulls the FRR image — this can take a few minutes).
 2. Open **http://localhost:8080/** (from another machine: `http://<host-ip>:8080/`).
@@ -166,15 +167,15 @@ cd network-xray
    ```bash
    docker exec -it clab-q21-bgp-lp-r1 vtysh
    ```
-5. Compare with the solved version: stop (Ctrl-C) and run `./demo.sh examples/q21-bgp-lp-solved/q21.clab.yml`.
+5. Compare with the solved version: stop (Ctrl-C) and run `./xray.sh examples/q21-bgp-lp-solved/q21.clab.yml`.
 6. Clean up: Ctrl-C, then `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup` (if you also started the solved version: `sudo containerlab destroy -t examples/q21-bgp-lp-solved/q21.clab.yml --cleanup`).
 
-**More labs:** `examples/` has 21 problems (q1–q21, OSPF / BGP / static) plus one BGP best-path sample, each with a broken version and a `-solved` version, and a README (the problem, how to check it, how to start and stop). Run any of them the same way: `./demo.sh examples/<problem>/<file>.clab.yml`.
+**More labs:** `examples/` has 21 problems (q1–q21, OSPF / BGP / static) plus one BGP best-path sample, each with a broken version and a `-solved` version, and a README (the problem, how to check it, how to start and stop). Run any of them the same way: `./xray.sh examples/<problem>/<file>.clab.yml`.
 No git? Download one problem as a folder from the **[Releases](https://github.com/rclab-dev/network-xray/releases/latest)** page and run `./run.sh` in it (opens on :50080).
 
 **Your own problem:** put a `problem.json` next to your `*.clab.yml` (the problem text, the route to focus on, and a `check` that turns the band to **✓ Solved**) — the format is in [docs/problem-format.md](docs/problem-format.md).
 
-**Labs started another way (e.g. with netlab):** `demo.sh` redeploys the lab, which would wipe the configuration netlab pushed, so don't use it there. Start the lab as usual (`netlab up`), then, in the lab folder, run the collector and the graph yourself:
+**Labs started another way (e.g. with netlab):** `xray.sh` redeploys the lab, which would wipe the configuration netlab pushed, so don't use it there. Start the lab as usual (`netlab up`), then, in the lab folder, run the collector and the graph yourself:
 
 > **Before you start:** the graph below binds to `127.0.0.1:8080`. If you change it to `0.0.0.0:8080` for remote access, it has no login — keep the machine on a trusted network. [More](#security-notes)
 
@@ -182,8 +183,8 @@ No git? Download one problem as a folder from the **[Releases](https://github.co
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
-Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `demo.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://localhost:8080/`. The path display is inferred from the routing table each router reports. To stop: Ctrl-C, then `kill %1` for the collector.
-If a `problem.json` is left in `<network-xray>` (e.g. from an older `demo.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
+Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `xray.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://localhost:8080/`. The path display is inferred from the routing table each router reports. To stop: Ctrl-C, then `kill %1` for the collector.
+If a `problem.json` is left in `<network-xray>` (e.g. from an older `xray.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
 
 <a id="netlab-tool"></a>
 
@@ -240,17 +241,17 @@ New to network-xray? Start with the [FAQ](docs/faq.md): what it reads, what it n
 | Symptom | What to do |
 |---|---|
 | `containerlab: command not found` | Install it: <https://containerlab.dev/install/> (one line: `bash -c "$(curl -sL https://get.containerlab.dev)"`). |
-| `permission denied` / asks for a password | containerlab needs root: `demo.sh` runs it with `sudo`. If your user is in the `clab_admins` and `docker` groups, run `SUDO= ./demo.sh …`. |
-| `address already in use` / `port 8080 is already in use` | Another graph is on 8080. Add a port: `./demo.sh <lab.clab.yml> 8081`, or stop the other one. |
+| `permission denied` / asks for a password | containerlab needs root: `xray.sh` runs it with `sudo`. If your user is in the `clab_admins` and `docker` groups, run `SUDO= ./xray.sh …`. |
+| `address already in use` / `port 8080 is already in use` | Another graph is on 8080. Add a port: `./xray.sh <lab.clab.yml> 8081`, or stop the other one. |
 | The page does not open from another PC | Use the machine's IP (`http://<host-ip>:8080/`), and allow the port in its firewall. On WSL2, open `http://localhost:8080/` from Windows. |
 | The first start is slow | It pulls the FRR image once — **FRR 8.4** from Docker Hub `frrouting/frr`, pinned by digest so everyone runs the same build (moving to FRR 10.x from quay.io is planned). You can pull it beforehand: `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce`. |
-| The collector feels heavy on a large lab (5+ nodes) | `demo.sh` always runs the collector every 1 s and takes no `--interval` option. To collect less often, run the two steps yourself from the repo folder with `--interval 2` (seconds): `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (use `ospf` for an OSPF-only lab, `static` for neither, as `demo.sh` would) and then `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 127.0.0.1:8080`. The page then updates a little later. The `docker run` / netlab container collects every 2 s by default; pass `--interval N` after `--topo …` to change it. |
+| The collector feels heavy on a large lab (5+ nodes) | `xray.sh` always runs the collector every 1 s and takes no `--interval` option. To collect less often, run the two steps yourself from the repo folder with `--interval 2` (seconds): `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (use `ospf` for an OSPF-only lab, `static` for neither, as `xray.sh` would) and then `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 127.0.0.1:8080`. The page then updates a little later. The `docker run` / netlab container collects every 2 s by default; pass `--interval N` after `--topo …` to change it. |
 | `docker pull` fails with "toomanyrequests" / rate limit | Docker Hub limits pulls without a login, counted per IP address — a classroom or office behind one connection can hit it when many people start at once. Run `docker login` first (a free Docker account raises the limit). |
-| `zebra is not running` / a router has no IP address or routes right after start | Occasionally (in our tests a few in 100 router starts with FRR 8.4), zebra crashes right after the container starts — sometimes without any message — and the router is left without its IP addresses and routes. This is an FRR start-up issue, not something you did. The example labs restart FRR by themselves when this happens (up to 3 times, also with a plain `containerlab deploy`), and so do `run.sh` / `demo.sh`. With packages from v1.0.0 / v1.0.1 or your own labs, fix it by hand: `docker exec clab-<lab>-<node> /usr/lib/frr/watchfrr.sh restart all`. |
+| `zebra is not running` / a router has no IP address or routes right after start | Occasionally (in our tests a few in 100 router starts with FRR 8.4), zebra crashes right after the container starts — sometimes without any message — and the router is left without its IP addresses and routes. This is an FRR start-up issue, not something you did. The example labs restart FRR by themselves when this happens (up to 3 times, also with a plain `containerlab deploy`), and so do `run.sh` / `xray.sh`. With packages from v1.0.0 / v1.0.1 or your own labs, fix it by hand: `docker exec clab-<lab>-<node> /usr/lib/frr/watchfrr.sh restart all`. |
 | A router shows nothing / routes do not appear | Give it 30–60 seconds (OSPF/BGP need time to come up). If it stays empty, check `docker ps` (the router is running) and `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`. Then ask the router directly: `docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'` (or `show ip ospf neighbor json`) — if that is empty too, the router has nothing yet; if it answers but the page stays empty, look at the log (`docker logs <network-xray container> 2>&1 | tail -30`: it names the containers it reads, `clab-<lab>-*`) and open an issue with both. |
 | A previous lab is still running | `sudo containerlab inspect --all` lists the labs; `sudo containerlab destroy -t <lab.clab.yml> --cleanup` removes one. |
 | WSL2 | Docker Desktop with the WSL2 backend (or Docker inside the WSL2 distro) is fine. Run everything inside the Linux shell, not in PowerShell. |
-| My fix is gone after restarting the lab | A fix lives only inside the running containers. Redeploying the lab (`./demo.sh`, `containerlab deploy`) starts again from the broken config — and restarting only FRR inside a router can bring the original config back too, even after `write memory`. |
+| My fix is gone after restarting the lab | A fix lives only inside the running containers. Redeploying the lab (`./xray.sh`, `containerlab deploy`) starts again from the broken config — and restarting only FRR inside a router can bring the original config back too, even after `write memory`. |
 | A lab advertises a BGP default route (e.g. netlab), but `0.0.0.0/0` is not selected | In labs where the management interface brings its own default route, that route may beat the BGP-learned default. X-Ray infers the path from the routing table the router reports; management routes may be hidden by `--exclude-mgmt`. |
 
 **Coming from Cisco IOS?** The routers are FRR. Common differences:
@@ -338,7 +339,7 @@ the per-node DeepDive on top.
 
 ### Interactive topology view — `xray-graph-nextui.html`
 
-`demo.sh`, the Docker image and the netlab tool use `xray-graph-nextui.html` by default. Explicitly selecting `xray-graph.html` gives a **static, zero-dependency** SVG topology view (plain DOM + SVG, MIT).
+`xray.sh`, the Docker image and the netlab tool use `xray-graph-nextui.html` by default. Explicitly selecting `xray-graph.html` gives a **static, zero-dependency** SVG topology view (plain DOM + SVG, MIT).
 The **interactive** graph lets you drag nodes, pan/zoom, and watch the open DeepDive's link angles
 follow the drag. To select it explicitly:
 
@@ -696,7 +697,7 @@ netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` で
 
 ## ほかの試し方
 
-**ライブ (live) の例題ラボ** — clone して `./demo.sh examples/q21-bgp-lp/q21.clab.yml` を実行します ([クイックスタート](#クイックスタート-containerlab-で例題を動かす)。`demo.sh` は全インターフェースで待ち受け、ログインはありません。[セキュリティ](#security-notes-ja) を参照してください)。
+**ライブ (live) の例題ラボ** — clone して `./xray.sh examples/q21-bgp-lp/q21.clab.yml` を実行します ([クイックスタート](#クイックスタート-containerlab-で例題を動かす)。`xray.sh` は全インターフェースで待ち受け、ログインはありません。[セキュリティ](#security-notes-ja) を参照してください)。
 
 ### ▶ ライブ (live) ラボ — GitHub Codespaces
 
@@ -730,7 +731,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 | SR Linux | 26.3.3 (containerlab で直接収集)・26.7.2 (netlab の BGP テスト対象、隣の FRR から判定) |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`、vrnetlab で構築したイメージ) |
 | netlab | 26.10 |
-| Node.js | 18 (`demo.sh` / イメージを使わない collector) |
+| Node.js | 18 (`xray.sh` / イメージを使わない collector) |
 
 <a id="maintenance-policy-ja"></a>
 生の出力を添えた issue を歓迎します。修正はここで行い、Pull Request はマージしません。
@@ -787,17 +788,18 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 <!-- nx_readme_quickstart (2026-10-07) -->
 ## クイックスタート: containerlab で例題を動かす
 
-![記録済みのクイックスタート: git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
+![記録済みのクイックスタート (前の名前 demo.sh で録った物): git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
 
 **必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)。
 
-> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`demo.sh` は画面を全部の口 (`0.0.0.0`・既定のポートは 8080・アドレスを変えるオプションはありません) で、ログインなしで開きます。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で使ってください。この機械の中だけにしたい時は、`sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` でラボを立て、下の collector / graph の手動の命令を使います。[詳しく](#security-notes-ja)
+> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`xray.sh` は画面を全部の口 (`0.0.0.0`・既定のポートは 8080・アドレスを変えるオプションはありません) で、ログインなしで開きます。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で使ってください。この機械の中だけにしたい時は、`sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` でラボを立て、下の collector / graph の手動の命令を使います。[詳しく](#security-notes-ja)
 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
 cd network-xray
-./demo.sh examples/q21-bgp-lp/q21.clab.yml     # deploy → 状態を集め続ける → graph を配信
+./xray.sh examples/q21-bgp-lp/q21.clab.yml     # deploy → 状態を集め続ける → graph を配信
 ```
+`xray.sh` は前は `demo.sh` という名前でした。`./demo.sh` も今まで通り動きます (`xray.sh` を動かします)。
 
 1. `==> open  http://<this machine>:8080/` が出るまで待つ (初回は FRR のイメージを取得するので数分かかることがある)。
 2. ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。
@@ -806,15 +808,15 @@ cd network-xray
    ```bash
    docker exec -it clab-q21-bgp-lp-r1 vtysh
    ```
-5. 解決版と比べる: Ctrl-C で止めて `./demo.sh examples/q21-bgp-lp-solved/q21.clab.yml`。
+5. 解決版と比べる: Ctrl-C で止めて `./xray.sh examples/q21-bgp-lp-solved/q21.clab.yml`。
 6. 片付け: Ctrl-C のあと `sudo containerlab destroy -t examples/q21-bgp-lp/q21.clab.yml --cleanup`。解決版も立てたなら `sudo containerlab destroy -t examples/q21-bgp-lp-solved/q21.clab.yml --cleanup` も。
 
-**ほかの例題:** `examples/` に 21 問 (q1〜q21・OSPF / BGP / static) と BGP の best path の見本 1 つ。各問に壊れた版と `-solved` の版、README (問題文・確かめ方・起動と停止) がある。どれも同じく `./demo.sh examples/<問>/<ファイル>.clab.yml` で動く。
+**ほかの例題:** `examples/` に 21 問 (q1〜q21・OSPF / BGP / static) と BGP の best path の見本 1 つ。各問に壊れた版と `-solved` の版、README (問題文・確かめ方・起動と停止) がある。どれも同じく `./xray.sh examples/<問>/<ファイル>.clab.yml` で動く。
 git を使わない場合は **[Releases](https://github.com/rclab-dev/network-xray/releases/latest)** から 1 問ずつのフォルダを取って、その中で `./run.sh` (:50080 で開く)。
 
 **自分の問題を作る:** `*.clab.yml` の隣に `problem.json` (問題文・注目する経路・帯を **✓ Solved** にする `check`) を置く — 書き方は [docs/problem-format.md](docs/problem-format.md) (英語)。
 
-**別の方法で立てたラボ (netlab など):** `demo.sh` はラボを作り直すので、netlab が入れた設定が消えます。こちらは使わず、いつもどおり (`netlab up`) ラボを立ててから、ラボのフォルダで collector と図を手で起動してください:
+**別の方法で立てたラボ (netlab など):** `xray.sh` はラボを作り直すので、netlab が入れた設定が消えます。こちらは使わず、いつもどおり (`netlab up`) ラボを立ててから、ラボのフォルダで collector と図を手で起動してください:
 
 > **始める前に:** 下の図は `127.0.0.1:8080` で待ち受けます。ほかの機械から開くため `0.0.0.0:8080` に変える場合、ログインはないため信頼できるネットワークの中で使ってください。[詳しく](#security-notes-ja)
 
@@ -822,8 +824,8 @@ git を使わない場合は **[Releases](https://github.com/rclab-dev/network-x
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
-OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://localhost:8080/` を開きます。パス表示は各ルータが報告する経路表から推定します。OSPF と BGP の両方があるラボでは `bgp` を使ってください (OSPF の隣接も読みます。コンテナと `demo.sh` は自動で選びます)。止める時は Ctrl-C のあと `kill %1` (collector)。
-`<network-xray>` に `problem.json` が残っていたら (古い `demo.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
+OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://localhost:8080/` を開きます。パス表示は各ルータが報告する経路表から推定します。OSPF と BGP の両方があるラボでは `bgp` を使ってください (OSPF の隣接も読みます。コンテナと `xray.sh` は自動で選びます)。止める時は Ctrl-C のあと `kill %1` (collector)。
+`<network-xray>` に `problem.json` が残っていたら (古い `xray.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
 
 <a id="netlab-tool-ja"></a>
 
@@ -872,17 +874,17 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 | 症状 | 対処 |
 |---|---|
 | `containerlab: command not found` | 入れる: <https://containerlab.dev/install/> (1 行で: `bash -c "$(curl -sL https://get.containerlab.dev)"`)。 |
-| `permission denied` / パスワードを聞かれる | containerlab は root が要る。`demo.sh` は `sudo` で動かす。ユーザが `clab_admins` と `docker` のグループにいれば `SUDO= ./demo.sh …`。 |
-| `address already in use` / `port 8080 is already in use` | 別の graph が 8080 を使っている。末尾にポート: `./demo.sh <lab.clab.yml> 8081`、または前のものを止める。 |
+| `permission denied` / パスワードを聞かれる | containerlab は root が要る。`xray.sh` は `sudo` で動かす。ユーザが `clab_admins` と `docker` のグループにいれば `SUDO= ./xray.sh …`。 |
+| `address already in use` / `port 8080 is already in use` | 別の graph が 8080 を使っている。末尾にポート: `./xray.sh <lab.clab.yml> 8081`、または前のものを止める。 |
 | 別の PC から開けない | そのマシンの IP で開く (`http://<IP>:8080/`)・ファイアウォールでポートを許可。WSL2 なら Windows から `http://localhost:8080/`。 |
 | 初回の起動が遅い | FRR のイメージを 1 回取得している — Docker Hub の `frrouting/frr` の **FRR 8.4** を digest で固定 (誰でも同じ版で動く・quay.io の FRR 10.x への移行は今後)。先に `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce` しておくと早い。 |
-| ノードの多いラボで collector が重い (5 台以上) | `demo.sh` は collector を常に 1 秒ごとに動かし、`--interval` は渡せません。間隔を空けたい時は repo のフォルダで 2 つの手順を自分で動かし、`--interval 2` (秒) を付けてください: `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (OSPF だけのラボは `ospf`・どちらも無ければ `static` = `demo.sh` が選ぶのと同じ) の後に `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 127.0.0.1:8080`。画面への反映は少し遅くなります。`docker run` / netlab のコンテナは既定で 2 秒ごとです。変える時は `--topo …` の後に `--interval N` を付けてください。 |
+| ノードの多いラボで collector が重い (5 台以上) | `xray.sh` は collector を常に 1 秒ごとに動かし、`--interval` は渡せません。間隔を空けたい時は repo のフォルダで 2 つの手順を自分で動かし、`--interval 2` (秒) を付けてください: `node clab-xray-collect.js <lab.clab.yml> . bgp --exclude-mgmt --watch --interval 2 &` (OSPF だけのラボは `ospf`・どちらも無ければ `static` = `xray.sh` が選ぶのと同じ) の後に `containerlab graph --topo <lab.clab.yml> --template xray-graph-nextui.html --static-dir . -s 127.0.0.1:8080`。画面への反映は少し遅くなります。`docker run` / netlab のコンテナは既定で 2 秒ごとです。変える時は `--topo …` の後に `--interval N` を付けてください。 |
 | `docker pull` が "toomanyrequests" (回数の上限) で失敗する | Docker Hub はログインなしの pull に回数の上限があり、IP アドレスごとに数える — 教室や会社など、同じ回線から大勢が一斉に始めると当たることがある。先に `docker login` しておく (無料のアカウントで上限が上がる)。 |
-| 起動直後に `zebra is not running` / ルータに IP や経路が無い | まれに (FRR 8.4 の試しでルータの起動 100 回に数回)、コンテナの起動直後に zebra が落ちて (何も出さずに落ちることもある)、ルータに IP アドレスや経路が入らないまま残ることがあります。FRR の起動時の不具合で、操作の誤りではありません。例題のラボはこの時に自分で FRR を立て直します (最大 3 回・`containerlab deploy` だけで立てた時も)。`run.sh` / `demo.sh` も立て直します。v1.0.0 / v1.0.1 のパッケージや自分で作ったラボでは、手で `docker exec clab-<ラボ名>-<ノード> /usr/lib/frr/watchfrr.sh restart all`。 |
+| 起動直後に `zebra is not running` / ルータに IP や経路が無い | まれに (FRR 8.4 の試しでルータの起動 100 回に数回)、コンテナの起動直後に zebra が落ちて (何も出さずに落ちることもある)、ルータに IP アドレスや経路が入らないまま残ることがあります。FRR の起動時の不具合で、操作の誤りではありません。例題のラボはこの時に自分で FRR を立て直します (最大 3 回・`containerlab deploy` だけで立てた時も)。`run.sh` / `xray.sh` も立て直します。v1.0.0 / v1.0.1 のパッケージや自分で作ったラボでは、手で `docker exec clab-<ラボ名>-<ノード> /usr/lib/frr/watchfrr.sh restart all`。 |
 | ルータの中が空 / 経路が出ない | 30〜60 秒待つ (OSPF/BGP は立ち上がりに時間がかかる)。空のままなら `docker ps` (ルータが動いているか) と `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`。 |
 | 前のラボが残っている | `sudo containerlab inspect --all` で一覧、`sudo containerlab destroy -t <lab.clab.yml> --cleanup` で消す。 |
 | WSL2 | Docker Desktop (WSL2 バックエンド) か WSL2 の中の Docker で動く。PowerShell ではなく Linux のシェルで打つ。 |
-| ラボを立て直したら直しが消えた | 直しは動いているコンテナの中だけに残る。ラボを立て直す(`./demo.sh`・`containerlab deploy`)と壊れた初期の設定から始まる。ルータの中で FRR だけを立て直しても、`write memory` の後でも初期の設定に戻ることがある。 |
+| ラボを立て直したら直しが消えた | 直しは動いているコンテナの中だけに残る。ラボを立て直す(`./xray.sh`・`containerlab deploy`)と壊れた初期の設定から始まる。ルータの中で FRR だけを立て直しても、`write memory` の後でも初期の設定に戻ることがある。 |
 | BGP で既定経路を流すラボ(netlab など)で `0.0.0.0/0` が選ばれない | 管理インターフェースが独自の既定経路を持つラボでは、それが BGP で学習した既定経路より優先される場合があります。X-Ray はルータが報告する経路表からパスを推定します。`--exclude-mgmt` で管理用の経路が非表示になる場合もあります。 |
 
 **Cisco IOS に慣れている人へ:** ルータは FRR です。よくある違い:
@@ -957,7 +959,7 @@ containerlab graph \
 
 ### インタラクティブな全体図 — `xray-graph-nextui.html`
 
-`demo.sh`・Docker イメージ・netlab tool の既定は `xray-graph-nextui.html` です。`xray-graph.html` を明示すると**静的・依存ゼロ**の SVG 全体図(素の DOM + SVG・MIT)になります。
+`xray.sh`・Docker イメージ・netlab tool の既定は `xray-graph-nextui.html` です。`xray-graph.html` を明示すると**静的・依存ゼロ**の SVG 全体図(素の DOM + SVG・MIT)になります。
 **インタラクティブ**なグラフ(ノードをドラッグ・パン/ズームし、開いた DeepDive のリンク角度が
 ドラッグに追随する)を明示的に選ぶには:
 

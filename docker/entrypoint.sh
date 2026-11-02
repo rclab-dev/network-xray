@@ -24,7 +24,7 @@ docker info >/dev/null 2>&1 || { echo "cannot talk to Docker: mount the socket (
 
 # a writable copy of the viewer: the collector writes xray-states.js next to the page
 rm -rf "$WORK"; mkdir -p "$WORK"; cp -a "$SRC"/. "$WORK"/; rm -rf "$WORK/examples" "$WORK/docker"
-# example labs: a problem.json next to the topology -> the problem band and ✓ Solved, as with demo.sh
+# example labs: a problem.json next to the topology -> the problem band and ✓ Solved, as with xray.sh
 # (the collector already reads it for the check). No problem.json (netlab / your own lab) -> no band.
 rm -f "$WORK/problem.json"
 [ -f "$(dirname "$TOPO")/problem.json" ] && cp "$(dirname "$TOPO")/problem.json" "$WORK/problem.json"

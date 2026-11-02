@@ -18,10 +18,10 @@ Nodes: r1 (FRR), r2 (FRR)
 ## Start
 From the repository root (`git clone https://github.com/rclab-dev/network-xray.git && cd network-xray`):
 ```bash
-./demo.sh examples/q3-ospf-solved/q3.clab.yml      # deploy -> keep collecting -> serve the graph
+./xray.sh examples/q3-ospf-solved/q3.clab.yml      # deploy -> keep collecting -> serve the graph
 ```
-Open **http://localhost:8080/** (from another machine: `http://<host-ip>:8080/`). Port in use? add a port: `./demo.sh examples/q3-ospf-solved/q3.clab.yml 8081`.
-The broken version (the problem): `./demo.sh examples/q3-ospf/q3.clab.yml` (stop this one first).
+Open **http://localhost:8080/** (from another machine: `http://<host-ip>:8080/`). Port in use? add a port: `./xray.sh examples/q3-ospf-solved/q3.clab.yml 8081`.
+The broken version (the problem): `./xray.sh examples/q3-ospf/q3.clab.yml` (stop this one first).
 From a release package (one folder per problem): run `./run.sh` in that folder and open `:50080`.
 
 ## What you see
@@ -47,7 +47,7 @@ sudo containerlab destroy -t examples/q3-ospf-solved/q3.clab.yml --cleanup
 ## Troubleshooting
 | Symptom | Fix |
 |---|---|
-| `address already in use` / `port … is already in use` | another graph is on the port: add a port (`./demo.sh <lab.clab.yml> 8081`; release package: `PORT=50081 ./run.sh`) or stop it |
+| `address already in use` / `port … is already in use` | another graph is on the port: add a port (`./xray.sh <lab.clab.yml> 8081`; release package: `PORT=50081 ./run.sh`) or stop it |
 | deploy says the lab `already exists` | from the repository: `sudo containerlab destroy -t examples/q3-ospf-solved/q3.clab.yml --cleanup` · release package: `./stop.sh` |
 | `http://…:8080/xray-core.js` returns HTML | normal — containerlab graph serves files under `/static/` |
 | `permission denied` from docker | add your user to the `docker` group, log in again |
@@ -78,10 +78,10 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 ## 起動
 リポジトリの直下で (`git clone https://github.com/rclab-dev/network-xray.git && cd network-xray`):
 ```bash
-./demo.sh examples/q3-ospf-solved/q3.clab.yml      # deploy → 状態を集め続ける → graph を配信
+./xray.sh examples/q3-ospf-solved/q3.clab.yml      # deploy → 状態を集め続ける → graph を配信
 ```
-ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。ポートが使用中なら末尾にポート: `./demo.sh examples/q3-ospf-solved/q3.clab.yml 8081`。
-壊れた版 (問題) と比べるなら: `./demo.sh examples/q3-ospf/q3.clab.yml` (先にこちらを止めてから)。
+ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。ポートが使用中なら末尾にポート: `./xray.sh examples/q3-ospf-solved/q3.clab.yml 8081`。
+壊れた版 (問題) と比べるなら: `./xray.sh examples/q3-ospf/q3.clab.yml` (先にこちらを止めてから)。
 リリースのパッケージ (1 問ずつのフォルダ) なら、そのフォルダで `./run.sh` を実行して `:50080` を開く。
 
 ## 画面の見方
@@ -107,7 +107,7 @@ sudo containerlab destroy -t examples/q3-ospf-solved/q3.clab.yml --cleanup
 ## 困ったとき
 | 症状 | 対処 |
 |---|---|
-| `address already in use` / `port … is already in use` | 別の graph がそのポートを使っている: 末尾にポートを付ける (`./demo.sh <lab.clab.yml> 8081`・リリースのパッケージなら `PORT=50081 ./run.sh`) か、それを止める |
+| `address already in use` / `port … is already in use` | 別の graph がそのポートを使っている: 末尾にポートを付ける (`./xray.sh <lab.clab.yml> 8081`・リリースのパッケージなら `PORT=50081 ./run.sh`) か、それを止める |
 | deploy で `already exists` | リポジトリなら: `sudo containerlab destroy -t examples/q3-ospf-solved/q3.clab.yml --cleanup`・リリースのパッケージなら: `./stop.sh` |
 | `http://…:8080/xray-core.js` が HTML になる | 正常。containerlab graph は部品を `/static/` の下で配る |
 | docker で `permission denied` | ユーザを `docker` グループに入れてログインし直す |

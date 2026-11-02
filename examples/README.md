@@ -7,7 +7,7 @@ Each of the 21 [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en) probl
 ## Start a lab
 From the repository root:
 ```bash
-./demo.sh examples/q21-bgp-lp/q21.clab.yml      # deploy -> keep collecting -> serve the X-Ray graph on :8080
+./xray.sh examples/q21-bgp-lp/q21.clab.yml      # deploy -> keep collecting -> serve the X-Ray graph on :8080
 ```
 Open **http://localhost:8080/** and click a router to open its DeepDive. Fix the lab in a router's shell (`docker exec -it clab-<lab name>-r1 vtysh`; the lab name is the `name:` in the `.clab.yml`, e.g. `q21-bgp-lp` / `q21-bgp-lp-solved`). In the problems (Q1–Q21) the band turns **✓ Solved** when the fault is fixed.
 Each folder has its own README (the problem, the nodes, how to start and stop it). Requirements, the release packages and troubleshooting: see the [main README](../README.md).
@@ -54,7 +54,7 @@ Put a `problem.json` next to your `*.clab.yml` (the problem text, the route to f
 ## ラボを起動する
 リポジトリの直下で:
 ```bash
-./demo.sh examples/q21-bgp-lp/q21.clab.yml      # deploy → 状態を集め続ける → X-Ray の graph を :8080 で配信
+./xray.sh examples/q21-bgp-lp/q21.clab.yml      # deploy → 状態を集め続ける → X-Ray の graph を :8080 で配信
 ```
 ブラウザで **http://localhost:8080/** を開き、ルータをクリックすると DeepDive が開きます。ルータのシェル(`docker exec -it clab-<ラボ名>-r1 vtysh`・ラボ名は `.clab.yml` の `name:`。例 `q21-bgp-lp` / `q21-bgp-lp-solved`)で直すと、問題(第1問〜第21問)では帯が **✓ Solved** になります。
 各フォルダに README があります(問題文・ノード・起動と停止)。必要なもの・リリースのパッケージ・困ったときは [本体の README](../README.md) へ。

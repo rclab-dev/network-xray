@@ -22,7 +22,7 @@
 ## Start
 - No install (recorded demo): https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html
 - GitHub Codespaces (real 3-router FRR lab, needs a GitHub login): https://codespaces.new/rclab-dev/network-xray?quickstart=1
-- containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./demo.sh examples/q21-bgp-lp/q21.clab.yml` then open http://localhost:8080/ (from another machine: http://<host-ip>:8080/)
+- containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./xray.sh examples/q21-bgp-lp/q21.clab.yml` then open http://localhost:8080/ (from another machine: http://<host-ip>:8080/)
 - Any running containerlab lab: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml`
 - netlab: add `defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]` and `tools: { network_xray: }` to the topology, then `netlab up`; open http://<host>:8600/
 

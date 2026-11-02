@@ -2,7 +2,7 @@
 
 Put a `problem.json` next to your `*.clab.yml` and network-xray shows the problem above the graph and, when the lab is fixed, a **✓ Solved** mark. Labs without a `problem.json` look exactly as before.
 
-If you don't use `demo.sh`, also put the `problem.json` in the folder you pass to `containerlab graph --static-dir` — the page reads the problem band from there (`demo.sh` links it for you). The `check` is read from the copy next to the `*.clab.yml`.
+If you don't use `xray.sh`, also put the `problem.json` in the folder you pass to `containerlab graph --static-dir` — the page reads the problem band from there (`xray.sh` links it for you). The `check` is read from the copy next to the `*.clab.yml`.
 
 The official examples in [`examples/`](../examples) all use this format. You can use it for your own containerlab labs too.
 
@@ -38,7 +38,7 @@ The problem band appears when the file has a title or a problem text.
   - **node** — a node name from your topology (`r1`). It reads that node's live state, collected by `clab-xray-collect.js`. If the node has no state yet, the condition does not hold.
   - **path** — a dot path into the node's state, e.g. `interfaces.eth1.up`. `{key}` is replaced with that node's own value, e.g. `interfaces.{wan_iface}.up`.
   - **op** and **value** — one of the 12 ops below.
-- The page checks the state every time it refreshes (about once a second). **✓ Solved appears once the check has held for about 10 seconds without a break** while the collector runs with `--watch` (as `demo.sh` does), so a lab that is still converging does not flash Solved. It disappears again as soon as the check stops holding. With a one-shot collect (no `--watch`) the page does not refresh by itself, so one pass is enough.
+- The page checks the state every time it refreshes (about once a second). **✓ Solved appears once the check has held for about 10 seconds without a break** while the collector runs with `--watch` (as `xray.sh` does), so a lab that is still converging does not flash Solved. It disappears again as soon as the check stops holding. With a one-shot collect (no `--watch`) the page does not refresh by itself, so one pass is enough.
 - A broken condition (wrong shape, unknown op) never throws: it simply does not hold, and the browser console shows one warning.
 
 ### Ops

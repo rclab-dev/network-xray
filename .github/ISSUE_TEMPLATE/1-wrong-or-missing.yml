@@ -16,7 +16,7 @@ body:
       options:
         - netlab tool (tools.network_xray)
         - docker run with a containerlab lab
-        - demo.sh / run.sh (examples or a release package)
+        - xray.sh / run.sh (examples or a release package)
         - GitHub Codespaces
         - Other (say below)
     validations:
@@ -89,7 +89,7 @@ body:
         - netlab tool / docker run: copy it out of the running network-xray container:
           `docker cp <network-xray container>:/tmp/network-xray/xray-states.js .`
           (the container name: `docker ps | grep network` — with netlab it is `<lab>_network_xray`)
-        - demo.sh / run.sh: the file `xray-states.js` in the repository folder (or the package folder).
+        - xray.sh / run.sh: the file `xray-states.js` in the repository folder (or the package folder).
         It holds the routers' state (addresses, neighbors, routes), not passwords. Remove anything you do not want public, then attach the file or paste the part for the node.
 
   - type: textarea
