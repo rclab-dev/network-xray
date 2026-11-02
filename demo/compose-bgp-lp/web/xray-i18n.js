@@ -514,5 +514,10 @@ window.xrayI18n = {
   "r1 iBGP Active (2.2.2.2 未学習)": "r1 iBGP Active (2.2.2.2 not learned)",
   "r3 return path 消失 (r1-r2 撤回)": "r3 return path lost (r1-r2 withdrawn)",
   "r1 → 8.8.8.8 不達": "r1 → 8.8.8.8 unreachable",
-  "iBGP Active + return path 無": "iBGP Active + no return path"
+  "iBGP Active + return path 無": "iBGP Active + no return path",
+  /* sample view (clab-xray-bridge.js SYNTHETIC_BADGE / SYNTHETIC_TAG) */
+  "見本の図 — ルータにはつないでいません": "Sample view — not connected to the routers",
+  "トポロジのファイルから形だけを描いています。色・線・状態は実物ではありません。実物を見るには、ラボを立てて ./xray.sh <ラボ>.clab.yml で開いてください。": "Only the shape is drawn, from the topology file. Colors, lines and states are not real. To see the real state, start the lab and open it with ./xray.sh <lab>.clab.yml.",
+  "トポロジのファイルから形だけを描いています。色・線・状態は実物ではありません。実物を見るには、ラボを立てて xray.sh で開いてください (このページはルータにつながりません)。": "Only the shape is drawn, from the topology file. Colors, lines and states are not real. To see the real state, start the lab and open it with xray.sh (this page never connects to routers).",
+  "(見本)": "(sample)"
 };
