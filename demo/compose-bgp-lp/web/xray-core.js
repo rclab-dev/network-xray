@@ -3630,6 +3630,7 @@ function xrayBgpDeepLines(s, opts) {
           lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + _xrayNbrTag(_nb) /* nx_if_tag */ + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _st + '</span>', cls: "re-ospf-nbr", style: _cxHide });
         });
       }
+      if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2): BGP + OSPF too (the empty list left the line out) */
     } else {
     if (_reStat) lines.push({text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_reStat) + '">' + _reStat + '</span>'});
     if (_reStat === "Running") lines.push({text: '> Neighbor: ' + (_reFull ? '<span style="color:#39ff14">Full</span>' : _xrayOspfNbrSpan(_xrayOspfNbrWord(_reNbr)))});
