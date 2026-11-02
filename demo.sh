@@ -89,6 +89,11 @@ sleep 8
 echo ""
 echo "==> open  http://<this machine>:${PORT}/   (Ctrl-C to stop)"
 echo "    Click any router to open its DeepDive. Fix the lab in a router's shell, e.g.:"
-echo "      docker exec -it clab-${LABNAME}-r1 vtysh"
+# nx_iol_demo_msgs: the shell by node kind (IOL has no vtysh: ssh with containerlab's cisco_iol default login)
+_frrn="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*linux.*/\1/p' "$YML" | head -1)"
+_ioln="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*cisco_iol.*/\1/p' "$YML" | head -1)"
+[ -n "$_frrn" ] && echo "      docker exec -it clab-${LABNAME}-${_frrn} vtysh"
+[ -n "$_ioln" ] && echo "      ssh admin@clab-${LABNAME}-${_ioln}   (password: admin)"
+[ -z "$_frrn$_ioln" ] && echo "      docker exec -it clab-${LABNAME}-r1 vtysh"
 echo "    and the picture follows within a few seconds."
 containerlab graph --topo "$YML" --template "$TEMPLATE" --static-dir "$HERE" -s "0.0.0.0:${PORT}"
