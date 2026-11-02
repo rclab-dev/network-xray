@@ -38,6 +38,8 @@ Each folder has its own README (the problem, the nodes, how to start and stop it
 | `q21-bgp-lp` / `q21-bgp-lp-solved` | `q21.clab.yml` | 3 | Problem 21 — "Two ISPs, yet everything takes the slow one" |
 | `bgp-bestpath-multiprefix` / `bgp-bestpath-multiprefix-solved` | `multiprefix.clab.yml` | 3 | Extra — a different best-path winner per prefix (Local Preference vs AS-Path) (no ✓ Solved check) |
 
+Cisco IOL (IOS-XE) versions of three problems (bring your own IOL image; see each folder's README): `q5-ospf-iol` / `q5-ospf-iol-solved`, `q15-bgp-ospf-static-iol` / `q15-bgp-ospf-static-iol-solved`, `q21-bgp-lp-iol` / `q21-bgp-lp-iol-solved`.
+
 Hints and the explanation of each problem are on RouteCrushLab — the problem card in the page has a **"Solve it on RouteCrushLab (guest)"** button (no account needed).
 
 ## Your own problem
@@ -84,6 +86,8 @@ Put a `problem.json` next to your `*.clab.yml` (the problem text, the route to f
 | `q20-bgp` / `q20-bgp-solved` | `q20.clab.yml` | 2 | 第20問「送ったはずの経路が相手に載らない」 |
 | `q21-bgp-lp` / `q21-bgp-lp-solved` | `q21.clab.yml` | 3 | 第21問「2つのISPがあるのに遅い方ばかり」 |
 | `bgp-bestpath-multiprefix` / `bgp-bestpath-multiprefix-solved` | `multiprefix.clab.yml` | 3 | 追加の見本 — プレフィックスごとに Best-Path の勝者が違う(Local Preference と AS-Path)(✓ Solved の判定なし) |
+
+3 問は Cisco IOL (IOS-XE) 版もあります(IOL のイメージは自分で用意。各フォルダの README を参照): `q5-ospf-iol` / `q5-ospf-iol-solved`・`q15-bgp-ospf-static-iol` / `q15-bgp-ospf-static-iol-solved`・`q21-bgp-lp-iol` / `q21-bgp-lp-iol-solved`。
 
 各問のヒントと解説は RouteCrushLab にあります — 画面の問題カードの **「RouteCrushLab で解く (guest)」** から(アカウント不要)。
 
