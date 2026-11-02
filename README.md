@@ -596,6 +596,31 @@ If the prefix is in more than one VRF, add the VRF name as a fifth argument (`wh
 A missing file, an unknown node, an unknown prefix or a wrong number of arguments prints `{"error": "..."}` and exits
 with code 2.
 
+### MCP server (stdio)
+
+`scripts/xray-mcp.js` serves the same two questions to an MCP client (Claude Desktop, Claude Code, …) over stdio,
+with no dependencies. Tools: `lab_state` (`path`) and `why_best_path` (`path`, `node`, `prefix`, optional `vrf`).
+It is read-only: it only reads the path it is given, never runs commands on routers and never writes files.
+It speaks the initialize-based MCP revisions (2024-11-05 to 2025-11-25), which current MCP clients use over stdio;
+the stateless 2026-07-28 revision is not implemented.
+
+```json
+{
+  "mcpServers": {
+    "network-xray": {
+      "command": "node",
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+    }
+  }
+}
+```
+
+With Claude Code: `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js` (on Windows, give the
+`C:\...\scripts\xray-mcp.js` path). If you add it with `--scope project`, Claude Code asks once before it starts the server.
+
+Then ask, for example, "use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15" or "why does r1 pick
+its path to 8.8.8.0/24?". Relative paths are resolved from the server's working directory, so absolute paths are safest.
+
 ## Embed the DeepDive in your own tool
 
 X-Ray's per-node **DeepDive** is a self-contained component you can drop into another UI —
