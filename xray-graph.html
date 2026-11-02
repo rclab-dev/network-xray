@@ -235,12 +235,14 @@ window.__xrayGraphBoot = function () {
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }
 
+  /* nx_xss_graph (2026-11-02): node names from the topology go into innerHTML -> escape. Defined here, outside showNode,
+     because the overview below uses it too (inside showNode the overview could not see it and stopped with a ReferenceError). */
+  function _nxEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
   // ================= node click → deepViews (one view with all of the node's links) =================
   function showNode(nodeId){
     window.__xrayCurNode = nodeId;   // remember the open node so the live poll can refresh it in place
     document.querySelectorAll('.ov-node').forEach(function(e){e.classList.toggle('sel', e.getAttribute('data-n')===nodeId);});
-    /* nx_xss_graph (2026-11-02): node names from the topology go into innerHTML -> escape */
-    function _nxEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
     var box=document.getElementById('peers'); box.innerHTML='';
     var views = window.clabXray.deepViews(fullCfg, nodeId, { state: window.LIVE_STATES && window.LIVE_STATES[nodeId], focusPrefix: window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.prefix });   // ← bridge (b)  /* nx_default_pair */
     if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
