@@ -239,7 +239,7 @@ function parseRoutes(text, warn) {
     return nhs;
   }
   lines(text).forEach(function (raw) {
-    var l = raw.replace(/\s+$/, '');
+    var l = raw.trimEnd();   // not /\s+$/: that regex is quadratic on a long line of inner blanks
     if (/--More--/.test(l)) { cur = null; return; }   // nx_ios_unparsed: what follows the pager prompt is not the previous route's next hop
     if (!l.trim() || /^Codes:|^\s{7}[A-Za-z0-9]+ - |^Gateway of last resort/.test(l)) return;
     var h = headRe.exec(l);
@@ -350,17 +350,20 @@ function parseBgpRoutes(text, warn) {
               lpEnd: H.indexOf('LocPrf') + 6, wEnd: H.indexOf('Weight') + 6, path: H.indexOf('Path') };
   var lastPrefix = null, pendingStatus = null, pendingRaw = null;
   for (var k = hi + 1; k < ls.length; k++) {
-    var line = ls[k].replace(/\s+$/, '');
+    var line = ls[k].trimEnd();
     if (/--More--/.test(line)) { lastPrefix = null; pendingStatus = null; pendingRaw = null; continue; }   // nx_ios_unparsed: a path after the cut is not the previous prefix's
     if (!line.trim() || /^Total number|^Displayed|^RPKI/.test(line.trim())) continue;
     // Rows are NOT always aligned to the header (some IOS builds print rows 2 chars left of it), so
     // status / network / next hop are taken by pattern, and the numeric columns are judged against
     // the header positions shifted by how far THIS row's next hop sits from the header's "Next Hop".
-    var onlyNet = /^\s*([sdhrSmbfxac=*>i ]*?)\s*(\d{1,3}(?:\.\d{1,3}){3}(?:\/\d+)?)\s*$/.exec(line);
+    var onlyNet = /^((?:\s*[sdhrSmbfxac=*>i](?: *[sdhrSmbfxac=*>i])*)?)\s*(\d{1,3}(?:\.\d{1,3}){3}(?:\/\d+)?)\s*$/.exec(line);
     if (onlyNet && /[*>]/.test(onlyNet[1])) {   // wrapped: status+network only, next hop on the next line
       pendingStatus = onlyNet[1].replace(/\s+/g, ''); pendingRaw = onlyNet[1].trim().replace(/\s+/g, ' '); lastPrefix = onlyNet[2]; continue;   /* nx_bgp_status_raw */
     }
-    var rm = /^\s*([sdhrSmbfxac=*>i ]*?)\s*(\d{1,3}(?:\.\d{1,3}){3}(?:\/\d+)?)?\s+(\d{1,3}(?:\.\d{1,3}){3})(?=\s|$)/.exec(line);
+    // (the leading blanks belong to the status, the status ends on a status char and the network takes its own
+    // blanks: each blank has one way to match, so a long line of blanks is linear, not cubic. rm[1] / onlyNet[1]
+    // may now start with blanks; they are only read with the blanks removed, so the values are unchanged.)
+    var rm = /^((?:\s*[sdhrSmbfxac=*>i](?: *[sdhrSmbfxac=*>i])*)?)(?:\s*(\d{1,3}(?:\.\d{1,3}){3}(?:\/\d+)?))?\s+(\d{1,3}(?:\.\d{1,3}){3})(?=\s|$)/.exec(line);
     if (!rm) { pendingStatus = null; lastPrefix = null; unread(warn, 'show ip bgp', line); continue; }
     var status = rm[1].replace(/\s+/g, ''), statusRaw = rm[1].trim().replace(/\s+/g, ' ');   /* nx_bgp_status_raw: as printed */
     if (!status && pendingStatus != null) { status = pendingStatus; statusRaw = pendingRaw; }
@@ -648,7 +651,9 @@ function splitByPrompt(raw) {
     }
     // a syslog line that interrupts an output (e.g. "%OSPF-4-ERRRCV: ... mismatched area ID" on a console):
     // not part of the show, so it is left out of the text and only counted (no `logging synchronous`: read-only)
-    if (/^\s*\*?[A-Za-z]{0,3}\s*[\d:. ]*%[A-Z0-9_]+-\d-[A-Z0-9_]+:/.test(l)) { out.__syslog = (out.__syslog || 0) + 1; return; }
+    // (written so that no blank can be matched two ways: the plain `\s*\*?[A-Za-z]{0,3}\s*[\d:. ]*` form is
+    // quadratic on a long line of blanks; it accepts the same lines)
+    if (/^\s*(?:(?:\*[A-Za-z]{0,3}|[A-Za-z]{1,3})\s*)?(?:[\d:.][\d:. ]*)?%[A-Z0-9_]+-\d-[A-Z0-9_]+:/.test(l)) { out.__syslog = (out.__syslog || 0) + 1; return; }
     if (cur) buf.push(l);
   });
   if (cur) out[cur] = buf.join('\n');

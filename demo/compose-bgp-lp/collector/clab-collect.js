@@ -68,6 +68,9 @@ function _ospfVrfParts(j, key) {
     .map(function (k) { return { vrf: j[k].vrfName || k, obj: j[k] }; });
 }
 
+// a json field that must be text: anything else (object / number / true from broken output) counts as missing
+function _str(v) { return typeof v === 'string' ? v : ''; }
+
 // show ip ospf neighbor json -> { byIface: { eth0: {rid,address,state,full} }, list:[...] }
 function parseOspfNeighbors(j) {
   var out = { byIface: {}, list: [] };
@@ -77,7 +80,7 @@ function parseOspfNeighbors(j) {
     var arr = j.neighbors[rid]; if (!Array.isArray(arr)) arr = [arr];
     arr.forEach(function (n) {
       if (!n || typeof n !== 'object') return;   /* a null / non-object neighbor entry (broken output) is skipped, not a crash */
-      var state = n.state || n.nbrState || n.converged || '';   // "Full/DR", "Init/-", "2-Way/DROther"
+      var state = _str(n.state) || _str(n.nbrState) || _str(n.converged);   // "Full/DR", "Init/-", "2-Way/DROther"
       // FRR 8.x `show ip ospf neighbor json` reports ifaceName as "eth1:10.1.12.2" (iface:local-ip);
       // strip the :ip so it matches the bare clab link iface (eth1) used for peer mapping & labels.
       // (route nexthop interfaceName and ospf-interface keys are already bare.)
@@ -267,7 +270,7 @@ function parseRoutes(j, _vrf) {
       if (!r || typeof r !== 'object') return;
       /* nexthops not an array / null entries (broken output) -> skipped, not a crash */
       var nhs = (Array.isArray(r.nexthops) ? r.nexthops : []).filter(function (nh) { return nh && typeof nh === 'object'; }).map(function (nh) {
-        return { ip: nh.ip || null, iface: nh.interfaceName || nh.interface || '', connected: !!nh.directlyConnected, active: nh.active !== false,
+        return { ip: _str(nh.ip) || null, iface: _str(nh.interfaceName) || _str(nh.interface), connected: !!nh.directlyConnected, active: nh.active !== false,
                  fib: nh.fib === true };   /* nx_ecmp: installed in the FIB (FRR sets fib:true only on the next-hops it uses) */
       });
       var _rr = {
@@ -300,7 +303,7 @@ function parseBgpSummary(j) {
   if (!peers) return;
   Object.keys(peers).forEach(function (ip) {
     var p = peers[ip] || {};
-    var st = p.state || p.peerState || '';
+    var st = _str(p.state) || _str(p.peerState);
     var rec = { ip: ip, state: st, established: /establ/i.test(st), remoteAs: p.remoteAs, localAs: p.localAs, ibgp: (p.remoteAs != null && p.localAs != null && p.remoteAs === p.localAs),
       upDown: p.peerUptime, pfxRcd: p.pfxRcd, hostname: p.hostname || '' };  /* nx_collect_peer_map: the peer's hostname (BGP hostname capability) */   /* nx_bgp_nbr_detail (2026-10-06): Up/Down + PfxRcd for the RE panel neighbor fold */
     if (part.vrf && part.vrf !== 'default') rec.vrf = part.vrf;   /* nx_vrf_all */
@@ -329,11 +332,11 @@ function parseBgpRoutes(j) {
     var arr = routes[prefix]; if (!Array.isArray(arr)) arr = [arr];
     arr.forEach(function (r) {
       if (!r || typeof r !== 'object') return;
-      var nh = (r.nexthops && r.nexthops[0] && r.nexthops[0].ip) || (r.peerId) || '';
+      var nh = (r.nexthops && r.nexthops[0] && _str(r.nexthops[0].ip)) || _str(r.peerId);
       /* nx_bgp_prefixlen (2026-10-23): FRR's "prefix" field has no length ("203.0.113.0", length in prefixLen) -> keep prefix as it was
          (problem.json checks compare it) and carry the length in prefixlen (from prefixLen, else from the "net/len" key) */
       var _pl = (r.prefixLen != null) ? +r.prefixLen : (/\/(\d+)$/.exec(String(r.prefix || prefix)) || [])[1];
-      out.push({ prefix: r.prefix || prefix, prefixlen: (_pl != null && _pl !== '' && !isNaN(+_pl)) ? +_pl : null, nextHop: nh, best: !!(r.bestpath || r.bestPath),
+      out.push({ prefix: _str(r.prefix) || prefix, prefixlen: (_pl != null && _pl !== '' && !isNaN(+_pl)) ? +_pl : null, nextHop: nh, best: !!(r.bestpath || r.bestPath),
         as_path: (r.path != null ? String(r.path).trim() : ''),
         local_pref: (r.locPrf != null ? r.locPrf : (r.localPref != null ? r.localPref : null)),
         weight: r.weight, metric: r.metric, origin: r.origin,
