@@ -1,16 +1,16 @@
 # network-xray
 
-> Browser view of why a router chose its path, read from the live state of FRR / Nokia SR Linux routers in a containerlab or netlab lab. It shows the BGP candidate routes and the reason the best path won (Best-Path Decision), OSPF adjacency state and OSPF-learned routes, interfaces and the routing table, as a topology view plus a per-router "DeepDive". Read-only: it runs show commands and changes nothing.
+> Browser view of why a router chose its path, read from the live state of FRR / Nokia SR Linux / Cisco IOS-XE (IOL) routers in a containerlab or netlab lab. It shows the BGP candidate routes and the reason the best path won (Best-Path Decision), OSPF adjacency state and OSPF-learned routes, interfaces and the routing table, as a topology view plus a per-router "DeepDive". Read-only: it runs show commands and changes nothing.
 
 ## What it is
 - A descriptive renderer of live router state, not a simulator and not a config checker.
-- Input: live state. FRR is read with `docker exec <node> vtysh -c '<show command>'`; SR Linux with `sr_cli 'info from state … | as json'`.
+- Input: live state, read-only commands only. FRR: `docker exec <node> vtysh -c '<show command>'`. SR Linux: `docker exec <node> sr_cli 'info from state … | as json'`. Cisco IOL: SSH, `terminal length 0` and `terminal width 0` (for that session only), then plain-text `show ip ospf neighbor`, `show ip ospf interface [brief]`, `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show ip protocols`, `show bridge-domain` (login `NX_IOS_USER` / `NX_IOS_PASSWORD`, default admin / admin).
 - Output: a web page (topology + per-router DeepDive) that updates every few seconds while the lab runs.
 
 ## Supported
-- Routers read: FRRouting (FRR) and Nokia SR Linux. Other nodes (Linux hosts, cEOS, …) are drawn in the topology but not read.
+- Routers read (by containerlab kind, see `VENDORS` in clab-xray-collect.js): FRRouting (FRR); Nokia SR Linux (`nokia_srlinux`, clab-srl-collect.js); Cisco IOS-XE IOL (`cisco_iol`, clab-iosxe-collect.js; OSPFv2 and BGP, global table only). Other nodes (Linux hosts, cEOS, …) are drawn in the topology but not read.
 - Lab tools: containerlab; netlab (as a netlab tool, netlab 26.10).
-- Protocols shown: BGP (sessions, BGP table, best path and why), OSPFv2 and OSPFv3 (neighbors, interfaces and their areas, OSPF-learned routes; the LSDB panel lists the routes learned through OSPF, from the routing table (`show ip route … json` / `show ipv6 route … json`) — `show ip ospf database` is not read), static routes. Interfaces, routes, OSPF, BGP sessions and the BGP table (best path) inside VRFs are read too; on a router with VRFs the Routing table and the BGP Table show one VRF at a time (a VRF button switches; the management VRF `mgmt` gets no button). The IPv6 BGP table is not read. A passive OSPF interface is shown as a state, not as a fault.
+- Protocols shown: BGP (sessions, BGP table, best path and why), OSPFv2 and OSPFv3 (neighbors, interfaces and their areas, OSPF-learned routes; the LSDB panel lists the routes learned through OSPF, from the routing table (`show ip route … json` / `show ipv6 route … json`) — `show ip ospf database` is not read; SR Linux is the exception: its LSDB panel is read from its OSPF link-state database), static routes. OSPFv3 and VRFs: FRR only. Interfaces, routes, OSPF, BGP sessions and the BGP table (best path) inside VRFs are read too; on a router with VRFs the Routing table and the BGP Table show one VRF at a time (a VRF button switches; the management VRF `mgmt` gets no button). The IPv6 BGP table is not read. A passive OSPF interface is shown as a state, not as a fault.
 - Image: ghcr.io/rclab-dev/network-xray:1 (linux/amd64, linux/arm64). License: MIT.
 
 ## FRR fields it reads
@@ -22,9 +22,18 @@
 ## Start
 - No install (recorded demo): https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html
 - GitHub Codespaces (real 3-router FRR lab, needs a GitHub login): https://codespaces.new/rclab-dev/network-xray?quickstart=1
-- containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./xray.sh examples/q21-bgp-lp/q21.clab.yml` then open http://localhost:8080/ (from another machine: http://<host-ip>:8080/)
-- Any running containerlab lab: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml`
+- containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./xray.sh examples/q21-bgp-lp/q21.clab.yml` (deploys the lab; needs containerlab and Node.js; usage `./xray.sh [lab.clab.yml] [port] [template.html]`, port default 8080) then open http://localhost:8080/ (from another machine: http://<host-ip>:8080/)
+- Any running containerlab lab: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` then open http://localhost:8600/ (run it from the lab folder; `-p 8600:8600` opens it to other machines; options after `--topo`: `--port`, `--proto auto|ospf|bgp|static`, `--interval <s>`)
 - netlab: add `defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]` and `tools: { network_xray: }` to the topology, then `netlab up`; open http://<host>:8600/
+
+## Query from scripts and AI assistants (read-only, no router contacted)
+- Input `<path>`: a `state_<node>.json` or a directory of them (e.g. `test/fixtures/iosxe-q15`), the `xray-states.js` written by clab-xray-collect.js, or a directory of saved FRR `show … json` files (`frr-collect.js --from-dir` layout, e.g. `fixtures/frr-collect-sample/r1`).
+- CLI: `node scripts/xray-query.js state <path>` (nodes, links, OSPF adjacencies, BGP sessions, counts) and `node scripts/xray-query.js why <path> <node> <prefix> [vrf]` (BGP best path and the stored reason; `reason` is null with a `note` when the data has none). Prints one JSON object; errors print `{"error": "..."}` and exit 2.
+- MCP server: `node scripts/xray-mcp.js` (stdio, JSON-RPC 2.0, one message per line; MCP revisions 2024-11-05 to 2025-11-25). Tools: `lab_state {path}` and `why_best_path {path, node, prefix, vrf?}`, the same answers as xray-query.js. It only reads the given path: no commands, no file writes, no network. Claude Code: `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js`.
+
+## Tests (Node 18+, no dependencies, no package.json; run from the repo root)
+- `node --test` runs `test/*.test.js` (fixtures in `test/fixtures/`).
+- Self-tests: `node bgp-parse.js`, `node clab-collect.js --self-test`, `node clab-srl-collect.js --self-test`, `node clab-iosxe-collect.js --self-test`, `node frr-collect.js --self-test`, `node scripts/hello-kf-selftest.js`.
 
 ## Limits and cautions
 - The container is given the Docker socket (root-equivalent on the host): use it on lab machines only.
