@@ -396,7 +396,7 @@ function parseBgpRoutes(text, warn) {
     var origin = (/\s?([ie?])$/.exec(pathStr) || [])[1] || '';
     var asPath = pathStr.replace(/\s?[ie?]$/, '').trim();
     out.push({ prefix: prefix, nextHop: nhM[1], best: status.indexOf('>') >= 0, valid: status.indexOf('*') >= 0, status_raw: statusRaw,
-               ibgp: /i/.test(status.replace(/[^i]/g, '')) && status.indexOf('i') > 0,
+               ibgp: status.indexOf('i') >= 0,   // 'i' is only ever "internal" in the status column, also when it stands alone (not valid: "  i")
                as_path: asPath, local_pref: lp, weight: w, metric: metric,
                origin: origin === 'i' ? 'IGP' : origin === 'e' ? 'EGP' : origin === '?' ? 'incomplete' : '', reason: '' });
   }
@@ -451,7 +451,7 @@ function explainBestPath(routes) {
     var firstAs = function (r) { return (r.as_path.split(/\s+/)[0] || ''); };
     var deepest = -1;
     paths.forEach(function (o) {
-      if (o === best) return;
+      if (o === best || o.valid === false) return;   // a not-valid path (no '*') is not a best-path candidate
       var step = -1;
       for (var i = 0; i < BP_STEPS.length; i++) {
         var s = BP_STEPS[i];
