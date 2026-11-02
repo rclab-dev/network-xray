@@ -725,6 +725,9 @@ function sshCollect(host) {
       env: Object.assign({}, process.env, { SSH_ASKPASS: ap, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || ':0', NX_IOS_ASKPASS_VALUE: pass }) });
     if (r.error && r.error.code === 'ETIMEDOUT') { process.stderr.write('NX_UNREAD timeout\n'); _exit(124); }
     var out = splitByPrompt(r.stdout || '');
+    /* nx_cli_msgs: these two are not "still booting" - say what to fix instead of retrying silently */
+    if (r.error && r.error.code === 'ENOENT') { process.stderr.write('!! ssh not found on this machine: install an OpenSSH client (IOS nodes are read over SSH)\n'); _exit(2); }
+    if (!Object.keys(out).length && /Permission denied|Authentication failed/i.test(r.stderr || '')) { process.stderr.write('!! SSH login to ' + host + ' was denied: set NX_IOS_USER / NX_IOS_PASSWORD (default admin / admin)\n'); _exit(2); }
     if (!Object.keys(out).length) { process.stderr.write('NX_UNREAD device (no IOS prompt from ' + host + ': ' + String(r.stderr || '').trim().slice(0, 200) + ')\n'); _exit(3); }
     return out;
   } finally { askp.remove(); }

@@ -100,7 +100,9 @@ for c in $(docker ps --filter "label=containerlab=${LAB}" --format '{{.Names}}')
 done
 set -e
 
-echo "==> collecting router state every second (the page follows the lab by itself) ..."
+# nx_cli_msgs: the IOS read interval is said only when the lab has a Cisco IOL node
+_iosint=""; grep -qsE "kind:[[:space:]]*cisco_iol" "$YML" && _iosint=", Cisco IOS every ${NX_IOS_INTERVAL:-10} s"
+echo "==> collecting router state every second${_iosint} (the page follows the lab by itself) ..."
 node "$HERE/clab-xray-collect.js" "$YML" "$HERE" "$PROTO" --exclude-mgmt --watch &
 CPID=$!   # the EXIT trap (set above, nx_demo_pj_cleanup) stops it and removes the problem.json link
 sleep 8
@@ -109,10 +111,13 @@ echo ""
 echo "==> open  http://<this machine>:${PORT}/   (Ctrl-C to stop)"
 echo "    Click any router to open its DeepDive. Fix the lab in a router's shell, e.g.:"
 # nx_iol_demo_msgs: the shell by node kind (IOL has no vtysh: ssh with containerlab's cisco_iol default login)
-_frrn="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*linux.*/\1/p' "$YML" | head -1)"
+# nx_cli_msgs: an FRR node is a linux node with an frr image (alpine hosts are linux too and have no vtysh)
+_frrn="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*linux[^}]*image:[^,}]*frr.*/\1/p' "$YML" | head -1)"
 _ioln="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*cisco_iol.*/\1/p' "$YML" | head -1)"
+_srln="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*nokia_srlinux.*/\1/p' "$YML" | head -1)"
 [ -n "$_frrn" ] && echo "      docker exec -it clab-${LABNAME}-${_frrn} vtysh"
 [ -n "$_ioln" ] && echo "      ssh admin@clab-${LABNAME}-${_ioln}   (password: admin)"
-[ -z "$_frrn$_ioln" ] && echo "      docker exec -it clab-${LABNAME}-r1 vtysh"
+[ -n "$_srln" ] && echo "      docker exec -it clab-${LABNAME}-${_srln} sr_cli"
+[ -z "$_frrn$_ioln$_srln" ] && echo "      docker exec -it clab-${LABNAME}-<node> vtysh   (FRR; sr_cli on SR Linux, ssh on Cisco IOL)"
 echo "    and the picture follows within a few seconds."
 containerlab graph --topo "$YML" --template "$TEMPLATE" --static-dir "$HERE" -s "0.0.0.0:${PORT}"

@@ -352,7 +352,7 @@ function run(lab, prefix, done) {
       if (nd && typeof nd !== 'object') nd = null;
       if (!nd) { row.nodes.push({ node: n, status: 'error', message: 'no node ' + n + ' in the lab' }); return false; }
       if (t.devices && t.devices.indexOf(nd.device) < 0) { row.nodes.push({ node: n, status: 'skip', message: 'device ' + nd.device + ' is not in the test' }); return false; }
-      if (nd.device !== 'frr') { row.nodes.push({ node: n, status: 'unsupported', message: 'device ' + nd.device }); return false; }
+      if (nd.device !== 'frr') { row.nodes.push({ node: n, status: 'unsupported', message: 'device ' + nd.device + ' (only frr nodes are checked)' }); return false; }
       return true;
     });
     var k = 0;

@@ -287,7 +287,7 @@ function collectAll() {
         || ((e && e.code === 'ETIMEDOUT') || /exit 124$/.test(String((e && e.message) || '')) ? 'timeout' : '');
       if (_why) {
         if (_why === 'timeout') retryAt[n] = Date.now() + RETRY_MS;
-        var _um = '  ' + n + ' cannot be read: ' + ({ stopped: 'the container is not running', device: 'not a router network-xray reads (no vtysh / sr_cli) - drawn only', timeout: 'no answer - showing its last good state as stale' })[_why];
+        var _um = '  ' + n + ' cannot be read: ' + ({ stopped: 'the container is not running (check: docker ps -a)', device: 'not a router network-xray reads (no vtysh / sr_cli) - drawn only', timeout: 'no answer - showing its last good state as stale' })[_why];
         if (_why === 'device' && typeof isIos === 'function' && isIos(kindOf[n])) _um = '  ' + n + ' not ready yet (IOL is booting, SSH not up yet) - retrying';   /* nx_iol_demo_msgs: an IOL node is a router network-xray reads; device here = still booting */
         if (!(failSeen[n] && failSeen[n].msg === _um)) { console.error(_um); failSeen[n] = { msg: _um, count: 1 }; } else failSeen[n].count++;
         states[n] = (_why === 'timeout' && lastGood[n]) ? Object.assign({}, lastGood[n], { nx_unread: 'timeout', nx_stale_since: lastGoodAt[n] })
