@@ -117,7 +117,8 @@ function ipv4Net(s) {
   var m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)(?:\/(\d+))?$/.exec(String(s).trim());
   if (!m) return null;
   var len = m[5] === undefined ? 32 : +m[5], n = 0;
-  for (var i = 1; i <= 4; i++) n = n * 256 + (+m[i]);
+  if (len > 32) return null;
+  for (var i = 1; i <= 4; i++) { if (+m[i] > 255) return null; n = n * 256 + (+m[i]); }
 
   var net = Math.floor(n / Math.pow(2, 32 - len)) * Math.pow(2, 32 - len);
   if (len === 0) net = 0;
@@ -128,7 +129,7 @@ function getPrefix(addr) {
   var v4 = ipv4Net(addr);
   if (v4) return v4;
   if (/:/.test(String(addr))) return String(addr).indexOf('/') >= 0 ? String(addr).toLowerCase() : String(addr).toLowerCase() + '/128';
-  throw new Error('not a prefix: ' + addr);
+  throw Object.assign(new Error('not a prefix: ' + addr), { unsupported: true });   /* the test cannot be read -> not checked */
 }
 
 /* ---------- the FRR checks (same rules and messages as netlab's netsim/validate/bgp/frr.py) ---------- */
@@ -156,7 +157,7 @@ var PLUGINS = {
     show: function (a, kw) {
       var vrf = kw.vrf || 'default', act = kw.activate || '';
       if (!act) return 'bgp vrf ' + vrf + ' summary json';
-      if (!AF_LOOKUP[act]) throw new Fail('Unsupported address family ' + act);
+      if (!has(AF_LOOKUP, act)) throw new Fail('Unsupported address family ' + act);
       if (act !== 'ipv4' && act !== 'ipv6') return 'bgp ' + AF_KW[act] + ' json';
       return 'bgp vrf ' + vrf + ' ' + AF_KW[act] + ' json';
     },
@@ -176,8 +177,8 @@ var PLUGINS = {
         if (state === 'missing') return { pass: true, message: res, mark: link };
         throw Object.assign(new Fail(res), { mark: link });
       }
-      var pState = data[nAddr].state;
-      if (String(state).indexOf(pState) < 0) {   // python: p_state not in state
+      var pState = (data[nAddr] || {}).state;
+      if (typeof pState !== 'string' || !pState || String(state).indexOf(pState) < 0) {   // python: p_state not in state ('' is "in" every string: no state = not a match)
         var res2 = 'The neighbor ' + nAddr + ' (' + nId + ') ' + actErr + ' is in state ' + pState;
         if (state === 'missing' && pState !== 'Established') return { pass: true, message: res2, mark: link };
         throw Object.assign(new Fail(res2 + ' (expected ' + state + ')'), { mark: link });
@@ -263,7 +264,7 @@ var TIER_TOP = /^(provider|isp.*|upstream|transit|spines?)$/i, TIER_EXT = /^exte
 function tiers(topo) {
   var lv = {}, used = {}, groups = topo.groups || {};
   Object.keys(topo.nodes || {}).forEach(function (n) {
-    var g = Object.keys(groups).filter(function (k) { return (groups[k].members || []).indexOf(n) >= 0; });
+    var g = Object.keys(groups).filter(function (k) { var m = groups[k] && groups[k].members; return Array.isArray(m) && m.indexOf(n) >= 0; });
     /* bottom marks first (bgplab puts customers / leafs in "external" too: external = pre-configured, not upstream), then the
        explicit top marks, then external (rtr + x1/x2 labs: the ISPs) */
     var has = function (re) { return g.some(function (k) { return re.test(k); }); };
@@ -277,7 +278,9 @@ function tiers(topo) {
 }
 function load(file) {
   var topo = JSON.parse(fs.readFileSync(file, 'utf8'));
-  var tests = Array.isArray(topo.validate) ? topo.validate : Object.keys(topo.validate || {}).map(function (k) { return Object.assign({ name: k }, topo.validate[k]); });
+  if (!topo || typeof topo !== 'object' || Array.isArray(topo)) topo = {};
+  var v = topo.validate;
+  var tests = Array.isArray(v) ? v : !v || typeof v !== 'object' ? [] : Object.keys(v).map(function (k) { return Object.assign({ name: k }, topo.validate[k]); });
   var mtime = fs.statSync(file).mtimeMs, started = mtime;
   try { started = fs.statSync(require('path').join(require('path').dirname(file), 'netlab.lock')).mtimeMs; } catch (e) {}   /* nx_validate_converge */
   if (LIVE_START) started = Math.max(started, PROC_START);   /* nx_validate_clistart: only the live band counts from its own start */   /* the netlab tool starts network-xray after the lab is configured: count from whichever is later */
@@ -329,19 +332,24 @@ function bgpSettled(container, vrf, needS, cache, labMtime, cb) {
 }
 function run(lab, prefix, done) {
   var out = [], stopped = false, idx = 0, sumCache = {};   /* nx_validate_settle: one summary per router per round */
+  var tests = Array.isArray(lab.tests) ? lab.tests : [], nodes = lab.nodes && typeof lab.nodes === 'object' ? lab.nodes : {};
   function next() {
-    if (idx >= lab.tests.length) return finish();
-    var t = lab.tests[idx++], row = { name: t.name, description: t.description || t.name, nodes: [], marks: [], stop: !!t.stop_on_error, level: t.level || '' };
+    if (idx >= tests.length) return finish();
+    var t = tests[idx++];
+    if (!t || typeof t !== 'object' || Array.isArray(t)) t = { name: 'test ' + idx };   /* not a test: shown as not checked */
+    var row = { name: t.name, description: t.description || t.name, nodes: [], marks: [], stop: !!t.stop_on_error, level: t.level || '' };
     out.push(row);
     if (stopped) { row.status = 'pending'; return next(); }
     var why = unsupportedWhy(t), call = null;
     if (!why) { try { call = parseCall(t.plugin); } catch (e) { why = 'cannot read: ' + e.message; } }
-    if (!why && !PLUGINS[call.fn]) why = call.fn;
+    if (!why && !has(PLUGINS, call.fn)) why = call.fn;
     if (why) { row.status = 'unsupported'; row.message = why; return next(); }
     var _age = Math.floor((Date.now() - (lab.started || lab.mtime || 0)) / 1000);   /* nx_validate_converge (2) */
     if (typeof t.wait === 'number' && _age < t.wait) { row.status = 'settling'; row.message = 'wait: ' + t.wait + ' s after the lab started (now ' + _age + ' s)'; return next(); }
-    var nlist = (t.nodes || []).filter(function (n) {
-      var nd = lab.nodes[n];
+    var tn = typeof t.nodes === 'string' ? [t.nodes] : Array.isArray(t.nodes) ? t.nodes : [];   /* netlab: one name = a list of one */
+    var nlist = tn.filter(function (n) {
+      var nd = typeof n === 'string' && has(nodes, n) ? nodes[n] : null;
+      if (nd && typeof nd !== 'object') nd = null;
       if (!nd) { row.nodes.push({ node: n, status: 'error', message: 'no node ' + n + ' in the lab' }); return false; }
       if (t.devices && t.devices.indexOf(nd.device) < 0) { row.nodes.push({ node: n, status: 'skip', message: 'device ' + nd.device + ' is not in the test' }); return false; }
       if (nd.device !== 'frr') { row.nodes.push({ node: n, status: 'unsupported', message: 'device ' + nd.device }); return false; }
@@ -350,7 +358,7 @@ function run(lab, prefix, done) {
     var k = 0;
     (function eachNode() {
       if (k >= nlist.length) return endTest();
-      var n = nlist[k++], nd = lab.nodes[n], ctx = { node: nd, nodes: lab.nodes, topo: lab.topo }, args, kw = {}, cmd;
+      var n = nlist[k++], nd = nodes[n], ctx = { node: nd, nodes: nodes, topo: lab.topo }, args, kw = {}, cmd;
       var rec = { node: n };
       try {
         args = call.args.map(function (a) { return evalValue(a, ctx); });
