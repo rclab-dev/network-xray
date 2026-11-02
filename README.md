@@ -235,6 +235,8 @@ can mix FRR, SR Linux and IOL. Example labs: `examples/q5-ospf-iol`, `examples/q
 
 ## FAQ / Troubleshooting
 
+New to network-xray? Start with the [FAQ](docs/faq.md): what it reads, what it never does, how it differs from other tools, and security.
+
 | Symptom | What to do |
 |---|---|
 | `containerlab: command not found` | Install it: <https://containerlab.dev/install/> (one line: `bash -c "$(curl -sL https://get.containerlab.dev)"`). |
