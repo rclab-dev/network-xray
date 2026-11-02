@@ -887,6 +887,9 @@ function buildState(opts) {
   adj.forEach(function (a) { _plAdd(a.iface, a.peer); });
   peers.forEach(function (p) { if (!p.reOnly) _plAdd(p.iface, p.name); });   /* nx_frr_vlan_re_only: not a link */
   if (_plRows.length) s.peer_links = _plRows;
+  /* nx_bgp_no_nbr_mark (2026-11-02): `router bgp <AS>` with no neighbor = bgp_configured stays false (nx_bgp_no_nbr: not a failed BGP),
+     but the state says the process is there, so the page can show it in a neutral way (FRR = running-config / IOS = show ip protocols) */
+  if (opts.bgpNoNeighbor && !s.bgp_configured) { s.bgp_no_neighbor = true; if (opts.bgpAs) s.bgp_as = String(opts.bgpAs); }
 
   return s;
 }
@@ -947,6 +950,7 @@ function collectFromJson(args) {
     selfName: args.node, id: args.id || args.node, proto: proto,
     adjacency: args.adjacency || [], mgmtSubnet: args.mgmtSubnet || '',
     ospfConfigured: args.ospfConfigured, bgpConfigured: args.bgpConfigured, /* presence-fix-cfg */
+    bgpNoNeighbor: args.bgpNoNeighbor, bgpAs: args.bgpAs,   /* nx_bgp_no_nbr_mark */
     ospfNei: _nei,
     ospfIf: _oif,
     ifaces: _ifs,
@@ -1109,6 +1113,7 @@ function collectLive(opts) {
   return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [], configStatics: _cfgStatics,
     ospfConfigured: _cfgLines.some(function(l){return l.indexOf('router ospf')===0;}),   /* "router ospf6" also starts with "router ospf" = OSPFv3-only routers count (nx_ospf6) */
     bgpConfigured: _bgpCfgWithNeighbor(_cfgLines),   /* nx_bgp_no_nbr */
+    bgpNoNeighbor: !_bgpCfgWithNeighbor(_cfgLines) && !!_bgpAsOf(_cfgLines), bgpAs: _bgpAsOf(_cfgLines),   /* nx_bgp_no_nbr_mark */
     mgmtSubnet: opts.mgmtSubnet || '',
     ospfNeighbor: raw.ospfNeighbor, ospfInterface: raw.ospfInterface, interface: raw.interface,
     ospf6Neighbor: raw.ospf6Neighbor, ospf6Interface: raw.ospf6Interface, route6: raw.route6,
@@ -1117,6 +1122,12 @@ function collectLive(opts) {
 /* nx_bgp_no_nbr (2026-10-19): `router bgp <AS>` with NO neighbor at all (netlab's FRR vrf module makes an empty one) is not a BGP that
    failed - drawing it as the red "BGP: Active" was false. BGP counts as configured only with a `router bgp` AND at least one
    `neighbor <x> [interface] remote-as|peer-group` line (any block, VRF ones included). Engine untouched: no bgp_configured = no BGP row. */
+/* nx_bgp_no_nbr_mark (2026-11-02): the AS of the global `router bgp <AS>` (not a `... vrf X` one) or null = a BGP with no neighbor is still
+   not "configured" (above), but the state says it is there (bgp_no_neighbor + bgp_as) so the page can show it in a neutral way. */
+function _bgpAsOf(lines) {
+  for (var i = 0; i < lines.length; i++) { var m = /^router bgp (\d+(?:\.\d+)?)\s*$/.exec(lines[i]); if (m) return m[1]; }
+  return null;
+}
 function _bgpCfgWithNeighbor(lines) {
   if (!lines.some(function (l) { return l.indexOf('router bgp') === 0; })) return false;
   return lines.some(function (l) { return /^neighbor\s+\S+\s+(interface\s+)?(remote-as|peer-group)\b/.test(l); });

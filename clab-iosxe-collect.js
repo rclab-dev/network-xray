@@ -530,6 +530,7 @@ function collectFromIosxeText(args, buildState) {
     selfName: args.node, id: args.id || args.node, proto: (args.proto || 'ospf').toLowerCase(),
     adjacency: args.adjacency || [], mgmtSubnet: args.mgmtSubnet || '',
     ospfConfigured: args.ospfConfigured, bgpConfigured: args.bgpConfigured,
+    bgpNoNeighbor: args.bgpNoNeighbor, bgpAs: args.bgpAs,   /* nx_bgp_no_nbr_mark */
     ospfNei: p.ospfNei, ospfIf: p.ospfIf, ifaces: p.ifaces, routes: p.routes,
     configStatics: args.configStatics || [], bgpSum: p.bgpSum, bgpRoutes: p.bgpRoutes
   });
@@ -627,6 +628,7 @@ var CMDS = [
   ['route', 'show ip route'],
   ['bgpSummary', 'show ip bgp summary'],
   ['bgp', 'show ip bgp'],
+  ['protocols', 'show ip protocols'],   /* nx_bgp_no_nbr_mark: `router bgp <AS>` with no neighbor prints nothing in show ip bgp summary - this names it */
   ['bridgeDomain', 'show bridge-domain']   /* nx_ios_bdi: which Ethernet port is in which BDI (optional) */
 ];
 var fileOf = function (cmd) { return cmd.replace(/ /g, '_') + '.txt'; };
@@ -723,6 +725,12 @@ function sshCollect(host) {
   } finally { askp.remove(); }
 }
 
+/* nx_bgp_no_nbr_mark: the AS of the BGP process from `show ip protocols` ("Routing Protocol is \"bgp 65001\"") or null */
+function bgpProcessAs(t) {
+  var m = /^\s*Routing Protocol is "bgp (\d+(?:\.\d+)?)"/m.exec(String(t || ''));
+  return m ? m[1] : null;
+}
+
 function loadBuildState() {
   var p = _path.join(__dirname, 'clab-collect.js');
   if (!_fs.existsSync(p)) { console.error('!! clab-collect.js not found next to ' + __filename + ' (it builds the state)'); process.exit(2); }
@@ -739,6 +747,9 @@ function run(texts, node, adjStr, proto, mgmtIp) {
   }
   var parsed = parseAll(Object.assign({ mgmtIp: mgmtIp }, texts));
   var cfg = { ospfConfigured: Object.keys(parsed.ospfIf).length > 0, bgpConfigured: !!parsed.bgpSum.routerId };
+  /* nx_bgp_no_nbr_mark (2026-11-02): BGP with no neighbor = not "configured" (same as FRR's nx_bgp_no_nbr), but marked so the page can say so */
+  var _bgpAs = bgpProcessAs(texts.protocols);
+  if (!cfg.bgpConfigured && _bgpAs) { cfg.bgpNoNeighbor = true; cfg.bgpAs = _bgpAs; }
   var unparsed = [];
   var st = collectFromIosxeText(Object.assign({ mgmtIp: mgmtIp, node: node, id: node, proto: proto, adjacency: adjacency, warn: unparsed }, cfg, texts), loadBuildState());
   var w = parseWarnings(texts, cfg, unparsed);
