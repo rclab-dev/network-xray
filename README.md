@@ -599,8 +599,10 @@ with code 2.
 
 ### MCP server (stdio)
 
-`scripts/xray-mcp.js` serves the same two questions to an MCP client (Claude Desktop, Claude Code, …) over stdio,
-with no dependencies. Tools: `lab_state` (`path`) and `why_best_path` (`path`, `node`, `prefix`, optional `vrf`).
+`scripts/xray-mcp.js` serves the same questions to an MCP client (Claude Desktop, Claude Code, …) over stdio,
+with no dependencies. Tools: `lab_state` (`path`), `why_best_path` (`path`, `node`, `prefix`, optional `vrf`),
+`list_routers` (`path`), `ospf_neighbors` and `bgp_neighbors` (`path`, optional `router`), and `route_lookup`
+(`path`, `router`, `destination`, optional `vrf`: the longest match in the routing table the collector saved).
 It is read-only: it only reads the path it is given, never runs commands on routers and never writes files.
 It speaks the initialize-based MCP revisions (2024-11-05 to 2025-11-25), which current MCP clients use over stdio;
 the stateless 2026-07-28 revision is not implemented.
@@ -620,7 +622,7 @@ With Claude Code: `claude mcp add network-xray -- node /path/to/network-xray/scr
 `C:\...\scripts\xray-mcp.js` path). If you add it with `--scope project`, Claude Code asks once before it starts the server.
 
 Then ask, for example, "use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15" or "why does r1 pick
-its path to 8.8.8.0/24?". Relative paths are resolved from the server's working directory, so absolute paths are safest.
+its path to 8.8.8.0/24?" or "which route does r1 use for 8.8.8.8?". Relative paths are resolved from the server's working directory, so absolute paths are safest.
 
 ## Embed the DeepDive in your own tool
 
