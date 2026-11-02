@@ -85,7 +85,7 @@ function parseOspfNeighbors(text, warn) {
     if (!m) { if (!/^\s*Neighbor ID/.test(l)) unread(warn, 'show ip ospf neighbor', l); return; }
     var st = m[3].toUpperCase(), role = m[4];
     // FRR spelling: "Full/DR", "2-Way/DROther", "Init/-"
-    var stNice = st === 'FULL' ? 'Full' : st === '2WAY' || st === '2-WAY' ? '2-Way' : st.charAt(0) + st.slice(1).toLowerCase();
+    var stNice = st === 'FULL' ? 'Full' : st === '2WAY' || st === '2-WAY' ? '2-Way' : st === 'EXSTART' ? 'ExStart' : st.charAt(0) + st.slice(1).toLowerCase();   /* nx_ospf_state_word: EXSTART -> ExStart (not Exstart) */
     // role in FRR spelling (FRR json: "Full/DR", "Full/Backup", "Full/DROther"; IOS: DR / BDR / DROTHER / -)
     role = ({ BDR: 'Backup', DROTHER: 'DROther', DR: 'DR', '-': '-' })[String(role).toUpperCase()] || role;
     var rec = { rid: m[1], address: m[6], iface: normIf(m[7]), state: stNice + '/' + role, full: st === 'FULL' };

@@ -10601,7 +10601,7 @@ function _xrayDeepDeconflict() {
         dash: 1,
         op: .42
       };
-      var st = String(p.fsm || "").split("/")[0], orange = "var(--xto-idle,#ff8c00)", green = "var(--xto-ospf,#39ff14)";
+      var st = _xrayOspfStateWord(String(p.fsm || "").split("/")[0]), orange = "var(--xto-idle,#ff8c00)", green = "var(--xto-ospf,#39ff14)";   /* nx_ospf_state_word */
       if (st === "Full") return {
         col: green,
         dash: 0,
@@ -10741,7 +10741,7 @@ function _xrayDeepDeconflict() {
           if (order.indexOf(p.proto) < 0) order.push(p.proto);
           if (p.up) upset[p.proto] = 1;
           if (p.proto === "ospf") {
-            var _st = String(p.fsm || "").split("/")[0];
+            var _st = _xrayOspfStateWord(String(p.fsm || "").split("/")[0]);   /* nx_ospf_state_word */
             if (_st === "Full" || _st === "ExStart" || _st === "Exchange" || _st === "Loading") ospfFwd = true;
           }
         });
@@ -11040,8 +11040,15 @@ function _xrayPeerOfNet(net, targetId) {
   return m ? m.node || m.name : "";
 }
 
+/* nx_ospf_state_word (2026-11-02): an OSPF neighbor state in any case / spelling (IOS EXSTART, Exstart, 2WAY, full) -> the FRR word the colours use */
+function _xrayOspfStateWord(st) {
+  st = String(st || "");
+  var w = { full: "Full", loading: "Loading", exchange: "Exchange", exstart: "ExStart", "2way": "2-Way", init: "Init", attempt: "Attempt", down: "Down" }[st.toLowerCase().replace(/-/g, "")];
+  return w || st;
+}
+
 function _xrayOspfBucket(fsm) {
-  var st = String(fsm || "").split("/")[0];
+  var st = _xrayOspfStateWord(String(fsm || "").split("/")[0]);   /* nx_ospf_state_word */
   if (st === "Full") return "full";
   if (st === "ExStart" || st === "Exchange" || st === "Loading") return "exchange";
   if (st === "2-Way") return "2way";
