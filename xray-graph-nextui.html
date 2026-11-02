@@ -369,9 +369,11 @@ window.__xrayGraphBoot = function () {
       _unote.textContent = nodeId + ': ' + (_wja ? '読めなかった出力が ' + _wn + ' つあります: ' + _wlist + '。下の絵はそれを除いて描いています。' : _wn + ' output' + (_wn > 1 ? 's' : '') + ' could not be read completely: ' + _wlist + '. The drawing below leaves them out.');
     }
     var views = window.clabXray.deepViews(fullCfg, nodeId, { state: window.LIVE_STATES && window.LIVE_STATES[nodeId], focusPrefix: window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.prefix });   /* nx_default_pair */
-    if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
+    var _pL = 'en'; try { _pL = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
+    var _pja = _pL === 'ja';
+    if (!views.length) { showErr(nodeId + (_pja ? ' には調べるリンクがありません。' : ' has no links to inspect.')); return; }
     if (views.length > 1) {
-      box.innerHTML='<span class="lbl">'+escH(nodeId)+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      box.innerHTML='<span class="lbl">'+escH(nodeId)+ (_pja ? ' の隣は '+ (ADJ[nodeId]||[]).length +' 台 — 見るペアを選ぶ:' : ' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:') +'</span>';
       views.forEach(function(v,idx){
         var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
         b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
