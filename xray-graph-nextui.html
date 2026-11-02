@@ -109,6 +109,10 @@
   #nx-solved-pip video{display:block;width:100%;background:#000}
   #nx-solved-pip .pip-err{padding:14px 12px;font:13px/1.5 system-ui,sans-serif;color:#e0e0e0}
   #nx-solved-pip .pip-err a{color:#a5d6a7}
+  /* nx_pip_q13_note: the preview is one fixed RouteCrushLab video (Q13) for every problem = say so */
+  #nx-solved-pip .pip-note{padding:3px 8px;font:12px/1.4 system-ui,sans-serif;color:#ffe082;background:#1b1f14;border-bottom:1px solid #2e3b2a}
+  #nx-solved-pip .pip-vwrap{position:relative}
+  #nx-solved-pip .pip-badge{position:absolute;left:6px;top:6px;z-index:1;pointer-events:none;padding:1px 6px;border-radius:4px;font:600 11px system-ui,sans-serif;color:#1b1f14;background:rgba(255,224,130,.92)}
   #nx-problem .nxp-solved{display:inline-block;margin-left:auto;font-size:12px;font-weight:700;color:#0f1318;background:#66bb6a;border-radius:10px;padding:2px 10px}
   /* nx_netlab_validate (2026-10-15): netlab validate: tests -> the same band (count, ✓ Solved) + one row per test */
   #nx-validate{display:none;background:#1c2736;border-left:3px solid #4dd0e1;padding:14px 20px;margin:14px 0 20px;border-radius:0 6px 6px 0}
@@ -891,15 +895,20 @@ window.__initNeXtOverview = function (data) {
     var x = document.createElement('button'); x.type = 'button'; x.className = 'pip-x'; x.textContent = '\u00d7'; x.title = L === 'ja' ? '\u9589\u3058\u308b' : 'Close';
     x.onclick = function(){ var v = w.querySelector('video'); if (v) { v.pause(); v.removeAttribute('src'); v.load(); } w.remove(); };
     bar.appendChild(ti); bar.appendChild(x); w.appendChild(bar);
+    var note = document.createElement('div'); note.className = 'pip-note';   /* nx_pip_q13_note */
+    note.textContent = L === 'ja' ? 'Q13 \u306e\u30b5\u30f3\u30d7\u30eb\u52d5\u753b (\u4eca\u89e3\u3044\u305f\u554f\u984c\u3068\u306f\u5225)' : 'Sample from Q13 (not the lab you just solved)';
+    w.appendChild(note);
+    var vw = document.createElement('div'); vw.className = 'pip-vwrap';
+    var bd = document.createElement('span'); bd.className = 'pip-badge'; bd.textContent = L === 'ja' ? '\u30b5\u30f3\u30d7\u30eb: Q13' : 'Sample: Q13';
     var v = document.createElement('video'); v.muted = true; v.autoplay = true; v.loop = true; v.playsInline = true; v.controls = true;
     v.onerror = function(){
-      v.remove();
+      v.remove(); bd.remove();   /* nx_pip_q13_note: no video = no badge (the note line stays) */
       var e = document.createElement('div'); e.className = 'pip-err';
       e.appendChild(document.createTextNode(L === 'ja' ? '\u52d5\u753b\u3092\u958b\u3051\u307e\u305b\u3093\u3067\u3057\u305f\u3002 ' : 'Could not load the preview. '));
       var a = document.createElement('a'); a.href = link; a.target = '_blank'; a.rel = 'noopener';
       a.textContent = L === 'ja' ? 'RouteCrushLab \u3067\u958b\u304f' : 'Open it on RouteCrushLab'; e.appendChild(a); w.appendChild(e);
     };
-    w.appendChild(v); document.body.appendChild(w);
+    vw.appendChild(bd); vw.appendChild(v); w.appendChild(vw); document.body.appendChild(w);   /* nx_pip_q13_note */
     v.src = NX_RCL_PREVIEW[L] || NX_RCL_PREVIEW.en;   // the only request, made on the click
   }
   window.__nxSolvedTick = function(){
