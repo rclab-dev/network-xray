@@ -24,8 +24,12 @@ var assert = require('node:assert');
 var ROOT = path.join(__dirname, '..');
 var SEED = parseInt(process.env.FUZZ_SEED || '20261102', 10) >>> 0;
 var CASES = parseInt(process.env.FUZZ_CASES || '300', 10);
-var HANG_MS = 8000;          // a worker still busy after this is a hang
-var SLOW_MS = 1500;          // one parse call slower than this is reported (quadratic regex / loop)
+/* nx_fuzz_hang_progress (2026-11-03): HANG_MS is how long a worker may go WITHOUT starting a new case (counted from the
+   worker coming online, reset on every case) - not a budget for all cases together. On a busy machine the 300 cases
+   could take longer than 8 s in total and the case running at that moment was reported as a hang. A real hang (one
+   case never ending) still fails after HANG_MS. Both limits can be raised for a slow CI with FUZZ_HANG_MS / FUZZ_SLOW_MS. */
+var HANG_MS = parseInt(process.env.FUZZ_HANG_MS || '8000', 10);   // no new case for this long = a hang
+var SLOW_MS = parseInt(process.env.FUZZ_SLOW_MS || '1500', 10);   // one parse call slower than this is reported (quadratic regex / loop)
 
 // ---- seeded PRNG (mulberry32) ---------------------------------------------------------------------
 function rng(seed) {
@@ -419,12 +423,19 @@ function runWorker(name) {
     var w = new wt.Worker(__filename, { workerData: { fuzzTarget: name, seed: SEED, cases: CASES } });
     var last = '(setup)', settled = false;
     function finish(res) { if (!settled) { settled = true; clearTimeout(timer); resolve(res); } }
-    var timer = setTimeout(function () {
-      w.terminate();
-      finish({ failures: ['hang: still running after ' + HANG_MS + ' ms at ' + last] });
-    }, HANG_MS);
+    var timer = null;
+    function arm() {   // nx_fuzz_hang_progress: (re)start the no-progress clock
+      if (settled) return;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        w.terminate();
+        finish({ failures: ['hang: no new case for ' + HANG_MS + ' ms, stuck at ' + last] });
+      }, HANG_MS);
+    }
+    arm();               // also covers a worker that never comes online
+    w.on('online', arm);
     w.on('message', function (m) {
-      if (m.type === 'case') last = m.what;
+      if (m.type === 'case') { last = m.what; arm(); }
       else if (m.type === 'fail') finish({ failures: [m.what + ': ' + m.err] });
       else if (m.type === 'done') { finish(m); w.terminate(); }
     });

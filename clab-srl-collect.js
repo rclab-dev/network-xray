@@ -47,7 +47,9 @@ function sameNet24(prefix, ip) {
 // dotted netmask -> prefix length (255.255.255.252 -> 30), for OSPF router-LSA stub links.
 function maskToPfx(mask) {
   if (!mask) return 32;
-  var n = 0; String(mask).split('.').forEach(function (o) { var b = parseInt(o, 10) || 0; while (b) { n += b & 1; b >>= 1; } });
+  /* nx_srl_mask_neg (2026-11-03): a broken mask octet ("-1") made `b >>= 1` stay -1 forever = the collector hung.
+     Each octet is taken as 0-255 and shifted without sign, so any input ends. Normal masks give the same length. */
+  var n = 0; String(mask).split('.').forEach(function (o) { var b = (parseInt(o, 10) || 0) & 255; while (b) { n += b & 1; b >>>= 1; } });
   return n;
 }
 // OSPF area id: srl prints "0.0.0.0" for the backbone; show the short "0" the labs use.
