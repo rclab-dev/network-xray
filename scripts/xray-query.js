@@ -218,6 +218,154 @@ function why(states, node, prefix, vrf) {
   return out;
 }
 
+// ---- per-router views -----------------------------------------------------------------------
+function getNode(states, node) {
+  if (!node) throw new QueryError('missing router');
+  if (!Object.prototype.hasOwnProperty.call(states, node)) {
+    throw new QueryError('unknown router: ' + node + ' (known: ' + Object.keys(states).sort().join(', ') + ')');
+  }
+  return states[node];
+}
+// node names to report: all of them, or the one asked for (checked)
+function pickNodes(states, node) {
+  if (node == null) return Object.keys(states).sort();
+  getNode(states, node);
+  return [node];
+}
+function nonEmpty(a) { return Array.isArray(a) && a.length > 0; }
+
+// router names and which protocols have state in the data
+function listRouters(states) {
+  var routers = Object.keys(states).sort().map(function (n) {
+    var s = states[n], o = { name: n };
+    if (s.nos) o.nos = s.nos;
+    var protocols = [];
+    if (nonEmpty(s.ospf_neighbors) || nonEmpty(s.lsdb_prefixes)) protocols.push('ospf');
+    if (nonEmpty(s.bgp_neighbors) || nonEmpty(s.bgp_routes)) protocols.push('bgp');
+    o.protocols = protocols;
+    o.routing_table = Array.isArray(s.routing_table);
+    o.counts = {
+      ospf_neighbors: (s.ospf_neighbors || []).length,
+      bgp_neighbors: (s.bgp_neighbors || []).length,
+      bgp_routes: (s.bgp_routes || []).length,
+      routes: (s.routing_table || []).length
+    };
+    return o;
+  });
+  return { routers: routers, count: routers.length };
+}
+
+function ospfNeighbors(states, node) {
+  var names = pickNodes(states, node), adj = summarize(states).ospf_adjacencies;
+  var routers = names.map(function (n) {
+    return { router: n, neighbors: adj.filter(function (x) { return x.node === n; }).map(function (x) {
+      var o = { neighbor: x.neighbor_id, address: x.address, state: x.state, interface: x.iface };
+      ['role', 'peer', 'af', 'vrf'].forEach(function (k) { if (x[k]) o[k] = x[k]; });
+      return o;
+    }) };
+  });
+  var all = [].concat.apply([], routers.map(function (r) { return r.neighbors; }));
+  return { routers: routers, counts: { total: all.length, full: all.filter(function (x) { return /^full$/i.test(x.state); }).length } };
+}
+
+function bgpNeighbors(states, node) {
+  var names = pickNodes(states, node), sess = summarize(states).bgp_sessions;
+  var routers = names.map(function (n) {
+    return { router: n, peers: sess.filter(function (x) { return x.node === n; }).map(function (x) {
+      var o = { peer: x.peer_ip, remote_as: x.remote_as, type: x.type, state: x.state, established: x.established,
+        prefixes_received: x.pfx_rcvd != null ? x.pfx_rcvd : null };
+      if (x.vrf) o.vrf = x.vrf;
+      return o;
+    }) };
+  });
+  var all = [].concat.apply([], routers.map(function (r) { return r.peers; }));
+  return { routers: routers, counts: { total: all.length, established: all.filter(function (x) { return x.established; }).length } };
+}
+
+// ---- route lookup ---------------------------------------------------------------------------
+// an IPv4 / IPv6 address -> { bits: 32|128, n: BigInt }, or null
+function parseAddr(s) {
+  s = String(s).trim();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(s)) {
+    var o = s.split('.').map(Number);
+    if (o.some(function (x) { return x > 255; })) return null;
+    return { bits: 32, n: o.reduce(function (a, x) { return a * 256n + BigInt(x); }, 0n) };
+  }
+  s = s.replace(/%[^%]+$/, '');   // zone index (fe80::1%eth0)
+  if (!/^[0-9a-fA-F:.]+$/.test(s) || s.indexOf(':') < 0) return null;
+  var tail = [];
+  var m4 = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(s);   // ::ffff:192.0.2.1
+  if (m4) {
+    var v4 = parseAddr(m4[2]);
+    if (!v4) return null;
+    tail = [Number(v4.n >> 16n), Number(v4.n & 0xffffn)];
+    s = /::$/.test(m4[1]) ? m4[1] : m4[1].slice(0, -1);   // keep a trailing '::', drop a single ':'
+  }
+  var halves = s.split('::');
+  if (halves.length > 2) return null;
+  var grp = function (h) { return h === '' ? [] : h.split(':'); };
+  var head = grp(halves[0]), rest = halves.length === 2 ? grp(halves[1]) : [];
+  if (head.concat(rest).some(function (g) { return !/^[0-9a-fA-F]{1,4}$/.test(g); })) return null;
+  var groups = head.concat(rest).length + tail.length;
+  if (halves.length === 2 ? groups > 7 : groups !== 8) return null;
+  var fill = [];
+  for (var i = groups; i < 8; i++) fill.push('0');
+  var all = head.concat(halves.length === 2 ? fill : [], rest).map(function (g) { return parseInt(g, 16); }).concat(tail);
+  return { bits: 128, n: all.reduce(function (a, x) { return a * 65536n + BigInt(x); }, 0n) };
+}
+// "10.0.0.0/24" -> { bits, n, len }, or null; a bare address is a host route
+function parsePrefix(p) {
+  var m = /^([^/]+)(?:\/(\d{1,3}))?$/.exec(String(p || '').trim());
+  if (!m) return null;
+  var a = parseAddr(m[1]);
+  if (!a) return null;
+  var len = m[2] != null ? +m[2] : a.bits;
+  if (len > a.bits) return null;
+  a.len = len;
+  return a;
+}
+function inPrefix(addr, pfx) {
+  if (addr.bits !== pfx.bits) return false;
+  var shift = BigInt(pfx.bits - pfx.len);
+  return (addr.n >> shift) === (pfx.n >> shift);
+}
+
+// longest-prefix match of an address in a router's collected routing_table (installed rows only)
+function routeLookup(states, node, destination, vrf) {
+  var s = getNode(states, node);
+  if (!destination) throw new QueryError('missing destination');
+  var addr = parseAddr(destination);
+  if (!addr) throw new QueryError('destination is not an IPv4 or IPv6 address: ' + destination);
+  var v = vrf || 'default';
+  var out = { router: node, destination: String(destination).trim(), vrf: v, route: null, next_hop: null, out_iface: null };
+  if (!Array.isArray(s.routing_table)) {
+    out.note = 'no routing table in the data for this router';
+    return out;
+  }
+  var best = [], bestLen = -1;
+  s.routing_table.forEach(function (r) {
+    if (!r || r.selected === false || (r.vrf || 'default') !== v) return;
+    var p = parsePrefix(r.prefix);
+    if (!p || !inPrefix(addr, p) || p.len < bestLen) return;
+    if (p.len > bestLen) { best = []; bestLen = p.len; }
+    best.push(r);
+  });
+  if (!best.length) {
+    out.note = 'no installed route in the routing table matches ' + out.destination + (vrf ? ' in VRF ' + v : '');
+    return out;
+  }
+  var rowOut = function (r) {
+    var o = { prefix: r.prefix, protocol: r.protocol || '', next_hop: r.next_hop || '', out_iface: r.out_iface || '' };
+    if (Array.isArray(r.nexthops)) o.nexthops = r.nexthops.map(function (h) { return { ip: h.ip || '', iface: h.iface || '' }; });
+    return o;
+  };
+  out.route = rowOut(best[0]);
+  out.next_hop = out.route.next_hop || null;   // null: directly connected (no gateway)
+  out.out_iface = out.route.out_iface || null;
+  if (best.length > 1) out.also = best.slice(1).map(rowOut);   // more than one installed row with the same prefix length
+  return out;
+}
+
 // ---- CLI ------------------------------------------------------------------------------------
 var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf]';
 function run(argv) {
@@ -235,4 +383,5 @@ if (require.main === module) {
   process.exitCode = code;
 }
 
-module.exports = { loadStates: loadStates, summarize: summarize, why: why, run: run };
+module.exports = { loadStates: loadStates, summarize: summarize, why: why, run: run,
+  listRouters: listRouters, ospfNeighbors: ospfNeighbors, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup };

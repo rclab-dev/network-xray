@@ -37,7 +37,8 @@ test('initialize and tools/list', function () {
   assert.strictEqual(init.result.serverInfo.name, 'network-xray');
   assert.ok(init.result.capabilities.tools);
   var tools = s.byId[2].result.tools;
-  assert.deepStrictEqual(tools.map(function (t) { return t.name; }), ['lab_state', 'why_best_path']);
+  assert.deepStrictEqual(tools.map(function (t) { return t.name; }),
+    ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'bgp_neighbors', 'route_lookup']);
   tools.forEach(function (t) {
     assert.strictEqual(t.inputSchema.type, 'object');
     assert.strictEqual(t.annotations.readOnlyHint, true);
@@ -114,4 +115,141 @@ test('tool errors come back as isError results; protocol errors as JSON-RPC erro
 test('initialize: the newest initialize-based revision (2025-11-25) is answered as requested', function () {
   var s = session([req(1, 'initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'test', version: '0' } })]);
   assert.strictEqual(s.byId[1].result.protocolVersion, '2025-11-25');
+});
+
+// ---- list_routers / ospf_neighbors / bgp_neighbors / route_lookup ------------------------------
+var ECMP = path.join(ROOT, 'test', 'fixtures', 'iosxe-ecmp');
+function ok(reply) {
+  var r = reply.result;
+  assert.ok(!r.isError, r.content[0].text);
+  var out = payload(reply);
+  assert.deepStrictEqual(r.structuredContent, out, 'same JSON as structuredContent and as text');
+  return out;
+}
+function isErr(reply, re) {
+  var r = reply.result;
+  assert.strictEqual(r.isError, true);
+  assert.match(payload(reply).error, re);
+}
+
+test('list_routers: names and which protocols have state', function () {
+  var s = session(INIT.concat([
+    call(20, 'list_routers', { path: Q15 }),
+    call(21, 'list_routers', { path: path.join(ROOT, 'no-such-dir') }),
+    call(22, 'list_routers', { path: 42 }),
+    call(23, 'list_routers', {})
+  ]));
+  var out = ok(s.byId[20]);
+  assert.strictEqual(out.count, 3);
+  assert.deepStrictEqual(out.routers.map(function (r) { return [r.name, r.protocols]; }),
+    [['r1', ['ospf', 'bgp']], ['r2', ['ospf', 'bgp']], ['r3', ['bgp']]]);
+  assert.strictEqual(out.routers[1].counts.bgp_neighbors, 2);
+  assert.strictEqual(out.routers[0].routing_table, true);
+  isErr(s.byId[21], /not found/);
+  isErr(s.byId[22], /path must be a string/);
+  isErr(s.byId[23], /missing argument: path/);
+});
+
+test('ospf_neighbors: per router neighbor, state, interface', function () {
+  var s = session(INIT.concat([
+    call(30, 'ospf_neighbors', { path: Q15 }),
+    call(31, 'ospf_neighbors', { path: ECMP, router: 'r1' }),
+    call(32, 'ospf_neighbors', { path: Q15, router: 'r9' }),
+    call(33, 'ospf_neighbors', { path: Q15, router: ['r1'] })
+  ]));
+  var all = ok(s.byId[30]);
+  assert.deepStrictEqual(all.routers.map(function (r) { return r.router; }), ['r1', 'r2', 'r3']);
+  assert.deepStrictEqual(all.routers[0].neighbors[0],
+    { neighbor: '2.2.2.2', address: '10.10.0.20', state: 'Full', interface: 'Ethernet0/1', role: 'DR', peer: 'r2' });
+  assert.deepStrictEqual(all.routers[2].neighbors, []);
+  assert.deepStrictEqual(all.counts, { total: 2, full: 2 });
+  var one = ok(s.byId[31]);
+  assert.strictEqual(one.routers.length, 1);
+  assert.deepStrictEqual(one.routers[0].neighbors.map(function (n) { return n.neighbor + '@' + n.interface; }),
+    ['3.3.3.3@Ethernet0/2', '2.2.2.2@Ethernet0/1']);
+  isErr(s.byId[32], /unknown router: r9 \(known: r1, r2, r3\)/);
+  isErr(s.byId[33], /router must be a string/);
+});
+
+test('bgp_neighbors: per router peer, AS, state, prefixes received', function () {
+  var s = session(INIT.concat([
+    call(40, 'bgp_neighbors', { path: Q15, router: 'r2' }),
+    call(41, 'bgp_neighbors', { path: FRR_R1 }),
+    call(42, 'bgp_neighbors', { path: Q15, router: 'nope' }),
+    call(43, 'bgp_neighbors', { path: Q15, router: 2 })
+  ]));
+  var out = ok(s.byId[40]);
+  assert.deepStrictEqual(out.routers[0].peers, [
+    { peer: '1.1.1.1', remote_as: 65001, type: 'iBGP', state: 'Established', established: true, prefixes_received: 0 },
+    { peer: '10.11.0.20', remote_as: 65002, type: 'eBGP', state: 'Established', established: true, prefixes_received: 1 }
+  ]);
+  assert.deepStrictEqual(out.counts, { total: 2, established: 2 });
+  var frr = ok(s.byId[41]);   // OSPF-only sample: the router is listed with no peers
+  assert.deepStrictEqual(frr.routers, [{ router: 'r1', peers: [] }]);
+  isErr(s.byId[42], /unknown router: nope/);
+  isErr(s.byId[43], /router must be a string/);
+});
+
+test('route_lookup: longest prefix match in the collected routing table', function () {
+  var fs = require('fs'), os = require('os');
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xmcp-rt-'));
+  fs.writeFileSync(path.join(dir, 'state_r1.json'), JSON.stringify({ target_node: 'r1', interfaces: {}, routing_table: [
+    { prefix: '0.0.0.0/0', out_iface: 'eth1', next_hop: '10.0.0.1', protocol: 'static', selected: true },
+    { prefix: '10.1.0.0/16', out_iface: 'eth2', next_hop: '10.0.1.2', protocol: 'ospf', selected: true },
+    { prefix: '10.1.2.0/24', out_iface: 'eth3', next_hop: '10.0.2.2', protocol: 'bgp', selected: false },
+    { prefix: '2001:db8::/32', out_iface: 'eth2', next_hop: 'fe80::2', protocol: 'ospf6', selected: true },
+    { prefix: '2001:db8:1::/48', out_iface: 'eth4', next_hop: '', protocol: 'connected', selected: true },
+    { prefix: '10.1.2.0/24', out_iface: 'v1', next_hop: '', protocol: 'connected', selected: true, vrf: 'cust' }
+  ] }));
+  fs.writeFileSync(path.join(dir, 'state_r2.json'), JSON.stringify({ target_node: 'r2', interfaces: {} }));
+  var s = session(INIT.concat([
+    call(50, 'route_lookup', { path: Q15, router: 'r1', destination: '8.8.8.8' }),
+    call(51, 'route_lookup', { path: Q15, router: 'r3', destination: '192.0.2.1' }),
+    call(52, 'route_lookup', { path: ECMP, router: 'r1', destination: '4.4.4.4' }),
+    call(53, 'route_lookup', { path: dir, router: 'r1', destination: '10.1.2.3' }),   // the /24 is not installed -> /16
+    call(54, 'route_lookup', { path: dir, router: 'r1', destination: '2001:db8:1::9' }),
+    call(55, 'route_lookup', { path: dir, router: 'r1', destination: '2001:db8:2::9' }),
+    call(56, 'route_lookup', { path: dir, router: 'r1', destination: '10.1.2.3', vrf: 'cust' }),
+    call(57, 'route_lookup', { path: dir, router: 'r1', destination: '2001:db9::1' }),
+    call(58, 'route_lookup', { path: dir, router: 'r2', destination: '10.1.2.3' }),
+    call(60, 'route_lookup', { path: Q15, router: 'r9', destination: '8.8.8.8' }),
+    call(61, 'route_lookup', { path: Q15, router: 'r1', destination: '8.8.8.256' }),
+    call(62, 'route_lookup', { path: Q15, router: 'r1', destination: '8.8.8.0/24' }),
+    call(63, 'route_lookup', { path: Q15, router: 'r1', destination: 'not-an-ip' }),
+    call(64, 'route_lookup', { path: Q15, router: 'r1' }),
+    call(65, 'route_lookup', { path: Q15, router: 'r1', destination: 134744072 })
+  ]));
+  var a = ok(s.byId[50]);
+  assert.deepStrictEqual(a.route, { prefix: '8.8.8.0/24', protocol: 'bgp', next_hop: '2.2.2.2', out_iface: 'Ethernet0/1' });
+  assert.strictEqual(a.next_hop, '2.2.2.2');
+  assert.strictEqual(a.out_iface, 'Ethernet0/1');
+  assert.strictEqual(a.vrf, 'default');
+  var d = ok(s.byId[51]);   // only the static default matches
+  assert.strictEqual(d.route.prefix, '0.0.0.0/0');
+  assert.strictEqual(d.next_hop, '10.11.0.10');
+  var e = ok(s.byId[52]);   // ECMP: every next hop is returned
+  assert.strictEqual(e.route.prefix, '4.4.4.4/32');
+  assert.deepStrictEqual(e.route.nexthops.map(function (h) { return h.ip; }), ['10.13.0.3', '10.12.0.2']);
+  assert.strictEqual(ok(s.byId[53]).route.prefix, '10.1.0.0/16');
+  var c = ok(s.byId[54]);   // connected: no gateway
+  assert.strictEqual(c.route.prefix, '2001:db8:1::/48');
+  assert.strictEqual(c.next_hop, null);
+  assert.strictEqual(c.out_iface, 'eth4');
+  assert.strictEqual(ok(s.byId[55]).next_hop, 'fe80::2');
+  var v = ok(s.byId[56]);
+  assert.strictEqual(v.route.out_iface, 'v1');
+  assert.strictEqual(v.vrf, 'cust');
+  var none = ok(s.byId[57]);
+  assert.strictEqual(none.route, null);
+  assert.match(none.note, /no installed route/);
+  var noTable = ok(s.byId[58]);
+  assert.strictEqual(noTable.route, null);
+  assert.match(noTable.note, /no routing table in the data/);
+  isErr(s.byId[60], /unknown router: r9/);
+  isErr(s.byId[61], /not an IPv4 or IPv6 address/);
+  isErr(s.byId[62], /not an IPv4 or IPv6 address/);
+  isErr(s.byId[63], /not an IPv4 or IPv6 address/);
+  isErr(s.byId[64], /missing argument: destination/);
+  isErr(s.byId[65], /destination must be a string/);
+  fs.rmSync(dir, { recursive: true, force: true });
 });

@@ -8,6 +8,13 @@
  *   lab_state      { path }                  -> nodes, links, OSPF adjacencies, BGP sessions, counts
  *   why_best_path  { path, node, prefix, vrf? } -> BGP best path and the reason stored with it
  *                                               (reason null + a note when the data has none; never guessed)
+ *   list_routers   { path }                  -> router names, which protocols have state, row counts
+ *   ospf_neighbors { path, router? }         -> per router: neighbor, address, state, interface
+ *   bgp_neighbors  { path, router? }         -> per router: peer, AS, state, prefixes received
+ *   route_lookup   { path, router, destination, vrf? } -> longest-prefix match in the collected routing table
+ *
+ * Every successful call returns the same JSON object as text content and as structuredContent; bad input
+ * (missing/unknown file, unknown router, malformed argument) returns isError with {"error": "..."}.
  *
  * `path` is anything xray-query.js accepts: a state_<node>.json, a directory of them, an xray-states.js,
  * or a directory of saved FRR `show ... json` files. Relative paths are resolved from the server's working directory.
@@ -30,6 +37,9 @@ var PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05']
 console.log = console.error;
 console.info = console.error;
 
+var READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+var PATH_PROP = { type: 'string', description: 'Same input as lab_state' };
+
 var TOOLS = [
   {
     name: 'lab_state',
@@ -43,7 +53,7 @@ var TOOLS = [
       required: ['path'],
       additionalProperties: false
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    annotations: READ_ONLY
   },
   {
     name: 'why_best_path',
@@ -61,7 +71,63 @@ var TOOLS = [
       required: ['path', 'node', 'prefix'],
       additionalProperties: false
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    annotations: READ_ONLY
+  },
+  {
+    name: 'list_routers',
+    description: 'List the routers in a network-xray lab state and which protocols have state for each ' +
+      '(ospf: OSPF neighbors or LSDB in the data; bgp: BGP neighbors or BGP routes), whether a routing table was ' +
+      'collected, and row counts. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: { path: PATH_PROP },
+      required: ['path'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
+  },
+  {
+    name: 'ospf_neighbors',
+    description: 'OSPF neighbors per router as collected: neighbor router ID, address, state (e.g. Full), ' +
+      'interface, and DR/BDR role and peer node name when known. All routers, or one with `router`. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: { path: PATH_PROP, router: { type: 'string', description: 'Only this router, e.g. r1 (default: all routers)' } },
+      required: ['path'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
+  },
+  {
+    name: 'bgp_neighbors',
+    description: 'BGP neighbors per router as collected: peer address, remote AS, iBGP/eBGP, state, ' +
+      'established, and prefixes received (null when the data has no count). All routers, or one with `router`. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: { path: PATH_PROP, router: { type: 'string', description: 'Only this router, e.g. r1 (default: all routers)' } },
+      required: ['path'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
+  },
+  {
+    name: 'route_lookup',
+    description: 'Look up a destination address in one router\'s collected routing table (installed rows only) ' +
+      'by longest prefix match: the matching route, its protocol, next hop and outgoing interface (all next hops ' +
+      'for ECMP). next_hop is null for a directly connected route; route is null with a note when nothing matches. ' +
+      'This reads the table the collector saved; it does not compute routing. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: PATH_PROP,
+        router: { type: 'string', description: 'Router name, e.g. r1' },
+        destination: { type: 'string', description: 'IPv4 or IPv6 address, e.g. 8.8.8.8 or 2001:db8::1 (no prefix length)' },
+        vrf: { type: 'string', description: 'VRF of the routing table rows to search (default: the default VRF)' }
+      },
+      required: ['path', 'router', 'destination'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
   }
 ];
 
@@ -79,6 +145,15 @@ function callTool(name, args) {
   if (name === 'why_best_path') {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);
     return query.why(query.loadStates(p), node, prefix, str(args, 'vrf', false));
+  }
+  if (name === 'list_routers') return query.listRouters(query.loadStates(str(args, 'path', true)));
+  if (name === 'ospf_neighbors' || name === 'bgp_neighbors') {
+    var p2 = str(args, 'path', true), router = str(args, 'router', false);
+    return (name === 'ospf_neighbors' ? query.ospfNeighbors : query.bgpNeighbors)(query.loadStates(p2), router);
+  }
+  if (name === 'route_lookup') {
+    var p3 = str(args, 'path', true), r = str(args, 'router', true), dst = str(args, 'destination', true);
+    return query.routeLookup(query.loadStates(p3), r, dst, str(args, 'vrf', false));
   }
   return null;
 }
