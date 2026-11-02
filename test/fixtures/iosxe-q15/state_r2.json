@@ -47,7 +47,8 @@
    "ibgp": true,
    "state": "Established",
    "up_down": "00:05:38",
-   "pfx_rcvd": 0
+   "pfx_rcvd": 0,
+   "iface": "Ethernet0/1"
   },
   {
    "ip": "10.11.0.20",
@@ -55,7 +56,8 @@
    "ibgp": false,
    "state": "Established",
    "up_down": "00:06:15",
-   "pfx_rcvd": 1
+   "pfx_rcvd": 1,
+   "iface": "Ethernet0/2"
   }
  ],
  "ospf_neighbors": [

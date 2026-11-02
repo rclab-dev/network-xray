@@ -36,7 +36,8 @@
    "ibgp": false,
    "state": "Established",
    "up_down": "00:06:16",
-   "pfx_rcvd": 0
+   "pfx_rcvd": 0,
+   "iface": "Ethernet0/1"
   }
  ],
  "ospf_neighbors": [],

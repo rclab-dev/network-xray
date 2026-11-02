@@ -299,6 +299,8 @@ function parseBgpSummary(j) {
   parts.forEach(function (part) {
   var j = part.obj;
   var uni = j && (j.ipv4Unicast || j);     // some FRR nest under ipv4Unicast, some flat
+  /* nx_bgp_local_as: the router's own AS / router id (default VRF first), same keys as the IOS-XE parser */
+  if (uni && out.localAs == null && uni.as != null) { out.localAs = uni.as; if (uni.routerId) out.routerId = uni.routerId; }
   var peers = uni && uni.peers;
   if (!peers) return;
   Object.keys(peers).forEach(function (ip) {
@@ -404,6 +406,7 @@ function buildState(opts) {
 
   // peers: prefer OSPF neighbors (have liveness); label by iface via clab links, else sequential
   var peers = [];                                       // {name, iface, full, state}
+  var _bgpPeerOf = [];                                  // nx_bgp_nbr_iface: the peer of bgpSum.list[i] (--proto bgp)
   var seq = 2;
   if (proto === 'bgp') {
     // BGP peers keyed by neighbor IP; map IP -> peer node by matching the iface that route to it,
@@ -418,26 +421,40 @@ function buildState(opts) {
       // not on a connected link (iBGP over lo / multihop): the peer's own hostname from the FRR summary (= the clab node name;
       // a non-adjacent peer, e.g. an RR client two hops away, simply has no link). Without a hostname: the old order-based guess.
       // a link whose iface is down has no connected route, but its address is still on the iface (show interface) = the session is on that link
-      var _ifOn = connRoute ? '' : (Object.keys(ifFallback).filter(function (f) { var d = ifFallback[f] || {}; return !/^lo/i.test(f) && d.ip && _sameSubnet(d.ip + '/' + (d.prefix || 24), b.ip); })[0] || '');
+      /* nx_bgp_nbr_iface: an iface with a connected route of its own has a KNOWN subnet that does not hold b.ip -> not a candidate
+         (IOS `show ip interface brief` has no mask: a down iface's /24 is a guess and also covers a neighbor /30 next door);
+         2+ candidates = unknown ('') instead of the first one */
+      var _ifCand = connRoute ? [] : Object.keys(ifFallback).filter(function (f) { var d = ifFallback[f] || {}; return !/^lo/i.test(f) && d.ip && _sameSubnet(d.ip + '/' + (d.prefix || 24), b.ip)
+        && !routes.some(function (r) { return r.protocol === 'connected' && r.nexthops[0] && r.nexthops[0].iface === f; }); });
+      var _ifOn = _ifCand.length === 1 ? _ifCand[0] : '';
       if (!peerName && _ifOn) peerName = ifaceToPeer[_ifOn];
       // the hostname as the clab node name: an adjacent node's own spelling when it matches ignoring case, else the short name (no domain)
       if (!peerName && !connRoute && !_ifOn && b.hostname) {
         var _hs = String(b.hostname).split('.')[0];
         peerName = (adj.filter(function (a) { return String(a.peer).toLowerCase() === _hs.toLowerCase() || String(a.peer).toLowerCase() === String(b.hostname).toLowerCase(); })[0] || {}).peer || _hs;
       }
+      /* nx_collect_peer_map: a session to an address reached by ROUTING (IGP/static, not connected) = iBGP over lo / multihop. Its packets go out
+         the route's exit iface(s): when an exit iface is a link TO THIS PEER, the session rides that link (row + bgp_over_lo); otherwise
+         (exit via another node / non-adjacent peer) it owns no link (iface '' and no fill-in from --adj). */
+      var _loRt = (connRoute || _ifOn) ? null : routes.filter(function (r) { return r.selected && !/^(connected|local|kernel)$/.test(r.protocol) && r.prefix !== '0.0.0.0/0' && _sameSubnet(r.prefix, b.ip); })
+        .sort(function (x, y) { return (parseInt(y.prefix.split('/')[1], 10) || 0) - (parseInt(x.prefix.split('/')[1], 10) || 0); })[0] || null;
+      /* nx_bgp_nbr_iface: not on a link subnet, no route, no hostname = the data does not say where this neighbor is -> RE (bgp_neighbors)
+         only, iface '' (unknown). Was the n-th --adj peer by list order, which put the session on another node's link.
+         IPv4 only: _sameSubnet cannot place an IPv6 address, so a v6 neighbor keeps the old order-based guess. */
+      if (!peerName && !connRoute && !_ifOn && !_loRt && /^\d+\.\d+\.\d+\.\d+$/.test(b.ip)) {
+        seq++;
+        var _unk = { name: '', reOnly: true, iface: '', full: b.established, state: b.state, ip: b.ip };
+        peers.push(_unk); _bgpPeerOf.push(_unk);
+        return;
+      }
       if (!peerName) peerName = adj[seq - 2] && adj[seq - 2].peer;
       if (!peerName) peerName = 'r' + (seq);
       seq++;
-      /* nx_collect_peer_map: a session to an address reached by ROUTING (IGP/static, not connected) = iBGP over lo / multihop. Its packets go out
-         the route's exit iface(s): when an exit iface is a link TO THIS PEER, the session rides that link (row + bgp_over_lo); otherwise
-         (exit via another node / non-adjacent peer) it owns no link (iface '' and no fill-in from --adj). Not on a link subnet and no route
-         at all (e.g. the local link IP was removed) = unknown -> the old behaviour (no mark). */
-      var _loRt = (connRoute || _ifOn) ? null : routes.filter(function (r) { return r.selected && !/^(connected|local|kernel)$/.test(r.protocol) && r.prefix !== '0.0.0.0/0' && _sameSubnet(r.prefix, b.ip); })
-        .sort(function (x, y) { return (parseInt(y.prefix.split('/')[1], 10) || 0) - (parseInt(x.prefix.split('/')[1], 10) || 0); })[0] || null;
       var _loExit = '';
       if (_loRt) { var _ex = (_loRt.nexthops || []).map(function (h) { return h.iface; }); _loExit = (adj.filter(function (a) { return a.peer === peerName && _ex.indexOf(a.iface) >= 0; })[0] || {}).iface || ''; }
-      peers.push({ name: peerName, iface: (connRoute && connRoute.nexthops[0] && connRoute.nexthops[0].iface) || _ifOn || _loExit || '', full: b.established, state: b.state, ip: b.ip,
-        overLo: !!_loRt && !!_loExit, noLink: !!_loRt && !_loExit });
+      var _bp = { name: peerName, iface: (connRoute && connRoute.nexthops[0] && connRoute.nexthops[0].iface) || _ifOn || _loExit || '', full: b.established, state: b.state, ip: b.ip,
+        overLo: !!_loRt && !!_loExit, noLink: !!_loRt && !_loExit };
+      peers.push(_bp); _bgpPeerOf.push(_bp);
     });
   } else {
     /* nx_ospf6: on a dual-stack link the same router is a v2 AND a v3 neighbor on the same iface -> one peer (v2 first, Full wins).
@@ -562,8 +579,9 @@ function buildState(opts) {
   } : { target: '', resolved: false, protocol: '', out_iface: '', next_hop: '', matched_prefix: '' };
 
   var _adjPeer = function (p) { return adj.some(function (a) { return a.peer === p.name; }); };  /* nx_collect_peer_map */
+  var _peer0 = peers.filter(function (p) { return !p.reOnly; })[0] || peers[0];   /* nx_bgp_nbr_iface (2): a neighbor with no place (reOnly) is not the main peer when a named one exists */
   var primaryPeer = peers.filter(function (p) { return p.full && !p.noLink && _adjPeer(p); })[0]
-    || peers.filter(function (p) { return p.full; })[0] || peers[0] || {};
+    || peers.filter(function (p) { return p.full; })[0] || _peer0 || {};
 
   // Area / hello timers for the DeepDive panel. A Full OSPF adjacency GUARANTEES matching area
   // and hello/dead timers (OSPF never reaches Full otherwise), so for a Full neighbor we can
@@ -602,8 +620,8 @@ function buildState(opts) {
     // uplink (out_iface / first non-lo) so a single-uplink node keeps wan==lan == its one data IF ->
     // is-single-link-edge stays true (1 beam/band). Never 'eth0'(mgmt->input-down red) nor 'lo'
     // (lan!=wan -> single-link-edge false -> coexist bands grow BOTH sides = spurious '2 links').
-    lan_iface: (peers[0] && peers[0].iface) || route_resolution.out_iface || (Object.keys(interfaces).filter(function (k) { return k !== 'lo'; })[0]) || 'lo',
-    neighbor_state: fullCount > 0 ? 'Full' : (peers[0] ? peers[0].state : 'None'),
+    lan_iface: (_peer0 && _peer0.iface) || route_resolution.out_iface || (Object.keys(interfaces).filter(function (k) { return k !== 'lo'; })[0]) || 'lo',
+    neighbor_state: fullCount > 0 ? 'Full' : (_peer0 ? _peer0.state : 'None'),
     has_full: fullCount > 0, full_count: fullCount,
     ospf_configured: opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf'), /* presence-fix-cfg */
     bgp_configured: opts.bgpConfigured !== undefined ? opts.bgpConfigured : (proto === 'bgp'),
@@ -614,7 +632,9 @@ function buildState(opts) {
     ospf_neighbor_full: nei.list.some(function (n) { return n.full; }),  /* REAL OSPF Full from show ip ospf neighbor (coexist band Full even under --proto bgp) */
     peer_sending_hello: (opts.ospfConfigured !== undefined ? opts.ospfConfigured : (proto === 'ospf')) && nei.list.length > 0,  /* peer HEARD = ANY OSPF neighbor state (Init and beyond = we received the peer's Hello), not only Full -> Hello-in orb shows during forming too; honest: absent only when no neighbor at all (peer unconfigured/down) */
     iface_hellos: ifaceHellos, peer_hellos: peerHellos, peer_sending_hellos: peerSendingHellos,
-    bgp_neighbors: (bgpSum.list || []).map(function (n) { var o = { ip: n.ip, remote_as: n.remoteAs, ibgp: !!n.ibgp, state: n.state }; if (n.upDown != null) o.up_down = n.upDown; if (n.pfxRcd != null) o.pfx_rcvd = n.pfxRcd; if (n.vrf) o.vrf = n.vrf; return o; }),   /* nx_vrf_bgp_table: vrf only when set */
+    bgp_neighbors: (bgpSum.list || []).map(function (n, i) { var o = { ip: n.ip, remote_as: n.remoteAs, ibgp: !!n.ibgp, state: n.state }; if (n.upDown != null) o.up_down = n.upDown; if (n.pfxRcd != null) o.pfx_rcvd = n.pfxRcd; if (n.vrf) o.vrf = n.vrf;
+      if (_bgpPeerOf[i]) o.iface = _bgpPeerOf[i].iface || '';   /* nx_bgp_nbr_iface: the local iface the session is on ('' = the data does not say) */
+      return o; }),   /* nx_vrf_bgp_table: vrf only when set */
     ospf_neighbors: (nei.list || []).map(function (n) { var _p = String(n.state || '').split('/'); var _o = { router_id: n.rid, address: n.address, state: _p[0] || '', role: _p[1] || '', iface: n.iface, full: !!n.full }; if (n.af) _o.af = n.af; if (n.vrf) _o.vrf = n.vrf; return _o; }),   /* nx_ospf6 / nx_vrf_all: af / vrf only when set */
     target_on_path: false,
     cleared: routeOk && fullCount > 0
@@ -644,6 +664,8 @@ function buildState(opts) {
   Object.keys(interfaces).forEach(function (ifn) { var _a = _areaOf(ifn); if (_areaShow && _a != null) interfaces[ifn].area = _a; if (ifs[ifn] && ifs[ifn].vrf) interfaces[ifn].vrf = ifs[ifn].vrf; else if (ifFallback[ifn] && ifFallback[ifn].vrf) interfaces[ifn].vrf = ifFallback[ifn].vrf; });   /* nx_vrf_all */
   if (proto === 'bgp') {
     s.is_established = fullCount > 0;
+    /* nx_bgp_local_as: this router's own AS, when the summary says it (absent = unknown) */
+    if (bgpSum.localAs != null && bgpSum.localAs !== '') s.bgp_local_as = /^\d+$/.test(String(bgpSum.localAs)) ? +bgpSum.localAs : bgpSum.localAs;
     s.has_bgp_route = routeOk && fullCount > 0;
     if (s.bgp_configured) s.protocol = 'bgp';  /* nx_state_driven: only when BGP actually configured (was forced for --proto bgp) */
     s.ping_ok = routeOk && fullCount > 0;
