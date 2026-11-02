@@ -11717,9 +11717,12 @@ function xrayRenderBgpTableReplay() {
   var drows = dbox ? dbox.querySelector(".de-bgp-decision-rows") : null;
   function showDecision(html) {
     if (!dbox) return;
-    if (document.querySelector(".de-bgp-bracket-pop.open")) return;
+    /* nx_bestpath_live_redraw: an open LocPrf (etc.) pop-up used to freeze the Decision -> the table showed the new best, the box the old one.
+       Redraw it with the new values and open the pop-up again in the new box (stays closed when the new box has none). */
+    var _popOpen = !!dbox.querySelector(".de-bgp-bracket-pop.open");
     if (drows) drows.innerHTML = html || "";
     dbox.style.display = html ? "" : "none";
+    if (_popOpen && html) { var _np = dbox.querySelector(".de-bgp-bracket-pop"); if (_np) _np.classList.add("open"); }
   }
   var _cfgX = window._scenarioConfig && window._scenarioConfig.xray || {};
   var _isTrace = document.body.classList.contains("trace-active");
@@ -12149,6 +12152,17 @@ function xrayBgpCloseBracketPop(e) {
   for (var i = 0; i < all.length; i++) all[i].classList.remove("open");
   document.removeEventListener("click", xrayBgpOutsideBracketPop);
   document.removeEventListener("keydown", xrayBgpEscBracketPop);
+}
+
+/* nx_bestpath_live_redraw: the pop-up's close-on-outside-click / ESC handlers were referenced but never defined (ReferenceError) */
+function xrayBgpOutsideBracketPop(e) {
+  var t = e && e.target;
+  if (t && t.closest && (t.closest(".de-bgp-bracket-pop") || t.closest(".bgp-crit-btn"))) return;
+  xrayBgpCloseBracketPop();
+}
+
+function xrayBgpEscBracketPop(e) {
+  if (e && (e.key === "Escape" || e.key === "Esc")) xrayBgpCloseBracketPop();
 }
 
 function xrayBgpToggleBracketPop(e) {
