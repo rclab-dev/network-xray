@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rclab-dev/network-xray/docs/dev/states-schema.json",
+  "title": "network-xray collected state",
+  "description": "Shape of the state the collectors write (clab-collect.js, frr-collect.js, clab-srl-collect.js, clab-iosxe-collect.js; merged by clab-xray-collect.js into xray-states.js as window.LIVE_STATES). The root is the LIVE_STATES map (router name -> router state). A single state_<node>.json file is one router state: validate it against #/$defs/routerState. Objects are open: a key not listed here is allowed (the engine reads more keys, see DATA-CONTRACT.md section 4); listed keys must have the listed type. Checked by scripts/validate-states.js, which supports only the keywords used here.",
+  "type": "object",
+  "additionalProperties": { "$ref": "#/$defs/routerState" },
+  "$defs": {
+    "routerState": {
+      "description": "One router. Every collector writes target_node and interfaces. A router that could not be read is { success: false, target_node, nx_unread, interfaces: {} }.",
+      "type": "object",
+      "required": ["target_node", "interfaces"],
+      "properties": {
+        "success": { "type": "boolean", "description": "false only for a router that could not be read (see nx_unread)." },
+        "id": { "type": "string" },
+        "scenario": { "type": "string" },
+        "target_node": { "type": "string", "description": "This router's name." },
+        "peer_node": { "type": "string", "description": "The primary neighbor's name ('' when none)." },
+        "nos": { "type": "string", "description": "The NOS that produced the state: 'srlinux', 'ios-xe'. Absent = FRR." },
+        "protocol": { "type": "string", "description": "'ospf' or 'bgp' when set." },
+        "nx_unread": { "type": "string", "enum": ["stopped", "device", "timeout", "error"], "description": "Set by clab-xray-collect.js when the router could not be read." },
+        "nx_stale_since": { "type": "string", "description": "ISO time of the last good read, with nx_unread 'timeout'." },
+        "parse_warnings": {
+          "type": "array",
+          "description": "IOS-XE only; absent when every output was read.",
+          "items": {
+            "type": "object",
+            "required": ["cmd", "why"],
+            "properties": {
+              "cmd": { "type": "string" },
+              "why": { "type": "string", "enum": ["paging", "cli_error", "empty", "unparsed", "syslog", "vrf"] },
+              "note": { "type": "string" },
+              "count": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+
+        "interfaces": {
+          "type": "object",
+          "description": "Interface name -> link state and address.",
+          "additionalProperties": { "$ref": "#/$defs/interface" }
+        },
+        "wan_iface": { "type": "string" },
+        "lan_iface": { "type": "string" },
+
+        "ospf_configured": { "type": "boolean" },
+        "ospf_active_on_interface": { "type": "boolean" },
+        "ospf_if_count": { "type": "integer", "minimum": 0 },
+        "ospf_neighbor_full": { "type": "boolean" },
+        "ospf_neighbor_state": { "type": "string" },
+        "neighbor_state": { "type": "string", "description": "State of the primary protocol's neighbor (OSPF state or BGP session state)." },
+        "has_full": { "type": "boolean" },
+        "full_count": { "type": "integer", "minimum": 0 },
+        "is_passive": { "type": "boolean" },
+        "passive_shown": { "type": "boolean" },
+        "passive_ifaces": { "type": "array", "items": { "type": "string" } },
+        "peer_sending_hello": { "type": "boolean" },
+        "iface_hellos": { "type": "object", "description": "Interface -> Hello interval (s).", "additionalProperties": { "type": "number" } },
+        "peer_hellos": { "type": "object", "description": "Neighbor name -> Hello interval (s).", "additionalProperties": { "type": "number" } },
+        "peer_sending_hellos": { "type": "object", "description": "Neighbor name -> its Hello is received.", "additionalProperties": { "type": "boolean" } },
+        "target_area": { "type": "string" },
+        "peer_area": { "type": "string" },
+        "area_match": { "type": "boolean" },
+        "target_hello": { "type": "number" },
+        "peer_hello": { "type": "number" },
+        "timer_match": { "type": "boolean" },
+        "ospf_neighbors": { "type": "array", "items": { "$ref": "#/$defs/ospfNeighbor" } },
+        "lsdb_prefixes": { "type": "array", "items": { "$ref": "#/$defs/lsdbPrefix" } },
+        "has_ospf_route": { "type": "boolean" },
+
+        "bgp_configured": { "type": "boolean" },
+        "bgp_no_neighbor": { "type": "boolean", "description": "A BGP process with no neighbor (bgp_configured stays false)." },
+        "bgp_as": { "type": "string", "description": "With bgp_no_neighbor: the process AS." },
+        "bgp_local_as": { "type": ["integer", "string"] },
+        "bgp_state": { "type": "string", "description": "Set when BGP is configured and not Established." },
+        "is_established": { "type": "boolean" },
+        "has_bgp_route": { "type": "boolean" },
+        "pfx_rcvd": { "type": "integer", "minimum": 0 },
+        "bgp_neighbors": { "type": "array", "items": { "$ref": "#/$defs/bgpNeighbor" } },
+        "bgp_routes": { "type": "array", "items": { "$ref": "#/$defs/bgpRoute" } },
+
+        "route_resolution": { "$ref": "#/$defs/routeResolution" },
+        "routing_table": { "type": "array", "items": { "$ref": "#/$defs/route" } },
+        "ping_ok": { "type": "boolean" },
+        "nh_reachable": { "type": "boolean" },
+        "target_on_path": { "type": "boolean" },
+        "cleared": { "type": "boolean" },
+
+        "peer_links": { "type": "array", "items": { "$ref": "#/$defs/peerLink" } }
+      },
+      "patternProperties": {
+        "^.+_has_full$": { "type": "boolean", "description": "<peer>_has_full: the session / adjacency to that neighbor is up." },
+        "^.+_iface$": { "type": "string", "description": "<peer>_iface: this router's interface toward that neighbor." },
+        "^.+_neighbor_state$": { "type": "string" },
+        "^.+_ospf_full$": { "type": "boolean" },
+        "^.+_ospf_state$": { "type": "string" },
+        "^.+_area$": { "type": "string", "description": "<node>_area: OSPF area (r1_area, r2_area, target_area, peer_area)." },
+        "^[^_]+_hello$": { "type": "number", "description": "<node>_hello: Hello interval in seconds (peer_sending_hello is a boolean, so the node part has no '_')." },
+        "^.+_established$": { "type": "boolean" },
+        "^.+_proto$": { "type": "string", "enum": ["ospf", "bgp"] },
+        "^.+_ospf_mismatch$": { "type": "object", "required": ["field"], "properties": { "field": { "type": "string" }, "iface": { "type": "string" }, "peer_iface": { "type": "string" }, "also": { "type": "array" } } }
+      }
+    },
+
+    "interface": {
+      "type": "object",
+      "required": ["up", "ip"],
+      "properties": {
+        "up": { "type": "boolean" },
+        "ip": { "type": "string", "description": "First IPv4 address as a.b.c.d/len; '' when the interface has none (an IPv6-only interface shows its first global IPv6)." },
+        "unnumbered": { "type": ["boolean", "string"] },
+        "area": { "type": "string" },
+        "vrf": { "type": "string" },
+        "via": { "type": "string" },
+        "ospf_area": { "type": "string" },
+        "ospf_hello": { "type": "number" },
+        "ospf_dead": { "type": "number" },
+        "ospf_net_type": { "type": "string" },
+        "ospf_passive": { "type": "boolean" },
+        "ospf_errors": { "type": "object" }
+      }
+    },
+
+    "ospfNeighbor": {
+      "type": "object",
+      "required": ["router_id", "state", "full"],
+      "properties": {
+        "router_id": { "type": "string" },
+        "address": { "type": "string" },
+        "state": { "type": "string", "description": "FSM state without the role: Full, 2-Way, Init, ..." },
+        "role": { "type": "string", "description": "DR / Backup / DROther / '' ." },
+        "iface": { "type": "string" },
+        "full": { "type": "boolean" },
+        "af": { "type": "string", "enum": ["v6"] },
+        "vrf": { "type": "string" }
+      }
+    },
+
+    "lsdbPrefix": {
+      "type": "object",
+      "required": ["text", "own", "via"],
+      "properties": {
+        "text": { "type": "string", "description": "Prefix a.b.c.d/len." },
+        "own": { "type": "boolean" },
+        "via": { "type": "string" },
+        "vrf": { "type": "string" }
+      }
+    },
+
+    "bgpNeighbor": {
+      "type": "object",
+      "required": ["ip", "remote_as", "ibgp", "state"],
+      "properties": {
+        "ip": { "type": "string" },
+        "remote_as": { "type": ["integer", "string"], "description": "A number; SR Linux writes '-' when the AS is not known." },
+        "ibgp": { "type": "boolean" },
+        "state": { "type": "string" },
+        "up_down": { "type": "string" },
+        "pfx_rcvd": { "type": "integer", "minimum": 0 },
+        "iface": { "type": "string" },
+        "vrf": { "type": "string" },
+        "state_raw": { "type": "string" },
+        "admin_down": { "type": "boolean" },
+        "max_prefix": { "type": "boolean" }
+      }
+    },
+
+    "bgpRoute": {
+      "type": "object",
+      "required": ["prefix", "next_hop", "status"],
+      "properties": {
+        "prefix": { "type": "string", "description": "As the router gives it (FRR: without the length, see prefixlen)." },
+        "prefixlen": { "type": "integer", "minimum": 0, "maximum": 128 },
+        "next_hop": { "type": "string" },
+        "as_path": { "type": "string" },
+        "best": { "type": "boolean" },
+        "status": { "type": "string", "description": "'*>' best, '* ' other, '*=' multipath, '  ' not valid." },
+        "status_raw": { "type": "string" },
+        "valid": { "type": "boolean" },
+        "local_pref": { "type": "number" },
+        "weight": { "type": "number" },
+        "metric": { "type": "number" },
+        "origin": { "type": "string" },
+        "reason": { "type": "string" },
+        "sel_reason": { "type": "string" },
+        "multipath": { "type": "boolean" },
+        "vrf": { "type": "string" }
+      }
+    },
+
+    "routeResolution": {
+      "type": "object",
+      "required": ["resolved"],
+      "properties": {
+        "target": { "type": "string" },
+        "resolved": { "type": "boolean" },
+        "protocol": { "type": "string" },
+        "out_iface": { "type": "string" },
+        "next_hop": { "type": "string" },
+        "matched_prefix": { "type": "string" }
+      }
+    },
+
+    "route": {
+      "type": "object",
+      "required": ["prefix", "protocol", "selected"],
+      "properties": {
+        "prefix": { "type": "string" },
+        "out_iface": { "type": "string" },
+        "next_hop": { "type": "string", "description": "Absent on some SR Linux rows with no next-hop address." },
+        "protocol": { "type": "string" },
+        "selected": { "type": "boolean" },
+        "vrf": { "type": "string" },
+        "nexthops": {
+          "type": "array",
+          "description": "Only on an installed route with 2+ active next-hops (ECMP).",
+          "items": { "type": "object", "properties": { "ip": { "type": "string" }, "iface": { "type": "string" } } }
+        }
+      }
+    },
+
+    "peerLink": {
+      "type": "object",
+      "required": ["iface", "peer", "up", "full", "state"],
+      "properties": {
+        "iface": { "type": "string" },
+        "peer": { "type": "string" },
+        "up": { "type": "boolean" },
+        "ip": { "type": "string" },
+        "full": { "type": "boolean" },
+        "state": { "type": "string" },
+        "ospf_full": { "type": "boolean" },
+        "ospf_state": { "type": "string" },
+        "ospf_nbrs": { "type": "array", "items": { "type": "object", "properties": { "router_id": { "type": "string" }, "state": { "type": "string" } } } },
+        "peer_ip": { "type": "string" },
+        "proto": { "type": "string", "enum": ["ospf", "bgp"], "description": "SR Linux rows carry proto instead of ospf_full / ospf_state." },
+        "area": { "type": "string" },
+        "vrf": { "type": "string" },
+        "bgp_over_lo": { "type": "boolean" }
+      }
+    }
+  }
+}
