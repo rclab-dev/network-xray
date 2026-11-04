@@ -1,0 +1,18 @@
+{
+  "routerId": "1.1.1.1",
+  "areas": {
+    "0.0.0.0": {
+      "routerLinkStates": [
+        { "lsId": "1.1.1.1", "advertisingRouter": "1.1.1.1", "lsaAge": 52, "sequenceNumber": "80000004", "checksum": "6a2f", "numOfRouterLinks": 2 },
+        { "lsId": "2.2.2.2", "advertisingRouter": "2.2.2.2", "lsaAge": 48, "sequenceNumber": "80000006", "checksum": "1b3c", "numOfRouterLinks": 3 },
+        { "lsId": "3.3.3.3", "advertisingRouter": "3.3.3.3", "lsaAge": 47, "sequenceNumber": "80000005", "checksum": "d410", "numOfRouterLinks": 2 }
+      ],
+      "routerLinkStatesCount": 3,
+      "networkLinkStates": [
+        { "lsId": "10.1.0.20", "advertisingRouter": "2.2.2.2", "lsaAge": 49, "sequenceNumber": "80000001", "checksum": "4e77" },
+        { "lsId": "10.2.0.30", "advertisingRouter": "3.3.3.3", "lsaAge": 47, "sequenceNumber": "80000001", "checksum": "92a1" }
+      ],
+      "networkLinkStatesCount": 2
+    }
+  }
+}

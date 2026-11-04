@@ -1,0 +1,16 @@
+{
+  "routerId": "1.1.1.1",
+  "areas": {
+    "0.0.0.1": {
+      "Summary Link States": [
+        { "lsId": "10.9.0.0", "advertisedRouter": "2.2.2.2", "lsaAge": 300, "sequenceNumber": "80000002", "checksum": "aa01", "summaryAddress": "10.9.0.0/24" }
+      ],
+      "ASBR-Summary Link States": [
+        { "lsId": "4.4.4.4", "advertisedRouter": "2.2.2.2", "lsaAge": 301, "sequenceNumber": "80000001", "checksum": "aa02" }
+      ]
+    }
+  },
+  "AS External Link States": [
+    { "lsId": "192.0.2.0", "advertisedRouter": "4.4.4.4", "lsaAge": 120, "sequenceNumber": "80000003", "checksum": "bb01", "metricType": "E2", "route": "192.0.2.0/24", "tag": 0 }
+  ]
+}

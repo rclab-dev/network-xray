@@ -15,6 +15,7 @@ One file per `show` command, spaces replaced with `_`, `.json` suffix:
 |---|---|
 | `show ip ospf neighbor`  | `show_ip_ospf_neighbor.json` |
 | `show ip ospf interface` | `show_ip_ospf_interface.json` |
+| `show ip ospf database`  | `show_ip_ospf_database.json` (optional; fills `ospf_lsdb`) |
 | `show interface`         | `show_interface.json` |
 | `show ip route`          | `show_ip_route.json` |
 | `show ip bgp summary`    | `show_ip_bgp_summary.json` |

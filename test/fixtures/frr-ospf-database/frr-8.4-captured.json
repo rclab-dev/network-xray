@@ -1,0 +1,36 @@
+{
+  "routerId": "10.10.0.10",
+  "areas": {
+    "0.0.0.0": {
+      "routerLinkStates": [
+        {
+          "lsId": "2.2.2.2",
+          "advertisedRouter": "2.2.2.2",
+          "lsaAge": 8,
+          "sequenceNumber": "80000004",
+          "checksum": "9475",
+          "numOfRouterLinks": 2
+        },
+        {
+          "lsId": "10.10.0.10",
+          "advertisedRouter": "10.10.0.10",
+          "lsaAge": 7,
+          "sequenceNumber": "80000003",
+          "checksum": "943b",
+          "numOfRouterLinks": 1
+        }
+      ],
+      "routerLinkStatesCount": 2,
+      "networkLinkStates": [
+        {
+          "lsId": "10.10.0.10",
+          "advertisedRouter": "10.10.0.10",
+          "lsaAge": 7,
+          "sequenceNumber": "80000001",
+          "checksum": "9a5d"
+        }
+      ],
+      "networkLinkStatesCount": 1
+    }
+  }
+}

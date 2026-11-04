@@ -81,7 +81,8 @@ var ALT_NAME = {
   'show interface': 'interface.json',
   'show ip route': 'route.json',
   'show ip bgp summary': 'bgp-summary.json',
-  'show ip bgp': 'bgp.json'
+  'show ip bgp': 'bgp.json',
+  'show ip ospf database': 'ospf-database.json'
 };
 function readShowFromDir(dir, showCmd) {
   var candidates = [showToFile(showCmd)];
@@ -105,6 +106,53 @@ function resolveProto(getShow, proto) {
   return 'ospf';                              // どちらも空 → ospf 既定 (down ノードでも panel は出る)
 }
 
+// ---- OSPF LSDB summary (`show ip ospf database json`) -----------------------------------------
+//
+// Both spellings of each part are accepted, in any combination (FRR changed them at different times):
+//   per-type keys: the CLI headings ("Router Link States", "Net Link States", ...) or camelCase
+//                  ("routerLinkStates", "networkLinkStates", ...) next to "<key>Count" numbers;
+//   the LSA's advertising router: "advertisedRouter" or "advertisingRouter".
+//   FRR 8.4 (captured: test/fixtures/frr-ospf-database/frr-8.4-captured.json) prints camelCase keys with "advertisedRouter".
+// Area-scoped LSAs sit under "areas"{<area-id>: {<type>: [..]}}; AS-scoped ones at the top level.
+// One row per LSA: { type, ls_id, adv_router, age, seq, area } (area = the area id, null for an AS-scoped LSA;
+// age = null when the router gave none).
+var LSA_TYPE = {
+  'Router Link States': 'router', 'routerLinkStates': 'router',
+  'Net Link States': 'network', 'networkLinkStates': 'network',
+  'Summary Link States': 'summary', 'summaryLinkStates': 'summary',
+  'ASBR-Summary Link States': 'asbr-summary', 'asbrSummaryLinkStates': 'asbr-summary',
+  'AS External Link States': 'as-external', 'asExternalLinkStates': 'as-external',
+  'NSSA-external Link States': 'nssa-external', 'nssaExternalLinkStates': 'nssa-external',
+  'Link-Local Opaque-LSA': 'opaque-link', 'linkLocalOpaqueLsa': 'opaque-link',
+  'Area-Local Opaque-LSA': 'opaque-area', 'areaLocalOpaqueLsa': 'opaque-area',
+  'AS-external Opaque-LSA': 'opaque-as', 'asExternalOpaqueLsa': 'opaque-as'
+};
+function _lsaRows(typeKey, list, out, area) {
+  var type = Object.prototype.hasOwnProperty.call(LSA_TYPE, typeKey) ? LSA_TYPE[typeKey] : null;
+  if (!type || !Array.isArray(list)) return;
+  list.forEach(function (L) {
+    if (!L || typeof L !== 'object') return;
+    var id = L.lsId, adv = L.advertisingRouter != null ? L.advertisingRouter : L.advertisedRouter;
+    if (id == null || adv == null) return;
+    var age = (L.lsaAge === null || L.lsaAge === undefined || L.lsaAge === '') ? NaN : Number(L.lsaAge);   // no age = unknown, not 0
+    out.push({ type: type, ls_id: String(id), adv_router: String(adv),
+      age: isFinite(age) ? age : null, seq: L.sequenceNumber != null ? String(L.sequenceNumber) : '', area: area });
+  });
+}
+function parseOspfDatabase(j) {
+  var out = [];
+  if (!j || typeof j !== 'object' || Array.isArray(j)) return out;
+  var areas = j.areas;
+  if (areas && typeof areas === 'object' && !Array.isArray(areas)) {
+    Object.keys(areas).forEach(function (a) {
+      var A = areas[a];
+      if (A && typeof A === 'object') Object.keys(A).forEach(function (k) { _lsaRows(k, A[k], out, a); });
+    });
+  }
+  Object.keys(j).forEach(function (k) { if (k !== 'areas') _lsaRows(k, j[k], out, null); });
+  return out;
+}
+
 // ---- 共通アセンブラ: getShow(cmd)->json を集めて clab.collectFromJson に渡す -----------------
 function assemble(getShow, opts) {
   var proto = resolveProto(getShow, opts.proto);
@@ -121,7 +169,13 @@ function assemble(getShow, opts) {
     args.ospfNeighbor = getShow('show ip ospf neighbor');
     args.ospfInterface = getShow('show ip ospf interface');
   }
-  return { proto: proto, state: clab.collectFromJson(args) };
+  var state = clab.collectFromJson(args);
+  // lsdb_prefixes (route-derived) stays as is; ospf_lsdb is the router's real LSDB summary.
+  if (proto !== 'bgp') {
+    var db = getShow('show ip ospf database');
+    if (db && typeof db === 'object') state.ospf_lsdb = parseOspfDatabase(db);
+  }
+  return { proto: proto, state: state };
 }
 
 function collectViaExec(opts) {
@@ -175,6 +229,11 @@ function selfTest() {
   _assert(st.r2_has_full === true && st.r2_iface === 'eth0', 'r2 mapped via --adj (eth0->r2) and Full');
   _assert(st.has_ospf_route === true && st.route_resolution.next_hop === '10.1.0.20',
     'route resolved, next-hop from real json');
+  _assert(Array.isArray(st.ospf_lsdb) && st.ospf_lsdb.length === 5 &&
+    st.ospf_lsdb[3].type === 'network' && st.ospf_lsdb[3].ls_id === '10.1.0.20' && st.ospf_lsdb[3].adv_router === '2.2.2.2',
+    'ospf_lsdb: 3 router + 2 network LSAs from show ip ospf database');
+  _assert(parseOspfDatabase({ areas: { '0.0.0.0': { routerLinkStates: [{ lsId: '1.1.1.1', advertisingRouter: '1.1.1.1', lsaAge: 5, sequenceNumber: '80000002' }], routerLinkStatesCount: 1 } } })[0].adv_router === '1.1.1.1',
+    'ospf_lsdb: newer camelCase key style accepted');
 
   // 3) --proto auto がこの OSPF sample を ospf と判定
   console.log('self-test: --proto auto on OSPF sample -> ospf');
@@ -214,7 +273,7 @@ if (typeof require !== 'undefined' && require.main === module) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     buildExecCmd: buildExecCmd, execVtyshJson: execVtyshJson,
-    readShowFromDir: readShowFromDir, resolveProto: resolveProto,
+    readShowFromDir: readShowFromDir, resolveProto: resolveProto, parseOspfDatabase: parseOspfDatabase,
     collectViaExec: collectViaExec, collectFromDir: collectFromDir
   };
 }
