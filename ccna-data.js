@@ -59,7 +59,7 @@ window.CCNA_STATES = {
   down:     _ccna('Down',     { peerHello: false }), // sending Hello only, peer not yet responding
   init:     _ccna('Init',     { peerHello: true  }), // peer Hello received (one-way)
   twoway:   _ccna('2-Way',    { peerHello: true  }), // bidirectional Hello established (DR/BDR election)
-  exstart:  _ccna('ExStart',  { peerHello: true  }), // Master/Slave decided, DBD exchange begins
+  exstart:  _ccna('ExStart',  { peerHello: true  }), // Master/Slave negotiation (empty DBDs), decided by NegotiationDone
   exchange: _ccna('Exchange', { peerHello: true  }), // DBD exchange in progress → LSDB gather animation
   loading:  _ccna('Loading',  { peerHello: true  }), // request/retrieve missing LSAs → LSDB gather
   full:     _ccna('Full',     { peerHello: true  }), // fully synced → tunnel + LSDB green
@@ -69,8 +69,8 @@ window.CCNA_STATES = {
 window.CCNA_DESC = {
   down:     'Down — sending Hello, but no Hello has been received from the peer yet.',
   init:     'Init — peer Hello received (one-way). We do not yet appear in the peer\'s neighbor list.',
-  twoway:   '2-Way — bidirectional Hello established. DR/BDR are elected here.',
-  exstart:  'ExStart — Master/Slave is decided and DBD (DB Description) exchange begins.',
+  twoway:   '2-Way — bidirectional Hello established. DR/BDR are elected here; if one side is DR/BDR the adjacency continues to ExStart (AdjOK?), two DROthers on a broadcast link stay in 2-Way.',
+  exstart:  'ExStart — Master/Slave negotiation: empty DBDs (I/M/MS bits) decide Master/Slave and the initial DD sequence number; NegotiationDone moves to Exchange.',
   exchange: 'Exchange — exchanging LSDB summaries via DBD. → the LSA gather animation plays inside the cylinder.',
   loading:  'Loading — requesting/retrieving missing LSAs via LSR/LSU. → LSA gather continues.',
   full:     'Full — LSDB fully synced, adjacency established. r2\'s loopback 2.2.2.2/32 is learned via OSPF → shown in the Routing Engine panel, LSDB, and the cylinder FORWARD arrow. Tunnel shown, gauge green, gather stops.',
