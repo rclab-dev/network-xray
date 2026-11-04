@@ -692,7 +692,7 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
-   読む命令だけですが、Docker のソケット (ホストの root と同じ強さ) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
+   読む命令だけですが、Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
    イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` で固定できます。[リリースページ](https://github.com/rclab-dev/network-xray/releases/latest) を参照してください。
 
 netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` での `docker/netlab-defaults.yml` の読み込みが必要です。[netlab tool](#netlab-tool-ja) を参照してください。
@@ -715,11 +715,11 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 - **使う時:** containerlab や netlab で **FRR**・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (OSPFv2 は 3 つとも。FRR は OSPFv3 と VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
 - **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux / Cisco IOL 以外の機器 (全体図には出るが、中は読まない)。
-- **読むもの** (読む命令だけ・何も変えません):
-  - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp vrf all json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp vrf all summary json`、`show ip ospf vrf all neighbor json`、`show ip ospf vrf all interface json`、`show ip route vrf all json`、`show interface json`、`show running-config` (`vrf all` に JSON で答えない FRR は素の命令で読む)。`router ospf6` のあるルータは OSPFv3 も: `show ipv6 ospf6 vrf all neighbor json`、`show ipv6 ospf6 vrf all interface json`、`show ipv6 route vrf all json`。VRF のあるルータでは、経路表と BGP の表を 1 つの VRF ずつ出す (上の VRF のボタンで切り替え。管理用の VRF `mgmt` にはボタンを出さない)。IPv6 の BGP の表は読まない。
+- **読み取る情報** (読み取り専用コマンドのみを実行し、何も変更しません):
+  - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp vrf all json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp vrf all summary json`、`show ip ospf vrf all neighbor json`、`show ip ospf vrf all interface json`、`show ip route vrf all json`、`show interface json`、`show running-config` (`vrf all` に JSON で応答しない FRR では、通常のコマンドで読み取ります)。`router ospf6` のあるルータは OSPFv3 も: `show ipv6 ospf6 vrf all neighbor json`、`show ipv6 ospf6 vrf all interface json`、`show ipv6 route vrf all json`。VRF のあるルータでは、経路表と BGP の表を 1 つの VRF ずつ出す (上の VRF のボタンで切り替え。管理用の VRF `mgmt` にはボタンを出さない)。IPv6 の BGP の表は読まない。
   - netlab の `validate:` の検査は `netlab validate` と同じ読み方: 宛先ごとの形 (`show bgp ipv4 unicast <宛先> json`) で、勝った経路は `bestpath.overall`。
   - SR Linux は `sr_cli 'info from state … | as json'`。
-  - Cisco IOS-XE (containerlab の kind `cisco_iol`) は SSH で文字の `show` を読みます — [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol-1) を見てください。
+  - Cisco IOS-XE (containerlab の kind `cisco_iol`) は、SSH 経由でテキスト形式の `show` コマンド出力を取得します — [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol-1) を見てください。
 
 **ブラウザで試す** — 一番上の **Open in GitHub Codespaces** ボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。
 - ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。** コンテナのノード (FRR など) だけ動きます (Codespaces では入れ子の仮想化ができないため)。
@@ -741,13 +741,13 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 **解説記事:** [network-xray の紹介 (Zenn)](https://zenn.dev/routecrushlab/articles/network-xray-oss)
 
-**ルータが *なぜ* その経路を選んだかを見る。** `network-xray` は、ルータの生きた状態(`show` / JSON)を転送判断の絵にします — どの経路が勝ち、どれが負け、なぜか。ギャラリーはインストール不要・ブラウザだけ。
+**ルータが *なぜ* その経路を選んだかを見る。** `network-xray` は、ルータの稼働状態 (`show` / JSON) をもとに、パケット転送の判断を図解します — どの経路が勝ち、どれが負け、なぜか。ギャラリーはインストール不要・ブラウザだけ。
 
 `network-xray` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
 **筋道立てて考えられる絵**にします — パケットがどこへ向かうか、なぜ経路が在る(または無い)のか、
 障害がどう波及し復旧するか。**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、
 OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストールされる経路)を描きます。操作は
-`xrayCore` ファサード越しの数行だけ。
+`xrayCore` API を数回呼び出すだけです。
 
 > これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss) を動かしているのと同じ描画コア**で、
 > フォークではありません — 共有モジュールとして切り出し、本体と食い違わないようにしています。
@@ -755,7 +755,7 @@ OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストール�
 **実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの
 FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
 
-**シミュレータではなく記述的(descriptive)**:与えられた報告状態を描くだけで、経路計算もプロトコル実行も
+**シミュレータではなく記述的 (descriptive)**: 入力で報告された状態を描くだけで、経路の計算もプロトコルの実行も
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
 FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (混ざったラボも同じように描けます)。Arista … も同じ小さなアダプタの形で載せられます。
 
@@ -765,7 +765,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 ルータが *なぜ* そう判断したかを示します — コンフィグ(意図)からの事前シミュレーションには **Batfish** を。
 入力が違い(状態 vs コンフィグ)、問いが違います。
 
-**CLI パースについて。** CLI パースはベストエフォートでバージョン依存に脆く、堅牢な経路は**構造化入力**
+**CLI パースについて。** CLI の解析はベストエフォートで、バージョン差異に弱いため、堅牢な方法は**構造化された入力**を使うことです
 (`show … json`、またはコレクタがデバイス状態を直接読む — FRR コレクタは既に `vtysh … json` を読みます)。
 画面スクレイプの CLI は簡便なフォールバック — **読めないベンダー／版は、生の出力 (`show … json`) を fixture として issue に付けてください** 。
 
@@ -794,7 +794,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 
 **必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)。
 
-> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`xray.sh` は画面を全部の口 (`0.0.0.0`・既定のポートは 8080・アドレスを変えるオプションはありません) で、ログインなしで開きます。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で使ってください。この機械の中だけにしたい時は、`sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` でラボを立て、下の collector / graph の手動の命令を使います。[詳しく](#security-notes-ja)
+> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`xray.sh` はすべてのインターフェース (`0.0.0.0`、既定ポート: 8080、待受アドレスを変更するオプションはありません) で画面を配信し、ログイン認証はありません。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で使ってください。この機械の中だけにしたい時は、`sudo containerlab deploy -t examples/q21-bgp-lp/q21.clab.yml` でラボを立て、下の collector / graph の手動の命令を使います。[詳しく](#security-notes-ja)
 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
@@ -831,7 +831,7 @@ OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を 
 
 <a id="netlab-tool-ja"></a>
 
-> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker のソケット (ホストの root と同じ強さ)** を渡します — ラボ用の機械でだけ。画面にはログインがありません。下の `docker run` の例はこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストの全部の口に公開します。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (network-xray の `netlab-defaults.yml` を使う時は `netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
+> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker ソケット (ホスト上の root 権限と同等)** を渡します — ラボ用の機械でだけ。画面にはログインがありません。下の `docker run` の例はこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストのすべてのインターフェースに公開します。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (network-xray の `netlab-defaults.yml` を使う時は `netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
 
 **netlab の tool として (Docker のイメージ):** network-xray はコンテナとしても動き、**netlab がラボと一緒に起動**します。netlab の topology に次を足して
 ```yaml
@@ -839,19 +839,19 @@ defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]   # tool �
 tools:
   network_xray:
 ```
-同梱の defaults ファイルは画面をホストの全部の口に公開します (`-p 8600:8600`・ほかの機械から開けます)。ログインはないため、信頼できるネットワークの中で使ってください。ラボの機械の中だけにしたい時は、手元の `docker/netlab-defaults.yml` の `-p` の行を `-p 127.0.0.1:…` に変えます。イメージもそこで `ghcr.io/rclab-dev/network-xray@sha256:<digest>` に固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。[セキュリティ](#security-notes-ja)
+同梱の defaults ファイルは画面をホストのすべてのインターフェースに公開します (`-p 8600:8600`・ほかの機械から開けます)。ログインはないため、信頼できるネットワークの中で使ってください。ラボの機械の中だけにしたい時は、手元の `docker/netlab-defaults.yml` の `-p` の行を `-p 127.0.0.1:…` に変えます。イメージもそこで `ghcr.io/rclab-dev/network-xray@sha256:<digest>` に固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。[セキュリティ](#security-notes-ja)
 
 netlab では tool の名前は `network_xray` (下線) です。netlab の tool の名前は環境変数の名前にも使われるためです。製品・リポジトリ・イメージの名前は network-xray のままです。
-netlab の開発中の枝には、netlab 自身の `network_xray` の tool の定義も入っています (26.10 の後に入った・26.10 には入っていません)。それが netlab の版に入ると、`tools: network_xray:` だけで network-xray が起動します (図と DeepDive)。ただしこの定義は `network-xray.json` を書きません。下の `validate:` の帯は出ず、自分で書いた `network-xray.json` は `netlab down` で消えません。帯を出すには、上の `defaults.sources.extra` の 1 行を残してください (その tool の定義は `netlab down` でファイルも消します)。<!-- nx_readme_builtin_tool -->
+netlab の開発ブランチ (development branch) には、netlab 自身の `network_xray` の tool の定義も入っています (26.10 の後に入った・26.10 には入っていません)。それが netlab の版に入ると、`tools: network_xray:` だけで network-xray が起動します (図と DeepDive)。ただしこの定義は `network-xray.json` を書きません。下の `validate:` の帯は出ず、自分で書いた `network-xray.json` は `netlab down` で消えません。帯を出すには、上の `defaults.sources.extra` の 1 行を残してください (その tool の定義は `netlab down` でファイルも消します)。<!-- nx_readme_builtin_tool -->
 (topology に `defaults.sources.extra` の一覧が既にある時 — BGP Labs はそう — は、2 行目を作らずその一覧に足してください)。`netlab up` すると、ラボの設定が終わった後に netlab が `ghcr.io/rclab-dev/network-xray:1` を起動し、`Open http://<host>:8600/` と案内します。OSPF / BGP は自分で見分けます (後から BGP を足しても追いかけます)。`netlab down` で一緒に片付きます。`multilab` プラグイン (`plugin: [ multilab ]`・`defaults.multilab.id: N`) を使うと、ラボごとに 8600 + N の番号になります (プラグインが要ります。無いとラボどうしの管理用の IP がぶつかります)。netlab の tool として確かめたのは FRR のラボ (ipSpace の BGP Labs の 3-rr・OSPF の例)。SR Linux も読めます (containerlab で確かめ済)。network-xray が中を読むのは FRR・SR Linux・Cisco IOS-XE (containerlab の kind `cisco_iol`) です。ほかの機器 (Linux のホスト・cEOS など) は全体図に出て、DeepDive にもそう出ます。止まっている・応答の無いルータは理由を添えて灰色で出ます。応答が無くなったルータは最後に読めた状態を「古い」と印を付けて残し、ほかのルータは書き換わり続けます。
 netlab を使わない場合 (動いている containerlab のラボなら何でも): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (画面はこの機械の中からだけ開けます。ほかの機械から開く時は `-p 8600:8600`) — ログインはないため、ほかの機械に公開する時は信頼できるネットワークで使ってください。イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` で固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。例題 (`examples/`) なら問題の帯と **✓ Solved** も出ます (topology の隣の `problem.json` から)。それが無いラボには帯は出ません。image は linux/amd64 と linux/arm64 です。
 `netlab up` が「already running」と言う時は、同じ名前のラボが別のフォルダで動いたままです (`netlab status --all`)。先にそこで `netlab down` してください。
 
-**netlab validate の検査をページに:** ラボに `validate:` の検査がある時 (ipSpace の BGP Labs はある)、図の上に帯で出します — 「3 / 12」・検査ごとに 1 行 (済んだ物は緑の ✓)・全部通ると **✓ Solved**。落ちている検査の BGP セッションやルータにも色が付きます。network-xray が数秒ごとに自分で判定するので (FRR のルータ・`bgp_neighbor` と `bgp_prefix`・netlab の FRR 用の規則からこの 2 種の判定と文を写した物)、設定している間も帯が追いかけます。network-xray が読まない検査 (ping・OSPF・`show`/`valid`・ほかの機器) は灰色のままで ✓ Solved を出しません — それは `netlab validate` で確かめてください。ラボを立てた直後は、早すぎる判定をしないよう帯が待ちます (この待ちは network-xray 独自なので、少しの間 `netlab validate` と判定が違うことがあります): 60 秒は ✓ Solved を出さず、経路が「無い」ことの検査はそのルータの BGP が張れて 30 秒 (検査に `wait:` があればその秒数) たってから判定し、✓ Solved は全部の合格が 20 秒続いた時だけ出します。BGP Labs は 2026-10-15 以降の写し (bgplab の commit 02b8860 以降) を使ってください — それより古い写しでは、netlab 26.x の `netlab validate` が `bgp.originate` を使う検査を実行できません。このため tool の定義は `netlab create` / `netlab up` に `network-xray.json` (検査が参照するラボの値) も書かせます。ラボを立てている間、このファイルには netlab が書くラボの値がそのまま入ります (topology のパスワードも。画面には出ません)。`netlab down` で消えます — ラボは `netlab down` で止めてください (`docker kill` や電源断だけだと残ります。その時は手で消してください)。`netlab up` が途中で失敗した時も片付けは走らないので、`network-xray.json` を手で消してください。 <!-- nx_netlab_validate -->
+**netlab validate の検査をページに:** ラボに `validate:` の検査がある時 (ipSpace の BGP Labs はある)、図の上に帯で出します — 「3 / 12」・検査ごとに 1 行 (済んだ物は緑の ✓)・全部通ると **✓ Solved**。不合格 (失敗) となっているテスト項目に関連する BGP セッションやルータにも色が付きます。network-xray が数秒ごとに自分で判定するので (FRR のルータ・`bgp_neighbor` と `bgp_prefix`・netlab の FRR 用の規則からこの 2 種の判定と文を写した物)、設定している間も帯が追いかけます。network-xray が読まない検査 (ping・OSPF・`show`/`valid`・ほかの機器) は灰色のままで ✓ Solved を出しません — それは `netlab validate` で確かめてください。ラボを立てた直後は、早すぎる判定をしないよう帯が待ちます (この待ちは network-xray 独自なので、少しの間 `netlab validate` と判定が違うことがあります): 60 秒は ✓ Solved を出さず、経路が「無い」ことの検査はそのルータの BGP が張れて 30 秒 (検査に `wait:` があればその秒数) たってから判定し、✓ Solved は全部の合格が 20 秒続いた時だけ出します。BGP Labs は 2026-10-15 以降の写し (bgplab の commit 02b8860 以降) を使ってください — それより古い写しでは、netlab 26.x の `netlab validate` が `bgp.originate` を使う検査を実行できません。このため tool の定義は `netlab create` / `netlab up` に `network-xray.json` (検査が参照するラボの値) も書かせます。ラボを立てている間、このファイルには netlab が書くラボの値がそのまま入ります (topology のパスワードも。画面には出ません)。`netlab down` で消えます — ラボは `netlab down` で止めてください (`docker kill` や電源断だけだと残ります。その時は手で消してください)。`netlab up` が途中で失敗した時も片付けは走らないので、`network-xray.json` を手で消してください。 <!-- nx_netlab_validate -->
 
-**図の段:** netlab のラボはルータを段に並べて開きます — 上の段 = `provider` / `isp*` / `spine(s)` / `external` のような名前のグループ、下の段 = `leaf(s)` / `customer(s)` / `host(s)` など、その他は間 (`external` は最後に見ます: BGP Labs では「設定済みの機器」の意味なので、客のルータが上に来ることがあります — その時は次の指定で直せます)。段を自分で決めるには、ノードに containerlab の `graph-level` ラベルを付けます (1 = 上の段・グループ名より優先): netlab では `nodes.s1.clab.labels: { graph-level: 1 }` (この repository の tool の定義 = 上の `defaults.sources.extra` の行を使う時だけ。それが `clab.labels` を使えるようにしています。無いと netlab がその行で止まります)、containerlab の topology ではノードの下に `labels: { graph-level: 1 }`。Horizontal / Vertical で段のまま並べ直し、ドラッグした位置はこのブラウザが覚えます。 <!-- nx_netlab_tiers -->
+**トポロジ図の行配置:** netlab のラボでは、ルータを行ごとに並べて表示します — 上の段 = `provider` / `isp*` / `spine(s)` / `external` のような名前のグループ、下の段 = `leaf(s)` / `customer(s)` / `host(s)` など、その他は間 (`external` は最後に見ます: BGP Labs では「設定済みの機器」の意味なので、客のルータが上に来ることがあります — その時は次の指定で直せます)。段を自分で決めるには、ノードに containerlab の `graph-level` ラベルを付けます (1 = 上の段・グループ名より優先): netlab では `nodes.s1.clab.labels: { graph-level: 1 }` (この repository の tool の定義 = 上の `defaults.sources.extra` の行を使う時だけ。それが `clab.labels` を使えるようにしています。無いと netlab がその行で止まります)、containerlab の topology ではノードの下に `labels: { graph-level: 1 }`。Horizontal / Vertical で段のまま並べ直し、ドラッグした位置はこのブラウザが覚えます。 <!-- nx_netlab_tiers -->
 <a id="security-notes-ja"></a>
-**注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'`、Cisco IOS-XE (IOL) を SSH の `show` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker のソケット (ホストの root と同じ強さ) を渡します**。ラボ用の機械でだけ使ってください。`docker run` の例はポート 8600 をこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストの全部の口に公開します。広く公開すると、そのポートに届く人ならログインなしでラボの状態を見られます。信頼できるネットワークで使ってください。
+**注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'`、Cisco IOS-XE (IOL) を SSH の `show` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker ソケット (ホスト上の root 権限と同等) を渡します**。ラボ用の機械でだけ使ってください。`docker run` の例はポート 8600 をこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストのすべてのインターフェースに公開します。広く公開すると、そのポートに届く人ならログインなしでラボの状態を見られます。信頼できるネットワークで使ってください。
 
 **セキュリティの注意:** Docker のソケットを使える人 (`-v /var/run/docker.sock` のマウント、または `docker` グループ) は、ホストで root として何でも動かせます。画面にはログインがありません: `docker run` なら `-p 127.0.0.1:8600:8600` (この機械だけ)、`containerlab graph` なら他の人に見せる必要がなければ `-s 127.0.0.1:8080` にしてください。Cisco IOS-XE では collector は SSH のホスト鍵を確かめません (ラボのルータは起動のたびに鍵が変わるため) — ラボの管理網の中でだけ使ってください。パスワードは `NX_IOS_PASSWORD` から取り、表示も状態ファイルへの書き込みもしません。collector はトポロジの名前をデータとしてだけ使い (シェルを通さず、普通の名前でないものは外します)、出力先には `xray-states.js` だけを書きます。ノードごとの一時ファイルは自分のユーザーだけが開けるディレクトリに置きます。
 
@@ -867,7 +867,7 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 - **読む物** (文字の出力・既定は 10 秒ごと = `NX_IOS_INTERVAL` (秒) で変えられます): `show ip ospf neighbor`・`show ip ospf interface` (brief と全部)・`show ip interface brief`・
   `show ip route`・`show ip bgp summary`・`show ip bgp`・`show bridge-domain`。ECMP の経路・unnumbered の IF (`ip unnumbered Loopback0`)・
   bridge-domain の IF (`BDI`・`Ethernet0/2 (BDI500)` のように出る) の上の OSPF も読みます。**VRF はまだ読みません** — VRF のあるラボでは、間違った絵の代わりにそう出します (管理の VRF は数えません)。
-- **読めない時** (`--More--` で切れた・その image が知らないコマンド・空の答え・読めない行) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
+- **取得・解析できない場合** (`--More--` で出力が途切れた・そのイメージが対応していないコマンド・出力が空・どのパーサーでも解析できない行) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
 - **FRR と違って見える所:** IOS の `show ip route` は選ばれた経路だけを出すので、経路表に「候補」の行は出ません。shutdown した OSPF の IF は赤で描き、OSPF の見出しは up の IF だけを数えます。
 - 実際のラボで試したのは `cisco_iol` だけです。ほかの IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) はまだ読みません。
 
@@ -943,7 +943,7 @@ view.openDeepDive();                                      // ルータの中へ
 
 すでに **[containerlab](https://containerlab.dev)** でラボを動かしているなら、`xray-graph.html` が
 `containerlab graph --template` の drop-in です。稼働中トポロジをノード数・リンク数に固定上限のない全体図で描き
-(レイアウトは commodity — NeXt UI と描画品質を競わない)、**ノードをクリックするとその
+(レイアウトは基本的なもので、NeXt UI と競うことは目指していません)、**ノードをクリックするとその
 ノードの X-Ray DeepDive** が開きます:報告された OSPF/BGP 隣接・LSDB 表示・インストール経路。LSDB 表示は報告された OSPF/OSPFv3 経路のプレフィックスを使い、無ければローカルのインターフェースのサブネットと解決した宛先を使います。LSDB 全体を読んではいません (SR Linux だけは OSPF のリンク状態データベースから読みます)。隣が何台あっても、
 そのノードの**リンクを全部いっぺんに**描き、どのトンネルも全体図でその相手がいる向きから入ります(リンクの名前は置ける所だけに出します)。
 
@@ -975,7 +975,7 @@ DeepDive エンジン(skin・routing table・Best-Path Decision)は共通で、�
 NeXt UI Toolkit(**EPL-1.0**・`js/` `css/` `fonts/` に同梱し `THIRD_PARTY_NOTICES.md` に帰属明記)を bundle します。
 `xray-graph.html` は純 MIT のままです。
 
-**混在ラボ:** `clab-xray-collect.js` は `VENDORS` 表で振り分けます。SR Linux の kind は `clab-srl-collect.js` (`sr_cli`)、`cisco_iol` は `clab-iosxe-collect.js` (SSH)、残りのノードは FRR 用の `clab-collect.js` (`vtysh`) で読もうとします。FRR の様に答えないノード (Linux のホストなど) は図には出ますが、読みません。3 つの collector は同じ `state` の形を使い、1 つの `window.LIVE_STATES` に入ります。SR Linux 1 台を手で渡すには `srl-paste.html` に `sr_cli … | as json` の出力を貼れます。
+**混在ラボ:** `clab-xray-collect.js` は `VENDORS` 表で振り分けます。SR Linux の kind は `clab-srl-collect.js` (`sr_cli`)、`cisco_iol` は `clab-iosxe-collect.js` (SSH)、その他のノードは、FRR 用の `clab-collect.js` (`vtysh`) で収集を試みます。FRR の様に答えないノード (Linux のホストなど) は図には出ますが、読みません。3 つの collector は同じ `state` の形を使い、1 つの `window.LIVE_STATES` に入ります。SR Linux 1 台を手で渡すには `srl-paste.html` に `sr_cli … | as json` の出力を貼れます。
 
 **live state(任意):** `clab-collect.js` は、稼働中ラボの1ノードの実 FRR 状態を読み
 (`docker exec clab-<lab>-<node> vtysh -c "show … json"`)、DeepDive にそのまま渡せる `state` を出す
