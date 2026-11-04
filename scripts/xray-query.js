@@ -287,6 +287,7 @@ function bgpNeighbors(states, node) {
 function parseAddr(s) {
   s = String(s).trim();
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(s)) {
+    if (/(^|\.)0\d/.test(s)) return null;   // 010 is octal to inet_aton (ping), decimal elsewhere
     var o = s.split('.').map(Number);
     if (o.some(function (x) { return x > 255; })) return null;
     return { bits: 32, n: o.reduce(function (a, x) { return a * 256n + BigInt(x); }, 0n) };
@@ -333,9 +334,13 @@ function inPrefix(addr, pfx) {
 // longest-prefix match of an address in a router's collected routing_table (installed rows only)
 function routeLookup(states, node, destination, vrf) {
   var s = getNode(states, node);
-  if (!destination) throw new QueryError('missing destination');
+  if (!destination || !String(destination).trim()) throw new QueryError('missing destination');
   var addr = parseAddr(destination);
-  if (!addr) throw new QueryError('destination is not an IPv4 or IPv6 address: ' + destination);
+  if (!addr) {
+    var lz = /^\s*\d+(\.\d+){3}\s*$/.test(destination) && /(^|\.)0\d/.test(String(destination).trim());
+    throw new QueryError('destination is not an IPv4 or IPv6 address: ' + destination +
+      (lz ? ' (an octet with a leading zero is ambiguous: write it without the zero)' : ''));
+  }
   var v = vrf || 'default';
   var out = { router: node, destination: String(destination).trim(), vrf: v, route: null, next_hop: null, out_iface: null };
   if (!Array.isArray(s.routing_table)) {
