@@ -218,6 +218,126 @@ function why(states, node, prefix, vrf) {
   return out;
 }
 
+// ---- why_path -------------------------------------------------------------------------------
+// The Best-Path Decision panel's comparison (xrayBgpDecision in xray-core.js). xray-core.js is a browser file, so the
+// functions are cut out of it by name and run in a vm context, as test/bestpath-frr.test.js does. Loaded on first use.
+var BP_NAMES = ['XRAY_BGP_CRITERIA', 'xrayBgpOriginChar', 'xrayBgpOriginRank', 'xrayBgpNum', 'xrayBgpNeighborAS',
+  '_xrayAsPathLen', 'xrayBgpDecision'];
+var bpCtx = null;
+function bestPathDecision(rows) {
+  if (!bpCtx) {
+    var vm = require('vm');
+    var src = fs.readFileSync(path.join(__dirname, '..', 'xray-core.js'), 'utf8');
+    var cut = function (name) {
+      var m = new RegExp('^(function ' + name + '\\(|var ' + name + ' = )', 'm').exec(src);
+      if (!m) throw new QueryError('xray-core.js: ' + name + ' not found');
+      var start = m.index, end;
+      if (m[1].indexOf('function') === 0) end = src.indexOf('\n}', start) + 2;
+      else {
+        var depth = 0, i = src.indexOf('=', start) + 1;
+        for (; i < src.length; i++) {
+          var c = src[i];
+          if (c === '[' || c === '{' || c === '(') depth++;
+          else if (c === ']' || c === '}' || c === ')') depth--;
+          else if (c === ';' && depth === 0) break;
+        }
+        end = i + 1;
+      }
+      return src.slice(start, end);
+    };
+    var ctx = { String: String, Math: Math, parseInt: parseInt, isNaN: isNaN };
+    vm.createContext(ctx);
+    vm.runInContext(BP_NAMES.map(cut).join('\n'), ctx, { filename: 'xray-core.js (Best-Path functions)' });
+    bpCtx = ctx;
+  }
+  return bpCtx.xrayBgpDecision(rows);
+}
+
+// a bare address that is not itself a BGP prefix -> the longest BGP prefix on the node that contains it (or null)
+function bgpPrefixFor(s, destination, vrf) {
+  var addr = parseAddr(destination);
+  if (!addr) return null;
+  var best = null, bestLen = -1;
+  (s.bgp_routes || []).forEach(function (r) {
+    if (vrf && (r.vrf || 'default') !== vrf) return;
+    var l = routeLen(r), net = splitPrefix(r.prefix || '').net;
+    var p = parsePrefix(l != null ? net + '/' + l : net);
+    if (p && inPrefix(addr, p) && p.len > bestLen) { best = net + '/' + p.len; bestLen = p.len; }
+  });
+  return best;
+}
+
+// router + prefix (or address) -> the selected BGP path, the other candidates, the deciding step and where it came from:
+//   reason_source "device"     - the router reported it (FRR selectionReason, stored as bgp_routes[].reason / sel_reason)
+//   reason_source "comparison" - network-xray compared the attributes in the data (the Best-Path Decision panel's order)
+//   reason_source null         - neither says (deciding_step null + a note)
+function whyPath(states, router, destination, vrf) {
+  var s = getNode(states, router);
+  if (!destination) throw new QueryError('missing prefix');
+  var w, matched = null;
+  try { w = why(states, router, destination, vrf); }
+  catch (e) {
+    if (!(e instanceof QueryError) || !/^unknown prefix/.test(e.message) || /\//.test(destination)) throw e;
+    matched = bgpPrefixFor(s, destination, vrf);
+    if (!matched) throw e;
+    w = why(states, router, matched, vrf);
+  }
+  var out = { router: router, prefix: w.prefix };
+  if (w.vrf) out.vrf = w.vrf;
+  if (matched) out.destination = String(destination).trim();
+  var bestIdx = w.candidates.findIndex(function (c) { return c.best; });
+  out.selected = bestIdx >= 0 ? w.candidates[bestIdx] : null;
+  out.candidates = w.candidates.filter(function (c, i) { return i !== bestIdx; });
+  if (w.also_best) out.note = 'more than one path is marked best (multipath); selected is the first';
+
+  // what the panel compares: usable paths only, LocPrf read from local_pref
+  var rows = w.candidates.filter(function (c) { return c.valid !== false; }).map(function (c) {
+    var o = JSON.parse(JSON.stringify(c));
+    if (o.local_pref != null) o.locprf = String(o.local_pref);
+    if (o.best && o.status.indexOf('>') < 0) o.status = '*>';   // the panel finds the best path by its '>' mark
+    if (!o.best) o.status = o.status.replace('>', ' ');
+    return o;
+  });
+  var dec = out.selected ? bestPathDecision(rows) : null;
+  var steps = dec && dec.chain ? dec.chain.map(function (st) {
+    return { step: st.crit.label, selected: st.bestVal, other: st.cmpVal, result: st.status };
+  }) : null;
+  var inferred = null, why2 = null;
+  if (dec) {
+    if (dec.kind === 'decided') inferred = dec.criterion.label;
+    else if (dec.kind === 'single') inferred = 'Only path';
+    else if (dec.kind === 'local') inferred = 'Locally originated';
+    else if (dec.kind === 'tie') why2 = 'every compared attribute ties; a later step not in the data decided (e.g. Older Path, Router ID)';
+    else if (dec.kind === 'medskip') why2 = 'MED is not compared across neighbor ASes and every other compared attribute ties';
+    else if (dec.kind === 'ambiguous') why2 = 'the attributes in the data do not explain the best mark at ' + dec.chain[dec.chain.length - 1].crit.label;
+  }
+
+  var best = (s.bgp_routes || []).filter(function (r) {
+    return r.best && splitPrefix(r.prefix || '').net === splitPrefix(w.prefix).net && routeLen(r) === routeLen({ prefix: w.prefix }) &&
+      (r.vrf || 'default') === (w.vrf || 'default');
+  })[0];
+  var devReason = best && (s.nos == null || s.nos === 'frr') ? (best.sel_reason || best.reason || '') : '';
+  if (!out.selected) {
+    out.deciding_step = null;
+    out.reason_source = null;
+    out.note = w.note;
+  } else if (typeof devReason === 'string' && devReason) {
+    out.deciding_step = devReason;
+    out.reason_source = 'device';
+    if (inferred) out.comparison = inferred;   // what the attribute comparison says, for a cross-check
+  } else if (inferred) {
+    out.deciding_step = inferred;
+    out.reason_source = 'comparison';
+  } else {
+    out.deciding_step = null;
+    out.reason_source = null;
+    out.note = why2 || 'the deciding step is not in the data';
+  }
+  if (steps) out.steps = steps;
+  if (out.selected && out.selected.multipath) out.multipath = true;
+  return out;
+}
+
 // ---- per-router views -----------------------------------------------------------------------
 function getNode(states, node) {
   if (!node) throw new QueryError('missing router');
@@ -389,4 +509,4 @@ if (require.main === module) {
 }
 
 module.exports = { loadStates: loadStates, summarize: summarize, why: why, run: run,
-  listRouters: listRouters, ospfNeighbors: ospfNeighbors, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup };
+  listRouters: listRouters, ospfNeighbors: ospfNeighbors, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath };

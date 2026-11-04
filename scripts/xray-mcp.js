@@ -12,6 +12,8 @@
  *   ospf_neighbors { path, router? }         -> per router: neighbor, address, state, interface
  *   bgp_neighbors  { path, router? }         -> per router: peer, AS, state, prefixes received
  *   route_lookup   { path, router, destination, vrf? } -> longest-prefix match in the collected routing table
+ *   why_path       { path, router, prefix, vrf? } -> selected BGP path, other candidates, deciding step and
+ *                                               reason_source: "device" (router said) / "comparison" (inferred)
  *
  * Every successful call returns the same JSON object as text content and as structuredContent; bad input
  * (missing/unknown file, unknown router, malformed argument) returns isError with {"error": "..."}.
@@ -128,6 +130,26 @@ var TOOLS = [
       additionalProperties: false
     },
     annotations: READ_ONLY
+  },
+  {
+    name: 'why_path',
+    description: 'Why one router selected its BGP path to a prefix: the selected path, the other candidates with their ' +
+      'attributes, the deciding step, and where that reason came from: reason_source "device" when the router reported it ' +
+      '(FRR selectionReason), "comparison" when network-xray inferred it by comparing the attributes in the data (Weight, ' +
+      'LocPrf, AS-Path, Origin, MED), or null with a note when neither says. A bare address is matched to the longest BGP ' +
+      'prefix that contains it. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: PATH_PROP,
+        router: { type: 'string', description: 'Router name, e.g. r1' },
+        prefix: { type: 'string', description: 'Prefix (e.g. 8.8.8.0/24) or an address inside it (e.g. 8.8.8.8)' },
+        vrf: { type: 'string', description: 'VRF, only needed when the prefix is in several VRFs' }
+      },
+      required: ['path', 'router', 'prefix'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
   }
 ];
 
@@ -154,6 +176,10 @@ function callTool(name, args) {
   if (name === 'route_lookup') {
     var p3 = str(args, 'path', true), r = str(args, 'router', true), dst = str(args, 'destination', true);
     return query.routeLookup(query.loadStates(p3), r, dst, str(args, 'vrf', false));
+  }
+  if (name === 'why_path') {
+    var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);
+    return query.whyPath(query.loadStates(p4), rt, pfx, str(args, 'vrf', false));
   }
   return null;
 }

@@ -38,7 +38,7 @@ test('initialize and tools/list', function () {
   assert.ok(init.result.capabilities.tools);
   var tools = s.byId[2].result.tools;
   assert.deepStrictEqual(tools.map(function (t) { return t.name; }),
-    ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'bgp_neighbors', 'route_lookup']);
+    ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'bgp_neighbors', 'route_lookup', 'why_path']);
   tools.forEach(function (t) {
     assert.strictEqual(t.inputSchema.type, 'object');
     assert.strictEqual(t.annotations.readOnlyHint, true);
@@ -251,5 +251,65 @@ test('route_lookup: longest prefix match in the collected routing table', functi
   isErr(s.byId[63], /not an IPv4 or IPv6 address/);
   isErr(s.byId[64], /missing argument: destination/);
   isErr(s.byId[65], /destination must be a string/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+// ---- why_path --------------------------------------------------------------------------------------
+test('why_path: device-reported reason, inferred reason, single path, unknown router / prefix', function () {
+  var fs = require('fs'), os = require('os');
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xmcp-why-'));
+  var pfx = { prefix: '203.0.113.0', prefixlen: 24, origin: 'IGP' };
+  function row(o) { return Object.assign({}, pfx, o); }
+  // FRR: the router stored its selectionReason with the best path
+  fs.writeFileSync(path.join(dir, 'state_r1.json'), JSON.stringify({ target_node: 'r1', nos: 'frr', interfaces: {}, bgp_routes: [
+    row({ next_hop: '10.0.1.2', as_path: '65002', local_pref: 100, status: '* ' }),
+    row({ next_hop: '10.0.2.3', as_path: '65003', local_pref: 200, status: '*>', best: true, reason: 'Local Pref' })
+  ] }));
+  // no reason in the data: the same MED comparison the Best-Path Decision panel makes
+  fs.writeFileSync(path.join(dir, 'state_r2.json'), JSON.stringify({ target_node: 'r2', interfaces: {}, bgp_routes: [
+    row({ next_hop: '10.0.3.2', as_path: '65002 65010', metric: 50, status: '* ' }),
+    row({ next_hop: '10.0.4.2', as_path: '65002 65010', metric: 10, status: '*>', best: true }),
+    row({ next_hop: '10.0.5.2', as_path: '65002 65010', metric: 90, status: '  ', valid: false })
+  ] }));
+  var s = session(INIT.concat([
+    call(70, 'why_path', { path: dir, router: 'r1', prefix: '203.0.113.0/24' }),
+    call(71, 'why_path', { path: dir, router: 'r2', prefix: '203.0.113.9' }),
+    call(72, 'why_path', { path: Q15, router: 'r1', prefix: '8.8.8.0/24' }),
+    call(73, 'why_path', { path: Q15, router: 'r9', prefix: '8.8.8.0/24' }),
+    call(74, 'why_path', { path: Q15, router: 'r1', prefix: '198.51.100.0/24' }),
+    call(75, 'why_path', { path: Q15, router: 'r1', prefix: '198.51.100.1' }),
+    call(76, 'why_path', { path: Q15, router: 'r1' })
+  ]));
+
+  var dev = ok(s.byId[70]);
+  assert.strictEqual(dev.prefix, '203.0.113.0/24');
+  assert.strictEqual(dev.selected.next_hop, '10.0.2.3');
+  assert.strictEqual(dev.selected.local_pref, 200);
+  assert.deepStrictEqual(dev.candidates.map(function (c) { return [c.next_hop, c.local_pref]; }), [['10.0.1.2', 100]]);
+  assert.strictEqual(dev.deciding_step, 'Local Pref');
+  assert.strictEqual(dev.reason_source, 'device');
+  assert.strictEqual(dev.comparison, 'LocPrf');   // the attribute comparison agrees
+
+  var inf = ok(s.byId[71]);   // an address: matched to the BGP prefix that contains it
+  assert.strictEqual(inf.prefix, '203.0.113.0/24');
+  assert.strictEqual(inf.destination, '203.0.113.9');
+  assert.strictEqual(inf.selected.next_hop, '10.0.4.2');
+  assert.strictEqual(inf.deciding_step, 'MED');
+  assert.strictEqual(inf.reason_source, 'comparison');
+  assert.strictEqual(inf.candidates.length, 2, 'the not-valid path is listed, but not compared');
+  assert.ok(inf.candidates.some(function (c) { return c.valid === false; }));
+  var med = inf.steps.filter(function (x) { return x.step === 'MED'; })[0];
+  assert.deepStrictEqual(med, { step: 'MED', selected: 10, other: 50, result: 'win' });
+
+  var one = ok(s.byId[72]);   // IOS-XE: the stored reason is the collector's, not the router's
+  assert.strictEqual(one.selected.next_hop, '2.2.2.2');
+  assert.deepStrictEqual(one.candidates, []);
+  assert.strictEqual(one.deciding_step, 'Only path');
+  assert.strictEqual(one.reason_source, 'comparison');
+
+  isErr(s.byId[73], /unknown router: r9 \(known: r1, r2, r3\)/);
+  isErr(s.byId[74], /unknown prefix on r1: 198\.51\.100\.0\/24/);
+  isErr(s.byId[75], /unknown prefix on r1: 198\.51\.100\.1/);
+  isErr(s.byId[76], /missing argument: prefix/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
