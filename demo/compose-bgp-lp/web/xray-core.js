@@ -1103,14 +1103,14 @@ function _xrayServerLines(nodeId, nodeIfaces, topo, s, pingTarget) {
     if (gwIface) gwIp = gwIface.ip;
   }
   return [ {
-    text: "$ ping " + (pingTarget || "..."),
+    text: "$ ping " + _escapeHtml(pingTarget || "..."),
     cls: "dim"
   }, {
-    text: "SRC: " + svIp
+    text: "SRC: " + _escapeHtml(svIp)
   }, {
-    text: "DST: " + (pingTarget || "...")
+    text: "DST: " + _escapeHtml(pingTarget || "...")
   }, {
-    text: "&rarr; GW " + gwIp,
+    text: "&rarr; GW " + _escapeHtml(gwIp),
     cls: "hl"
   } ];
 }
@@ -1123,7 +1123,7 @@ function _xrayIspLines(nodeId, nodeIfaces, pingTarget) {
   return [ {
     text: "IN: " + _escapeHtml(inName)
   }, {
-    text: "DST: " + (pingTarget || "...")
+    text: "DST: " + _escapeHtml(pingTarget || "...")
   }, {
     text: '&nbsp; (<span class="hl">LOCAL</span>)'
   }, {
@@ -1177,7 +1177,7 @@ function _xrayPeerRouterLines(nodeId, nodeIfaces, s) {
     var estField = nodeId + "_established";
     var est = s[estField] !== undefined ? !!s[estField] : !!s.is_established;
     lines.push({
-      text: "BGP: " + (est ? '<span class="hl">Established</span>' : '<span class="warn">' + (s.bgp_state || "Idle") + "</span>")
+      text: "BGP: " + (est ? '<span class="hl">Established</span>' : '<span class="warn">' + _escapeHtml(s.bgp_state || "Idle") + "</span>")
     });
     var lo = nodeIfaces.find(function(i) {
       return i.name === "lo";
@@ -1198,7 +1198,7 @@ function _xrayPeerRouterLines(nodeId, nodeIfaces, s) {
       return i.name === "lo";
     });
     if (lo) lines.push({
-      text: "Lo: " + lo.ip,
+      text: "Lo: " + _escapeHtml(lo.ip),
       cls: "dim"
     });
   }
@@ -2796,13 +2796,13 @@ function xrayStaticLogicLines(s, opts) {
       cls: "dim"
     });
     if (s.dr_rid) lines.push({
-      text: '> DR: <span class="de-hl">' + s.dr_rid + "</span>"
+      text: '> DR: <span class="de-hl">' + _escapeHtml(s.dr_rid) + "</span>"
     });
     if (s.bdr_rid) lines.push({
-      text: '> BDR: <span class="de-hl">' + s.bdr_rid + "</span>"
+      text: '> BDR: <span class="de-hl">' + _escapeHtml(s.bdr_rid) + "</span>"
     });
     if (s.full_count !== undefined) lines.push({
-      text: '> Full neighbors: <span class="de-hl">' + s.full_count + "</span>"
+      text: '> Full neighbors: <span class="de-hl">' + _escapeHtml(s.full_count) + "</span>"
     });
   }
   return lines;
@@ -2859,7 +2859,7 @@ function _xrayNbrTag(nb) {
   if (!nb) return "";
   return (nb.af === "v6" ? " (v3)" : "") + (nb.vrf ? " [vrf " + _escapeHtml(String(nb.vrf)) + "]" : "");
 }
-function _xrayOspfNbrSpan(st, role) { return '<span style="color:' + _xrayOspfNbrColor(st, role) + '">' + st + "</span>"; }
+function _xrayOspfNbrSpan(st, role) { return '<span style="color:' + _xrayOspfNbrColor(st, role) + '">' + _escapeHtml(st) + "</span>"; }
 /* One summary line that stays visible while the neighbor list is folded (only when Running). allowEmpty: emit "Neighbor: Down"
    for an empty list (only where the caller has no Neighbor line of its own). */
 /* nx_ospf_nbr_own_list: OSPF interfaces (iface_hellos = enabled, not passive; lo left out) with no row in the router's own neighbor list.
@@ -2899,7 +2899,7 @@ function _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume) {
   });
   var _txt;
   if (L.length === 1) _txt = _xrayOspfNbrSpan(_worst, _worstRole);
-  else if (_ok === L.length) _txt = '<span style="color:#39ff14">' + _worst + "</span>";
+  else if (_ok === L.length) _txt = '<span style="color:#39ff14">' + _escapeHtml(_worst) + "</span>";
   else _txt = _xrayOspfNbrSpan(_worst, _worstRole) + ' <span style="color:#aef5b0">(' + _full + "/" + L.length + " Full)</span>";
   lines.push({ text: "> Neighbor: " + _txt });
 }
@@ -2908,7 +2908,7 @@ function xrayOspfLogicLines(s) {
   var lines = [];
   var h = window._lastXrayHierarchy || xrayEvaluateState(s);
   if (h.ospfStatus) lines.push({
-    text: "OSPF: " + h.ospfStatus,
+    text: "OSPF: " + _escapeHtml(h.ospfStatus),
     cls: h.ospfStatus === "Running" ? "hl" : "warn"
   });
   lines.push({
@@ -2922,7 +2922,7 @@ function xrayBgpLogicLines(s) {
   var lines = [];
   var h = window._lastXrayHierarchy || xrayEvaluateState(s);
   lines.push({
-    text: "BGP: " + (s.is_established ? "Established" : (s.bgp_state || h.bgpStatus || "Idle")),
+    text: "BGP: " + (s.is_established ? "Established" : _escapeHtml(s.bgp_state || h.bgpStatus || "Idle")),
     cls: (s.is_established || h.bgpEstablished) ? "hl" : "warn"
   });
   lines.push({
@@ -2965,7 +2965,7 @@ function xrayStaticDeepLines(s, opts) {
   });
   var _bgpCtx = !!s.bgp_configured;
   var _lookupLine = {
-    text: "> Lookup: " + target
+    text: "> Lookup: " + _escapeHtml(target)
   };
   var _ifaceLines = [];
   Object.keys(ifaces).forEach(function(name) {
@@ -2979,12 +2979,12 @@ function xrayStaticDeepLines(s, opts) {
   if (_bgpCtx) {
     var _bEst = s.is_established !== undefined ? !!s.is_established : s.bgp_state === "Established";
     lines.push({
-      text: "> BGP: " + (_bEst ? '<span class="de-hl">' + (s.bgp_state || "Established") + "</span>" : '<span style="color:#ff4444">' + (s.bgp_state || "Idle") + "</span>"),
+      text: "> BGP: " + (_bEst ? '<span class="de-hl">' + _escapeHtml(s.bgp_state || "Established") + "</span>" : '<span style="color:#ff4444">' + _escapeHtml(s.bgp_state || "Idle") + "</span>"),
       style: _bEst ? "" : "color:#ff6b35;font-weight:700"
     });
     if (s.pfx_rcvd !== undefined) {
       lines.push({
-        text: '> Prefixes received: <span class="' + (s.pfx_rcvd > 0 ? "de-hl" : "warn") + '">' + s.pfx_rcvd + "</span>"
+        text: '> Prefixes received: <span class="' + (s.pfx_rcvd > 0 ? "de-hl" : "warn") + '">' + _escapeHtml(s.pfx_rcvd) + "</span>"
       });
     }
     _ifaceLines.forEach(function(l) { lines.push(l); });
@@ -2996,16 +2996,16 @@ function xrayStaticDeepLines(s, opts) {
   }
   if (rr.resolved) {
     lines.push({
-      text: '> Route: <span class="de-hl">' + (rr.protocol || "static") + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
+      text: '> Route: <span class="de-hl">' + _escapeHtml(rr.protocol || "static") + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
     });
     var nhReachable = typeof s.nh_reachable === "boolean" ? s.nh_reachable : s.r1_ping_ok !== false;
     if (nhReachable) {
       lines.push({
-        text: '> Next-Hop: <span class="de-hl">' + (rr.next_hop || "direct") + "</span>"
+        text: '> Next-Hop: <span class="de-hl">' + _escapeHtml(rr.next_hop || "direct") + "</span>"
       });
     } else {
       lines.push({
-        text: '> Next-Hop: <span style="color:#ff4444">' + (rr.next_hop || "?") + '</span> <span style="color:#ff6b35">(ARP FAILED)</span>',
+        text: '> Next-Hop: <span style="color:#ff4444">' + _escapeHtml(rr.next_hop || "?") + '</span> <span style="color:#ff6b35">(ARP FAILED)</span>',
         style: "color:#ff6b35;font-weight:700"
       });
     }
@@ -3016,7 +3016,7 @@ function xrayStaticDeepLines(s, opts) {
     var cfgNh = s.config_next_hop || "";
     if (cfgNh) {
       lines.push({
-        text: '> Config: <span class="de-dim">S 0.0.0.0/0 via ' + cfgNh + "</span>"
+        text: '> Config: <span class="de-dim">S 0.0.0.0/0 via ' + _escapeHtml(cfgNh) + "</span>"
       });
       lines.push({
         text: '> RIB: <span style="color:#ff4444">NOT INSTALLED</span> <span class="de-dim">(nexthop unreachable)</span>',
@@ -3024,7 +3024,7 @@ function xrayStaticDeepLines(s, opts) {
       });
     } else {
       lines.push({
-        text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+        text: "> Route to " + _escapeHtml(target) + ': <span style="color:#ff4444">NONE</span>',
         style: "color:#ff6b35"
       });
     }
@@ -3085,11 +3085,11 @@ function _xrayOspfRtSummaryLines(s) {
   var _osFullAny = (Array.isArray(s.ospf_neighbors) && s.ospf_neighbors.some(function (_n) { return _n.full || _n.state === "Full"; })) || !!s.ospf_neighbor_full;
   if (Array.isArray(s.ospf_neighbors)) {
     var _osState = _xrayOspfHeadWord(s, true);  /* nx_ospf_running_wording */
-    if (_osState) lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + _xrayOspfHeadColor(_osState) + '">' + _osState + '</span></span>' }); _xrayOspfNbrSummaryPush(lines, s, false, true);
+    if (_osState) lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + _xrayOspfHeadColor(_osState) + '">' + _escapeHtml(_osState) + '</span></span>' }); _xrayOspfNbrSummaryPush(lines, s, false, true);
   } else {
   var _osW0 = _xrayOspfHeadWord(s, true);  /* nx_ospf_running_wording */
   if (_osW0) lines.push({
-    text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_osW0) + '">' + _osW0 + "</span>"
+    text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_osW0) + '">' + _escapeHtml(_osW0) + "</span>"
   });
   }
   var nbrFull = _xrayOspfSpecific(s) ? _xrayOspfFull(s) : (_xrayOspfFull(s) || s.full_count > 0);  /* nx_ospf_full_helper / nx_ospf_specific_fields */
@@ -3121,18 +3121,18 @@ function _xrayOspfRtSummaryLines(s) {
       var _lbl = _escapeHtml(_nb.router_id || _nb.address || _nb.ip || "?");
       var _st = _nb.full ? "Full" : _xrayOspfNbrWord(_nb.state);
       var _sc = _xrayOspfNbrColor(_st, _nb.role);
-      lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + _xrayNbrTag(_nb) /* nx_if_tag */ + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _st + '</span>', cls: "re-ospf-nbr", style: _osHide });
+      lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + _xrayNbrTag(_nb) /* nx_if_tag */ + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _escapeHtml(_st) + '</span>', cls: "re-ospf-nbr", style: _osHide });
     });
   } else if (_osPerPeer) {
     _osPeers.forEach(function(_pk) {
       var _ps = _xrayOspfNbrWord(s[_pk + "_neighbor_state"] || "None");
       var _pc = _xrayOspfNbrColor(_ps);
-      lines.push({ text: "> Neighbor " + _escapeHtml(_pk) + ': <span style="color:' + _pc + '">' + _ps + "</span>" });
+      lines.push({ text: "> Neighbor " + _escapeHtml(_pk) + ': <span style="color:' + _pc + '">' + _escapeHtml(_ps) + "</span>" });
     });
     if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2) */
   } else {
     lines.push({
-      text: '> Neighbor: <span style="color:' + nbrColor + '">' + nbrLabel + "</span>"
+      text: '> Neighbor: <span style="color:' + nbrColor + '">' + _escapeHtml(nbrLabel) + "</span>"
     });
     if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2) */
   }
@@ -3150,7 +3150,7 @@ function _xrayOspfRtSummaryLines(s) {
   if (s.rid_duplicate) {
     var _tgtRid = s.target_rid || s.r1_rid || "?", _peerRid = s.peer_rid || s.r2_rid || "?";
     lines.push({
-      text: '> Router-ID: <span style="color:#ff4444">DUPLICATE (' + _tgtRid + "=" + _peerRid + ")</span>"
+      text: '> Router-ID: <span style="color:#ff4444">DUPLICATE (' + _escapeHtml(_tgtRid) + "=" + _escapeHtml(_peerRid) + ")</span>"
     });
   }
   if (s.timer_match === false) {
@@ -3170,10 +3170,10 @@ function _xrayOspfRtSummaryLines(s) {
   } else if (_xrayPassiveShownText(s)) lines.push({ text: _xrayPassiveShownText(s) });   /* nx_passive_shown */
   if (s.dr_rid || s.bdr_rid) {
     if (s.dr_rid) lines.push({
-      text: '> DR: <span class="de-hl">' + s.dr_rid + "</span>"
+      text: '> DR: <span class="de-hl">' + _escapeHtml(s.dr_rid) + "</span>"
     });
     if (s.bdr_rid) lines.push({
-      text: '> BDR: <span class="de-hl">' + s.bdr_rid + "</span>"
+      text: '> BDR: <span class="de-hl">' + _escapeHtml(s.bdr_rid) + "</span>"
     });
   }
 
@@ -3204,11 +3204,11 @@ function xrayOspfDeepLines(s, opts) {
   var ospfLabel = h.ospfStatus || "";
   if (ospfLabel === "Running") {  /* nx_ospf_running_wording */
     lines.push({
-      text: '> OSPF: <span class="de-hl">' + ospfLabel + "</span>"
+      text: '> OSPF: <span class="de-hl">' + _escapeHtml(ospfLabel) + "</span>"
     });
   } else if (ospfLabel) {
     lines.push({
-      text: '> OSPF: <span style="color:#ff8c00">' + ospfLabel + "</span>"
+      text: '> OSPF: <span style="color:#ff8c00">' + _escapeHtml(ospfLabel) + "</span>"
     });
   }
   var ospfRunning = (ospfLabel === "Running");  /* nx_ospf_running_wording */
@@ -3244,7 +3244,7 @@ function xrayOspfDeepLines(s, opts) {
   if (ospfRunning && (showAll || !(init.r1_hello === init.r2_hello) || currTimerOk !== (init.r1_hello === init.r2_hello))) {
     var timerColor = currTimerOk ? "#39ff14" : "#ff4444";
     lines.push({
-      text: "> Hello: r1=" + (s.r1_hello || "?") + "s r2=" + (s.r2_hello || "?") + 's <span style="color:' + timerColor + '">' + (currTimerOk ? "MATCH" : "MISMATCH") + "</span>"
+      text: "> Hello: r1=" + _escapeHtml(s.r1_hello || "?") + "s r2=" + _escapeHtml(s.r2_hello || "?") + 's <span style="color:' + timerColor + '">' + (currTimerOk ? "MATCH" : "MISMATCH") + "</span>"
     });
   }
   var currAreaOk = !!s.area_match;
@@ -3272,7 +3272,7 @@ function xrayOspfDeepLines(s, opts) {
       if (s.has_redistribute) {
         var rmColor = s.route_map_status === "permit" ? "#39ff14" : "#ff4444";
         lines.push({
-          text: '> redistribute: <span style="color:' + rmColor + '">' + (s.route_map_status || "?") + "</span>"
+          text: '> redistribute: <span style="color:' + rmColor + '">' + _escapeHtml(s.route_map_status || "?") + "</span>"
         });
       } else {
         lines.push({
@@ -3286,11 +3286,11 @@ function xrayOspfDeepLines(s, opts) {
     var _advArea = s.target_area || s.r2_area || "0";
     if (ospfRunning && s.advertises_loopback) {
       lines.push({
-        text: '> Advertising <span class="de-hl">' + _lb + "/32</span> (area " + _advArea + ")"
+        text: '> Advertising <span class="de-hl">' + _escapeHtml(_lb) + "/32</span> (area " + _escapeHtml(_advArea) + ")"
       });
     } else {
       lines.push({
-        text: "> Advertising " + _lb + '/32: <span style="color:#ff4444">NO</span> (OSPF area0 に未広報)',
+        text: "> Advertising " + _escapeHtml(_lb) + '/32: <span style="color:#ff4444">NO</span> (OSPF area0 に未広報)',
         style: "color:#ff6b35;font-weight:700"
       });
     }
@@ -3302,13 +3302,13 @@ function xrayOspfDeepLines(s, opts) {
       cls: "dim"
     });
     if (s.dr_rid) lines.push({
-      text: '> DR: <span class="de-hl">' + s.dr_rid + "</span>"
+      text: '> DR: <span class="de-hl">' + _escapeHtml(s.dr_rid) + "</span>"
     });
     if (s.bdr_rid) lines.push({
-      text: '> BDR: <span class="de-hl">' + s.bdr_rid + "</span>"
+      text: '> BDR: <span class="de-hl">' + _escapeHtml(s.bdr_rid) + "</span>"
     });
     if (s.full_count !== undefined) lines.push({
-      text: '> Full neighbors: <span class="de-hl">' + s.full_count + "</span>"
+      text: '> Full neighbors: <span class="de-hl">' + _escapeHtml(s.full_count) + "</span>"
     });
   }
   if (s.has_static && s.static_is_best) {
@@ -3324,7 +3324,7 @@ function xrayOspfDeepLines(s, opts) {
       var nhOk = s.ping_ok;
       var nhColor = nhOk ? "#39ff14" : "#ff4444";
       lines.push({
-        text: '> Next-Hop: <span style="color:' + nhColor + '">' + rr.next_hop + (nhOk ? "" : " (UNREACHABLE)") + "</span>"
+        text: '> Next-Hop: <span style="color:' + nhColor + '">' + _escapeHtml(rr.next_hop) + (nhOk ? "" : " (UNREACHABLE)") + "</span>"
       });
     }
     if (s.ospf_route_available) {
@@ -3335,14 +3335,14 @@ function xrayOspfDeepLines(s, opts) {
     }
   } else if (rr.resolved) {
     lines.push({
-      text: '> Route: <span class="de-hl">' + (rr.protocol || "ospf").toUpperCase() + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
+      text: '> Route: <span class="de-hl">' + _escapeHtml((rr.protocol || "ospf").toUpperCase()) + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
     });
     if (rr.next_hop) lines.push({
-      text: '> Next-Hop: <span class="de-hl">' + rr.next_hop + "</span>"
+      text: '> Next-Hop: <span class="de-hl">' + _escapeHtml(rr.next_hop) + "</span>"
     });
   } else {
     lines.push({
-      text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+      text: "> Route to " + _escapeHtml(target) + ': <span style="color:#ff4444">NONE</span>',
       style: "color:#ff6b35"
     });
   }
@@ -3473,7 +3473,7 @@ function xrayTriDeepLines(s, opts) {
     var color = hasFull ? "#39ff14" : nbrState !== "None" ? "#ff8c00" : "#ff4444";
     var label = hasFull ? "Full" : nbrState;
     return {
-      text: "> " + linkName + ' OSPF: <span style="color:' + color + '">' + label + "</span>"
+      text: "> " + linkName + ' OSPF: <span style="color:' + color + '">' + _escapeHtml(label) + "</span>"
     };
   }
   lines.push(_linkLine(tName + "-" + pName, pName, pFull, pState, !!opts.primaryStatic));
@@ -3487,7 +3487,7 @@ function xrayTriDeepLines(s, opts) {
       var _peerRid = s.peer_rid || s.r2_rid || "?";
       var ridLabel = s.rid_duplicate ? "DUPLICATE (" + _tgtRid + "=" + _peerRid + ")" : "Unique";
       lines.push({
-        text: '> Router-ID: <span style="color:' + ridColor + '">' + ridLabel + "</span>"
+        text: '> Router-ID: <span style="color:' + ridColor + '">' + _escapeHtml(ridLabel) + "</span>"
       });
     }
     if (s.timer_match !== undefined) {
@@ -3524,18 +3524,18 @@ function xrayTriDeepLines(s, opts) {
   });
   if (rr.resolved) {
     lines.push({
-      text: '> Route: <span class="de-hl">' + (rr.protocol || "ospf").toUpperCase() + " " + _escapeHtml(rr.matched_prefix || target) + "</span>"
+      text: '> Route: <span class="de-hl">' + _escapeHtml((rr.protocol || "ospf").toUpperCase()) + " " + _escapeHtml(rr.matched_prefix || target) + "</span>"
     });
     if (rr.next_hop) {
       var _nhIfUp = !rr.out_iface || ifaces[rr.out_iface] && ifaces[rr.out_iface].up;
       var _nhUnreach = !!_nhIfUp && !xrayCanForward(s);
       lines.push({
-        text: "> Next-Hop: <span " + (_nhUnreach ? 'style="color:#ff4444"' : 'class="de-hl"') + ">" + rr.next_hop + (_nhUnreach ? " (UNREACHABLE)" : "") + "</span>"
+        text: "> Next-Hop: <span " + (_nhUnreach ? 'style="color:#ff4444"' : 'class="de-hl"') + ">" + _escapeHtml(rr.next_hop) + (_nhUnreach ? " (UNREACHABLE)" : "") + "</span>"
       });
     }
   } else {
     lines.push({
-      text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+      text: "> Route to " + _escapeHtml(target) + ': <span style="color:#ff4444">NONE</span>',
       style: "color:#ff6b35"
     });
   }
@@ -3560,7 +3560,7 @@ function xrayBgpDeepLines(s, opts) {
     cls: "de-title"
   });
 
-  var _nbAgg = (function () { if (!Array.isArray(s.bgp_neighbors) || !s.bgp_neighbors.length) return ""; var _c = {}, _any = false; s.bgp_neighbors.forEach(function (_n) { if (_n.state) { _any = true; _c[_n.state] = (_c[_n.state] || 0) + 1; } }); if (!_any) return ""; return Object.keys(_c).map(function (_k) { /* oss_nbagg_per_state_color */ return '<span style="color:' + (/establ/i.test(_k) ? '#a855f7' : '#ffb74d') + '">' + _k + " " + _c[_k] + '</span>'; }).join(", "); })();
+  var _nbAgg = (function () { if (!Array.isArray(s.bgp_neighbors) || !s.bgp_neighbors.length) return ""; var _c = {}, _any = false; s.bgp_neighbors.forEach(function (_n) { if (_n.state) { _any = true; _c[_n.state] = (_c[_n.state] || 0) + 1; } }); if (!_any) return ""; return Object.keys(_c).map(function (_k) { /* oss_nbagg_per_state_color */ return '<span style="color:' + (/establ/i.test(_k) ? '#a855f7' : '#ffb74d') + '">' + _escapeHtml(_k) + " " + _c[_k] + '</span>'; }).join(", "); })();
   if (s.r2_established !== undefined || s.r3_established !== undefined) {
     if (_nbAgg) {
 
@@ -3594,7 +3594,7 @@ function xrayBgpDeepLines(s, opts) {
     });
   } else {
     lines.push({
-      text: '> BGP: <span style="color:#ff4444">' + (s.bgp_state || h.bgpStatus || "Idle") + "</span>",
+      text: '> BGP: <span style="color:#ff4444">' + _escapeHtml(s.bgp_state || h.bgpStatus || "Idle") + "</span>",
       style: "color:#ff6b35;font-weight:700"
     });
   }
@@ -3606,12 +3606,12 @@ function xrayBgpDeepLines(s, opts) {
       var _kind = _nb.ibgp ? "iBGP" : "eBGP";
       var _kc = _nb.ibgp ? "#7facc9" : "#ffb74d";
       lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _escapeHtml(_nb.ip) + '&nbsp;&nbsp;AS ' + _escapeHtml(_nb.remote_as) + ' </span><span style="color:' + _kc + '">(' + _kind + ')</span>', cls: "re-bgp-nbr", style: _nbHide });
-      if (_nb.state) { var _sc = /establ/i.test(_nb.state) ? "#a855f7" : "#ffb74d"; var _ud = (_nb.up_down != null ? '&nbsp;&nbsp;<span style="color:#9ab">Up/Down</span> ' + _nb.up_down : '') + (_nb.pfx_rcvd != null ? '&nbsp;&nbsp;<span style="color:#9ab">PfxRcd</span> ' + _nb.pfx_rcvd : ''); /* nx_bgp_nbr_fold_any_state */ lines.push({ text: '<span style="color:' + _sc + '">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + _nb.state + '</span>', cls: "re-bgp-nbr", style: _nbHide }); if (_ud) lines.push({ text: '&nbsp;&nbsp;&nbsp;' + _ud, cls: "re-bgp-nbr", style: _nbHide }); /* nx_bgp_nbr_detail_line2 (2026-10-06): Up/Down + PfxRcd on their own indented line = no wrap to the left edge */ }
+      if (_nb.state) { var _sc = /establ/i.test(_nb.state) ? "#a855f7" : "#ffb74d"; var _ud = (_nb.up_down != null ? '&nbsp;&nbsp;<span style="color:#9ab">Up/Down</span> ' + _escapeHtml(_nb.up_down) : '') + (_nb.pfx_rcvd != null ? '&nbsp;&nbsp;<span style="color:#9ab">PfxRcd</span> ' + _escapeHtml(_nb.pfx_rcvd) : ''); /* nx_bgp_nbr_fold_any_state */ lines.push({ text: '<span style="color:' + _sc + '">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + _escapeHtml(_nb.state) + '</span>', cls: "re-bgp-nbr", style: _nbHide }); if (_ud) lines.push({ text: '&nbsp;&nbsp;&nbsp;' + _ud, cls: "re-bgp-nbr", style: _nbHide }); /* nx_bgp_nbr_detail_line2 (2026-10-06): Up/Down + PfxRcd on their own indented line = no wrap to the left edge */ }
     });
   }
   if (s.pfx_rcvd !== undefined) {
     lines.push({
-      text: '> Prefixes received: <span class="de-hl">' + s.pfx_rcvd + "</span>"
+      text: '> Prefixes received: <span class="de-hl">' + _escapeHtml(s.pfx_rcvd) + "</span>"
     });
   }
 
@@ -3630,7 +3630,7 @@ function xrayBgpDeepLines(s, opts) {
       var _cxFullAny = _reCxSt.ospf_neighbors.some(function (_n) { return _n.full || _n.state === "Full"; }) || _reFull;
       var _cxOsUp = !!(_reCxSt.ospf_configured || _reCxSt.ospf_active_on_interface);
       var _cxOsState = _reStat;
-      if (_cxOsState) lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + _xrayOspfHeadColor(_cxOsState) + '">' + _cxOsState + '</span></span>' }); _xrayOspfNbrSummaryPush(lines, _reCxSt, true);
+      if (_cxOsState) lines.push({ text: '<span class="re-ospf-head" style="cursor:pointer" onclick="window._xrayReOspfToggle && window._xrayReOspfToggle()"><span class="re-ospf-ind">' + (window._reOspfOpen ? "\u25bc" : "\u25b6") + '</span> OSPF: <span style="color:' + _xrayOspfHeadColor(_cxOsState) + '">' + _escapeHtml(_cxOsState) + '</span></span>' }); _xrayOspfNbrSummaryPush(lines, _reCxSt, true);
       if (_reCxSt.ospf_neighbors.length) {
         var _cxHide = window._reOspfOpen ? "" : "display:none";
         lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;neighbor</span>', cls: "re-ospf-nbr", style: _cxHide });
@@ -3638,12 +3638,12 @@ function xrayBgpDeepLines(s, opts) {
           var _lbl = _escapeHtml(_nb.router_id || _nb.address || _nb.ip || "?");
           var _st = _nb.full ? "Full" : _xrayOspfNbrWord(_nb.state);
           var _sc = _xrayOspfNbrColor(_st, _nb.role);
-          lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + _xrayNbrTag(_nb) /* nx_if_tag */ + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _st + '</span>', cls: "re-ospf-nbr", style: _cxHide });
+          lines.push({ text: '<span style="color:#aef5b0">&nbsp;&nbsp;&nbsp;&nbsp;' + _lbl + _xrayNbrTag(_nb) /* nx_if_tag */ + '&nbsp;&nbsp;</span><span style="color:' + _sc + '">' + _escapeHtml(_st) + '</span>', cls: "re-ospf-nbr", style: _cxHide });
         });
       }
       if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2): BGP + OSPF too (the empty list left the line out) */
     } else {
-    if (_reStat) lines.push({text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_reStat) + '">' + _reStat + '</span>'});
+    if (_reStat) lines.push({text: '> OSPF: <span style="color:' + _xrayOspfHeadColor(_reStat) + '">' + _escapeHtml(_reStat) + '</span>'});
     if (_reStat === "Running") lines.push({text: '> Neighbor: ' + (_reFull ? '<span style="color:#39ff14">Full</span>' : _xrayOspfNbrSpan(_xrayOspfNbrWord(_reNbr)))});
     if (lines._nxNoNbr) { lines.push(lines._nxNoNbr); lines._nxNoNbr = null; }   /* nx_ospf_nbr_own_list (2) */
     }
@@ -3663,7 +3663,7 @@ function xrayBgpDeepLines(s, opts) {
     if (!initNbOk || currNbOk !== initNbOk) {
       var nbColor = currNbOk ? "#39ff14" : "#ff4444";
       lines.push({
-        text: '> Neighbor: <span style="color:' + nbColor + '">' + (s.neighbor_ip || "?") + "</span>" + (s.r2_actual_ip && !currNbOk ? ' <span class="de-dim">(actual: ' + s.r2_actual_ip + ")</span>" : "")
+        text: '> Neighbor: <span style="color:' + nbColor + '">' + _escapeHtml(s.neighbor_ip || "?") + "</span>" + (s.r2_actual_ip && !currNbOk ? ' <span class="de-dim">(actual: ' + _escapeHtml(s.r2_actual_ip) + ")</span>" : "")
       });
     }
   }
@@ -3686,7 +3686,7 @@ function xrayBgpDeepLines(s, opts) {
         text: '> next-hop-self: <span style="color:' + nhsColor + '">' + (s.has_next_hop_self ? "設定済み" : "未設定") + "</span>"
       });
       if (s.bgp_next_hop) lines.push({
-        text: '> BGP NH: <span class="de-dim">' + s.bgp_next_hop + "</span>"
+        text: '> BGP NH: <span class="de-dim">' + _escapeHtml(s.bgp_next_hop) + "</span>"
       });
     }
   }
@@ -3705,7 +3705,7 @@ function xrayBgpDeepLines(s, opts) {
     var currMpOk = (s.pfx_rcvd || 0) <= (s.max_prefix_limit || 999);
     if (!initMpOk || currMpOk !== initMpOk) {
       lines.push({
-        text: '> max-prefix: <span class="de-dim">' + s.max_prefix_limit + "</span>"
+        text: '> max-prefix: <span class="de-dim">' + _escapeHtml(s.max_prefix_limit) + "</span>"
       });
     }
   }
@@ -3714,7 +3714,7 @@ function xrayBgpDeepLines(s, opts) {
     var currBestPath = s.best_path_via || "";
     if (initBestPath !== currBestPath || !initBestPath) {
       lines.push({
-        text: "> LP: r2=" + (s.r2_lp || "?") + " r3=" + (s.r3_lp || "?") + (s.best_path_via ? ' <span class="de-hl">best via ' + s.best_path_via + "</span>" : "")
+        text: "> LP: r2=" + _escapeHtml(s.r2_lp || "?") + " r3=" + _escapeHtml(s.r3_lp || "?") + (s.best_path_via ? ' <span class="de-hl">best via ' + _escapeHtml(s.best_path_via) + "</span>" : "")
       });
     }
   }
@@ -3726,14 +3726,14 @@ function xrayBgpDeepLines(s, opts) {
   if (!((typeof window !== "undefined" && window.xrayCore) || (s.routing_table && s.routing_table.length))) {
     if (rr.resolved) {
       lines.push({
-        text: '> Route: <span class="de-hl">' + (rr.protocol || "bgp").toUpperCase() + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
+        text: '> Route: <span class="de-hl">' + _escapeHtml((rr.protocol || "bgp").toUpperCase()) + " " + _escapeHtml(rr.matched_prefix || rr.target || target) + "</span>"
       });
       if (rr.next_hop) lines.push({
-        text: '> Next-Hop: <span class="de-hl">' + rr.next_hop + "</span>"
+        text: '> Next-Hop: <span class="de-hl">' + _escapeHtml(rr.next_hop) + "</span>"
       });
     } else {
       lines.push({
-        text: "> Route to " + target + ': <span style="color:#ff4444">NONE</span>',
+        text: "> Route to " + _escapeHtml(target) + ': <span style="color:#ff4444">NONE</span>',
         style: "color:#ff6b35"
       });
     }
@@ -4043,9 +4043,9 @@ function _xrayRenderTriangleTopology(config) {
   html += "</div>";
   html += '<svg class="topo-tri-svg" id="topo-tri-svg"></svg>';
   html += '<svg class="topo-tri-svg topo-tri-arrows" id="topo-tri-arrows"></svg>';
-  html += '<div class="topo-tri-link-label" id="tri-label-tl">' + netTopLeft + '<span class="topo-tri-subnet" id="topo-subnet-' + netTopLeft.replace("net-", "") + '">...</span></div>';
-  html += '<div class="topo-tri-link-label" id="tri-label-tr">' + netTopRight + '<span class="topo-tri-subnet" id="topo-subnet-' + netTopRight.replace("net-", "") + '">...</span></div>';
-  html += '<div class="topo-tri-link-label" id="tri-label-bt">' + netBottom + '<span class="topo-tri-subnet" id="topo-subnet-' + netBottom.replace("net-", "") + '">...</span></div>';
+  html += '<div class="topo-tri-link-label" id="tri-label-tl">' + _escapeHtml(netTopLeft) + '<span class="topo-tri-subnet" id="topo-subnet-' + _escapeHtml(netTopLeft.replace("net-", "")) + '">...</span></div>';
+  html += '<div class="topo-tri-link-label" id="tri-label-tr">' + _escapeHtml(netTopRight) + '<span class="topo-tri-subnet" id="topo-subnet-' + _escapeHtml(netTopRight.replace("net-", "")) + '">...</span></div>';
+  html += '<div class="topo-tri-link-label" id="tri-label-bt">' + _escapeHtml(netBottom) + '<span class="topo-tri-subnet" id="topo-subnet-' + _escapeHtml(netBottom.replace("net-", "")) + '">...</span></div>';
   html += "</div>";
   var _triApex = apex.id, _triBL = bLeft.id, _triBR = bRight.id;
   var _triQid = config.id || "q6";
@@ -4334,7 +4334,7 @@ function _xrayRenderTriangleTopology(config) {
   var _xray = config.xray || {};
   var _holoProto = _xray.protocol === "static" ? "Routing Engine" : _xray.protocol === "bgp" ? "BGP Process" : "OSPF Process";
   html += '<div class="xray-holo-panel" id="xray-holo-panel">';
-  html += '<div class="title">[' + _holoProto + " &#8212; " + apex.id + "]</div>";
+  html += '<div class="title">[' + _holoProto + " &#8212; " + _escapeHtml(apex.id) + "]</div>";
   html += '<div id="xray-holo-body"></div>';
   html += "</div>";
   html += '<div class="xray-fib-entry" id="xray-fib-entry"></div>';
@@ -4348,25 +4348,25 @@ function _xrayRenderInvertedVTopology(config) {
   function nodeHtml(n) {
     var cls = "router";
     if (n.target) cls += " target";
-    var nodeId = n.id;
+    var nodeId = _escapeHtml(n.id);
     var h = '<div class="topo-node" id="topo-node-' + nodeId + '">';
     if (n.readonly) {
       h += '<div class="topo-box ' + cls + '" style="position:relative" data-name="' + nodeId + '">';
       h += "<h4>" + nodeId + "</h4>";
-      h += '<div class="role">' + (n.role || "") + "</div>";
-      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + n.loopback + "</span></div>";
+      h += '<div class="role">' + _escapeHtml(n.role || "") + "</div>";
+      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + _escapeHtml(n.loopback) + "</span></div>";
       h += '<div class="topo-iface"><span class="label">...</span></div>';
       h += '<div class="terminal-hint" style="color:#e74c3c">🔒 参照専用</div>';
       h += '<div class="xray-ospf-unit"><div class="xray-ospf-dot"></div></div>';
       h += '<div class="xray-logic"></div>';
       h += "</div>";
     } else {
-      var ttydPath = n.ttyd_path || nodeId;
+      var ttydPath = n.ttyd_path ? _escapeHtml(n.ttyd_path) : nodeId;
       h += '<a href="ttyd/' + ttydPath + '/" target="_blank" class="topo-box-link" id="' + nodeId + '-box-link">';
       h += '<div class="topo-box ' + cls + '" style="position:relative" data-name="' + nodeId + '">';
       h += "<h4>" + nodeId + "</h4>";
-      h += '<div class="role">' + (n.role || "") + "</div>";
-      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + n.loopback + "</span></div>";
+      h += '<div class="role">' + _escapeHtml(n.role || "") + "</div>";
+      if (n.loopback) h += '<div class="topo-iface"><span class="label">Lo:</span> <span class="ip">' + _escapeHtml(n.loopback) + "</span></div>";
       h += '<div class="topo-iface"><span class="label">...</span></div>';
       h += '<div class="terminal-hint">Click to open terminal</div>';
       h += '<div class="xray-ospf-unit"><div class="xray-ospf-dot"></div></div>';
@@ -4435,7 +4435,7 @@ function _xrayRenderInvertedVTopology(config) {
   for (var li = 0; li < ivLinks.length; li++) {
     var lk = ivLinks[li];
     var lblPosCls = li === 0 ? "tl" : li === 1 ? "tr" : "n" + li;
-    html += '<div class="topo-iv-link-label" id="iv-label-' + lblPosCls + '">' + lk.netName + '<span class="topo-iv-subnet" id="topo-subnet-' + lk.netName.replace("net-", "") + '">...</span></div>';
+    html += '<div class="topo-iv-link-label" id="iv-label-' + lblPosCls + '">' + _escapeHtml(lk.netName) + '<span class="topo-iv-subnet" id="topo-subnet-' + _escapeHtml(lk.netName.replace("net-", "")) + '">...</span></div>';
   }
   html += "</div>";
   var _ivApex = apex.id;
@@ -4531,7 +4531,7 @@ function _xrayRenderInvertedVTopology(config) {
   var _xrayCfg = config.xray || {};
   var _holoProto = _xrayCfg.protocol === "static" ? "Routing Engine" : _xrayCfg.protocol === "bgp" ? "BGP Process" : "OSPF Process";
   html += '<div class="xray-holo-panel" id="xray-holo-panel">';
-  html += '<div class="title">[' + _holoProto + " &#8212; " + apex.id + "]</div>";
+  html += '<div class="title">[' + _holoProto + " &#8212; " + _escapeHtml(apex.id) + "]</div>";
   html += '<div id="xray-holo-body"></div>';
   html += "</div>";
   html += '<div class="xray-fib-entry" id="xray-fib-entry"></div>';
@@ -5613,7 +5613,7 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   html += '<rect x="20" y="10" width="1160" height="680" stroke="rgba(57,255,20,0.5)" stroke-width="2" fill="none"/>';
   html += "</svg>";
   html += '<div class="de-if-marker left"></div><div class="de-if-marker right"></div>';
-  html += '<div class="de-r1-label"><div class="de-r1-name">' + nodeId + "</div>";
+  html += '<div class="de-r1-label"><div class="de-r1-name">' + _escapeHtml(nodeId) + "</div>";
   html += '<div class="de-r1-sub">Router &#8212; Internal View</div></div>';
   html += '<div class="de-loading-ind"><span class="de-load-spin"></span><span class="de-load-txt">解析中&#8230;</span></div>';
   if (isTriangle) {
@@ -5627,9 +5627,9 @@ function xrayRenderDeepEngine(config, activeTargetId) {
     if (isTriangle) {
       var _protoLabel = isBgp ? "BGP" : "OSPF";
       html += '<div class="de-tunnel left-side" id="de-tunnel-left"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
-      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-inner"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div></div><div class="de-tunnel-label">' + _protoLabel + " &#8212; " + leftNode.id + "</div></div>";
+      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-inner"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div></div><div class="de-tunnel-label">' + _protoLabel + " &#8212; " + _escapeHtml(leftNode.id) + "</div></div>";
       html += '<div class="de-tunnel" id="de-tunnel-right"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div>';
-      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-inner"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div></div><div class="de-tunnel-label">' + _protoLabel + " &#8212; " + rightNode.id + "</div></div>";/*oss_q15_dl_tunnel_inner*/
+      html += '<div class="de-tunnel-fill"></div><div class="de-tunnel-inner"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div></div><div class="de-tunnel-label">' + _protoLabel + " &#8212; " + _escapeHtml(rightNode.id) + "</div></div>";/*oss_q15_dl_tunnel_inner*/
     } else {
       var _linearLabel = isBgp ? "BGP SESSION" : "OSPF ADJACENCY";
       var _deInner = '<div class="de-tunnel-inner"><div class="de-tunnel-wall top"></div><div class="de-tunnel-wall bot"></div></div>';
@@ -5729,14 +5729,14 @@ function xrayRenderExplanation(explanation) {
   if (!explanation) return "";
   var html = '<h3>&#x1F4D6; 解説</h3><div class="explanation-content">';
   if (explanation.cause) {
-    html += "<h4>原因</h4><p>" + explanation.cause + "</p>";
+    html += "<h4>原因</h4><p>" + _escapeHtml(explanation.cause) + "</p>";
   }
   if (explanation.concept_title && explanation.concept) {
-    html += "<h4>" + explanation.concept_title + "</h4><p>" + explanation.concept + "</p>";
+    html += "<h4>" + _escapeHtml(explanation.concept_title) + "</h4><p>" + _escapeHtml(explanation.concept) + "</p>";
   }
   if (explanation.fix_commands) {
     html += "<h4>解決方法</h4>";
-    if (explanation.fix_note) html += "<p>" + explanation.fix_note + "</p>";
+    if (explanation.fix_note) html += "<p>" + _escapeHtml(explanation.fix_note) + "</p>";
     html += '<div class="cmd-group">';
     html += '<div class="cmd-tabs">';
     html += '<button class="cmd-tab active" data-platform="frr" onclick="switchCmd(this)">FRR</button>';
@@ -5749,7 +5749,7 @@ function xrayRenderExplanation(explanation) {
     html += "</div>";
   }
   if (explanation.fix_alt) {
-    html += '<p style="margin-top:8px;font-size:13px;color:#aaa;line-height:1.8">' + explanation.fix_alt + "</p>";
+    html += '<p style="margin-top:8px;font-size:13px;color:#aaa;line-height:1.8">' + _escapeHtml(explanation.fix_alt) + "</p>";
   }
   if (explanation.verify_commands) {
     html += "<h4>確認コマンド</h4>";
@@ -5810,11 +5810,11 @@ function xrayRenderRoutingTable(config) {
   for (var ni = 0; ni < nets.length; ni++) {
     var net = nets[ni];
     html += '<div class="rt-capture-panel"><div class="rt-capture-header">';
-    html += '<span class="rt-net-label">' + net + "</span>";
-    html += '<input class="rt-filter-input" id="rt-filter-' + net + '" type="text" placeholder="filter" maxlength="80">';
-    html += '<button class="rt-capture-btn start" id="rt-btn-' + net + '" onclick="startRealtimeCapture(\'' + net + "')\">Capture Start</button>";
-    html += '<span class="rt-status-msg" id="rt-status-' + net + '"></span>';
-    html += '</div><div class="rt-packets" id="rt-packets-' + net + '"><div class="rt-empty">Capture Start を押すとパケットがリアルタイム表示されます</div></div></div>';
+    html += '<span class="rt-net-label">' + _escapeHtml(net) + "</span>";
+    html += '<input class="rt-filter-input" id="rt-filter-' + _escapeHtml(net) + '" type="text" placeholder="filter" maxlength="80">';
+    html += '<button class="rt-capture-btn start" id="rt-btn-' + _escapeHtml(net) + '" onclick="startRealtimeCapture(' + _xrayJsArg(net) + ')">Capture Start</button>';
+    html += '<span class="rt-status-msg" id="rt-status-' + _escapeHtml(net) + '"></span>';
+    html += '</div><div class="rt-packets" id="rt-packets-' + _escapeHtml(net) + '"><div class="rt-empty">Capture Start を押すとパケットがリアルタイム表示されます</div></div></div>';
   }
   html += "</div>";
   html += '<div class="rt-files-section"><h4>Capture Files</h4><div id="rt-file-list"><div class="rt-no-files">キャプチャファイルはまだありません</div></div></div>';
@@ -5894,25 +5894,25 @@ function xrayRenderCapture(config) {
   if (isOspf) {
     html += '<div class="tab-content active" id="tab-hello">';
     html += '<div class="ospf-topo"><div class="ospf-topo-nodes" id="ospf-topo-nodes" style="position:relative">';
-    html += '<div class="ospf-topo-node"><div class="ospf-node-box' + (targetNode.target ? " target" : "") + '">' + targetNode.id + "</div>";
-    html += '<div class="ospf-node-status"><div class="ospf-status-item"><span class="status-label">Hello送信</span> <span class="status-icon" id="' + targetNode.id + '-hello-icon"></span></div></div></div>';
+    html += '<div class="ospf-topo-node"><div class="ospf-node-box' + (targetNode.target ? " target" : "") + '">' + _escapeHtml(targetNode.id) + "</div>";
+    html += '<div class="ospf-node-status"><div class="ospf-status-item"><span class="status-label">Hello送信</span> <span class="status-icon" id="' + _escapeHtml(targetNode.id) + '-hello-icon"></span></div></div></div>';
     html += '<div class="ospf-topo-arrow" id="ospf-arrow" style="visibility:hidden">';
     html += '<div class="arrow-shaft"></div><div class="arrow-dst">224.0.0.5</div><div class="arrow-label">OSPF Hello</div></div>';
     if (otherNodes.length > 0) {
-      html += '<div class="ospf-topo-node"><div class="ospf-node-box">' + otherNodes[0].id + "</div></div>";
+      html += '<div class="ospf-topo-node"><div class="ospf-node-box">' + _escapeHtml(otherNodes[0].id) + "</div></div>";
     }
     html += '<div class="measuring-overlay" id="measuring-overlay" style="display:none">';
     html += '<div class="measuring-text">計測中</div><div class="measuring-dots"><span>.</span><span>.</span><span>.</span></div></div>';
     html += "</div></div>";
     html += '<div class="ospf-card" id="ospf-card"><div class="ospf-card-body">';
     html += '<div class="ospf-metric" id="ospf-hello-metric"><div class="value" id="ospf-hello-count">-</div>';
-    html += '<div class="label">' + targetNode.id + " の Hello パケット送信数</div></div>";
+    html += '<div class="label">' + _escapeHtml(targetNode.id) + " の Hello パケット送信数</div></div>";
     html += '<div class="ospf-message" id="ospf-message">Capture Go! を押してキャプチャを開始してください</div>';
     html += '</div><div class="ospf-extra" id="ospf-extra" style="display:none"></div></div>';
     html += "</div>";
     html += '<div class="tab-content" id="tab-raw">';
     html += '<div class="raw-container" style="position:relative">';
-    html += '<div class="raw-col"><div class="raw-col-header" style="color:#26c6da">OSPF パケット (' + nets[0] + ")</div>";
+    html += '<div class="raw-col"><div class="raw-col-header" style="color:#26c6da">OSPF パケット (' + _escapeHtml(nets[0]) + ")</div>";
     html += '<div class="raw-col-body" id="raw-col-ospf"><div class="raw-empty">キャプチャ実行後にパケットが表示されます</div></div></div>';
     html += '<div class="measuring-overlay" id="measuring-overlay-raw" style="display:none">';
     html += '<div class="measuring-text">計測中</div><div class="measuring-dots"><span>.</span><span>.</span><span>.</span></div></div>';
@@ -5927,15 +5927,15 @@ function xrayRenderCapture(config) {
     for (var fi = 0; fi < flowNodes.length; fi++) {
       var fn = flowNodes[fi];
       var fcls = fn.type === "server" ? "server" : fn.type === "isp" ? "isp" : "router";
-      html += '<div class="topo-flow-node ' + fcls + '">' + fn.id + "</div>";
+      html += '<div class="topo-flow-node ' + fcls + '">' + _escapeHtml(fn.id) + "</div>";
       if (fi < flowNodes.length - 1) {
         if (fi < nets.length) {
           var segNet = nets[fi];
           var segId = segNet.replace("net-", "");
-          html += '<div class="topo-flow-segment" id="seg-' + segId + '">';
-          html += '<div class="seg-label">' + segNet + "</div>";
-          html += '<div class="seg-arrow req"><span class="arrow-line">---&gt;</span> <span class="seg-count" id="' + segId + '-req">-</span></div>';
-          html += '<div class="seg-arrow rep"><span class="arrow-line">&lt;---</span> <span class="seg-count" id="' + segId + '-rep">-</span></div>';
+          html += '<div class="topo-flow-segment" id="seg-' + _escapeHtml(segId) + '">';
+          html += '<div class="seg-label">' + _escapeHtml(segNet) + "</div>";
+          html += '<div class="seg-arrow req"><span class="arrow-line">---&gt;</span> <span class="seg-count" id="' + _escapeHtml(segId) + '-req">-</span></div>';
+          html += '<div class="seg-arrow rep"><span class="arrow-line">&lt;---</span> <span class="seg-count" id="' + _escapeHtml(segId) + '-rep">-</span></div>';
           html += "</div>";
         } else {
           var fromId = flowNodes[fi].id;
@@ -5957,7 +5957,7 @@ function xrayRenderCapture(config) {
           }
           var placeholderNet = foundNet || "net-" + fromId + toId;
           html += '<div class="topo-flow-segment not-captured" style="opacity:0.55">';
-          html += '<div class="seg-label">' + placeholderNet + "</div>";
+          html += '<div class="seg-label">' + _escapeHtml(placeholderNet) + "</div>";
           html += '<div class="seg-arrow req"><span class="arrow-line">---&gt;</span> <span class="seg-count pending" style="color:#78909c">未観測</span></div>';
           html += '<div class="seg-arrow rep"><span class="arrow-line">&lt;---</span> <span class="seg-count pending" style="color:#78909c">未観測</span></div>';
           html += "</div>";
@@ -5970,12 +5970,12 @@ function xrayRenderCapture(config) {
     if (roNodes.length > 0 && nets.length > flowNodes.length - 1) {
       var lastNet = nets[nets.length - 1] || "net-wan";
       var lastId = lastNet.replace("net-", "");
-      html += '<div class="topo-flow-segment" id="seg-' + lastId + '">';
-      html += '<div class="seg-label">' + lastNet + "</div>";
-      html += '<div class="seg-arrow req"><span class="arrow-line">---&gt;</span> <span class="seg-count" id="' + lastId + '-req">-</span></div>';
-      html += '<div class="seg-arrow rep"><span class="arrow-line">&lt;---</span> <span class="seg-count" id="' + lastId + '-rep">-</span></div>';
+      html += '<div class="topo-flow-segment" id="seg-' + _escapeHtml(lastId) + '">';
+      html += '<div class="seg-label">' + _escapeHtml(lastNet) + "</div>";
+      html += '<div class="seg-arrow req"><span class="arrow-line">---&gt;</span> <span class="seg-count" id="' + _escapeHtml(lastId) + '-req">-</span></div>';
+      html += '<div class="seg-arrow rep"><span class="arrow-line">&lt;---</span> <span class="seg-count" id="' + _escapeHtml(lastId) + '-rep">-</span></div>';
       html += "</div>";
-      html += '<div class="topo-flow-node isp">' + roNodes[0].id + "</div>";
+      html += '<div class="topo-flow-node isp">' + _escapeHtml(roNodes[0].id) + "</div>";
     }
     html += "</div></div>";
     html += '<div id="before-after-flow" class="before-after-split" style="display:none"></div>';
@@ -5986,8 +5986,8 @@ function xrayRenderCapture(config) {
     for (var ri = 0; ri < nets.length; ri++) {
       var rNet = nets[ri];
       var rLabel = lanes[rNet] || rNet;
-      html += '<div class="raw-col"><div class="raw-col-header">' + rNet + "</div>";
-      html += '<div class="raw-col-body" id="raw-col-' + rNet.replace("net-", "") + '"><div class="raw-empty">-</div></div></div>';
+      html += '<div class="raw-col"><div class="raw-col-header">' + _escapeHtml(rNet) + "</div>";
+      html += '<div class="raw-col-body" id="raw-col-' + _escapeHtml(rNet.replace("net-", "")) + '"><div class="raw-empty">-</div></div></div>';
     }
     html += "</div></div>";
     html += '<div id="before-after-raw" class="before-after-split" style="display:none"></div>';
@@ -6003,11 +6003,11 @@ function xrayRenderCapture(config) {
     var net = nets[ni];
     var lane = lanes[net] || net.replace("net-", "").toUpperCase();
     html += '<div class="rt-capture-panel"><div class="rt-capture-header">';
-    html += '<span class="rt-net-label">' + lane + "</span>";
-    html += '<input class="rt-filter-input" id="rt-filter-' + net + '" type="text" placeholder="filter (e.g. icmp, port 80)" maxlength="80">';
-    html += '<button class="rt-capture-btn start" id="rt-btn-' + net + '" onclick="startRealtimeCapture(\'' + net + "')\">Capture Start</button>";
-    html += '<span class="rt-status-msg" id="rt-status-' + net + '"></span></div>';
-    html += '<div class="rt-packets" id="rt-packets-' + net + '"><div class="rt-empty">Capture Start を押すとパケットがリアルタイム表示されます</div></div></div>';
+    html += '<span class="rt-net-label">' + _escapeHtml(lane) + "</span>";
+    html += '<input class="rt-filter-input" id="rt-filter-' + _escapeHtml(net) + '" type="text" placeholder="filter (e.g. icmp, port 80)" maxlength="80">';
+    html += '<button class="rt-capture-btn start" id="rt-btn-' + _escapeHtml(net) + '" onclick="startRealtimeCapture(' + _xrayJsArg(net) + ')">Capture Start</button>';
+    html += '<span class="rt-status-msg" id="rt-status-' + _escapeHtml(net) + '"></span></div>';
+    html += '<div class="rt-packets" id="rt-packets-' + _escapeHtml(net) + '"><div class="rt-empty">Capture Start を押すとパケットがリアルタイム表示されます</div></div></div>';
   }
   html += "</div>";
   html += '<div class="rt-files-section"><h4>Capture Files</h4><div id="rt-file-list"><div class="rt-no-files">キャプチャファイルはまだありません</div></div></div>';
@@ -6096,7 +6096,7 @@ window.xrayBuildRawSummary = function(packets) {
   var c = _xrayCaptureCfg();
   var focusNet = c.nets[c.nets.length - 1];
   var focusLane = c.lanes[focusNet] || focusNet;
-  var routerLabel = "r1 (" + focusLane + ")";
+  var routerLabel = "r1 (" + _escapeHtml(focusLane) + ")";
   if (!packets || packets.length === 0) {
     return "📡 " + routerLabel + " でパケットは観測されませんでした";
   }
@@ -6156,18 +6156,18 @@ function _xrayRenderPacketsToCol(pkts) {
     var proto = p.proto || "ICMP";
     if (proto === "OSPF" || proto === "BGP" || proto === "TCP") {
       var cls = proto === "OSPF" ? "ospf" : "bgp";
-      var body = (p.raw_line || "").replace(/^\S+\s+IP\s+/, "");
+      var body = _escapeHtml((p.raw_line || "").replace(/^\S+\s+IP\s+/, ""));
       body = body.replace(/Flags\s+\[S\]/g, '<span style="color:#e74c3c;font-weight:bold">Flags [S]</span>');
-      return '<div class="raw-line ' + cls + '"><span class="raw-ts">' + ts + "</span>" + '<span class="raw-dir" style="font-weight:bold;min-width:3.2em">' + proto + "</span>" + body + "</div>";
+      return '<div class="raw-line ' + cls + '"><span class="raw-ts">' + ts + "</span>" + '<span class="raw-dir" style="font-weight:bold;min-width:3.2em">' + _escapeHtml(proto) + "</span>" + body + "</div>";
     }
     if (proto === "ARP") {
-      var arpBody = (p.raw_line || "").replace(/^\S+\s+/, "").replace(/Ethernet \(len \d+\), IPv4 \(len \d+\), /, "");
+      var arpBody = _escapeHtml((p.raw_line || "").replace(/^\S+\s+/, "").replace(/Ethernet \(len \d+\), IPv4 \(len \d+\), /, ""));
       return '<div class="raw-line arp"><span class="raw-ts">' + ts + "</span>" + '<span class="raw-dir" style="font-weight:bold;min-width:3.2em">ARP</span>' + arpBody + "</div>";
     }
     var isReq = p.raw_line && (p.raw_line.indexOf("request") !== -1 || p.raw_line.indexOf("echo request") !== -1);
     var dir = isReq ? "req" : "rep";
     var dirLabel = isReq ? "→" : "←";
-    var body = (p.raw_line || "").replace(/.*ICMP\s*/, "");
+    var body = _escapeHtml((p.raw_line || "").replace(/.*ICMP\s*/, ""));
     return '<div class="raw-line ' + dir + '"><span class="raw-ts">' + ts + '</span><span class="raw-dir ' + dir + '">' + dirLabel + "</span>" + body + "</div>";
   }).join("");
 }
@@ -6239,7 +6239,7 @@ window.xrayBuildFlowHTML = function(flowData) {
   function fmtCount(cnt, t) {
     var ok = cnt > 0;
     var d = Math.min(cnt, t);
-    return '<span class="seg-count ' + (ok ? "ok" : "fail") + '">' + d + "/" + t + (ok ? " ✔" : " ✖") + "</span>";
+    return '<span class="seg-count ' + (ok ? "ok" : "fail") + '">' + d + "/" + _escapeHtml(t) + (ok ? " ✔" : " ✖") + "</span>";
   }
   function arrowCls(cnt) {
     return cnt > 0 ? "arrow-line active" : "arrow-line";
@@ -6249,10 +6249,10 @@ window.xrayBuildFlowHTML = function(flowData) {
       req: 0,
       rep: 0
     };
-    return '<div class="topo-flow-segment"><div class="seg-label">' + segNet + "</div>" + '<div class="seg-arrow req"><span class="' + arrowCls(cnt.req) + '">---&gt;</span> ' + fmtCount(cnt.req, total) + "</div>" + '<div class="seg-arrow rep"><span class="' + arrowCls(cnt.rep) + '">&lt;---</span> ' + fmtCount(cnt.rep, total) + "</div>" + "</div>";
+    return '<div class="topo-flow-segment"><div class="seg-label">' + _escapeHtml(segNet) + "</div>" + '<div class="seg-arrow req"><span class="' + arrowCls(cnt.req) + '">---&gt;</span> ' + fmtCount(cnt.req, total) + "</div>" + '<div class="seg-arrow rep"><span class="' + arrowCls(cnt.rep) + '">&lt;---</span> ' + fmtCount(cnt.rep, total) + "</div>" + "</div>";
   }
   function placeholderSegHTML(netName) {
-    return '<div class="topo-flow-segment not-captured" style="opacity:0.55">' + '<div class="seg-label">' + netName + "</div>" + '<div class="seg-arrow req"><span class="arrow-line">---&gt;</span> <span class="seg-count pending" style="color:#78909c">未観測</span></div>' + '<div class="seg-arrow rep"><span class="arrow-line">&lt;---</span> <span class="seg-count pending" style="color:#78909c">未観測</span></div>' + "</div>";
+    return '<div class="topo-flow-segment not-captured" style="opacity:0.55">' + '<div class="seg-label">' + _escapeHtml(netName) + "</div>" + '<div class="seg-arrow req"><span class="arrow-line">---&gt;</span> <span class="seg-count pending" style="color:#78909c">未観測</span></div>' + '<div class="seg-arrow rep"><span class="arrow-line">&lt;---</span> <span class="seg-count pending" style="color:#78909c">未観測</span></div>' + "</div>";
   }
   var flowNodes = c.nodes.filter(function(n) {
     return !n.readonly;
@@ -6293,7 +6293,7 @@ window.xrayBuildFlowHTML = function(flowData) {
   for (var i = 0; i < flowNodes.length; i++) {
     var n = flowNodes[i];
     var cls = n.type === "server" ? "server" : n.type === "isp" ? "isp" : "router";
-    html += '<div class="topo-flow-node ' + cls + '">' + n.id + "</div>";
+    html += '<div class="topo-flow-node ' + cls + '">' + _escapeHtml(n.id) + "</div>";
     if (i < flowNodes.length - 1) {
       if (i < c.nets.length) {
         html += segHTML(c.nets[i]);
@@ -6305,7 +6305,7 @@ window.xrayBuildFlowHTML = function(flowData) {
   if (roNodes.length > 0 && c.nets.length > flowNodes.length - 1) {
     var lastNet = c.nets[c.nets.length - 1];
     html += segHTML(lastNet);
-    html += '<div class="topo-flow-node isp">' + roNodes[0].id + "</div>";
+    html += '<div class="topo-flow-node isp">' + _escapeHtml(roNodes[0].id) + "</div>";
   }
   html += "</div>";
   return html;
@@ -6332,7 +6332,7 @@ window.xrayShowBeforeAfterRaw = function(initialRawData, latestRawData) {
       var id = n.replace("net-", "");
       var hl = n === focusNet && c.nets.length > 1 ? " wan-highlight" : "";
       var label = c.lanes[n] || n;
-      return '<div class="raw-col' + hl + '"><div class="raw-col-header">' + label + " (" + n + ")</div>" + '<div class="raw-col-body" style="max-height:200px">' + (rawMap[id] || '<div class="raw-empty">-</div>') + "</div></div>";
+      return '<div class="raw-col' + hl + '"><div class="raw-col-header">' + _escapeHtml(label) + " (" + _escapeHtml(n) + ")</div>" + '<div class="raw-col-body" style="max-height:200px">' + (rawMap[id] || '<div class="raw-empty">-</div>') + "</div></div>";
     }).join("");
   }
   container.innerHTML = '<div class="ba-section before"><div class="ba-label">初期状態 (Before)</div><div class="ba-content">' + '<div style="padding:6px 10px;margin-bottom:8px;border-radius:4px;font-size:12px;background:#0a0a0a;border-left:3px solid #e74c3c;color:#ccc">' + beforeSummary + "</div>" + '<div class="raw-2col">' + rawColsHTML(beforeRaw) + "</div>" + "</div></div>" + '<div class="ba-section after"><div class="ba-label">復旧後 (After)</div><div class="ba-content">' + '<div style="padding:6px 10px;margin-bottom:8px;border-radius:4px;font-size:12px;background:#0a0a0a;border-left:3px solid #27ae60;color:#ccc">' + afterSummary + "</div>" + '<div class="raw-2col">' + rawColsHTML(afterRaw) + "</div>" + "</div></div>";
@@ -6879,14 +6879,14 @@ function xrayBuildApplyState(config) {
       if (f.condition_not && s[f.condition_not]) continue;
       if (f.ok !== undefined && f.field && val === undefined) continue;
       if (f.format) {
-        var txt = f.format.replace(/\{(\w+)\}/g, function(m, k) {
-          return s[k] || "?";
+        var txt = _escapeHtml(f.format).replace(/\{(\w+)\}/g, function(m, k) {
+          return _escapeHtml(s[k] || "?");
         });
         holo += "<div>&gt; " + txt + "</div>";
       } else if (f.ok !== undefined) {
         var isOk = f.ok_value !== undefined ? val === f.ok_value : !!val;
         var display = isOk ? f.ok || val : f.fallback ? _holoVal(s, f.fallback) || f.err || "NG" : f.err || "NG";
-        holo += "<div>&gt; " + f.label + ': <span class="' + (isOk ? "ok" : "err") + '">' + display + "</span></div>";
+        holo += "<div>&gt; " + _escapeHtml(f.label) + ': <span class="' + (isOk ? "ok" : "err") + '">' + _escapeHtml(display) + "</span></div>";
       }
     }
     var holoBody = document.getElementById("xray-holo-body");
@@ -12850,7 +12850,7 @@ function _xrayInitTriangleTools(config) {
     bar.id = "check-progress";
     var _stepsHtml = _cfSteps.map(function(s, i) {
       var _lbl = s && s.label || "Step " + (i + 1);
-      return '<span class="check-step" id="chk-s' + (i + 1) + '" data-step-idx="' + i + '">' + _lbl + "</span>";
+      return '<span class="check-step" id="chk-s' + (i + 1) + '" data-step-idx="' + i + '">' + _escapeHtml(_lbl) + "</span>";
     }).join("");
     bar.innerHTML = _stepsHtml + '<span class="check-phase-msg" id="chk-msg"></span>';
     document.body.appendChild(bar);

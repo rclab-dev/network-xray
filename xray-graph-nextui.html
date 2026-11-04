@@ -1032,16 +1032,16 @@ window.__initNeXtOverview = function (data) {
           if (kinds.indexOf(k) < 0) kinds.push(k); });
         var kt = kinds.slice(0, 3).join(ja ? '・' : ', ') + (kinds.length > 3 ? (ja ? ' など' : ', ...') : '');
         return '<span class="nxp-partial">' + (ja   /* nx_validate_partial3: two unbreakable halves, the line breaks at the dash */
-          ? '<span class="nxpp">BGP の検査 ' + c.pass + ' つは通過・残り ' + c.unsupported + ' つ (' + esc(kt) + ') は未確認</span> — <span class="nxpp">netlab validate で確かめてください</span>'
-          : '<span class="nxpp">' + c.pass + ' BGP check' + (c.pass === 1 ? '' : 's') + ' passed; ' + c.unsupported + ' more (' + esc(kt) + ') not read by network-xray</span> — <span class="nxpp">run netlab validate for those</span>') + '</span>';
+          ? '<span class="nxpp">BGP の検査 ' + esc(c.pass) + ' つは通過・残り ' + esc(c.unsupported) + ' つ (' + esc(kt) + ') は未確認</span> — <span class="nxpp">netlab validate で確かめてください</span>'
+          : '<span class="nxpp">' + esc(c.pass) + ' BGP check' + (c.pass === 1 ? '' : 's') + ' passed; ' + esc(c.unsupported) + ' more (' + esc(kt) + ') not read by network-xray</span> — <span class="nxpp">run netlab validate for those</span>') + '</span>';
       };
       var badge = held ? (allOk ? '<span class="nxp-solved">' + (ja ? '\u2713 \u89e3\u3051\u307e\u3057\u305f (Solved)' : '\u2713 Solved') + '</span>'
                                 : partialLine()) : '';   /* nx_validate_partial: no ✓ while grey checks remain */
       var waitLine = (v.converging || c.settling || (partOk && !held))   /* nx_validate_converge: say why there is no Solved yet */
-        ? '<div class="nxv-note">' + (ja ? 'ラボの収束を待っています… (立ち上げから ' + (v.converge_s || 60) + ' 秒と、全部の合格が 20 秒続くまでは ✓ Solved を出しません)' : 'Waiting for the lab to converge… (no ✓ Solved until ' + (v.converge_s || 60) + ' s after the lab started and all checks have passed for 20 s)') + '</div>' : '';
+        ? '<div class="nxv-note">' + (ja ? 'ラボの収束を待っています… (立ち上げから ' + esc(v.converge_s || 60) + ' 秒と、全部の合格が 20 秒続くまでは ✓ Solved を出しません)' : 'Waiting for the lab to converge… (no ✓ Solved until ' + esc(v.converge_s || 60) + ' s after the lab started and all checks have passed for 20 s)') + '</div>' : '';
       host.innerHTML = waitLine + '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
-        + '<span class="nxp-count">' + (c.pass || 0) + ' / ' + (c.total || 0) + (c.unsupported ? ' · ' + c.unsupported + (ja ? ' つは見ていない' : ' not read') : '') + '</span>' + badge + '</div><div class="nxv-list">' + rows + '</div>'
-        + (c.unsupported && !(held && !allOk) ? '<div class="nxv-note">' + (ja ? '\u7070\u8272\u306e ' + c.unsupported + ' \u3064\u306f network-xray \u3067\u306f\u898b\u3066\u3044\u306a\u3044\u306e\u3067\u3001\u2713 Solved \u306f\u51fa\u3057\u307e\u305b\u3093 (netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044)\u3002' : c.unsupported + ' grey check(s) are not read by network-xray, so \u2713 Solved is not shown: run netlab validate for those.') + '</div>' : '');
+        + '<span class="nxp-count">' + esc(c.pass || 0) + ' / ' + esc(c.total || 0) + (c.unsupported ? ' · ' + esc(c.unsupported) + (ja ? ' つは見ていない' : ' not read') : '') + '</span>' + badge + '</div><div class="nxv-list">' + rows + '</div>'
+        + (c.unsupported && !(held && !allOk) ? '<div class="nxv-note">' + (ja ? '\u7070\u8272\u306e ' + esc(c.unsupported) + ' \u3064\u306f network-xray \u3067\u306f\u898b\u3066\u3044\u306a\u3044\u306e\u3067\u3001\u2713 Solved \u306f\u51fa\u3057\u307e\u305b\u3093 (netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044)\u3002' : esc(c.unsupported) + ' grey check(s) are not read by network-xray, so \u2713 Solved is not shown: run netlab validate for those.') + '</div>' : '');
       host.classList.toggle('nx-solved', held && allOk);
       host.style.display = 'block';
       if (window.__nxValidateMarks) window.__nxValidateMarks(v);

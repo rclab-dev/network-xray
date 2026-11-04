@@ -231,6 +231,9 @@ window.__xrayGraphBoot = function () {
     return !!(document.querySelector('.de-cyl-svg') && document.getElementById('de-re-panel'));
   }
 
+  /* node names from the topology go into innerHTML -> escape (same helper as xray-graph.html) */
+  function _nxEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
   // ================= node click → deepViews (one view with all of the node's links) =================
   function showNode(nodeId){
     window.__xrayCurNode = nodeId;   // remember the open node so the live poll can refresh it in place
@@ -239,7 +242,7 @@ window.__xrayGraphBoot = function () {
     var views = window.clabXray.deepViews(fullCfg, nodeId);   // ← bridge (b)
     if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
     if (views.length > 1) {
-      box.innerHTML='<span class="lbl">'+nodeId+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
+      box.innerHTML='<span class="lbl">'+_nxEsc(nodeId)+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
       views.forEach(function(v,idx){
         var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
         b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
@@ -258,7 +261,7 @@ window.__xrayGraphBoot = function () {
   });}); svg+='</svg>'; ov.innerHTML=svg;
   NAMES.forEach(function(n){
     var b=document.createElement('div'); b.className='ov-node'; b.setAttribute('data-n',n);
-    b.innerHTML=n+(KIND[n]?'<span class="k">'+KIND[n]+'</span>':'');
+    b.innerHTML=_nxEsc(n)+(KIND[n]?'<span class="k">'+_nxEsc(KIND[n])+'</span>':'');
     b.style.left=POS[n][0]+'px'; b.style.top=POS[n][1]+'px';
     b.onclick=function(){ showNode(n); };
     ov.appendChild(b);
