@@ -58,6 +58,16 @@ function splitIf(sub) { var m = /^(.*)\.(\d+)$/.exec(sub); return m ? { base: m[
 // a list field from sr_cli json: only a real array, and only its object entries (null / 'x' / 7 in place of a
 // list or a list entry would throw below; valid srl output is always an array of objects, so it is unchanged).
 function list(x) { return Array.isArray(x) ? x.filter(function (e) { return e !== null && typeof e === 'object'; }) : []; }
+// srl adjacency-state ("two-way", "exstart", ...) -> the OSPF state words the engine compares against
+// (FRR spelling: Down / Attempt / Init / 2-Way / ExStart / Exchange / Loading / Full).
+var OSPF_WORDS = { down: 'Down', attempt: 'Attempt', init: 'Init', twoway: '2-Way', '2way': '2-Way',
+  exstart: 'ExStart', exchangestart: 'ExStart', exchange: 'Exchange', loading: 'Loading', full: 'Full' };
+var OSPF_ORDER = ['Down', 'Attempt', 'Init', '2-Way', 'ExStart', 'Exchange', 'Loading', 'Full'];
+function ospfStateWord(v) {
+  var k = typeof v === 'string' ? v.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+  return Object.prototype.hasOwnProperty.call(OSPF_WORDS, k) ? OSPF_WORDS[k] : 'Down';
+}
+function ospfStateRank(w) { return w ? OSPF_ORDER.indexOf(w) : -1; }
 var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 'ip-vrf': 'connected', static: 'static', 'bgp': 'bgp', 'bgp-vpn': 'bgp', arpnd: 'connected', 'arp-nd': 'connected' };
 
 // ---------------------------------------------------------------------------
@@ -113,16 +123,23 @@ function buildState(fetch, node, adj, proto) {
     });
   } else {
     var oa = fetch('network-instance default protocols ospf instance default area *');
+    var _nbWord = {};   // peer -> the furthest adjacency state on its kept link
     list(oa && oa.area).forEach(function (a) {
       list(a.interface).forEach(function (iface) {
         var ifn = iface['interface-name'];
         list(iface.neighbor).forEach(function (nb) {
           var peer = adj[ifn]; if (!peer) return;
-          var _keepO = state[peer + '_has_full'] === true && nb['adjacency-state'] !== 'full';  /* nx_srl_peer_map: a Full adjacency keeps the per-peer keys */
-          if (!_keepO) state[peer + '_iface'] = ifn;
-          if (!_keepO) state[peer + '_has_full'] = nb['adjacency-state'] === 'full';
+          var _w = ospfStateWord(nb['adjacency-state']);
+          var _keepO = state[peer + '_has_full'] === true && _w !== 'Full';  /* nx_srl_peer_map: a Full adjacency keeps the per-peer keys */
+          if (!_keepO) {
+            if (state[peer + '_iface'] !== ifn || _w === 'Full' || ospfStateRank(_w) > ospfStateRank(_nbWord[peer])) _nbWord[peer] = _w;
+            state[peer + '_iface'] = ifn;
+            state[peer + '_has_full'] = _w === 'Full';   // the same word the display uses (also for a non-lowercase spelling)
+          }
           state[peer + '_proto'] = 'ospf';
-          _plByIf[ifn] = { full: _plByIf[ifn] && _plByIf[ifn].full || nb['adjacency-state'] === 'full', proto: 'ospf', peer_ip: '' };
+          var _prev = _plByIf[ifn];
+          _plByIf[ifn] = { full: _prev && _prev.full || _w === 'Full', proto: 'ospf', peer_ip: '',
+                           word: _prev && ospfStateRank(_prev.word) > ospfStateRank(_w) ? _prev.word : _w };
         });
       });
     });
@@ -132,7 +149,7 @@ function buildState(fetch, node, adj, proto) {
 
   /* nx_peer_links: one row per adj link (incl. 2 links to the same peer / a link with no neighbor = Down). Additive. */
   var _plRows = Object.keys(adj).map(function (ifn) { var r = _plByIf[ifn], it = state.interfaces[ifn] || {};
-    return { iface: ifn, peer: adj[ifn], up: !!state.interfaces[ifn] && it.up !== false, ip: it.ip || '', full: !!(r && r.full), state: r ? (r.full ? 'Full' : 'Down') : 'Down', proto: r ? r.proto : state.protocol, peer_ip: (r && r.peer_ip) || '' }; });
+    return { iface: ifn, peer: adj[ifn], up: !!state.interfaces[ifn] && it.up !== false, ip: it.ip || '', full: !!(r && r.full), state: r ? (r.full ? 'Full' : (r.word || 'Down')) : 'Down', proto: r ? r.proto : state.protocol, peer_ip: (r && r.peer_ip) || '' }; });
   if (_plRows.length) state.peer_links = _plRows;
 
   // routes: route -> next-hop-group -> next-hop (resolve ip + out-iface)
@@ -272,7 +289,7 @@ function buildState(fetch, node, adj, proto) {
       state.r1_area = state.r2_area = state.target_area = state.peer_area = tArea; state.area_match = true;
       state.r1_hello = state.r2_hello = state.target_hello = state.peer_hello = tHello; state.timer_match = true;
     }
-    peers.forEach(function (p) { state[p + '_neighbor_state'] = state[p + '_has_full'] ? 'Full' : 'None'; });
+    peers.forEach(function (p) { state[p + '_neighbor_state'] = state[p + '_has_full'] ? 'Full' : (_nbWord[p] || 'None'); });
   }
 
   return state;
