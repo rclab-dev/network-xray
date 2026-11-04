@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: How issues and fixes are handled
+    url: https://github.com/rclab-dev/network-xray#maintenance-policy
+    about: Issues are welcome and fixes are made in this repository; pull requests are not merged (single copyright holder).
   - name: Security notes (Docker socket, port 8600)
     url: https://github.com/rclab-dev/network-xray#security-notes
     about: Read this before opening the page to other machines.

@@ -1,0 +1,66 @@
+name: Device output not understood
+description: A router's show output was read wrong or not at all (for example the page says "could not be read completely").
+title: "[output] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when network-xray reads a supported router (FRR, SR Linux, Cisco IOL) but gets its output wrong:
+        a line is skipped, a value lands in the wrong place, or the page shows "… could not be read completely".
+        For a device it does not read at all, use "A router OS or version it does not read".
+        **Issues are welcome, and fixes are made in this repository.** Pull requests are not merged: the project keeps a single copyright holder.
+        English or 日本語, either is fine.
+
+  - type: input
+    id: versions
+    attributes:
+      label: network-xray version (image tag or commit)
+      description: "Image: `docker image inspect ghcr.io/rclab-dev/network-xray:1 --format '{{index .RepoDigests 0}}'` · from a clone: `git rev-parse --short HEAD`"
+      placeholder: "network-xray :1 sha256:… (or commit ae7b4e9)"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device type and OS version
+      description: The containerlab kind and the version from the device's own `show version`.
+      placeholder: "cisco_iol, IOS-XE 17.18.02"
+    validations:
+      required: true
+
+  - type: input
+    id: cmd
+    attributes:
+      label: The command
+      description: The exact show command whose output was not understood.
+      placeholder: "show ip bgp"
+    validations:
+      required: true
+
+  - type: textarea
+    id: raw
+    attributes:
+      label: Raw output
+      description: |
+        The output exactly as the device printed it, including the header lines and spacing (paste it, do not retype it).
+        **Remove secrets before pasting:** passwords, keys, SNMP communities, and any addresses or names you do not want public. Replace them with something of the same shape (an address with an address) so the line still parses the same way.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: meaning
+    attributes:
+      label: What the device really meant
+      description: In your words, what those lines say. Point at the lines that matter.
+      placeholder: |
+        The second 10.0.0.0/24 line is another path via 10.1.2.2, learned over iBGP, and it is the best path (the ">" is on that line).
+    validations:
+      required: true
+
+  - type: textarea
+    id: shown
+    attributes:
+      label: What network-xray showed (optional)
+      description: The note on the page, the wrong value, or a screenshot (drag the image into this box).

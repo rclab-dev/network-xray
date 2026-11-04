@@ -5,7 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        English or 日本語, either is fine. Single maintainer: issues are read, no SLA, pull requests are not accepted.
+        English or 日本語, either is fine.
+        **Issues are welcome, and fixes are made in this repository.** Pull requests are not merged: the project keeps a single copyright holder. There is no SLA.
         **Please do not attach `network-xray.json`** (it holds the lab's passwords).
 
   - type: dropdown
@@ -24,8 +25,9 @@ body:
   - type: input
     id: versions
     attributes:
-      label: Versions
+      label: Versions (network-xray image tag or commit, netlab, containerlab, Docker)
       description: |
+        From a clone (xray.sh): `git rev-parse --short HEAD` instead of the image.
         `docker image inspect ghcr.io/rclab-dev/network-xray:1 --format '{{index .RepoDigests 0}}'` · `netlab version` · `containerlab version` · `docker version --format '{{.Server.Version}}'`
       placeholder: "network-xray sha256:… · netlab 26.10 · containerlab 0.82.0 · Docker 27.3"
     validations:

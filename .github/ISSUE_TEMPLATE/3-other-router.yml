@@ -5,8 +5,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        network-xray reads FRR and Nokia SR Linux today (FRR is checked live with 8.4 and 10.7.1). Other devices are drawn in the topology but not read.
+        network-xray reads FRR, Nokia SR Linux and Cisco IOS-XE (containerlab kind `cisco_iol`) today. Other devices are drawn in the topology but not read.
+        If a supported router's output is read wrong, use "Device output not understood" instead.
         This issue helps decide what to read next. No promise of support. English or 日本語, either is fine.
+        **Issues are welcome, and fixes are made in this repository.** Pull requests are not merged: the project keeps a single copyright holder.
 
   - type: input
     id: os
@@ -47,7 +49,7 @@ body:
       label: Sample output (structured if the device has it)
       description: |
         The device's JSON (or other structured) output for what you chose above — for example the BGP table for one prefix with two paths.
-        Remove anything you do not want public.
+        **Remove secrets before pasting:** passwords, keys, SNMP communities, and anything else you do not want public.
       render: json
 
   - type: textarea
