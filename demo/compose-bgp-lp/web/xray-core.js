@@ -12016,24 +12016,27 @@ function xrayBgpDecision(group) {
     best: best,
     col: null
   };
-  var chain = [], medSkipped = false;
+  /* nx_bestpath_elim (2026-11-03): each step compares the best only with the paths still in play after the earlier
+     steps (a path cut at LocPrf no longer counts at AS-Path). MED is still compared only among the remaining paths of
+     the best's neighbor AS. Before, any 3+ path set where a step cut some paths but not all came out "no single decider". */
+  var chain = [], medSkipped = false, alive = group;
   for (var c = 0; c < XRAY_BGP_CRITERIA.length; c++) {
     var crit = XRAY_BGP_CRITERIA[c];
     var bv = crit.val(best);
-    var cohort = group;
+    var cohort = alive;
     if (crit.key === "metric") {
       var bAS = xrayBgpNeighborAS(best);
-      cohort = group.filter(function(r) {
+      cohort = alive.filter(function(r) {
         return xrayBgpNeighborAS(r) === bAS;
       });
       if (cohort.length < 2) {
-        var anyDiff = group.some(function(r) {
+        var anyDiff = alive.some(function(r) {
           return r !== best && crit.val(r) !== bv;
         });
         chain.push({
           crit: crit,
           bestVal: bv,
-          cmpVal: null,
+          cmpVal: anyDiff ? null : bv,
           status: anyDiff ? "skip" : "tie"
         });
         if (anyDiff) medSkipped = true;
@@ -12059,7 +12062,7 @@ function xrayBgpDecision(group) {
       continue;
     }
     var bestIsUnique = cohort.every(function(r) {
-      return r === best || (crit.dir > 0 ? bv > crit.val(r) : bv < crit.val(r));
+      return r === best || (crit.dir > 0 ? bv >= crit.val(r) : bv <= crit.val(r));   /* nx_bestpath_elim: only a better path makes it ambiguous */
     });
     if (!bestIsUnique) {
       chain.push({
@@ -12074,6 +12077,20 @@ function xrayBgpDecision(group) {
         chain: chain,
         col: null
       };
+    }
+    if (cohort.some(function(r) {
+      return r !== best && crit.val(r) === bv;
+    })) {   /* nx_bestpath_elim: some paths cut here, the best still tied with others -> next step */
+      alive = cohort.filter(function(r) {
+        return crit.val(r) === bv;
+      });
+      chain.push({
+        crit: crit,
+        bestVal: bv,
+        cmpVal: bv,
+        status: "tie"
+      });
+      continue;
     }
     chain.push({
       crit: crit,

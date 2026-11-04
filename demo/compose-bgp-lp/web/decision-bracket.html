@@ -163,7 +163,10 @@ function betterSet(alive, crit){
   //   rather than falsely attributing the win to Router ID.
   if (crit.key === 'routerid' && !data.compareRouterId) return alive.slice();
   if (crit.key === 'olderpath' && !alive.some(function(r){ return r.attrs.age != null; })) return alive.slice();
+  // MED is compared only between paths from the same neighbor AS (RFC 4271 9.1.2.2 c), as the DeepDive panel does
+  if (crit.key === 'med') return alive.filter(function(r){ return !alive.some(function(o){ return o.as === r.as && o.attrs.med < r.attrs.med; }); });
   function val(r){ var v = (crit.key === 'olderpath') ? r.attrs.age : r.attrs[crit.key];
+    if (crit.key === 'routerid' && typeof v === 'string') v = v.split('.').reduce(function(a,o){ return a * 256 + (+o); }, 0);   // dotted quad -> number
     if (crit.dir === 'origin') return -originRank[v];
     if (crit.dir === 'ebgp')   return v ? 1 : 0;
     if (crit.dir === 'low')    return -v;

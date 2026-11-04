@@ -106,19 +106,22 @@
     if (!best) return { kind: 'nobest' };
     var localOrigin = _bnum(best.weight, 0) === 32768;
     if (group.length < 2) return { kind: localOrigin ? 'local' : 'single', best: best, col: null };
-    var chain = [], medSkipped = false;
+    // nx_bestpath_elim: compare only with the paths still in play (same as xray-core.js)
+    var chain = [], medSkipped = false, alive = group;
     for (var c = 0; c < _BGP_CRIT.length; c++) {
-      var crit = _BGP_CRIT[c], bv = crit.val(best), cohort = group;
+      var crit = _BGP_CRIT[c], bv = crit.val(best), cohort = alive;
       if (crit.key === 'metric') {
-        var bAS = _bNbrAS(best); cohort = group.filter(function (r) { return _bNbrAS(r) === bAS; });
-        if (cohort.length < 2) { var anyDiff = group.some(function (r) { return r !== best && crit.val(r) !== bv; });
-          chain.push({ crit: crit, bestVal: bv, cmpVal: null, status: anyDiff ? 'skip' : 'tie' }); if (anyDiff) medSkipped = true; continue; }
+        var bAS = _bNbrAS(best); cohort = alive.filter(function (r) { return _bNbrAS(r) === bAS; });
+        if (cohort.length < 2) { var anyDiff = alive.some(function (r) { return r !== best && crit.val(r) !== bv; });
+          chain.push({ crit: crit, bestVal: bv, cmpVal: anyDiff ? null : bv, status: anyDiff ? 'skip' : 'tie' }); if (anyDiff) medSkipped = true; continue; }
       }
       var cmp = null; cohort.forEach(function (r) { if (r === best) return; var v = crit.val(r); cmp = (cmp === null) ? v : (crit.dir > 0 ? Math.max(cmp, v) : Math.min(cmp, v)); });
       if (cohort.every(function (r) { return crit.val(r) === bv; })) { chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'tie' }); continue; }
-      if (!cohort.every(function (r) { return r === best || (crit.dir > 0 ? bv > crit.val(r) : bv < crit.val(r)); })) {
+      if (!cohort.every(function (r) { return r === best || (crit.dir > 0 ? bv >= crit.val(r) : bv <= crit.val(r));   /* nx_bestpath_elim: only a better path makes it ambiguous */ })) {
         chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'amb' }); return { kind: 'ambiguous', best: best, chain: chain, col: null };
       }
+      if (cohort.some(function (r) { return r !== best && crit.val(r) === bv; })) {
+        alive = cohort.filter(function (r) { return crit.val(r) === bv; }); chain.push({ crit: crit, bestVal: bv, cmpVal: bv, status: 'tie' }); continue; }
       chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'win' });
       return { kind: 'decided', best: best, chain: chain, criterion: crit, bestVal: bv, cmpVal: cmp, col: crit.col };
     }
