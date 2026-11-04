@@ -16,7 +16,14 @@
  *   - a directory of saved FRR `show ... json` files (frr-collect.js --from-dir layout; node = directory name),
  *     or a directory whose sub-directories are such node directories
  *
- * Errors (missing file, unknown node / prefix, unreadable input) -> {"error": "..."} and exit code 2.
+ * Options (anywhere on the line):
+ *   --format json   the default: one JSON object, as above
+ *   --format table  compact aligned tables for people (state: routers, OSPF neighbors, BGP neighbors;
+ *                   why: the best path and its candidates); lines stay under 100 characters
+ *   --color         colors in table output, only when stdout is a terminal
+ *
+ * Errors (missing file, unknown node / prefix, unreadable input) -> {"error": "..."} and exit code 2
+ * (with --format table: "error: ..." on stderr, exit code 2).
  * Nothing is sent anywhere; no router is contacted.
  */
 'use strict';
@@ -491,8 +498,150 @@ function routeLookup(states, node, destination, vrf) {
   return out;
 }
 
+// ---- table output (--format table) ----------------------------------------------------------
+var MAX_LINE = 99;   // every printed line stays under 100 characters
+var SGR = { bold: '1', green: '32', yellow: '33', red: '31', dim: '2' };
+
+function cell(v) { return v == null || v === '' ? '-' : String(v); }
+function clip(s, w) { return s.length <= w ? s : (w <= 1 ? s.slice(0, w) : s.slice(0, w - 1) + '~'); }
+function paint(s, style, color) { return color && style ? '\x1b[' + SGR[style] + 'm' + s + '\x1b[0m' : s; }
+
+// cols: [{ head, key, right?, style?(value) }]; rows: plain objects. Columns are shrunk (widest first) to fit MAX_LINE.
+function renderTable(cols, rows, color, indent) {
+  indent = indent || '';
+  var gap = 2;
+  var text = rows.map(function (r) { return cols.map(function (c) { return cell(r[c.key]); }); });
+  var w = cols.map(function (c, i) {
+    return text.reduce(function (m, t) { return Math.max(m, t[i].length); }, c.head.length);
+  });
+  var total = function () { return indent.length + w.reduce(function (a, x) { return a + x; }, 0) + gap * (w.length - 1); };
+  while (total() > MAX_LINE) {
+    var i = w.indexOf(Math.max.apply(null, w));
+    if (w[i] <= 3) break;
+    w[i]--;
+  }
+  var line = function (vals, styleOf) {
+    return (indent + vals.map(function (v, i) {
+      var s = clip(v, w[i]), pad = new Array(w[i] - s.length + 1).join(' ');
+      var styled = paint(s, styleOf(i, v), color);
+      return cols[i].right ? pad + styled : (i === vals.length - 1 ? styled : styled + pad);
+    }).join(new Array(gap + 1).join(' '))).replace(/\s+$/, '');
+  };
+  var out = [line(cols.map(function (c) { return c.head; }), function () { return 'bold'; })];
+  text.forEach(function (t) {
+    out.push(line(t, function (i, v) { return cols[i].style ? cols[i].style(v) : null; }));
+  });
+  return out;
+}
+function hasAny(rows, key) { return rows.some(function (r) { return r[key] != null && r[key] !== ''; }); }
+function title(s, color) { return paint(clip(s, MAX_LINE), 'bold', color); }
+function textLine(s) { return clip(s, MAX_LINE); }
+
+function ospfStyle(v) { return /^full/i.test(v) ? 'green' : /^(2-?way|-)$/i.test(v) ? null : 'yellow'; }
+function bgpStyle(v) { return /^established$/i.test(v) ? 'green' : 'red'; }
+
+function stateTable(states, color) {
+  var lr = listRouters(states), on = ospfNeighbors(states), bn = bgpNeighbors(states);
+  var out = [title('Routers (' + lr.count + ')', color)];
+  var rrows = lr.routers.map(function (r) {
+    var ifs = states[r.name].interfaces || {}, names = Object.keys(ifs);
+    var up = names.filter(function (i) { return ifs[i] && ifs[i].up; }).length;
+    return { name: r.name, nos: r.nos, protocols: r.protocols.join(','), ifaces: up + '/' + names.length,
+      ospf: r.counts.ospf_neighbors, bgp: r.counts.bgp_neighbors, bgp_routes: r.counts.bgp_routes,
+      routes: r.routing_table ? r.counts.routes : null };
+  });
+  out = out.concat(renderTable([
+    { head: 'ROUTER', key: 'name' }, { head: 'NOS', key: 'nos' }, { head: 'PROTOCOLS', key: 'protocols' },
+    { head: 'IFACES UP', key: 'ifaces', right: true }, { head: 'OSPF NBRS', key: 'ospf', right: true },
+    { head: 'BGP PEERS', key: 'bgp', right: true }, { head: 'BGP ROUTES', key: 'bgp_routes', right: true },
+    { head: 'RIB ROUTES', key: 'routes', right: true }
+  ], rrows, color, '  '));
+
+  var orows = [];
+  on.routers.forEach(function (r) {
+    r.neighbors.forEach(function (n) {
+      orows.push({ router: r.router, neighbor: n.neighbor, address: n.address, iface: n.interface, state: n.state,
+        role: n.role, peer: n.peer, vrf: n.vrf, af: n.af });
+    });
+  });
+  out.push('', title('OSPF neighbors (' + on.counts.full + '/' + on.counts.total + ' Full)', color));
+  if (!orows.length) out.push('  none');
+  else {
+    var ocols = [{ head: 'ROUTER', key: 'router' }, { head: 'NEIGHBOR ID', key: 'neighbor' },
+      { head: 'ADDRESS', key: 'address' }, { head: 'INTERFACE', key: 'iface' },
+      { head: 'STATE', key: 'state', style: ospfStyle }];
+    if (hasAny(orows, 'role')) ocols.push({ head: 'ROLE', key: 'role' });
+    if (hasAny(orows, 'peer')) ocols.push({ head: 'PEER', key: 'peer' });
+    if (hasAny(orows, 'af')) ocols.push({ head: 'AF', key: 'af' });
+    if (hasAny(orows, 'vrf')) ocols.push({ head: 'VRF', key: 'vrf' });
+    out = out.concat(renderTable(ocols, orows, color, '  '));
+  }
+
+  var brows = [];
+  bn.routers.forEach(function (r) {
+    r.peers.forEach(function (p) {
+      brows.push({ router: r.router, peer: p.peer, remote_as: p.remote_as, type: p.type, state: p.state,
+        pfx: p.prefixes_received, vrf: p.vrf });
+    });
+  });
+  out.push('', title('BGP neighbors (' + bn.counts.established + '/' + bn.counts.total + ' Established)', color));
+  if (!brows.length) out.push('  none');
+  else {
+    var bcols = [{ head: 'ROUTER', key: 'router' }, { head: 'PEER', key: 'peer' },
+      { head: 'REMOTE AS', key: 'remote_as', right: true }, { head: 'TYPE', key: 'type' },
+      { head: 'STATE', key: 'state', style: bgpStyle }, { head: 'PFX RCVD', key: 'pfx', right: true }];
+    if (hasAny(brows, 'vrf')) bcols.push({ head: 'VRF', key: 'vrf' });
+    out = out.concat(renderTable(bcols, brows, color, '  '));
+  }
+  return out.join('\n') + '\n';
+}
+
+function whyTable(w, color) {
+  var out = [title('Best path: ' + w.node + ' ' + w.prefix + (w.vrf ? ' (VRF ' + w.vrf + ')' : '') +
+    ', ' + w.paths + ' path' + (w.paths === 1 ? '' : 's'), color)];
+  var bests = w.best ? [w.best].concat(w.also_best || []) : [];
+  bests.forEach(function (b, i) {
+    out.push(textLine('  ' + (i ? 'also best: ' : 'best:      ') + 'via ' + cell(b.next_hop) + '  as-path ' + cell(b.as_path)));
+  });
+  if (!w.best) out.push('  best:      ' + paint('none', 'yellow', color));
+  if (w.reason) {
+    out.push(textLine('  reason:    ' + w.reason));
+    if (w.reason_source) out.push(textLine('  source:    ' + w.reason_source));
+  }
+  if (w.note) out.push(textLine('  note:      ' + w.note));
+  out.push('', title('Candidates', color));
+  var rows = w.candidates.map(function (c) {
+    return { mark: c.best ? '*' : ' ', next_hop: c.next_hop, as_path: c.as_path, lp: c.local_pref, weight: c.weight,
+      med: c.metric, origin: c.origin, status: c.status, vrf: c.vrf };
+  });
+  var cols = [{ head: 'B', key: 'mark', style: function (v) { return v === '*' ? 'green' : null; } },
+    { head: 'NEXT HOP', key: 'next_hop' }, { head: 'AS PATH', key: 'as_path' },
+    { head: 'LOCPRF', key: 'lp', right: true }, { head: 'WEIGHT', key: 'weight', right: true },
+    { head: 'MED', key: 'med', right: true }, { head: 'ORIGIN', key: 'origin' }];
+  if (hasAny(rows, 'status')) cols.push({ head: 'STATUS', key: 'status' });
+  out = out.concat(renderTable(cols, rows, color, '  '));
+  return out.join('\n') + '\n';
+}
+
 // ---- CLI ------------------------------------------------------------------------------------
-var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf]';
+var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf]' +
+  ' [--format json|table] [--color]';
+
+// pull --format / --color out of argv; the rest are the positional arguments
+function parseOptions(argv) {
+  var o = { format: 'json', color: false, args: [] };
+  for (var i = 0; i < argv.length; i++) {
+    var a = argv[i], m = /^--format(?:=(.*))?$/.exec(a);
+    if (m) {
+      var v = m[1] != null ? m[1] : argv[++i];
+      if (v !== 'json' && v !== 'table') throw new QueryError('--format must be json or table');
+      o.format = v;
+    } else if (a === '--color') o.color = true;
+    else o.args.push(a);
+  }
+  return o;
+}
+
 function run(argv) {
   var cmd = argv[0];
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
@@ -500,13 +649,27 @@ function run(argv) {
   throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
 }
 
+// the text for --format table (same checks and errors as run())
+function runTable(argv, color) {
+  var res = run(argv);
+  return argv[0] === 'state' ? stateTable(loadStates(argv[1]), color) : whyTable(res, color);
+}
+
 if (require.main === module) {
-  var res, code = 0;
-  try { res = run(process.argv.slice(2)); }
-  catch (e) { res = { error: (e && e.message) || String(e) }; code = 2; }
-  process.stdout.write(JSON.stringify(res, null, 2) + '\n');
+  var res, code = 0, opts = null;
+  try {
+    opts = parseOptions(process.argv.slice(2));
+    if (opts.format === 'table') res = runTable(opts.args, opts.color && !!process.stdout.isTTY);
+    else res = run(opts.args);
+  } catch (e) {
+    res = { error: (e && e.message) || String(e) }; code = 2;
+  }
+  if (typeof res === 'string') process.stdout.write(res);
+  else if (code && opts && opts.format === 'table') process.stderr.write('error: ' + res.error + '\n');
+  else process.stdout.write(JSON.stringify(res, null, 2) + '\n');
   process.exitCode = code;
 }
 
 module.exports = { loadStates: loadStates, summarize: summarize, why: why, run: run,
-  listRouters: listRouters, ospfNeighbors: ospfNeighbors, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath };
+  listRouters: listRouters, ospfNeighbors: ospfNeighbors, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath,
+  parseOptions: parseOptions, runTable: runTable, stateTable: stateTable, whyTable: whyTable };

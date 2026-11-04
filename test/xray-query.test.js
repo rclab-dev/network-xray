@@ -169,3 +169,123 @@ test('why: reason_source follows the node OS', function () {
   assert.match(run(['why', Q15, 'r1', '8.8.8.0/24']).out.reason_source, /IOS-XE/);
   assert.match(run(['why', twoVrfDir(), 'r1', '198.51.100.0/24', 'red']).out.reason_source, /FRR/);
 });
+
+// ---- --format table ----
+function runText(args) {
+  var r = cp.spawnSync(process.execPath, [QUERY].concat(args), { encoding: 'utf8' });
+  return { code: r.status, out: r.stdout, err: r.stderr };
+}
+function lines(a) { return a.join('\n') + '\n'; }
+function underLimit(text) {
+  text.split('\n').forEach(function (l) { assert.ok(l.length < 100, 'line too long (' + l.length + '): ' + l); });
+}
+
+var Q15_ROUTERS = [
+  'Routers (3)',
+  '  ROUTER  NOS     PROTOCOLS  IFACES UP  OSPF NBRS  BGP PEERS  BGP ROUTES  RIB ROUTES',
+  '  r1      ios-xe  ospf,bgp         2/2          1          1           1           4',
+  '  r2      ios-xe  ospf,bgp         3/3          1          2           1           5',
+  '  r3      ios-xe  bgp              2/2          0          1           1           4'
+];
+var Q15_OSPF = [
+  'OSPF neighbors (2/2 Full)',
+  '  ROUTER  NEIGHBOR ID  ADDRESS     INTERFACE    STATE  ROLE    PEER',
+  '  r1      2.2.2.2      10.10.0.20  Ethernet0/1  Full   DR      r2',
+  '  r2      1.1.1.1      10.10.0.10  Ethernet0/1  Full   Backup  r1'
+];
+var Q15_BGP = [
+  'BGP neighbors (4/4 Established)',
+  '  ROUTER  PEER        REMOTE AS  TYPE  STATE        PFX RCVD',
+  '  r1      2.2.2.2         65001  iBGP  Established         1',
+  '  r2      1.1.1.1         65001  iBGP  Established         0',
+  '  r2      10.11.0.20      65002  eBGP  Established         1',
+  '  r3      10.11.0.10      65001  eBGP  Established         0'
+];
+
+test('table: routers summary, OSPF neighbors and BGP neighbors (iosxe-q15)', function () {
+  var r = runText(['state', Q15, '--format', 'table']);
+  assert.strictEqual(r.code, 0);
+  assert.strictEqual(r.out, lines(Q15_ROUTERS.concat([''], Q15_OSPF, [''], Q15_BGP)));
+  underLimit(r.out);
+  assert.strictEqual(runText(['--format=table', 'state', Q15]).out, r.out, '--format=table anywhere on the line');
+});
+
+test('table: OSPF neighbors from the FRR sample, empty BGP section says none', function () {
+  var r = runText(['state', FRR_R1, '--format', 'table']);
+  assert.strictEqual(r.code, 0);
+  assert.strictEqual(r.out, lines([
+    'Routers (1)',
+    '  ROUTER  NOS  PROTOCOLS  IFACES UP  OSPF NBRS  BGP PEERS  BGP ROUTES  RIB ROUTES',
+    '  r1      -    ospf             1/1          1          0           0           4',
+    '',
+    'OSPF neighbors (1/1 Full)',
+    '  ROUTER  NEIGHBOR ID  ADDRESS    INTERFACE  STATE  ROLE',
+    '  r1      2.2.2.2      10.1.0.20  eth0       Full   DR',
+    '',
+    'BGP neighbors (0/0 Established)',
+    '  none'
+  ]));
+});
+
+test('table: best-path explanation for one prefix (iosxe-q15 r1 8.8.8.0/24)', function () {
+  var r = runText(['why', Q15, 'r1', '8.8.8.0/24', '--format', 'table']);
+  assert.strictEqual(r.code, 0);
+  assert.strictEqual(r.out, lines([
+    'Best path: r1 8.8.8.0/24, 1 path',
+    '  best:      via 2.2.2.2  as-path 65002',
+    '  reason:    First path received',
+    '  source:    bgp_routes[].reason (IOS-XE: derived by the collector from the printed columns)',
+    '',
+    'Candidates',
+    '  B  NEXT HOP  AS PATH  LOCPRF  WEIGHT  MED  ORIGIN  STATUS',
+    '  *  2.2.2.2   65002       100       0    0  IGP     *>'
+  ]));
+  underLimit(r.out);
+});
+
+test('table: best-path explanation with two candidates and no stored reason (FRR)', function () {
+  var r = runText(['why', frrBgpDir(false), 'r1', '203.0.113.0/24', '--format', 'table']);
+  assert.strictEqual(r.code, 0);
+  assert.strictEqual(r.out, lines([
+    'Best path: r1 203.0.113.0/24, 2 paths',
+    '  best:      via 10.0.2.3  as-path 65003',
+    '  note:      the reason is not in the data (no reason stored for the best path)',
+    '',
+    'Candidates',
+    '  B  NEXT HOP  AS PATH  LOCPRF  WEIGHT  MED  ORIGIN  STATUS',
+    '     10.0.1.2  65002       100       0    -  IGP     *',
+    '  *  10.0.2.3  65003       200       0    -  IGP     *>'
+  ]));
+});
+
+test('table: long values are clipped so every line stays under 100 characters', function () {
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'xq-long-'));
+  var long = 'TenGigabitEthernet0/0/0.' + new Array(80).join('9');
+  fs.writeFileSync(path.join(dir, 'state_r1.json'), JSON.stringify({ target_node: 'r1', interfaces: {},
+    ospf_neighbors: [{ router_id: '2.2.2.2', address: '10.0.0.2', iface: long, state: 'Full', vrf: long }] }));
+  var r = runText(['state', dir, '--format', 'table']);
+  assert.strictEqual(r.code, 0);
+  underLimit(r.out);
+  assert.match(r.out, /TenGigabitEthernet0\/0\/0\.9+~/);
+});
+
+test('table: no colors unless --color and a TTY; --color adds them when asked directly', function () {
+  var piped = runText(['state', Q15, '--format', 'table', '--color']);
+  assert.strictEqual(piped.code, 0);
+  assert.ok(piped.out.indexOf('\x1b[') < 0, 'stdout is a pipe: no escape codes');
+  var q = require(QUERY);
+  var colored = q.stateTable(q.loadStates(Q15), true);
+  assert.ok(colored.indexOf('\x1b[32mEstablished\x1b[0m') >= 0);
+  assert.strictEqual(colored.replace(/\x1b\[\d+m/g, ''), piped.out, 'same text once the codes are removed');
+});
+
+test('table: errors go to stderr with exit 2; JSON stays the default', function () {
+  var r = runText(['why', Q15, 'r9', '8.8.8.0/24', '--format', 'table']);
+  assert.strictEqual(r.code, 2);
+  assert.strictEqual(r.out, '');
+  assert.match(r.err, /^error: unknown node: r9/);
+  var bad = run(['state', Q15, '--format', 'xml']);
+  assert.strictEqual(bad.code, 2);
+  assert.match(bad.out.error, /--format must be json or table/);
+  assert.deepStrictEqual(run(['state', Q15, '--format', 'json']).out, run(['state', Q15]).out);
+});
