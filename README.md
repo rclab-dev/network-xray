@@ -663,6 +663,8 @@ topology view; it doesn't replace it.
 - **Vendor-neutral via adapter** — map your router OS's `show` output to the documented shapes
   (`frr-parse.js` is the template; DATA-CONTRACT has the mapping).
 - **Browser-only / private** — the paste demo sends nothing to a server.
+- **Why `docker exec` and CLI / JSON (not gNMI or BMP)** — it reads each router the way you would by hand: `vtysh -c 'show … json'` on FRR, `sr_cli` on SR Linux, `show` over SSH on Cisco IOL. No agent or extra daemon is installed on the routers and their configuration is not changed, so the stock containerlab images work as they are. It only reads: `show` commands (and, on IOL, `terminal length 0` / `terminal width 0` for its own SSH session).
+- **Sized for labs** — made for lab-sized topologies, not for full Internet routing tables. On synthetic FRR labs (`scripts/scale-bench.js`, one core of a desktop PC), the Node side of one round (parse every router's JSON and merge it into one state file) took about 6 ms for 10 routers, 110 ms for 50 and 350 ms for 100. Reading each router with `docker exec` comes on top of that and depends on the machine.
 - **Minimal maintenance / single maintainer:** see the [policy after Tested with](#maintenance-policy).
 
 ## License
@@ -1045,6 +1047,8 @@ ping/パケットのアニメはこれらのデモでは非表示(通信内容�
 - **アダプタでベンダー中立** — 自分のルータ OS の `show` 出力をドキュメントの形に対応付ける
   (`frr-parse.js` が雛形、DATA-CONTRACT に対応表)。
 - **ブラウザ完結・プライベート** — 貼るデモはサーバへ何も送らない。
+- **なぜ `docker exec` と CLI / JSON か (gNMI や BMP でなく)** — 人が手で見るのと同じ道でルータを読みます: FRR は `vtysh -c 'show … json'`、SR Linux は `sr_cli`、Cisco IOL は SSH で `show`。ルータにエージェントやデーモンを入れることも設定を変えることもないので、containerlab のふつうのイメージのまま動きます。読むだけです: 打つのは `show` (IOL では、自分の SSH の接続の中だけ `terminal length 0` / `terminal width 0` も)。
+- **ラボの大きさ向け** — ラボの大きさのトポロジ向けで、インターネットの全経路は対象外です。合成の FRR のラボ (`scripts/scale-bench.js`・デスクトップ PC の 1 コア) では、1 回分の Node の処理 (全ルータの JSON を読んで 1 つの state にまとめる) が 10 台で約 6 ms・50 台で約 110 ms・100 台で約 350 ms でした。これに、各ルータを `docker exec` で読む時間 (機械による) が加わります。
 - **最小限の保守・単独メンテナ:** [動作確認した版の直後の方針](#maintenance-policy-ja) を参照してください。
 
 ## ライセンス
