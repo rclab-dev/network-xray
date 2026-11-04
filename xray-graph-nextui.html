@@ -43,11 +43,11 @@
   .ov-frame{position:relative;background:#ffffff;border-radius:10px;border:1px solid #24323e;overflow:hidden;margin:6px 0}
   .ov-bar{display:flex;align-items:center;gap:0;padding:8px 10px;border-bottom:1px solid #e5e7eb;background:#f8fafc}
   .ov-bar .cap{font-size:12px;color:#64748b;margin-right:auto}
-  .ov-bar .cap b{color:#0386d2}
-  .ov-bar button{border:1px solid #0386d2;font-size:12px;color:#0386d2;background:#fff;padding:5px 12px;cursor:pointer}
+  .ov-bar .cap b{color:#0273b5}   /* nx_a11y: containerlab blue one step darker -> 4.5:1 on the light bar */
+  .ov-bar button{border:1px solid #0273b5;font-size:12px;color:#0273b5;background:#fff;padding:5px 12px;cursor:pointer}
   .ov-bar button:first-of-type{border-radius:6px 0 0 6px}
   .ov-bar button:last-of-type{border-radius:0 6px 6px 0;border-left:none}
-  .ov-bar button.cur{color:#fff;background:#0386d2}
+  .ov-bar button.cur{color:#fff;background:#0273b5}
   #clab-topology{width:100%;height:360px;position:relative}
   /* nx_static_align_reposition: mask NeXt UI force shuffle until nodes are re-aligned to RCL layout */
   .nx-wait-overlay{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fbfdff;color:#607d8b;font:13px -apple-system,Segoe UI,sans-serif;transition:opacity .35s ease}
@@ -55,7 +55,7 @@
   .nx-wait-overlay .sp{width:30px;height:30px;border:3px solid #cfe0ea;border-top-color:#4dd0e1;border-radius:50%;animation:nxsp .9s linear infinite;margin-bottom:10px}
   @keyframes nxsp{to{transform:rotate(360deg)}}
 
-  .hint{text-align:center;color:#607d8b;font-size:12px;margin:6px 0 2px}
+  .hint{text-align:center;color:#78909c;font-size:12px;margin:6px 0 2px}
   .hint b{color:#4dd0e1}
 
   /* ---- DeepDive pane (dark, our X-Ray) ---- */
@@ -154,6 +154,16 @@
   html body.nx-synthetic .xray-deep-engine .de-lsa-container,
   html body.nx-synthetic .xray-deep-engine .de-hello-orb{display:none!important;visibility:hidden!important;animation:none!important}   /* moving light reads as traffic: off (visibility too: the engine forces display:block on some of them) */
   html body.nx-synthetic .xray-deep-engine *{animation-play-state:paused!important}
+  /* nx_a11y (2026-11-03): visible keyboard focus everywhere on the page (overview nodes, peer buttons, DeepDive
+     controls); node names and the dimmest DeepDive texts raised to WCAG AA 4.5:1, same hue (skin colors still apply) */
+  .wrap :focus-visible,#nx-solved-pip :focus-visible{outline:2px solid #4dd0e1;outline-offset:2px}
+  #clab-topology .n-topology:focus-visible{outline:2px solid #4dd0e1!important;outline-offset:-2px}
+  #clab-topology g.node:focus{outline:none}
+  #clab-topology g.node:focus-visible .selectedBG{display:block!important;fill:none;stroke:#0273b5;stroke-width:3px;opacity:1}
+  #clab-topology g.node .node-label{fill:#0273b5}
+  .xray-deep-engine .de-panel .de-dim{color:rgba(var(--xto-link-rgb,0,229,255),0.7)}
+  .xray-deep-engine .de-r1-sub{color:rgba(var(--xto-ospf-rgb,57,255,20),0.7)}
+  .nx-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 </style>
 </head>
 <body class="is-xray-mode">
@@ -170,8 +180,8 @@
   <div class="ov-frame">
     <div class="ov-bar">
       <span class="cap"><span data-i18n="topo_label">ContainerLab Topology</span> <b id="ovname">{{ .Name }}</b></span>
-      <button type="button" id="h-btn" data-i18n="horizontal">Horizontal</button>
-      <button type="button" id="v-btn" data-i18n="vertical">Vertical</button>
+      <button type="button" id="h-btn" data-i18n="horizontal" aria-pressed="false">Horizontal</button>
+      <button type="button" id="v-btn" data-i18n="vertical" aria-pressed="false">Vertical</button>
     </div>
     <div id="clab-topology"></div>
   </div>
@@ -400,7 +410,8 @@ window.__xrayGraphBoot = function () {
       box.innerHTML='<span class="lbl">'+escH(nodeId)+ (_pja ? ' の隣は '+ (ADJ[nodeId]||[]).length +' 台 — 見るペアを選ぶ:' : ' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:') +'</span>';
       views.forEach(function(v,idx){
         var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
-        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
+        b.type='button'; b.setAttribute('aria-pressed', idx===0 ? 'true' : 'false');   /* nx_a11y */
+        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur'); e.setAttribute('aria-pressed','false');}); b.classList.add('cur'); b.setAttribute('aria-pressed','true'); renderView(v,nodeId); };
         if(idx===0) b.classList.add('cur'); box.appendChild(b);
       });
     }
@@ -613,7 +624,7 @@ window.__initNeXtOverview = function (data) {
         /* rows: top above, bottom below, middle rows to the right (links go up and down there); Horizontal: outer columns outside, middle below */
         n.labelAngle(hz ? (r===0 ? 180 : r===last ? 0 : 90) : (r===0 ? 270 : r===last ? 90 : 0)); if (typeof n.calcLabelPosition==='function') n.calcLabelPosition(true); });
     }catch(e){} };
-    function _done(){ _reposition(); _restore(); if (window.__nxTierLabels) window.__nxTierLabels();
+    function _done(){ _reposition(); _restore(); if (window.__nxTierLabels) window.__nxTierLabels(); nxKeyNodes();
       if (window.XRAY_TIERS) { activeLayout = window.__nxTierDir || 'vertical'; setCur(activeLayout==='horizontal'?'h-btn':'v-btn'); }
       setTimeout(function(){ _center();
         if(window.__xrayPushLayout) try{window.__xrayPushLayout();}catch(e){}
@@ -636,6 +647,38 @@ window.__initNeXtOverview = function (data) {
     // scroll the DeepDive into view for a clear "open inside" motion
     var t=document.querySelector('.topology'); if(t&&t.scrollIntoView) t.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
+  /* nx_a11y (2026-11-03): overview nodes work from the keyboard - Tab to a node, Enter or Space opens its DeepDive
+     (Esc closes it). NeXt draws nodes as SVG <g class="node" data-id="name"> with no focus support of its own. */
+  function nxKeyNodes(){
+    document.querySelectorAll('#clab-topology g.node[data-id]').forEach(function(g){
+      if (g.__nxKey) return; g.__nxKey = true;
+      var nm = g.getAttribute('data-id');
+      g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', nxNodeLabel(nm));
+    });
+  }
+  function nxNodeLabel(nm){ var l = 'en'; try { l = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
+    return l === 'ja' ? nm + ' の DeepDive を開く' : 'Open DeepDive for ' + nm; }
+  (function(){ var host = document.getElementById('clab-topology'); if (!host) return;
+    /* a focused SVG node is scrolled into view inside the overflow:hidden frame, which hid the Horizontal / Vertical
+       bar: put the frame back (it never scrolls on purpose) and keep the label in the page language */
+    host.addEventListener('focusin', function(e){
+      var g = e.target && e.target.closest ? e.target.closest('g.node[data-id]') : null; if (!g) return;
+      g.setAttribute('aria-label', nxNodeLabel(g.getAttribute('data-id')));
+      for (var el = g.parentNode; el && el.nodeType === 1; el = el.parentNode) {
+        if (el.scrollTop || el.scrollLeft) { el.scrollTop = 0; el.scrollLeft = 0; }
+        if (el.classList && el.classList.contains('ov-frame')) break;
+      }
+    });
+    host.addEventListener('keydown', function(e){
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var g = e.target && e.target.closest ? e.target.closest('g.node[data-id]') : null; if (!g) return;
+      e.preventDefault(); e.stopPropagation();
+      var nm = g.getAttribute('data-id'); if (window.__xrayShowNode) window.__xrayShowNode(nm);
+      var t=document.querySelector('.topology'); if(t&&t.scrollIntoView) t.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }, true);
+  })();
+  try { topo.on('topologyGenerated', function(){ setTimeout(nxKeyNodes, 0); }); } catch (e) {}
   topo.on('ready', function(){ topo.data(data); });
   // register click after generation (both hooks are harmless if one is a no-op in this NeXt build)
   topo.on('clickNode', onNodeClick);
@@ -682,7 +725,7 @@ window.__initNeXtOverview = function (data) {
   window.__xrayPushLayout = pushLayout;   // exposed for tests / manual re-sync
 
   // layout toggle buttons (group-based hierarchy; falls back gracefully when all groups are N/A)
-  function setCur(id){ ['h-btn','v-btn'].forEach(function(x){ var b=document.getElementById(x); if(b) b.classList.toggle('cur', x===id); }); }
+  function setCur(id){ ['h-btn','v-btn'].forEach(function(x){ var b=document.getElementById(x); if(b){ b.classList.toggle('cur', x===id); b.setAttribute('aria-pressed', x===id ? 'true' : 'false'); } }); }   /* nx_a11y: aria-pressed */
   window.__nxLayout = function(dir){
     if (window.XRAY_TIERS && window.__nxAlign) {   /* nx_netlab_tiers: the lab's rows; a click also forgets dragged places */
       activeLayout=dir; window.__nxTierDir=dir; setCur(dir==='horizontal'?'h-btn':'v-btn'); if (window.__nxForgetPos) window.__nxForgetPos();
@@ -913,7 +956,7 @@ window.__initNeXtOverview = function (data) {
     w = document.createElement('div'); w.id = 'nx-solved-pip';
     var bar = document.createElement('div'); bar.className = 'pip-bar';
     var ti = document.createElement('span'); ti.textContent = L === 'ja' ? '\u30d1\u30b1\u30c3\u30c8\u30ad\u30e3\u30d7\u30c1\u30e3\u30e9\u30dc (RouteCrushLab)' : 'Packet Capture Lab (RouteCrushLab)';
-    var x = document.createElement('button'); x.type = 'button'; x.className = 'pip-x'; x.textContent = '\u00d7'; x.title = L === 'ja' ? '\u9589\u3058\u308b' : 'Close';
+    var x = document.createElement('button'); x.type = 'button'; x.className = 'pip-x'; x.textContent = '\u00d7'; x.title = L === 'ja' ? '\u9589\u3058\u308b' : 'Close'; x.setAttribute('aria-label', x.title);   /* nx_a11y: icon-only button */
     x.onclick = function(){ var v = w.querySelector('video'); if (v) { v.pause(); v.removeAttribute('src'); v.load(); } w.remove(); };
     bar.appendChild(ti); bar.appendChild(x); w.appendChild(bar);
     var note = document.createElement('div'); note.className = 'pip-note';   /* nx_pip_q13_note */
@@ -967,6 +1010,8 @@ window.__initNeXtOverview = function (data) {
       if (sig === window.__nxValidateSig) return;
       window.__nxValidateSig = sig;
       var ja = L === 'ja', esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); };
+      var SRW = ja ? { settling: '\u5f85\u3061', pass: '\u901a\u904e', fail: '\u672a\u901a\u904e', warning: '\u8b66\u544a', pending: '\u672a\u78ba\u8a8d', unsupported: '\u5bfe\u8c61\u5916', skip: '\u5bfe\u8c61\u5916' }
+                   : { settling: 'waiting', pass: 'passed', fail: 'not yet', warning: 'warning', pending: 'not run yet', unsupported: 'not checked', skip: 'skipped' };   /* nx_a11y */
       var MARK = { settling: '\u2713', pass: '\u2713', fail: '\u2713', warning: '\u2713', pending: '\u2713', unsupported: '\u2013', skip: '\u2013' };   /* nx_validate_list: grey \u2713 until done */
       var WHY = { settling: ja ? '経路が届くのを待っています (BGP が張れてから 30 秒たってから「無い」を判定します)' : 'waiting for routes to arrive: a "not there" check is judged once BGP has been up for 30 s',
                   pending: ja ? '\u524d\u306e\u691c\u67fb\u304c\u901a\u308b\u307e\u3067\u672a\u78ba\u8a8d (stop_on_error)' : 'not run yet: an earlier check has to pass first (stop_on_error)',
@@ -976,7 +1021,7 @@ window.__initNeXtOverview = function (data) {
         var judged = t.status === 'pass' || t.status === 'fail' || t.status === 'warning';
         var why = judged ? (t.message || t.text || '') : (WHY[t.status] || t.status) + (t.status === 'unsupported' && t.message ? ' (' + t.message + ')' : '');
         var tip = [t.text, why].filter(Boolean).join('\n');
-        return '<div class="nxv-row ' + esc(t.status) + '" title="' + esc(tip) + '"><span class="nxv-st">' + (MARK[t.status] || '?') + '</span>'
+        return '<div class="nxv-row ' + esc(t.status) + '" title="' + esc(tip) + '"><span class="nxv-st"><span aria-hidden="true">' + (MARK[t.status] || '?') + '</span><span class="nx-sr">' + esc(SRW[t.status] || t.status) + '</span></span>'   /* nx_a11y: state as text, not only color */
           + '<span class="nxv-txt"><span class="nxv-ttl">' + esc(t.description) + '<code>' + esc(t.name) + '</code></span><span class="nxv-why">' + esc(why) + '</span></span></div>';
       }).join('');
       /* nx_validate_partial (2026-10-18): grey checks remain -> no tick and no green: "N BGP checks passed, M not read (OSPF, ...)" */

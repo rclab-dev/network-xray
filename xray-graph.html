@@ -66,6 +66,12 @@
   html body.nx-synthetic .xray-deep-engine .de-lsa-container,
   html body.nx-synthetic .xray-deep-engine .de-hello-orb{display:none!important;visibility:hidden!important;animation:none!important}   /* moving light reads as traffic: off (visibility too: the engine forces display:block on some of them) */
   html body.nx-synthetic .xray-deep-engine *{animation-play-state:paused!important}
+  /* nx_a11y (2026-11-03): visible keyboard focus everywhere on the page (overview nodes, peer buttons, DeepDive
+     controls); the dimmest DeepDive texts raised to WCAG AA 4.5:1 on the dark panel, same hue (skin colors still apply) */
+  .wrap :focus-visible{outline:2px solid #4dd0e1;outline-offset:2px}
+  .ov-node:focus-visible{box-shadow:0 0 12px rgba(77,208,225,.6)}
+  .xray-deep-engine .de-panel .de-dim{color:rgba(var(--xto-link-rgb,0,229,255),0.7)}
+  .xray-deep-engine .de-r1-sub{color:rgba(var(--xto-ospf-rgb,57,255,20),0.7)}
 </style>
 </head>
 <body class="is-xray-mode">
@@ -262,7 +268,7 @@ window.__xrayGraphBoot = function () {
   // ================= node click → deepViews (one view with all of the node's links) =================
   function showNode(nodeId){
     window.__xrayCurNode = nodeId;   // remember the open node so the live poll can refresh it in place
-    document.querySelectorAll('.ov-node').forEach(function(e){e.classList.toggle('sel', e.getAttribute('data-n')===nodeId);});
+    document.querySelectorAll('.ov-node').forEach(function(e){var on=e.getAttribute('data-n')===nodeId; e.classList.toggle('sel', on); e.setAttribute('aria-pressed', on ? 'true' : 'false');});   /* nx_a11y: selection is not color-only */
     var box=document.getElementById('peers'); box.innerHTML='';
     var views = window.clabXray.deepViews(fullCfg, nodeId, { state: window.LIVE_STATES && window.LIVE_STATES[nodeId], focusPrefix: window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.prefix });   // ← bridge (b)  /* nx_default_pair */
     if (!views.length) { showErr(nodeId+' has no links to inspect.'); return; }
@@ -270,7 +276,8 @@ window.__xrayGraphBoot = function () {
       box.innerHTML='<span class="lbl">'+_nxEsc(nodeId)+' has '+ (ADJ[nodeId]||[]).length +' neighbors — inspect peer-pair:</span>';
       views.forEach(function(v,idx){
         var b=document.createElement('button'); b.textContent=(v.peers||[]).join(' ↔ ');
-        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur');}); b.classList.add('cur'); renderView(v,nodeId); };
+        b.type='button'; b.setAttribute('aria-pressed', idx===0 ? 'true' : 'false');   /* nx_a11y */
+        b.onclick=function(){ box.querySelectorAll('button').forEach(function(e){e.classList.remove('cur'); e.setAttribute('aria-pressed','false');}); b.classList.add('cur'); b.setAttribute('aria-pressed','true'); renderView(v,nodeId); };
         if(idx===0) b.classList.add('cur'); box.appendChild(b);
       });
     }
@@ -291,6 +298,10 @@ window.__xrayGraphBoot = function () {
     b.innerHTML=_nxEsc(n)+(KIND[n]?'<span class="k">'+_nxEsc(KIND[n])+'</span>':'');
     b.style.left=POS[n][0]+'px'; b.style.top=POS[n][1]+'px';
     b.onclick=function(){ showNode(n); };
+    /* nx_a11y: overview nodes work from the keyboard (Tab to a node, Enter or Space opens its DeepDive; Esc closes it) */
+    b.tabIndex=0; b.setAttribute('role','button'); b.setAttribute('aria-pressed','false');
+    b.setAttribute('aria-label', 'Open DeepDive for '+n+(KIND[n]?' ('+KIND[n]+')':''));
+    b.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); showNode(n); } };
     ov.appendChild(b);
   });
 
