@@ -47,8 +47,12 @@ var CHILD_MS = 25000, RETRY_MS = 10000;
 /* nx_ios_interval (2026-10-27): an IOS node is read over SSH (a login + 7 shows each time) - not every second like FRR's docker exec.
    Between reads it keeps its last good state; FRR / SR Linux nodes are not affected. NX_IOS_INTERVAL=<seconds> to change. */
 var IOS_MS = Math.max(2, parseInt(process.env.NX_IOS_INTERVAL || '10', 10) || 10) * 1000, iosNextAt = {};
+/* With --watch a cycle waits at most CYCLE_WAIT_MS for a router that already has a state; one still running then keeps
+   its last state and its result is taken in a later cycle (it is not started again while it runs). NX_CYCLE_WAIT_MS to change. */
+var CYCLE_WAIT_MS = parseInt(process.env.NX_CYCLE_WAIT_MS, 10) >= 0 ? parseInt(process.env.NX_CYCLE_WAIT_MS, 10) : 4000, running = {};
+function sleepMs(ms) { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }
 var PAR_RUNNER = "var cp=require('child_process'),fs=require('fs');var jobs=JSON.parse(process.argv[1]);var left=jobs.length;" +
-  "jobs.forEach(function(j){var done=false;var fin=function(c){if(done)return;done=true;try{fs.writeFileSync(j.code,String(c)+'\\n');}catch(e){}if(--left===0)process.exit(0);};" +
+  "jobs.forEach(function(j){var done=false;var fin=function(c){if(done)return;done=true;try{fs.writeFileSync(j.code+'.tmp',String(c)+'\\n');fs.renameSync(j.code+'.tmp',j.code);}catch(e){}if(--left===0)process.exit(0);};" +
   "var fd='ignore';try{fd=fs.openSync(j.err,'w');}catch(e){}" +
   "var ch=cp.spawn(process.execPath,j.args,{stdio:['ignore','ignore',fd]});var to=setTimeout(function(){try{ch.kill('SIGKILL');}catch(e){}fin(124);}," + CHILD_MS + ");ch.on('error',function(){clearTimeout(to);fin(127);});ch.on('close',function(c){clearTimeout(to);fin(c==null?1:c);});});" +
   "if(!left)process.exit(0);";
@@ -244,8 +248,10 @@ var dest = path.join(outDir, 'xray-states.js');
 var lastGood = {};
 var failSeen = {};
 var lastGoodAt = {}, retryAt = {}, lastOut = {};   /* nx_unread */   /* nx_quiet_log: node -> {msg, count} of the current run of identical failures */
+// a child has finished when its exit code is written; one with no code well past CHILD_MS is given up (counted as failed)
+function _jobDone(j, now) { return fs.existsSync(j.code) || now - j.since > CHILD_MS + 5000; }
 function collectAll() {
-  var states = {}, ok = 0, kept = 0, unread = 0;
+  var states = {}, ok = 0, kept = 0, unread = 0, _t0 = Date.now();   // one time for the whole cycle: who is skipped is decided once
   /* nx_collect_parallel (2026-10-09): start every node's collector at once in one sh and wait for all of them
      (about one node's time instead of the sum - 3 nodes ~4 s -> ~1.5 s). Exit code / stderr of each child go to
      small files next to its state file and are read below, so the failure handling is unchanged. --serial = old way. */
@@ -257,18 +263,35 @@ function collectAll() {
   };
   if (_par) {
     /* nx_no_shell: one small node process starts every child with an argument array (no sh) and waits for all of them */
-    var _jobs = nodes.filter(function (n) { return !(retryAt[n] > Date.now()) && !(iosNextAt[n] > Date.now() && lastGood[n]); }).map(function (n) {   /* nx_unread: back-off */   /* nx_ios_interval */
-      var c = _cmdOf(n); _job[n] = { code: c.out + '.code', err: c.out + '.err' };
+    var _jobs = [];
+    nodes.forEach(function (n) {
+      if (running[n]) { _job[n] = running[n]; return; }   // started in an earlier cycle and not taken yet
+      if (retryAt[n] > _t0 || (iosNextAt[n] > _t0 && lastGood[n])) return;   /* nx_unread: back-off */   /* nx_ios_interval */
+      var c = _cmdOf(n); _job[n] = running[n] = { code: c.out + '.code', err: c.out + '.err', since: _t0 };
       try { fs.unlinkSync(_job[n].code); } catch (e) {}
-      return { args: c.args, code: _job[n].code, err: _job[n].err };
+      _jobs.push({ args: c.args, code: _job[n].code, err: _job[n].err });
     });
-    try { cp.execFileSync(process.execPath, ['-e', PAR_RUNNER, JSON.stringify(_jobs)], { stdio: 'ignore' }); } catch (e) {}
+    if (_jobs.length) {
+      try { var _rp = cp.spawn(process.execPath, ['-e', PAR_RUNNER, JSON.stringify(_jobs)], { stdio: 'ignore' }); _rp.on('error', function () {}); _rp.unref(); } catch (e) {}
+    }
+    // wait for every child (a one-shot run, or a router with no state yet); with --watch at most CYCLE_WAIT_MS for the
+    // others started in this cycle, and not at all for one still running from an earlier cycle
+    for (;;) {
+      var _now = Date.now();
+      var _wait = Object.keys(_job).some(function (n) {
+        return !_jobDone(_job[n], _now) && (!watch || !lastOut[n] || (_job[n].since === _t0 && _now - _t0 < CYCLE_WAIT_MS));
+      });
+      if (!_wait) break;
+      sleepMs(20);
+    }
   }
   nodes.forEach(function (n) {
     var _nj = nodeJob(n), script = _nj.script, adjStr = _nj.adjStr, mg = _nj.mg;   /* nx_ios_collect: FRR / SR Linux / IOS (--exclude-mgmt is FRR-only) */
     var out = stateFile(n);   /* nx_tmp_per_user (2026-10-05): a collector run with sudo and one without no longer fight over a root-owned tmp file (EACCES forever) */   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
-    if (retryAt[n] > Date.now()) { if (lastOut[n]) states[n] = lastOut[n]; return; }   /* nx_unread: asked again after RETRY_MS */
-    if (iosNextAt[n] > Date.now() && lastGood[n]) { states[n] = lastGood[n]; ok++; return; }   /* nx_ios_interval: not yet time to read this IOS node again */
+    if (_par && _job[n] && !_jobDone(_job[n], Date.now())) { if (lastOut[n]) { states[n] = lastOut[n]; if (lastOut[n] === lastGood[n]) ok++; } return; }   // still running: its last state stays
+    if (_par && _job[n]) delete running[n];
+    if (retryAt[n] > _t0) { if (lastOut[n]) states[n] = lastOut[n]; return; }   /* nx_unread: asked again after RETRY_MS */
+    if (iosNextAt[n] > _t0 && lastGood[n]) { states[n] = lastGood[n]; ok++; return; }   /* nx_ios_interval: not yet time to read this IOS node again */
     try {
       if (_par) {   /* nx_collect_parallel: the child already ran - read its exit code (and stderr on failure) */
         var _code = ''; try { _code = fs.readFileSync(_job[n].code, 'utf8').trim(); } catch (e) {}
