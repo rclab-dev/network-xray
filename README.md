@@ -595,6 +595,7 @@ says which). When the data has no reason, `reason` is `null` with a `note` — i
 ```
 
 If the prefix is in more than one VRF, add the VRF name as a fifth argument (`why <dir> r1 10.0.0.0/24 red`).
+Add `--format table` to print a plain-text table instead of JSON (`--color` adds colors in a terminal).
 A missing file, an unknown node, an unknown prefix or a wrong number of arguments prints `{"error": "..."}` and exits
 with code 2.
 
@@ -602,8 +603,9 @@ with code 2.
 
 `scripts/xray-mcp.js` serves the same questions to an MCP client (Claude Desktop, Claude Code, …) over stdio,
 with no dependencies. Tools: `lab_state` (`path`), `why_best_path` (`path`, `node`, `prefix`, optional `vrf`),
-`list_routers` (`path`), `ospf_neighbors` and `bgp_neighbors` (`path`, optional `router`), and `route_lookup`
-(`path`, `router`, `destination`, optional `vrf`: the longest match in the routing table the collector saved).
+`list_routers` (`path`), `ospf_neighbors` and `bgp_neighbors` (`path`, optional `router`), `route_lookup`
+(`path`, `router`, `destination`, optional `vrf`: the longest match in the routing table the collector saved), and
+`why_path` (`path`, `router`, `prefix`, optional `vrf`: the selected BGP path, the other candidates and the deciding step).
 It is read-only: it only reads the path it is given, never runs commands on routers and never writes files.
 It speaks the initialize-based MCP revisions (2024-11-05 to 2025-11-25), which current MCP clients use over stdio;
 the stateless 2026-07-28 revision is not implemented.
