@@ -624,6 +624,8 @@ the stateless 2026-07-28 revision is not implemented.
 With Claude Code: `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js` (on Windows, give the
 `C:\...\scripts\xray-mcp.js` path). If you add it with `--scope project`, Claude Code asks once before it starts the server.
 
+More detail (which files `path` can point at, a lab running with `xray.sh`, other clients): [docs/mcp.md](docs/mcp.md).
+
 Then ask, for example, "use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15" or "why does r1 pick
 its path to 8.8.8.0/24?" or "which route does r1 use for 8.8.8.8?". Relative paths are resolved from the server's working directory, so absolute paths are safest.
 

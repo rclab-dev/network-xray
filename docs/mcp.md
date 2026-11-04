@@ -24,6 +24,10 @@ Collect first, then point the tools at the output. The server reads the files ag
 collector again, the next answer uses the new state. A relative `path` is resolved from the server's working
 directory, which is set by the client and is often not the repo. Use absolute paths.
 
+**A lab running with `xray.sh`:** `xray.sh` runs the collector with the repo folder as its output, so the live state is
+`/path/to/network-xray/xray-states.js`, rewritten every round. Give that file (or the repo folder) as `path` while the
+lab is running; each call reads the latest round. After you stop `xray.sh`, the file keeps the last state.
+
 ## Start it
 
 ```
@@ -89,7 +93,8 @@ That writes:
 
 ### Any other MCP client (JSON config)
 
-Most clients that start stdio servers, Claude Desktop among them, take an `mcpServers` block like this:
+Most clients that start stdio servers, Claude Desktop among them, take an `mcpServers` block like this. In Claude
+Desktop it goes in `claude_desktop_config.json` (Settings → Developer → Edit Config); other clients name their own file.
 
 ```json
 {
