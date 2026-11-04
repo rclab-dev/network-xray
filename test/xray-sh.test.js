@@ -43,8 +43,9 @@ var FAKES = {
     'exit 0\n',
   // docker ps: no containers, so the FRR wait loop has nothing to do
   docker: LOGLINE + 'exit 0\n',
-  // node (the collector, started in the background)
+  // node (the collector, started in the background); `node -e` (the --bind check) runs the real node
   node:
+    '[ "$1" = -e ] && exec "$NX_REAL_NODE" "$@"\n' +
     LOGLINE +
     'echo $$ > "$NX_LOG.nodepid"\n' +
     '[ -n "$NX_GRAPH_BLOCK" ] && exec "$NX_REAL_SLEEP" 30 >/dev/null 2>&1\n' +
@@ -76,7 +77,7 @@ function run(env, script, args, extra) {
   extra = extra || {};
   var e = Object.assign({}, process.env, {
     PATH: env.bin + path.delimiter + process.env.PATH,
-    NX_LOG: env.log, NX_PJ: path.join(env.here, 'problem.json'), NX_REAL_SLEEP: REAL_SLEEP
+    NX_LOG: env.log, NX_PJ: path.join(env.here, 'problem.json'), NX_REAL_SLEEP: REAL_SLEEP, NX_REAL_NODE: process.execPath
   }, extra.env || {});
   delete e.SUDO;
   if (extra.env && 'SUDO' in extra.env) e.SUDO = extra.env.SUDO;
@@ -127,7 +128,7 @@ function writeLab(dir, name, opts) {
   return yml;
 }
 
-test('xray.sh: default lab and port deploy q21, start the collector and serve the graph on 8080', { skip: SKIP }, async function (t) {
+test('xray.sh: default lab and port deploy q21, start the collector and serve the graph on 0.0.0.0:8080', { skip: SKIP }, async function (t) {
   if (await portInUse(8080)) { t.skip('port 8080 is in use on this machine'); return; }
   var env = setup();
   var r = await run(env, 'xray.sh', []);
@@ -136,10 +137,10 @@ test('xray.sh: default lab and port deploy q21, start the collector and serve th
   assert.match(r.stdout, /==> deploying lab 'q21-bgp-lp' \(bgp\) \.\.\./);
   assert.deepStrictEqual(calls(r, 'sudo'), [['containerlab', 'deploy', '-t', yml, '--reconfigure']]);
   assert.deepStrictEqual(calls(r, 'docker')[0], ['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']);
-  assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch']]);
+  assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
     ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', env.here, '-s', '0.0.0.0:8080']);
-  assert.match(r.stdout, /open {2}http:\/\/<this machine>:8080\//);
+  assert.match(r.stdout, /open {2}http:\/\/<this machine>:8080\/ {3}\(listening on all addresses, 0\.0\.0\.0:8080/);
   assert.match(r.stdout, /docker exec -it clab-q21-bgp-lp-r1 vtysh/);
   assert.match(r.stdout, /stopped\. remove the lab with: {2}sudo containerlab destroy -t .*q21\.clab\.yml --cleanup/);
 });
@@ -157,7 +158,7 @@ test('xray.sh: a given lab and port (relative path, OSPF, no sudo with SUDO=)', 
   assert.deepStrictEqual(cl[0], ['deploy', '-t', yml, '--reconfigure']);
   assert.deepStrictEqual(cl[cl.length - 1].slice(-2), ['-s', '0.0.0.0:' + port]);
   assert.strictEqual(calls(r, 'node')[0][3], 'ospf');
-  assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/'));
+  assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
   assert.ok(!fs.existsSync(path.join(env.here, 'problem.json')), 'no problem.json for a lab without one');
 });
 
@@ -258,4 +259,79 @@ test('demo.sh: forwards all arguments to xray.sh', { skip: SKIP }, async functio
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
     ['graph', '--topo', path.join(env.here, 'examples', 'q21-bgp-lp', 'q21.clab.yml'), '--template', tpl,
       '--static-dir', env.here, '-s', '0.0.0.0:' + port]);
+});
+
+test('demo.sh: forwards --bind and --interval to xray.sh', { skip: SKIP }, async function () {
+  var env = setup();
+  var port = await freePort();
+  var r = await run(env, 'demo.sh', ['--interval', '4', 'examples/q21-bgp-lp/q21.clab.yml', String(port), '--bind', '0.0.0.0']);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.deepStrictEqual(calls(r, 'node')[0].slice(-2), ['--interval', '4']);
+  assert.deepStrictEqual(calls(r, 'containerlab').pop().slice(-2), ['-s', '0.0.0.0:' + port]);
+});
+
+test('xray.sh: with no options the graph listens on 0.0.0.0 (as before) and the collector reads every second', { skip: SKIP }, async function () {
+  var env = setup();
+  var port = await freePort();
+  var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port)]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.deepStrictEqual(calls(r, 'node')[0].slice(-3), ['--watch', '--interval', '1']);
+  assert.deepStrictEqual(calls(r, 'containerlab').pop().slice(-2), ['-s', '0.0.0.0:' + port]);
+  assert.match(r.stdout, /==> collecting router state every second /);
+  assert.match(r.stdout, /listening on all interfaces \(0\.0\.0\.0\) - to allow only this machine, use --bind 127\.0\.0\.1/);   // nx_bind_note: the default says how to narrow it
+  assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
+});
+
+test('xray.sh: --bind and --interval go to the graph server and the collector, in any position', { skip: SKIP }, async function () {
+  var env = setup();
+  var port = await freePort();
+  var tpl = path.join(env.here, 'xray-graph-nextui.html');
+  var yml = path.join(env.here, 'examples', 'q21-bgp-lp', 'q21.clab.yml');
+  var r = await run(env, 'xray.sh', ['--bind', '0.0.0.0', 'examples/q21-bgp-lp/q21.clab.yml', '--interval', '5', String(port), tpl]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '5']]);
+  assert.deepStrictEqual(calls(r, 'containerlab').pop(),
+    ['graph', '--topo', yml, '--template', tpl, '--static-dir', env.here, '-s', '0.0.0.0:' + port]);
+  assert.match(r.stdout, /==> collecting router state every 5 s /);
+  assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
+  assert.doesNotMatch(r.stdout, /to allow only this machine, use --bind/);   // nx_bind_note: only when --bind was not given
+
+  // --opt=value form
+  port = await freePort();
+  r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port), '--bind=127.0.0.1', '--interval=3']);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.deepStrictEqual(calls(r, 'node').pop().slice(-2), ['--interval', '3']);
+  assert.deepStrictEqual(calls(r, 'containerlab').pop().slice(-2), ['-s', '127.0.0.1:' + port]);
+  assert.match(r.stdout, new RegExp('open {2}http://127\\.0\\.0\\.1:' + port + '/ '));
+});
+
+test('xray.sh: an address the graph cannot listen on stops before deploy with a clear message', { skip: SKIP }, async function () {
+  var env = setup();
+  var port = await freePort();
+  var r = await run(env, 'xray.sh', ['--bind', '192.0.2.1', 'examples/q21-bgp-lp/q21.clab.yml', String(port)]);   // TEST-NET-1: not on this machine
+  assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, new RegExp('the graph cannot listen on 192\\.0\\.2\\.1:' + port + ' \\(EADDRNOTAVAIL\\) - stopped, nothing was deployed'));
+  assert.match(r.stdout, /192\.0\.2\.1 is not an address of this machine/);
+  assert.deepStrictEqual(r.calls, [], 'nothing deployed or started');
+  assert.ok(!fs.existsSync(path.join(env.here, '.xray.lock')), 'no lock left');
+});
+
+test('xray.sh: bad --bind / --interval values are refused before deploy', { skip: SKIP }, async function () {
+  var env = setup();
+  var cases = [
+    [['--interval', '0'], /--interval must be a whole number of seconds \(1 or more\)/],
+    [['--interval', '1.5'], /--interval must be a whole number of seconds/],
+    [['--interval', ''], /--interval must be a whole number of seconds/],
+    [['--interval'], /--interval needs a value/],
+    [['--bind'], /--bind needs a value/],
+    [['--bind', ''], /--bind must be an address/],
+    [['--bind', 'a b'], /--bind must be an address/],
+    [['--bind', '$(id)'], /--bind must be an address/]
+  ];
+  for (var i = 0; i < cases.length; i++) {
+    var r = await run(env, 'xray.sh', cases[i][0]);
+    assert.strictEqual(r.code, 1, cases[i][0].join(' '));
+    assert.match(r.stdout, cases[i][1], cases[i][0].join(' '));
+    assert.deepStrictEqual(r.calls, [], cases[i][0].join(' '));
+  }
 });

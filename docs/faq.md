@@ -116,7 +116,8 @@ does not guess. If a router answers but the page stays empty, the steps in
 ### Does the page have a login?
 
 No. Anyone who can reach the port can see the lab's state. `xray.sh` and `containerlab graph … -s 0.0.0.0:8080` listen
-on all interfaces, so keep the machine on a trusted network, or use `-s 127.0.0.1:8080`. See
+on all interfaces, so keep the machine on a trusted network, or limit it to this machine: `./xray.sh --bind 127.0.0.1 <lab>`
+(or `-s 127.0.0.1:8080` for `containerlab graph`). See
 [Security notes](../README.md#security-notes).
 
 ### Why does the container need the Docker socket?
