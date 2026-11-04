@@ -1,0 +1,38 @@
+{
+  "neighbors": {
+    "2.2.2.2": [
+      {
+        "nbrState": "Full/DR",
+        "nbrPriority": 1,
+        "converged": "Full",
+        "role": "DR",
+        "upTimeInMsec": 99000,
+        "routerDeadIntervalTimerDueMsec": 35000,
+        "upTime": "1m39s",
+        "deadTime": "35.000s",
+        "ifaceAddress": "10.1.0.20",
+        "ifaceName": "eth0:10.1.0.10",
+        "linkStateRetransmissionListCounter": 0,
+        "linkStateRequestListCounter": 0,
+        "databaseSummaryListCounter": 0
+      }
+    ],
+    "3.3.3.3": [
+      {
+        "nbrState": "Init/DROther",
+        "nbrPriority": 1,
+        "converged": "Init",
+        "role": "DROther",
+        "upTimeInMsec": 2000,
+        "routerDeadIntervalTimerDueMsec": 38000,
+        "upTime": "2.000s",
+        "deadTime": "38.000s",
+        "ifaceAddress": "10.2.0.30",
+        "ifaceName": "eth1:10.2.0.10",
+        "linkStateRetransmissionListCounter": 0,
+        "linkStateRequestListCounter": 0,
+        "databaseSummaryListCounter": 0
+      }
+    ]
+  }
+}

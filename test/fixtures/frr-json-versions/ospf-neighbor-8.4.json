@@ -1,0 +1,28 @@
+{
+  "neighbors": {
+    "2.2.2.2": [
+      {
+        "priority": 1,
+        "state": "Full/DR",
+        "nbrPriority": 1,
+        "nbrState": "Full/DR",
+        "converged": "Full",
+        "role": "DR",
+        "upTimeInMsec": 99000,
+        "deadTimeMsecs": 35000,
+        "routerDeadIntervalTimerDueMsec": 35000,
+        "upTime": "1m39s",
+        "deadTime": "35.000s",
+        "address": "10.1.0.20",
+        "ifaceAddress": "10.1.0.20",
+        "ifaceName": "eth0:10.1.0.10",
+        "retransmitCounter": 0,
+        "linkStateRetransmissionListCounter": 0,
+        "requestCounter": 0,
+        "linkStateRequestListCounter": 0,
+        "dbSummaryCounter": 0,
+        "databaseSummaryListCounter": 0
+      }
+    ]
+  }
+}

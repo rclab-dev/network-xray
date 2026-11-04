@@ -1,0 +1,30 @@
+{
+  "interfaces": {
+    "eth0": {
+      "ifUp": true,
+      "ifIndex": 2,
+      "mtuBytes": 1500,
+      "bandwidthMbit": 10000,
+      "ifFlags": "<UP,BROADCAST,RUNNING,MULTICAST>",
+      "ospfEnabled": true,
+      "ipAddress": "10.1.0.10",
+      "ipAddressPrefixlen": 24,
+      "area": "0.0.0.0",
+      "timerMsecs": 10000,
+      "timerDeadSecs": 40
+    },
+    "eth1": {
+      "ifDown": false,
+      "ifIndex": 3,
+      "mtuBytes": 1500,
+      "bandwidthMbit": 10000,
+      "ifFlags": "<BROADCAST,MULTICAST>",
+      "ospfEnabled": true,
+      "ipAddress": "10.2.0.10",
+      "ipAddressPrefixlen": 24,
+      "area": "0.0.0.0",
+      "timerMsecs": 10000,
+      "timerDeadSecs": 40
+    }
+  }
+}

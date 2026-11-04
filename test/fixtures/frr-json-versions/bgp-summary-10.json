@@ -1,0 +1,58 @@
+{
+  "ipv4Unicast": {
+    "routerId": "10.0.0.1",
+    "as": 65001,
+    "vrfId": 0,
+    "vrfName": "default",
+    "tableVersion": 4,
+    "peerCount": 2,
+    "peers": {
+      "10.1.0.2": {
+        "hostname": "r2",
+        "softwareVersion": "FRRouting/10.7.1",
+        "remoteAs": 65002,
+        "localAs": 65001,
+        "version": 4,
+        "msgRcvd": 12,
+        "msgSent": 12,
+        "tableVersion": 0,
+        "outq": 0,
+        "inq": 0,
+        "peerUptime": "00:05:01",
+        "peerUptimeMsec": 301000,
+        "peerUptimeEstablishedEpoch": 1762160000,
+        "pfxRcd": 3,
+        "pfxSnt": 1,
+        "state": "Established",
+        "peerState": "OK",
+        "connectionsEstablished": 1,
+        "connectionsDropped": 0,
+        "idType": "ipv4"
+      },
+      "10.1.0.6": {
+        "softwareVersion": "n/a",
+        "remoteAs": 65003,
+        "localAs": 65001,
+        "version": 4,
+        "msgRcvd": 0,
+        "msgSent": 0,
+        "tableVersion": 0,
+        "outq": 0,
+        "inq": 0,
+        "peerUptime": "never",
+        "peerUptimeMsec": 0,
+        "pfxRcd": 0,
+        "pfxSnt": 0,
+        "state": "Idle (Admin)",
+        "peerState": "Admin",
+        "connectionsEstablished": 0,
+        "connectionsDropped": 0,
+        "idType": "ipv4"
+      }
+    },
+    "failedPeers": 1,
+    "displayedPeers": 2,
+    "totalPeers": 2,
+    "dynamicPeers": 0
+  }
+}

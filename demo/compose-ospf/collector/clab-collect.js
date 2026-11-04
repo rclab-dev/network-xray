@@ -181,7 +181,7 @@ function parseOspfInterfaces(j) {
               : (d.timerHelloInSecs != null ? d.timerHelloInSecs
               : (d.helloInterval != null ? d.helloInterval : 10));
     out[ifn] = {
-      up: (d.ifUp != null ? !!d.ifUp : true),
+      up: (d.ifUp != null ? !!d.ifUp : d.ifDown === undefined),   // FRR prints "ifUp": true when up, else only "ifDown" (value false)
       ospf: (d.ospfEnabled != null ? !!d.ospfEnabled : true),
       ip: d.ipAddress || (d.ipAddresses && d.ipAddresses[0] && (d.ipAddresses[0].address || d.ipAddresses[0])) || '',
       prefix: (d.ipAddressPrefixlen != null ? d.ipAddressPrefixlen : 24),
@@ -335,14 +335,16 @@ function parseBgpRoutes(j) {
     arr.forEach(function (r) {
       if (!r || typeof r !== 'object') return;
       var nh = (r.nexthops && r.nexthops[0] && _str(r.nexthops[0].ip)) || _str(r.peerId);
+      /* per-prefix form: "bestpath" is an object, best only with "overall" (it can hold just "bestpathFromAs") */
+      var _best = (r.bestpath && typeof r.bestpath === 'object') ? r.bestpath.overall === true : !!(r.bestpath || r.bestPath);
       /* nx_bgp_prefixlen (2026-10-23): FRR's "prefix" field has no length ("203.0.113.0", length in prefixLen) -> keep prefix as it was
          (problem.json checks compare it) and carry the length in prefixlen (from prefixLen, else from the "net/len" key) */
       var _pl = (r.prefixLen != null) ? +r.prefixLen : (/\/(\d+)$/.exec(String(r.prefix || prefix)) || [])[1];
-      out.push({ prefix: _str(r.prefix) || prefix, prefixlen: (_pl != null && _pl !== '' && !isNaN(+_pl)) ? +_pl : null, nextHop: nh, best: !!(r.bestpath || r.bestPath),
+      out.push({ prefix: _str(r.prefix) || prefix, prefixlen: (_pl != null && _pl !== '' && !isNaN(+_pl)) ? +_pl : null, nextHop: nh, best: _best,
         as_path: (r.path != null ? String(r.path).trim() : ''),
         local_pref: (r.locPrf != null ? r.locPrf : (r.localPref != null ? r.localPref : null)),
         weight: r.weight, metric: r.metric, origin: r.origin,
-        reason: r.selectionReason || (r.bestpath && typeof r.bestpath === 'object' && r.bestpath.selectionReason) || '',   /* nx_bestpath_fix: per-prefix form */ multipath: !!r.multipath, valid: !!(r.valid || r.bestpath || r.bestPath || r.multipath) });   /* nx_ecmp: FRR marks every installed equal path multipath */   /* nx_frr_bgp_valid: FRR puts "valid": true on usable paths only (missing = invalid, e.g. inaccessible next hop); a best / multipath path is usable by definition (hand-made json without valid stays as before) */
+        reason: r.selectionReason || (r.bestpath && typeof r.bestpath === 'object' && r.bestpath.selectionReason) || '',   /* nx_bestpath_fix: per-prefix form */ multipath: !!r.multipath, valid: !!(r.valid || _best || r.multipath) });   /* nx_ecmp: FRR marks every installed equal path multipath */   /* nx_frr_bgp_valid: FRR puts "valid": true on usable paths only (missing = invalid, e.g. inaccessible next hop); a best / multipath path is usable by definition (hand-made json without valid stays as before) */
     });
   });
   return out;
