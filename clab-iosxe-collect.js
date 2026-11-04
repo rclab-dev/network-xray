@@ -402,6 +402,7 @@ function parseBgpRoutes(text, warn) {
                ibgp: status.indexOf('i') >= 0,   // 'i' is only ever "internal" in the status column, also when it stands alone (not valid: "  i")
                as_path: asPath, local_pref: lp, weight: w, metric: metric,
                origin: origin === 'i' ? 'IGP' : origin === 'e' ? 'EGP' : origin === '?' ? 'incomplete' : '', reason: '' });
+    if (status.indexOf('m') >= 0 && status.indexOf('*') >= 0) out[out.length - 1].multipath = true;   // 'm' = multipath (installed with the best)
   }
   return out;
 }
