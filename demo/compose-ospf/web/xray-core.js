@@ -1385,57 +1385,6 @@ function _xrayBuildHelloKf(name, interval, direction) {
   return kfName;
 }
 
-function _xrayBuildOvHelloKf(name, interval, startR, endR, yOff) {
-  var key = name + "_" + interval;
-  if (_helloKfCache[key]) return _helloKfCache[key];
-  var movePct = _HELLO_TRAVEL_TIME / interval * 100;
-  var p1 = Math.min(movePct * .2, 5);
-  var p2 = Math.min(movePct, 40);
-  var p3 = Math.min(p2 + movePct * .3, 50);
-  var ty = "translateY(calc(-50% " + yOff + "))";
-  var rule = "@keyframes " + key + "{" + "0%{right:" + startR + "%;opacity:0;transform:" + ty + " scale(0.8)}" + p1.toFixed(1) + "%{opacity:1;transform:" + ty + " scale(1)}" + p2.toFixed(1) + "%{right:" + endR + "%;opacity:1;transform:" + ty + " scale(1)}" + p3.toFixed(1) + "%{right:" + endR + "%;opacity:0;transform:" + ty + " scale(1)}" + "100%{right:" + endR + "%;opacity:0}}";
-  var el = document.getElementById("xray-hello-kf") || function() {
-    var s = document.createElement("style");
-    s.id = "xray-hello-kf";
-    (document.head || document.documentElement).appendChild(s);
-    return s;
-  }();
-  el.textContent += rule + "\n";
-  _helloKfCache[key] = key;
-  return key;
-}
-
-function _xrayBuildOvBounceDead(name, interval, startR, endR, yOff) {
-  var key = name + "_" + interval;
-  if (_helloKfCache[key]) return _helloKfCache[key];
-  var movePct = _HELLO_TRAVEL_TIME / interval * 100;
-  var p1 = Math.min(movePct * .2, 5);
-  var p2 = Math.min(movePct, 40);
-  var pBounce = Math.min(p2 + 3, 45);
-  var pRecoil = Math.min(pBounce + 3, 50);
-  var pFade = Math.min(pRecoil + 5, 60);
-  var ty = "translateY(calc(-50% " + yOff + "))";
-  var recoilR = endR + 2;
-  var rule = "@keyframes " + key + "{" + "0%{right:" + startR + "%;opacity:0;transform:" + ty + " scale(0.5)}" + p1.toFixed(1) + "%{opacity:1;transform:" + ty + " scale(1)}" + p2.toFixed(1) + "%{right:" + endR + "%;opacity:1;transform:" + ty + " scale(1)}" + pBounce.toFixed(1) + "%{right:" + endR + "%;opacity:1;transform:" + ty + " scale(1.4)}" + pRecoil.toFixed(1) + "%{right:" + recoilR + "%;opacity:0.6;transform:" + ty + " scale(0.6)}" + pFade.toFixed(1) + "%{right:" + endR + "%;opacity:0}" + "100%{opacity:0}}";
-  var sparkKey = "_spark_" + interval;
-  if (!_helloKfCache[sparkKey]) {
-    var sp1 = Math.max(p2 - 1, 0);
-    var sp2 = p2;
-    var sp3 = Math.min(p2 + 4, pFade);
-    rule += "\n@keyframes xsparkSync_" + interval + "{" + "0%," + sp1.toFixed(1) + "%{opacity:0}" + sp2.toFixed(1) + "%{opacity:1}" + sp3.toFixed(1) + "%{opacity:0}" + "100%{opacity:0}}";
-    _helloKfCache[sparkKey] = "xsparkSync_" + interval;
-  }
-  var el = document.getElementById("xray-hello-kf") || function() {
-    var s = document.createElement("style");
-    s.id = "xray-hello-kf";
-    (document.head || document.documentElement).appendChild(s);
-    return s;
-  }();
-  el.textContent += rule + "\n";
-  _helloKfCache[key] = key;
-  return key;
-}
-
 function _xrayBuildOvReach(name, interval, startR, endR, yOff) {
   var key = name + "_" + interval;
   if (_helloKfCache[key]) return _helloKfCache[key];
