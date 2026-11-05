@@ -132,6 +132,8 @@ function checkExamples(root) {
       for (const m of l.matchAll(/`([A-Za-z0-9_.-]+)`\s*\/\s*`([A-Za-z0-9_.-]+)`/g)) { names.add(m[1]); names.add(m[2]); }
     }
     for (const m of l.matchAll(/\bexamples\/([A-Za-z0-9_.-]+)\//g)) names.add(m[1]);
+    // the table's links to the folders: [q1-static](q1-static/) / [q1-static-solved](q1-static-solved/) (relative, one folder name)
+    for (const m of l.matchAll(/\]\(\.?\/?([A-Za-z0-9_.-]+)\/?\)/g)) if (!/\.(md|png|jpe?g|gif|svg|html?)$/i.test(m[1])) names.add(m[1]);
     for (const d of names) { n++; if (!dirOk(d)) out.push(`FAIL ${at}: example examples/${d}/ does not exist`); }
   });
   if (!out.length) out.push(`OK   ${f}: ${n} listed examples exist`);

@@ -135,3 +135,11 @@ test('console.log added to a collector since the previous tag is reported, unles
   r = check(root, '1.1.7', '--since', 'no-such-ref');
   assert.match(r.out, /SKIP collectors: no-such-ref is not available/);
 });
+
+test('examples/README.md in the link form [q1-static](q1-static/) / [q1-static-solved](q1-static-solved/): a missing folder is found', () => {
+  const table = '| Lab | Protocol |\n|---|---|\n| [q1-static](q1-static/) / [q1-static-solved](q1-static-solved/) | static |\n\nSee [the guide](../docs/guide.md) and [notes](NOTES.md).\n';
+  let r = check(fixture({ 'examples/README.md': table }), '1.1.7');
+  assert.match(r.out, /OK {3}examples\/README\.md: 2 listed examples exist/, r.out);   // both folders counted; the .md links are not folders
+  r = check(fixture({ 'examples/README.md': table, 'examples/q1-static-solved/q1.clab.yml': null }), '1.1.7');
+  assert.match(r.out, /^FAIL examples\/README\.md:3: example examples\/q1-static-solved\/ does not exist$/m, r.out);
+});
