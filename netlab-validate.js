@@ -414,8 +414,15 @@ function run(lab, prefix, done) {
 module.exports = { setLiveStart: function (on) { LIVE_START = !!on; }, load: load, tiers: tiers, run: run, parseCall: parseCall, evalValue: evalValue, getPrefix: getPrefix, PLUGINS: PLUGINS };
 
 if (require.main === module) {
+  var USAGE = 'usage: node netlab-validate.js <network-xray.json> [container-prefix]\n' +
+    '  run the validate: tests of a netlab lab against its running routers (read-only show commands)\n' +
+    '  container-prefix  default: clab-<lab name>-\n' +
+    '  -h, --help        show this help';
   var f = process.argv[2];
-  if (!f) { console.error('usage: node netlab-validate.js <network-xray.json> [container-prefix]'); process.exit(2); }
+  if (process.argv.slice(2).some(function (s) { return s === '-h' || s === '--help'; })) { console.log(USAGE); process.exit(0); }
+  var _bad = process.argv.slice(2).filter(function (s) { return s.charAt(0) === '-' && s.length > 1; })[0];
+  if (_bad) { console.error('netlab-validate.js: unknown option: ' + _bad + "\nTry 'node netlab-validate.js --help'."); process.exit(2); }
+  if (!f) { console.error(USAGE); process.exit(2); }
   var labx = load(f), pfx = process.argv[3] || ('clab-' + labx.name + '-');
   run(labx, pfx, function (res) {
     res.tests.forEach(function (r) { console.log('[' + r.status.toUpperCase() + '] ' + r.name + ' - ' + r.description + (r.message ? '\n    ' + r.message : '')); });

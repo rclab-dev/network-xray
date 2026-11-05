@@ -394,20 +394,30 @@ function selftest() {
  * -------------------------------------------------------------------------- */
 function main(argv) {
   const args = argv.slice(2);
-  if (args.includes('--selftest')) { selftest(); return; }
-  if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
-    process.stderr.write(
-      'usage: node topojson-to-xray.js <topo.json> [--inverted-v] [--target <node>] [--emit graph-data]\n' +
-      '       node topojson-to-xray.js --selftest\n' +
-      '  --emit graph-data : raw {nodes,links} for xray-graph.html (any-size overview lane)\n');
-    process.exit(args.length === 0 ? 1 : 0);
+  const usage = 'usage: node topojson-to-xray.js <topo.json> [--inverted-v] [--target <node>] [--emit graph-data]\n' +
+    '       node topojson-to-xray.js --selftest\n' +
+    '  --inverted-v       lay a 3-router line out as an inverted V\n' +
+    '  --target <node>    the router to look inside (default: the most connected one)\n' +
+    '  --emit graph-data  raw {nodes,links} for xray-graph.html (any-size overview lane)\n' +
+    '  --selftest         run the golden-fixture regression test\n' +
+    '  -h, --help         show this help\n';
+  if (args.includes('-h') || args.includes('--help')) { process.stdout.write(usage); process.exit(0); }
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--target' || args[i] === '--emit') i++;
+    else if (args[i] !== '--inverted-v' && args[i] !== '--selftest' && args[i].startsWith('-')) {
+      process.stderr.write('topojson-to-xray.js: unknown option: ' + args[i] + "\nTry 'node topojson-to-xray.js --help'.\n");
+      process.exit(2);
+    }
   }
+  if (args.includes('--selftest')) { selftest(); return; }
+  if (args.length === 0) { process.stderr.write(usage); process.exit(1); }
   const opts = { invertedV: args.includes('--inverted-v'), target: null, emit: null };
   const ti = args.indexOf('--target');
   if (ti >= 0 && args[ti + 1]) opts.target = args[ti + 1];
   const ei = args.indexOf('--emit');
   if (ei >= 0 && args[ei + 1]) opts.emit = args[ei + 1];
   const file = args.find((a) => !a.startsWith('--') && a !== opts.target && a !== opts.emit);
+  if (!file) { process.stderr.write(usage); process.exit(1); }
 
   const src = fs.readFileSync(file, 'utf8');
   const res = convert(src, opts);

@@ -660,7 +660,24 @@ function runTable(argv, color) {
 }
 
 if (require.main === module) {
-  var res, code = 0, opts = null;
+  var res, code = 0, opts = null, _cli = process.argv.slice(2);
+  if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) {
+    console.log(USAGE + '\n' +
+      '  state <path>                        nodes, links, OSPF adjacencies, BGP sessions, counts\n' +
+      '  why <path> <node> <prefix> [vrf]    BGP best path and the reason stored with it\n' +
+      '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR show ... json files\n' +
+      '  --format json|table  default: json\n' +
+      '  --color              colors in table output (only on a terminal)\n' +
+      '  -h, --help           show this help');
+    process.exit(0);
+  }
+  for (var _i = 0; _i < _cli.length; _i++) {
+    if (_cli[_i] === '--format') _i++;
+    else if (_cli[_i] !== '--color' && !/^--format=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
+      console.error('xray-query.js: unknown option: ' + _cli[_i] + "\nTry 'node scripts/xray-query.js --help'.");
+      process.exit(2);
+    }
+  }
   try {
     opts = parseOptions(process.argv.slice(2));
     if (opts.format === 'table') res = runTable(opts.args, opts.color && !!process.stdout.isTTY);

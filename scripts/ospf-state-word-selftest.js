@@ -6,6 +6,10 @@
  * 3) xray-core.js _xrayDeLinkInfo: a BGP + OSPF link whose OSPF state was saved as "Exstart/DR" -> coexist + the exchange bucket (not "none").
  */
 var fs = require('fs'), path = require('path'), vm = require('vm');
+var _cli = process.argv.slice(2);
+if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) { console.log('usage: node scripts/ospf-state-word-selftest.js\n  check the IOS-XE OSPF state words (no options)\n  -h, --help  show this help'); process.exit(0); }
+var _bad = _cli[0];
+if (_bad) { console.error('ospf-state-word-selftest.js: unknown option: ' + _bad + "\nTry 'node scripts/ospf-state-word-selftest.js --help'."); process.exit(2); }
 var ios = require(path.join(__dirname, '..', 'clab-iosxe-collect.js'));
 
 var pass = 0, fail = 0;

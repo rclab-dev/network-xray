@@ -423,6 +423,24 @@ if (require.main !== module) return;   // required (e.g. by test/): export only,
 
 function arg(name, def) { var i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : def; }
 
+var USAGE = 'usage: node clab-srl-collect.js --lab <lab> --node <node> --adj if:peer,... [--proto ospf|bgp] [--capture <dir>] [--out f]   (live via docker exec sr_cli, read-only)\n' +
+  '       node clab-srl-collect.js --from-dir <dir> --node <node> --adj if:peer,... [--proto ospf|bgp] [--out f]                (offline replay)\n' +
+  '       node clab-srl-collect.js --self-test\n' +
+  '  --capture <dir>    also save the state paths to <dir> (for --from-dir later)\n' +
+  '  --proto ospf|bgp   default: ospf\n' +
+  '  --out <file>       write the state JSON to <file> (default: stdout)\n' +
+  '  -h, --help         show this help';
+// options that take a value always take the next word (as arg() does)
+var _valued = ['--node', '--proto', '--out', '--from-dir', '--lab', '--capture', '--adj'], _help = false, _bad = '';
+for (var _i = 2; _i < process.argv.length; _i++) {
+  var _s = process.argv[_i];
+  if (_valued.indexOf(_s) >= 0) _i++;
+  else if (_s === '-h' || _s === '--help') _help = true;
+  else if (_s !== '--self-test' && _s.charAt(0) === '-' && !_bad) _bad = _s;
+}
+if (_help) { console.log(USAGE); process.exit(0); }
+if (_bad) { console.error('clab-srl-collect.js: unknown option: ' + _bad + "\nTry 'node clab-srl-collect.js --help'."); process.exit(2); }
+
 if (process.argv.indexOf('--self-test') >= 0) {
   process.exit(selfTest() ? 0 : 1);
 }

@@ -24,6 +24,10 @@
 var fs = require('fs'), path = require('path'), vm = require('vm');
 var ROOT = process.env.CHECK_I18N_ROOT ? path.resolve(process.env.CHECK_I18N_ROOT) : path.resolve(__dirname, '..');
 var VERBOSE = process.argv.indexOf('--verbose') >= 0;
+var _cli = process.argv.slice(2);
+if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) { console.log('usage: node scripts/check-i18n.js [--verbose]\n  check English / Japanese UI string parity\n  --verbose   also list the warnings\n  -h, --help  show this help'); process.exit(0); }
+var _bad = _cli.filter(function (s) { return ['--verbose'].indexOf(s) < 0; })[0];
+if (_bad) { console.error('check-i18n.js: unknown option: ' + _bad + "\nTry 'node scripts/check-i18n.js --help'."); process.exit(2); }
 
 var PAGES = ['xray-graph.html', 'xray-graph-nextui.html', 'decision-bracket.html'];
 var DICT = 'xray-i18n.js';

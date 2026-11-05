@@ -6,14 +6,29 @@
 #   and configured later), and restarts the collector when the answer changes
 set -u
 TOPO=/lab/clab.yml; PORT=8600; PROTO=auto; INTERVAL=2
+usage() {
+  cat <<'EOF'
+usage: network-xray [--topo /lab/clab.yml] [--port 8600] [--proto auto|ospf|bgp|static] [--interval 2]
+  watch a running containerlab / netlab lab and serve the graph (read-only show commands, no config changes)
+  --topo <file>       the lab's topology file (default: /lab/clab.yml)
+  --port <port>       port the graph is served on (default: 8600)
+  --proto <proto>     auto | ospf | bgp | static (default: auto: ask the routers every 30 s)
+  --interval <secs>   seconds between collector rounds (default: 2)
+  -h, --help          show this help
+EOF
+}
 while [ $# -gt 0 ]; do
+  case "$1" in
+    --topo|--port|--proto|--interval)
+      [ $# -ge 2 ] || { echo "network-xray: $1 needs a value" >&2; echo "Try 'network-xray --help'." >&2; exit 2; } ;;
+  esac
   case "$1" in
     --topo) TOPO="$2"; shift ;;
     --port) PORT="$2"; shift ;;
     --proto) PROTO="$2"; shift ;;
     --interval) INTERVAL="$2"; shift ;;
-    -h|--help) sed -n '2,6p' "$0"; exit 0 ;;
-    *) echo "unknown option: $1" >&2; exit 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "network-xray: unknown option: $1" >&2; echo "Try 'network-xray --help'." >&2; exit 2 ;;
   esac
   shift
 done

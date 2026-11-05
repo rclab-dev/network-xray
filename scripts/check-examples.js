@@ -341,6 +341,10 @@ function checkAll(root = ROOT) {
 module.exports = { parseTopology, vendorOf, protocolsOf, slug, anchorsOf, checkLinks, checkExampleReadme, checkIndexReadme, checkAll, exampleDirs };
 
 if (require.main === module) {
+  var _cli = process.argv.slice(2);
+  if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) { console.log('usage: node scripts/check-examples.js\n  check examples/*/README.md against the labs (no options; exit 1 on any problem)\n  -h, --help  show this help'); process.exit(0); }
+  var _bad = _cli[0];
+  if (_bad) { console.error('check-examples.js: unknown option: ' + _bad + "\nTry 'node scripts/check-examples.js --help'."); process.exit(2); }
   const result = checkAll();
   const files = Object.keys(result);
   for (const f of files) for (const p of result[f]) console.log(`${f}: ${p}`);

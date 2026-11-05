@@ -11,6 +11,10 @@
  */
 var fs = require('fs'), path = require('path');
 var A = process.argv;
+var _cli = process.argv.slice(2);
+if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) { console.log('usage: node scripts/gen_compose_bundle.js <lab.clab.yml> <cfg-src-dir> <assets-dir> <out-dir>\n  build a `docker compose up` X-Ray bundle from a containerlab lab\n  lab.clab.yml  containerlab topology (nodes + links)\n  cfg-src-dir   dir with <node>/frr.conf + <node>/daemons (e.g. examples/q21-bgp-lp)\n  assets-dir    network-xray checkout (engine + collector scripts)\n  out-dir       bundle output\n  -h, --help    show this help'); process.exit(0); }
+var _badOpt = _cli.filter(function (s) { return s.charAt(0) === '-' && s.length > 1; })[0];
+if (_badOpt) { console.error('gen_compose_bundle.js: unknown option: ' + _badOpt + "\nTry 'node scripts/gen_compose_bundle.js --help'."); process.exit(2); }
 if (A.length < 6) { console.error('usage: gen_compose_bundle.js <lab.clab.yml> <cfg-src-dir> <assets-dir> <out-dir>'); process.exit(2); }
 var CLAB = A[2], CFG = A[3], NX = A[4], OUT = A[5];
 

@@ -133,10 +133,15 @@ function filesOf(arg) {
 }
 
 function main(argv) {
-  if (!argv.length || argv[0] === '-h' || argv[0] === '--help') {
-    console.log('usage: node scripts/validate-states.js <xray-states.js | state_<node>.json | dir> ...');
+  var help = argv.indexOf('-h') >= 0 || argv.indexOf('--help') >= 0;
+  if (!argv.length || help) {
+    console.log('usage: node scripts/validate-states.js <xray-states.js | state_<node>.json | dir> ...\n' +
+      '  check collected state against docs/dev/states-schema.json (exit 0 valid, 1 invalid, 2 usage / unreadable)\n' +
+      '  -h, --help  show this help');
     return argv.length ? 0 : 2;
   }
+  var badOpt = argv.filter(function (a) { return a.charAt(0) === '-' && a.length > 1; })[0];
+  if (badOpt) { console.error('validate-states.js: unknown option: ' + badOpt + "\nTry 'node scripts/validate-states.js --help'."); return 2; }
   var schema = loadSchema(), bad = 0, files = [];
   try { argv.forEach(function (a) { files = files.concat(filesOf(a)); }); }
   catch (e) { console.error(e.message); return 2; }

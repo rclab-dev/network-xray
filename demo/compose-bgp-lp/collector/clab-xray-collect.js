@@ -23,13 +23,29 @@ var fs = require('fs'), cp = require('child_process'), path = require('path'), o
 
 // flags (--watch / --interval N / --exclude-mgmt / --mgmt-subnet <cidr>) may appear in any order
 var argv = process.argv.slice(2), validateFile = '', watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = [], pos = [], serialCollect = false;
+var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>] [--validate <file>] [--serial]\n' +
+  '  proto                ospf | bgp | static (default: ospf)\n' +
+  '  --watch              keep collecting (default: collect once)\n' +
+  '  --interval <secs>    seconds between rounds with --watch (default: 1)\n' +
+  '  --exclude-mgmt       leave out the management network (the topology\'s mgmt subnet, else 172.20.20.0/24)\n' +
+  '  --mgmt-subnet <cidr> leave out this management network\n' +
+  '  --validate <file>    netlab topology JSON with validate: tests (network-xray.json)\n' +
+  '  --serial             read the routers one at a time (default: all at once)\n' +
+  '  -h, --help           show this help\n' +
+  '  env: NX_IOS_INTERVAL (seconds between Cisco IOS reads, default 10), NX_CYCLE_WAIT_MS (default 4000)';
+var HINT = "Try 'node clab-xray-collect.js --help'.";
 for (var ai = 0; ai < argv.length; ai++) {
+  if (argv[ai] === '-h' || argv[ai] === '--help') { console.log(USAGE); process.exit(0); }
+  if (argv[ai] === '--validate' || argv[ai] === '--interval' || argv[ai] === '--mgmt-subnet') ai++;
+}
+for (ai = 0; ai < argv.length; ai++) {
   if (argv[ai] === '--watch') watch = true;
   else if (argv[ai] === '--validate') validateFile = argv[++ai] || '';   /* nx_netlab_validate: netlab topology JSON with validate: tests */
   else if (argv[ai] === '--serial') serialCollect = true;   /* nx_collect_parallel: old one-node-at-a-time collect */
   else if (argv[ai] === '--interval') intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000;
   else if (argv[ai] === '--exclude-mgmt') mgmtArg = ['--exclude-mgmt'];                       // drop clab mgmt IF (172.20.20.0/24)
   else if (argv[ai] === '--mgmt-subnet') mgmtArg = ['--mgmt-subnet', argv[++ai] || ''];
+  else if (argv[ai].charAt(0) === '-' && argv[ai].length > 1) { console.error('clab-xray-collect.js: unknown option: ' + argv[ai] + '\n' + HINT); process.exit(2); }
   else pos.push(argv[ai]);
 }
 /* nx_no_shell (2026-10-17): names from the topology file never reach a shell. The per-node collectors are started with
@@ -60,7 +76,7 @@ if (mgmtArg[0] === '--mgmt-subnet' && !/^[0-9.]+\/[0-9]+$/.test(mgmtArg[1])) { c
 var topoPath = pos[0], outDir = pos[1], proto = pos[2] || 'ospf';
 if (!/^[a-z]{1,16}$/.test(proto)) { console.error('!! unknown proto ' + shown(proto)); process.exit(2); }
 if (!topoPath || !outDir) {
-  console.error('usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>]');
+  console.error(USAGE);
   process.exit(2);
 }
 // Friendly guards: the first arg is a topology FILE (.clab.yml), not a directory. Passing the lab

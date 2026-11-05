@@ -241,6 +241,16 @@ function handleLine(line) {
 }
 
 if (require.main === module) {
+  var _cli = process.argv.slice(2);
+  if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) {
+    process.stdout.write('usage: node scripts/xray-mcp.js\n' +
+      '  read-only MCP server over stdio (JSON-RPC, one message per line); start it from an MCP client\n' +
+      '  tools: ' + TOOLS.map(function (t) { return t.name; }).join(', ') + '\n' +
+      '  -h, --help  show this help\n');
+    process.exitCode = 0;
+    return;
+  }
+  if (_cli.length) { console.error('xray-mcp.js: unknown option: ' + _cli[0] + "\nTry 'node scripts/xray-mcp.js --help'."); process.exit(2); }
   var rl = readline.createInterface({ input: process.stdin, terminal: false });
   rl.on('line', function (line) {
     var res = handleLine(line);

@@ -229,6 +229,12 @@
   // Node self-test — real FRR fixture (live multipath data). Run: `node bgp-parse.js`.
   // Browser: typeof process is undefined → skipped. (Not fabricated: this is a captured FRR paste.)
   if (typeof process !== 'undefined' && process.argv && /bgp-parse\.js$/.test(process.argv[1] || '')) {
+    var _a = process.argv.slice(2);
+    if (_a.indexOf('-h') >= 0 || _a.indexOf('--help') >= 0) {
+      console.log('usage: node bgp-parse.js\n  runs the self-test of the FRR BGP parser (no options)\n  -h, --help  show this help');
+      process.exit(0);
+    }
+    if (_a.length) { console.error('bgp-parse.js: unknown option: ' + _a[0] + "\nTry 'node bgp-parse.js --help'."); process.exit(2); }
     var SUM = ["BGP router identifier 10.59.0.10, local AS number 65001 vrf-id 0","","Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc","10.58.0.20      4      65002        15        15        2    0    0 00:00:27            1        1 N/A","10.59.0.20      4      65003        12        13        2    0    0 00:00:26            1        1 N/A","Total number of neighbors 2"].join('\n');
     var TBL = ["BGP table version is 2, local router ID is 10.59.0.10, vrf id 0","   Network          Next Hop            Metric LocPrf Weight Path","*> 8.8.8.0/24       10.59.0.20               0             0 65003 i","*                   10.58.0.20               0     50      0 65002 i","Displayed 1 routes and 2 total paths"].join('\n');
     var s = parseSummary(SUM), t = parseBgpTable(TBL), r = build(SUM, TBL, 'r1');

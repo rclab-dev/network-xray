@@ -27,15 +27,32 @@ set -euo pipefail
 unset CDPATH   # a CDPATH from the environment would make the cd below print a path or pick another folder
 HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
 BIND=0.0.0.0; BIND_SET=""; INTERVAL=1; CHECK=""; ATTACH=""; POS=()
+usage() {
+  cat <<'EOF'
+usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] [lab.clab.yml] [port] [template.html]
+  deploy a containerlab lab, keep collecting each router's state and serve the X-Ray graph
+  lab                   default: examples/q21-bgp-lp/q21.clab.yml
+  port                  default: 8080
+  template              default: xray-graph-nextui.html
+  --bind <address>      address the graph listens on (default: 0.0.0.0 = all; 127.0.0.1 = this machine only)
+  --interval <seconds>  how often the collector reads the routers, whole seconds (default: 1)
+  --check               only check what this run needs and say what to fix; nothing is started
+  --attach              do not deploy: graph the lab that is already running (changes made by hand are kept)
+  -h, --help            show this help
+  env: SUDO= (privilege prefix, default sudo), NX_IOS_INTERVAL (Cisco IOS read interval, default 10)
+EOF
+}
 while [ $# -gt 0 ]; do
   case "$1" in
+    -h|--help) usage; exit 0 ;;
     --check) CHECK=1; shift ;;
     --bind|--interval)
-      [ $# -ge 2 ] || { echo "$1 needs a value (see the top of xray.sh)"; exit 1; }
+      [ $# -ge 2 ] || { echo "$1 needs a value (see ./xray.sh --help)"; exit 1; }
       if [ "$1" = --bind ]; then BIND="$2"; BIND_SET=1; else INTERVAL="$2"; fi; shift 2 ;;
     --bind=*) BIND="${1#--bind=}"; BIND_SET=1; shift ;;
     --interval=*) INTERVAL="${1#--interval=}"; shift ;;
     --attach) ATTACH=1; shift ;;
+    -?*) echo "xray.sh: unknown option: $1" >&2; echo "Try './xray.sh --help'." >&2; exit 2 ;;
     *) POS+=("$1"); shift ;;
   esac
 done

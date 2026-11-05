@@ -11,6 +11,10 @@
 var fs = require('fs'), path = require('path'), crypto = require('crypto');
 var ROOT = path.resolve(__dirname, '..');
 var LIST = process.argv.indexOf('--list') >= 0;
+var _cli = process.argv.slice(2);
+if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) { console.log('usage: node scripts/check-copies.js [--list]\n  check that the files kept as copies (demo/compose-*, demo/) are byte-identical\n  --list      also print every checked group and the exceptions\n  -h, --help  show this help'); process.exit(0); }
+var _bad = _cli.filter(function (s) { return ['--list'].indexOf(s) < 0; })[0];
+if (_bad) { console.error('check-copies.js: unknown option: ' + _bad + "\nTry 'node scripts/check-copies.js --help'."); process.exit(2); }
 
 function abs(p) { return path.join(ROOT, p); }
 function isDir(p) { try { return fs.statSync(abs(p)).isDirectory(); } catch (e) { return false; } }

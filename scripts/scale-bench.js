@@ -191,12 +191,22 @@ function table(rows) {
 
 if (require.main === module) {
   var argv = process.argv.slice(2), sizes = DEFAULT_SIZES, proto = 'ospf', iterations = 5, json = false;
+  if (argv.indexOf('-h') >= 0 || argv.indexOf('--help') >= 0) {
+    console.log('usage: node scripts/scale-bench.js [--routers 10,25,50,100,200] [--proto ospf|bgp] [--iterations 5] [--json]\n' +
+      '  time the Node side of the data path (collect + merge) on synthetic FRR labs\n' +
+      '  --routers <list>    lab sizes, 3..1000 routers each (default: 10,25,50,100,200)\n' +
+      '  --proto ospf|bgp    default: ospf\n' +
+      '  --iterations <n>    runs per size, the median is shown (default: 5)\n' +
+      '  --json              print JSON instead of a table\n' +
+      '  -h, --help          show this help');
+    process.exit(0);
+  }
   for (var ai = 0; ai < argv.length; ai++) {
     if (argv[ai] === '--json') json = true;
     else if (argv[ai] === '--routers') sizes = String(argv[++ai] || '').split(',').map(function (x) { return parseInt(x, 10); });
     else if (argv[ai] === '--proto') proto = argv[++ai];
     else if (argv[ai] === '--iterations') iterations = parseInt(argv[++ai], 10);
-    else { console.error('unknown argument ' + JSON.stringify(argv[ai])); process.exit(2); }
+    else { console.error('scale-bench.js: unknown option: ' + argv[ai] + "\nTry 'node scripts/scale-bench.js --help'."); process.exit(2); }
   }
   if (!sizes.length || sizes.some(function (n) { return !(n >= 3 && n <= 1000); })) { console.error('--routers: a list of numbers 3..1000'); process.exit(2); }
   if (proto !== 'ospf' && proto !== 'bgp') { console.error('--proto: ospf or bgp'); process.exit(2); }

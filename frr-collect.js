@@ -245,6 +245,34 @@ function selfTest() {
 
 // ---- main -----------------------------------------------------------------------------------
 if (typeof require !== 'undefined' && require.main === module) {
+  var USAGE = "usage: node frr-collect.js --node <n> --exec '<prefix>' [--id <id>] [--adj eth0:r2,eth1:r3] [--proto ospf|bgp|auto] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n" +
+    '       node frr-collect.js --node <n> --from-dir <dir> [--id <id>] [--adj ...] [--proto ...] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
+    '       node frr-collect.js --self-test\n' +
+    "  --exec '<prefix>'    how to reach vtysh: '' (local vtysh) | 'docker exec <c>' | 'ssh <host>' (read-only show commands)\n" +
+    '  --from-dir <dir>     read saved `show ... json` files from <dir> instead\n' +
+    '  --id <id>            router id in the state (default: --node)\n' +
+    '  --adj if:peer,...    which neighbor is on which interface\n' +
+    '  --proto ospf|bgp|auto  default: ospf (auto: ask the router)\n' +
+    '  --exclude-mgmt       leave out the containerlab management network 172.20.20.0/24\n' +
+    '  --mgmt-subnet <cidr> leave out this management network\n' +
+    '  --out <file>         write the state JSON to <file> (default: stdout)\n' +
+    '  --self-test          run the built-in tests\n' +
+    '  -h, --help           show this help';
+  // the same walk as _argMap: an option takes the next word as its value unless that starts with --;
+  // a flag (no value) never takes it, and -h / --help anywhere wins
+  var _av = process.argv.slice(2), _help = _av.indexOf('-h') >= 0 || _av.indexOf('--help') >= 0, _bad = '';
+  var _flags = ['self-test', 'exclude-mgmt'];
+  var _known = ['self-test', 'from-dir', 'exec', 'node', 'id', 'adj', 'proto', 'exclude-mgmt', 'mgmt-subnet', 'out'];
+  for (var _i = 0; _i < _av.length; _i++) {
+    var _s = _av[_i];
+    if (_s.indexOf('--') === 0) {
+      if (_flags.indexOf(_s.slice(2)) < 0 && _av[_i + 1] != null && _av[_i + 1].indexOf('--') !== 0) _i++;
+      if (_s === '--help') _help = true; else if (_known.indexOf(_s.slice(2)) < 0 && !_bad) _bad = _s;
+    } else if (_s === '-h') _help = true;
+    else if (_s.charAt(0) === '-' && _s.length > 1 && !_bad) _bad = _s;
+  }
+  if (_help) { console.log(USAGE); process.exit(0); }
+  if (_bad) { console.error('frr-collect.js: unknown option: ' + _bad + "\nTry 'node frr-collect.js --help'."); process.exit(2); }
   var a = _argMap(process.argv.slice(2));
   var mgmt = (a['mgmt-subnet'] && a['mgmt-subnet'] !== true) ? a['mgmt-subnet']
     : (a['exclude-mgmt'] ? '172.20.20.0/24' : '');
@@ -262,11 +290,7 @@ if (typeof require !== 'undefined' && require.main === module) {
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, o2); console.log('wrote ' + a.out); } else console.log(o2);
   }
   else {
-    console.log('usage:\n' +
-      "  --node <n> --exec '<prefix>' [--adj eth0:r2,eth1:r3] [--proto ospf|bgp|auto] [--exclude-mgmt|--mgmt-subnet <cidr>] [--out f]\n" +
-      "     prefix: '' (local vtysh) | 'docker exec <c>' | 'ssh <host>'\n" +
-      '  --node <n> --from-dir <dir> [--adj ...] [--proto ...] [--out f]\n' +
-      '  --self-test');
+    console.log(USAGE);
   }
 }
 

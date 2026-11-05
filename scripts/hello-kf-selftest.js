@@ -5,6 +5,10 @@
  * Takes the real function out of xray-core.js and runs it against a stub document.
  */
 var fs = require('fs'), path = require('path'), vm = require('vm');
+var _cli = process.argv.slice(2);
+if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) { console.log('usage: node scripts/hello-kf-selftest.js\n  check the single-link Hello ball keyframes in xray-core.js (no options)\n  -h, --help  show this help'); process.exit(0); }
+var _bad = _cli[0];
+if (_bad) { console.error('hello-kf-selftest.js: unknown option: ' + _bad + "\nTry 'node scripts/hello-kf-selftest.js --help'."); process.exit(2); }
 
 var src = fs.readFileSync(path.join(__dirname, '..', 'xray-core.js'), 'utf8');
 var travel = src.match(/^var _HELLO_TRAVEL_TIME = [^;]+;/m);

@@ -7,6 +7,10 @@
  * Loads the whole xray-core.js against a stub window/document.
  */
 var fs = require('fs'), path = require('path'), vm = require('vm');
+var _cli = process.argv.slice(2);
+if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) { console.log('usage: node scripts/nbr-own-list-selftest.js\n  check the \"Hello sent, no neighbor\" line in xray-core.js (no options)\n  -h, --help  show this help'); process.exit(0); }
+var _bad = _cli[0];
+if (_bad) { console.error('nbr-own-list-selftest.js: unknown option: ' + _bad + "\nTry 'node scripts/nbr-own-list-selftest.js --help'."); process.exit(2); }
 
 var src = fs.readFileSync(path.join(__dirname, '..', 'xray-core.js'), 'utf8');
 var document = {

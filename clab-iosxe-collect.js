@@ -876,7 +876,35 @@ function selfTest() {
   process.exit(bad ? 1 : 0);
 }
 
+var USAGE = 'usage: node clab-iosxe-collect.js --lab <lab> --node <node> --adj Ethernet0/1:r2 [--proto ospf|bgp] [--host <addr>] [--capture <dir>] [--out f.json]\n' +
+  '       node clab-iosxe-collect.js --from-dir <dir> --node <node> --adj Ethernet0/1:r2 [--proto ospf|bgp] [--out f.json]\n' +
+  '       node clab-iosxe-collect.js --self-test\n' +
+  '  --lab <lab>        read clab-<lab>-<node> over SSH with show commands (read-only)\n' +
+  '  --host <addr>      SSH to this address instead of the container\'s management address\n' +
+  '  --capture <dir>    also save the show outputs to <dir> (for --from-dir later)\n' +
+  '  --from-dir <dir>   read saved show outputs from <dir> instead\n' +
+  '  --adj if:peer,...  which neighbor is on which interface\n' +
+  '  --proto ospf|bgp   default: ospf\n' +
+  '  --out <file>       write the state JSON to <file> (default: stdout)\n' +
+  '  --self-test        run the built-in tests\n' +
+  '  -h, --help         show this help\n' +
+  '  login: NX_IOS_USER / NX_IOS_PASSWORD (default: admin / admin)';
+// options that take a value always take the next word (as arg() does)
+function cliCheck(argv) {
+  var valued = ['--node', '--lab', '--proto', '--from-dir', '--host', '--capture', '--adj', '--out'];
+  var r = { help: false, bad: '' };
+  for (var i = 0; i < argv.length; i++) {
+    if (valued.indexOf(argv[i]) >= 0) i++;
+    else if (argv[i] === '-h' || argv[i] === '--help') r.help = true;
+    else if (argv[i] !== '--self-test' && argv[i].charAt(0) === '-' && !r.bad) r.bad = argv[i];
+  }
+  return r;
+}
+
 function main() {
+  var cli = cliCheck(process.argv.slice(2));
+  if (cli.help) { console.log(USAGE); process.exit(0); }
+  if (cli.bad) { console.error('clab-iosxe-collect.js: unknown option: ' + cli.bad + "\nTry 'node clab-iosxe-collect.js --help'."); process.exit(2); }
   if (process.argv.indexOf('--self-test') > 0) return selfTest();
   var node = arg('--node'), lab = arg('--lab'), proto = (arg('--proto', 'ospf') || 'ospf').toLowerCase();
   if (!node) { console.error('usage: node clab-iosxe-collect.js --lab <lab> --node <node> --adj Ethernet0/1:r2 [--proto ospf|bgp] [--out f.json]'); process.exit(2); }

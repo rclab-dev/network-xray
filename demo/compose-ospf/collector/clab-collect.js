@@ -1513,6 +1513,35 @@ function selfTest() {
 
 // ---- main -----------------------------------------------------------------------------------
 if (typeof require !== 'undefined' && require.main === module) {
+  var USAGE = 'usage: node clab-collect.js --self-test\n' +
+    '       node clab-collect.js --lab <lab> --node <n> [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
+    '       node clab-collect.js --fixtures <dir> --node <n> [--adj ...] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
+    '  --lab <lab>          read the FRR router clab-<lab>-<n> with docker exec vtysh (read-only)\n' +
+    '  --fixtures <dir>     read saved `show ... json` files from <dir> instead\n' +
+    '  --adj if:peer,...    which neighbor is on which interface\n' +
+    '  --proto ospf|bgp     default: ospf\n' +
+    '  --exclude-mgmt       leave out the containerlab management network 172.20.20.0/24\n' +
+    '  --mgmt-subnet <cidr> leave out this management network\n' +
+    '  --out <file>         write the state JSON to <file> (default: stdout)\n' +
+    '  --self-test          run the built-in tests\n' +
+    '  -h, --help           show this help';
+  // the same walk as _argMap: an option takes the next word as its value unless that starts with --;
+  // a flag (no value) never takes it, and -h / --help anywhere wins
+  function _cliCheck(argv, known, flags) {
+    var r = { help: argv.indexOf('-h') >= 0 || argv.indexOf('--help') >= 0, bad: '' };
+    for (var i = 0; i < argv.length; i++) {
+      var s = argv[i];
+      if (s.indexOf('--') === 0) {
+        if (flags.indexOf(s.slice(2)) < 0 && argv[i + 1] && argv[i + 1].indexOf('--') !== 0) i++;
+        if (s === '--help') r.help = true; else if (known.indexOf(s.slice(2)) < 0 && !r.bad) r.bad = s;
+      } else if (s === '-h') r.help = true;
+      else if (s.charAt(0) === '-' && s.length > 1 && !r.bad) r.bad = s;
+    }
+    return r;
+  }
+  var _cli = _cliCheck(process.argv.slice(2), ['self-test', 'fixtures', 'lab', 'node', 'adj', 'proto', 'exclude-mgmt', 'mgmt-subnet', 'out'], ['self-test', 'exclude-mgmt']);
+  if (_cli.help) { console.log(USAGE); process.exit(0); }
+  if (_cli.bad) { console.error('clab-collect.js: unknown option: ' + _cli.bad + "\nTry 'node clab-collect.js --help'."); process.exit(2); }
   var a = _argMap(process.argv.slice(2));
   // --mgmt-subnet <cidr> (explicit) or --exclude-mgmt (default clab mgmt 172.20.20.0/24); else off.
   var _mgmt = (a['mgmt-subnet'] && a['mgmt-subnet'] !== true) ? a['mgmt-subnet']
@@ -1535,7 +1564,7 @@ if (typeof require !== 'undefined' && require.main === module) {
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, outl); console.log('wrote ' + a.out); } else console.log(outl);
   }
   else {
-    console.log('usage:\n  --self-test\n  --fixtures <dir> --node <n> [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--exclude-mgmt|--mgmt-subnet <cidr>] [--out f]\n  --lab <lab> --node <n> [--proto ospf|bgp] [--adj eth0:r2] [--exclude-mgmt|--mgmt-subnet <cidr>] [--out f]');
+    console.log(USAGE);
   }
 }
 
