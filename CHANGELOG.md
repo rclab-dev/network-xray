@@ -2,6 +2,18 @@
 
 User-visible changes in each release, newest first. Dates are the release tag dates.
 
+## v1.1.8 — 2026-11-06
+
+- Lighter refresh: the collector writes the state once per round (to a temp file, then renamed) together with a small signature file, and the pages reload the state only when a router changed and not while the tab is hidden.
+- `xray.sh` and the Docker image say what is wrong when Docker cannot be reached (no socket, not a socket, permission denied) and stop before deploying. A `docker info` that hangs is cut at 10 s, and other Docker errors with a usable socket do not stop the run, as before.
+- containerlab: a `prefix:` other than `clab` stops with a clear message, and a lab name followed by a comment is read.
+- Cisco IOS-XE: `show vrf` is read, and VRFs other than the global table are named as not read yet.
+- A router that does not answer, or ignores SIGTERM, is cut at the collector's own timeout; `frr-collect.js` reports it as not answering after 8 s.
+- The compose demo server sends security headers and serves only the page files.
+- Recorded output from real routers: FRR 8.4 and 10.7 for each BGP best-path step, and Cisco IOL for BGP best-path steps and OSPF neighbor states other than Full; the hand-written FRR samples now use the words FRR really prints.
+- Docs: `docs/network.md` (every connection, en / ja), `docs/windows-wsl2.md` (en / ja), "Filename too long" on Windows in troubleshooting, the netlab tool defaults explained, and `THIRD_PARTY_NOTICES` says what is known and unknown.
+- New checks and tests: `scripts/check-problem-json.js`, `scripts/check-no-external.js`, `scripts/dev/graph-bench.js`; tests for collectors that hang, the `xray-query.js` subcommands, FRR OSPFv3, SR Linux output variants, every FRR best-path reason and IOS-XE best-path steps.
+
 ## v1.1.7 — 2026-11-05
 
 - Security: node names are escaped in the DeepDive labels, and `xray.sh` serves only the page files.
