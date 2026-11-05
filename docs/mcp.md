@@ -25,8 +25,8 @@ collector again, the next answer uses the new state. A relative `path` is resolv
 directory, which is set by the client and is often not the repo. Use absolute paths.
 
 **A lab running with `xray.sh`:** `xray.sh` runs the collector with the repo folder as its output, so the live state is
-`/path/to/network-xray/xray-states.js`, rewritten every round. Give that file (or the repo folder) as `path` while the
-lab is running; each call reads the latest round. After you stop `xray.sh`, the file keeps the last state.
+`/path/to/network-xray/xray-states.js`; the collector rewrites it whenever the routers' state changes. Give that file (or
+the repo folder) as `path` while the lab is running; each call reads the latest state. After you stop `xray.sh`, the file keeps the last state.
 
 ## Start it
 
