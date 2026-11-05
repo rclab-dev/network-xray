@@ -97,6 +97,19 @@ test.describe('collector timeouts', { concurrency: true, skip: !POSIX }, functio
     assert.ok(!/"success"/.test(r.stdout), 'no state printed: ' + r.stdout.slice(0, 80));
   });
 
+  test.it('frr-collect as a module: a hung router does not make the next collectViaExec in the same process a timeout', async function () {
+    var sb = sandbox(); sb.set('r1', 'hang');
+    var js = 'var f = require(' + JSON.stringify(FRR) + ');' +
+      'f.collectViaExec({ node: "r1", id: "r1", exec: "docker exec r1", proto: "ospf" });' +
+      'var b = f.collectViaExec({ node: "r2", id: "r2", exec: "docker exec r2", proto: "ospf" });' +
+      'console.log(JSON.stringify(Object.keys((b.state && b.state.interfaces) || {})));';
+    var r;
+    try { r = await run(sb, ['-e', js]); } finally { sb.done(); }
+    assert.strictEqual(r.code, 0, r.stderr);
+    assert.ok(sb.calls('r2') >= 1, 'r2 was asked after r1 timed out');
+    assert.deepStrictEqual(JSON.parse(r.stdout.trim().split('\n').pop()), ['eth1'], 'r2 state read: ' + r.stdout.slice(0, 120));
+  });
+
   test.it('a router that answers with half an output or exits non-zero is still a router that answered (no hang, not marked)', async function () {
     var sb = sandbox();
     try {

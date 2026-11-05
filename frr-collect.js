@@ -183,6 +183,7 @@ function assemble(getShow, opts) {
 
 function collectViaExec(opts) {
   var prefix = opts.exec || '';
+  execTimedOut = false;   /* per collection: a router that timed out earlier in this process must not stop the next one */
   return assemble(function (cmd) { return execVtyshJson(prefix, cmd); }, opts);
 }
 function collectFromDir(opts) {
