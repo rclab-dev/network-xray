@@ -54,7 +54,7 @@ Put a `problem.json` next to your `*.clab.yml` (the problem text, the route to f
 
 # examples/ — トラブルシュートの 21 問(壊れた版と直した版)と Best-Path の見本 1 つ
 
-[RouteCrushLab](https://routecrushlab.com) の 21 問(第1問〜第21問)は、それぞれ containerlab のラボが 2 つあります。**壊れた版**(`<フォルダ>/`・起動直後は障害が起きた状態)と、**直した版**(`<フォルダ>-solved/`・比べるための直したラボ)です。`bgp-bestpath-multiprefix`(と `-solved` の写し)は Best-Path を見せるための追加の見本で、壊れたラボではありません。
+[RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=ja) の 21 問(第1問〜第21問)は、それぞれ containerlab のラボが 2 つあります。**壊れた版**(`<フォルダ>/`・起動直後は障害が起きた状態)と、**直した版**(`<フォルダ>-solved/`・比べるための直したラボ)です。`bgp-bestpath-multiprefix`(と `-solved` の写し)は Best-Path を見せるための追加の見本で、壊れたラボではありません。
 
 ## ラボを起動する
 リポジトリの直下で:
