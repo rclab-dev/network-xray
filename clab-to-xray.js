@@ -134,7 +134,7 @@ function parseYaml(src) {
       if (ln.indent > indent) throw new Error('YAML indent error near: ' + ln.raw);
       if (!ln.text.startsWith('- ')) break;
       const itemText = ln.text.slice(2);
-      const m = itemText.match(/^([^:\[\]]+):\s*(.*)$/);
+      const m = itemText.match(/^([^:\[\]]+):(?:\s+|$)(.*)$/);
       if (m) {
         // "- key: val" = a list item that is a map -> build the map starting from this line
         // virtually split the line: build the map this item points to
