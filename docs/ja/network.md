@@ -29,8 +29,8 @@ network-xray には、テレメトリも、アクセス解析も、アカウン�
 ## image を作る / 取る
 
 - `docker pull ghcr.io/rclab-dev/network-xray` は GitHub の registry から image を取ります。
-- `docker build` は土台の image (`node`・digest で固定) と、固定した版の containerlab 1 つを GitHub から取り、SHA-256 で
-  確かめます。
+- `docker build` は土台の image (`node`・digest で固定) と、足す Alpine のパッケージ (`apk add`: bash・docker-cli・openssh-client …
+  を Alpine のパッケージの置き場から) と、固定した版の containerlab 1 つを GitHub から取り、SHA-256 で確かめます。
 
 ## あなたが押すリンク
 

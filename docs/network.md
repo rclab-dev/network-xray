@@ -30,8 +30,8 @@ that is not listed below. It reads the source text: it finds the known patterns,
 ## Building or pulling the image
 
 - `docker pull ghcr.io/rclab-dev/network-xray` downloads the image from GitHub's registry.
-- `docker build` downloads the base image (`node`, pinned by digest) and one pinned containerlab release from GitHub,
-  checked against its SHA-256.
+- `docker build` downloads the base image (`node`, pinned by digest), the Alpine packages it adds (`apk add`: bash, docker-cli,
+  openssh-client, … from the Alpine package mirrors) and one pinned containerlab release from GitHub, checked against its SHA-256.
 
 ## Links you click
 
