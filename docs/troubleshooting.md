@@ -168,7 +168,7 @@ The page says `The container is not running: nothing to read.` A router that sto
 shows `  r1 cannot be read: no answer - showing its last good state as stale`, and the page marks the old
 state with the time it was last read.
 
-**Why.** The collector reads the lab every second and writes `xray-states.js` in the repository folder.
+**Why.** The collector reads the lab every second (`--interval` changes this; Cisco IOL nodes are read less often) and rewrites `xray-states.js` in the repository folder only when the state changes.
 If the lab was destroyed (or a container stopped) while a collector was still running, there is nothing
 left to read. `xray-states.js` is not removed when you stop, so it still holds the last lab you ran until
 the next run rewrites it.

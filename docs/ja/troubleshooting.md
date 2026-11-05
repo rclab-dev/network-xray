@@ -176,7 +176,7 @@ FRR を立て直します (`==> <container>: FRR did not start cleanly, restarti
 `  r1 cannot be read: no answer - showing its last good state as stale` と出て、画面では古い状態に
 最後に読めた時刻の印が付きます。
 
-**わけ。** collector は毎秒ラボを読み、リポジトリのフォルダに `xray-states.js` を書きます。
+**わけ。** collector は毎秒ラボを読み (`--interval` で変えられる・Cisco IOL はもっと間を空ける)、状態が変わった時だけリポジトリのフォルダの `xray-states.js` を書き直します。
 collector が動いている間にラボを消した (またはコンテナが止まった) 時は、読む物がもう残っていません。
 `xray-states.js` は止めても消えないので、次に動かして書き直されるまで、最後に動かしたラボの状態が残ります。
 
