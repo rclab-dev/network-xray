@@ -2,6 +2,23 @@
 
 User-visible changes in each release, newest first. Dates are the release tag dates.
 
+## v1.1.7 — 2026-11-05
+
+- Security: node names are escaped in the DeepDive labels, and `xray.sh` serves only the page files.
+- `xray.sh --check`: checks docker, containerlab, node, the port, the topology and the IOL images, says what to fix, and starts nothing.
+- `xray.sh --attach`: graphs a lab that is already running without redeploying it (changes made by hand are kept); `xray.sh` warns before redeploying a running lab.
+- All command-line tools answer `-h` / `--help`, and an unknown option prints one line and exits.
+- The compose demos listen on `127.0.0.1` only.
+- The Docker image has a healthcheck and also runs with `--read-only --tmpfs /tmp`.
+- Cisco IOS-XE: more `show` output variants are read (timestamp lines, `O*E2`, wrapped route lines, RPKI marks, a default route without mask).
+- The node panel reads the BGP Origin words (IGP / EGP / incomplete).
+- IPv6 addresses are no longer read as IPv4 when matching prefixes.
+- Tests no longer share temp folders or depend on file order, so they pass reliably on busy machines.
+- Replay pages: one shared replay bar (buttons, frame dots, arrow / Space keys) that no longer covers the title.
+- The DeepDive "Powered by" link is plain text.
+- Docs: `SECURITY.md`, `CHANGELOG.md`, Japanese versions of the FAQ, the MCP guide and the troubleshooting page, `docs/dev/likely-questions.md`, a README section on which way to start, and the Japanese README caught up with the English one.
+- New checks: `scripts/release-check.js`, `scripts/check-links.js`, `scripts/check-examples.js` (complete list), `scripts/check-solved-pairs.js`, `scripts/check-example-topologies.js`, and `check-i18n` reads inline pairs and `data-i18n-aria`.
+
 ## v1.1.6 — 2026-11-04
 
 - The collector no longer waits for a slow or stopped router: the others keep updating, and that router keeps its last state until it answers again.
