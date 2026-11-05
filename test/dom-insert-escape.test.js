@@ -154,3 +154,16 @@ test('topology and DeepDive renderers escape node names, roles, loopbacks and ne
   var de = ctx.xrayRenderDeepEngine(cfg, 'topo-node-' + IMG);
   assertNoMarkup(de, 'deep engine');
 });
+
+test('DeepDive of a router with two neighbours (triangle layout) escapes the neighbour names', function () {
+  var ctx = sandbox();
+  var cfg = {
+    topology_type: 'triangle',
+    nodes: [{ id: 'r2', target: true }, { id: IMG }, { id: QUOTE }],
+    networks: [{ name: 'a', members: [{ node: 'r2' }, { node: IMG }] }, { name: 'b', members: [{ node: 'r2' }, { node: QUOTE }] }],
+    xray: { protocol: 'ospf' }
+  };
+  var de = ctx.xrayRenderDeepEngine(cfg, 'topo-node-r2');
+  assertNoMarkup(de, 'deep engine (triangle)');
+  assert.ok(de.indexOf(IMG_ESC) >= 0, 'the neighbour name is shown as text');
+});

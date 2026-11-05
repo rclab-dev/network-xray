@@ -5591,8 +5591,8 @@ function xrayRenderDeepEngine(config, activeTargetId) {
   if (isTriangle) {
     html += '<div class="de-energy el"></div>';
     html += '<div class="de-energy er"></div>';
-    html += '<div class="de-label in">' + leftNode.id + ": ...</div>";
-    html += '<div class="de-label out">' + rightNode.id + ": ...</div>";
+    html += '<div class="de-label in">' + _escapeHtml(leftNode.id) + ": ...</div>";
+    html += '<div class="de-label out">' + _escapeHtml(rightNode.id) + ": ...</div>";
   } else {
     html += '<div class="de-energy el"></div>';
     html += '<div class="de-energy er"></div>';
