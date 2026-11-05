@@ -44,7 +44,7 @@ function lines(text) { return String(text || '').replace(/\r/g, '').split('\n');
 // nx_ios_unparsed: a line a parser could not read is recorded (warn = optional array) instead of guessed.
 // Blank lines, CLI error lines ("% ...", the "^" marker) and --More-- lines are not recorded here:
 // parseWarnings() already reports the last two per command.
-function skipLine(l) { return !String(l).trim() || /^\s*%/.test(l) || /^\s*\^\s*$/.test(l) || /--More--/.test(l); }
+function skipLine(l) { return !String(l).trim() || /^\s*%/.test(l) || /^\s*\^\s*$/.test(l) || /--More--/.test(l) || /^\s*(?:Load for five secs:|Time source is )/.test(l); }
 function unread(warn, cmd, l) { if (warn && !skipLine(l)) warn.push({ cmd: cmd, line: String(l).trim().slice(0, 120) }); }
 var IP = '(\\d{1,3}(?:\\.\\d{1,3}){3})';
 
@@ -215,7 +215,7 @@ function parseRoutes(text, warn) {
   var lenFromHeader = null, cur = null;
   var headRe = new RegExp('^\\s*' + IP + '/(\\d+) is (?:variably )?subnetted');
   // code + optional subcode (IA, E1, E2, N1, N2, L1, L2, ia, su, EX), then prefix[/len]
-  var entRe = new RegExp('^([A-Za-z]\\*?)(?:\\s+(IA|E1|E2|N1|N2|L1|L2|ia|su|EX|\\*))?\\s+' + IP + '(?:/(\\d+))?\\s*(.*)$');
+  var entRe = new RegExp('^([A-Za-z]\\*?)(?:(?:\\s+|(?<=\\*))(IA|E1|E2|N1|N2|L1|L2|ia|su|EX|\\*))?\\s+' + IP + '(?:/(\\d+))?\\s*(.*)$');
   var viaRe = new RegExp('via ' + IP);
   function nexthopsFrom(rest) {
     var nhs = [];
@@ -259,6 +259,7 @@ function parseRoutes(text, warn) {
     if (cur && /^\s+/.test(l) && /via |directly connected/.test(l)) {
       var more = nexthopsFrom(l);
       more.forEach(function (nh) { cur.nexthops.push(nh); });
+      var ad2 = cur.distance == null && /\[(\d+)\/(\d+)\]/.exec(l); if (ad2) { cur.distance = +ad2[1]; cur.metric = +ad2[2]; }
       if (!more.length) unread(warn, 'show ip route', l);
     }
     else if (!/^\s+\S{1,3} - |^Routing Table: /.test(l)) unread(warn, 'show ip route', l);   // legend lines like "       + - replicated route"
@@ -350,7 +351,7 @@ function parseBgpRoutes(text, warn) {
               lpEnd: H.indexOf('LocPrf') + 6, wEnd: H.indexOf('Weight') + 6, path: H.indexOf('Path') };
   var lastPrefix = null, pendingStatus = null, pendingRaw = null;
   for (var k = hi + 1; k < ls.length; k++) {
-    var line = ls[k].trimEnd();
+    var line = ls[k].trimEnd().replace(/^(\s*)[VIN](?=[sdhrSmbfxac=*>i])/, '$1 ');   // RPKI validation code before the status
     if (/--More--/.test(line)) { lastPrefix = null; pendingStatus = null; pendingRaw = null; continue; }   // nx_ios_unparsed: a path after the cut is not the previous prefix's
     if (!line.trim() || /^Total number|^Displayed|^RPKI/.test(line.trim())) continue;
     // Rows are NOT always aligned to the header (some IOS builds print rows 2 chars left of it), so
@@ -375,7 +376,7 @@ function parseBgpRoutes(text, warn) {
     var nhM = [rm[3], rm[3]];
     var prefix = net || lastPrefix;
     if (!prefix) continue;
-    if (prefix.indexOf('/') < 0) prefix = prefix + '/' + classfulLen(prefix);
+    if (prefix.indexOf('/') < 0) prefix = prefix + '/' + (prefix === '0.0.0.0' ? 0 : classfulLen(prefix));
     lastPrefix = prefix;
     // numeric columns: assign each number token by where it ENDS (right-aligned under the header)
     var base = nhStart + rm[3].length;
