@@ -229,9 +229,9 @@ can mix FRR, SR Linux and IOL. Example labs: `examples/q5-ospf-iol`, `examples/q
 - **Login:** containerlab's defaults (`admin` / `admin`); set `NX_IOS_USER` / `NX_IOS_PASSWORD` if yours differ. The password is handed to ssh
   through an askpass file, never on the command line.
 - **What is read** (plain text, every 10 s by default — change it with `NX_IOS_INTERVAL` (seconds)): `show ip ospf neighbor`, `show ip ospf interface` (brief and full),
-  `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show ip protocols`, `show bridge-domain`. ECMP routes, unnumbered
+  `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show ip protocols`, `show bridge-domain`, `show vrf`. ECMP routes, unnumbered
   interfaces (`ip unnumbered Loopback0`) and OSPF on a bridge-domain interface (`BDI`, shown as e.g. `Ethernet0/2 (BDI500)`) are read.
-  **VRFs are not read yet** — only the global routing table is read, so routes and neighbors inside a VRF are not shown (the management VRF is ignored).
+  **VRFs are not read yet** — only the global routing table is read, so routes and neighbors inside a VRF are not shown; a lab with VRFs is told so, with their names (from `show vrf`; the management VRF is ignored).
 - **When something cannot be read** (output cut by `--More--`, a command the image does not know, an empty answer, a line no parser understands) the state carries
   `parse_warnings` and the page shows how many — it does not guess.
 - **Differences from FRR you will see:** IOS's `show ip route` lists only the chosen routes, so the routing table has no "candidate" rows.
@@ -900,8 +900,8 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
   [vrnetlab](https://containerlab.dev/manual/kinds/cisco_iol/) で image を作り、`kind: cisco_iol` のノードの `image:` の行にその名前を書いてください。
 - **ログイン:** containerlab の既定 (`admin` / `admin`)。違う時は `NX_IOS_USER` / `NX_IOS_PASSWORD`。パスワードはコマンドの引数に出しません (ssh の askpass)。
 - **読む物** (文字の出力・既定は 10 秒ごと = `NX_IOS_INTERVAL` (秒) で変えられます): `show ip ospf neighbor`・`show ip ospf interface` (brief と全部)・`show ip interface brief`・
-  `show ip route`・`show ip bgp summary`・`show ip bgp`・`show ip protocols`・`show bridge-domain`。ECMP の経路・unnumbered の IF (`ip unnumbered Loopback0`)・
-  bridge-domain の IF (`BDI`・`Ethernet0/2 (BDI500)` のように出る) の上の OSPF も読みます。**VRF はまだ読みません** — global の経路表だけを読むので、VRF の中の経路やネイバーは出ません (管理の VRF は数えません)。
+  `show ip route`・`show ip bgp summary`・`show ip bgp`・`show ip protocols`・`show bridge-domain`・`show vrf`。ECMP の経路・unnumbered の IF (`ip unnumbered Loopback0`)・
+  bridge-domain の IF (`BDI`・`Ethernet0/2 (BDI500)` のように出る) の上の OSPF も読みます。**VRF はまだ読みません** — global の経路表だけを読むので、VRF の中の経路やネイバーは出ません。VRF のあるラボでは、その名前つきでそう出します (`show vrf` から・管理の VRF は数えません)。
 - **取得・解析できない場合** (`--More--` で出力が途切れた・そのイメージが対応していないコマンド・出力が空・どのパーサーでも解析できない行) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
 - **FRR と違って見える所:** IOS の `show ip route` は選ばれた経路だけを出すので、経路表に「候補」の行は出ません。shutdown した OSPF の IF は赤で描き、OSPF の見出しは up の IF だけを数えます。
 - 実際のラボで試したのは `cisco_iol` だけです。ほかの IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) はまだ読みません。

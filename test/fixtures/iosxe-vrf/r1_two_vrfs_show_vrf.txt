@@ -1,0 +1,5 @@
+  Name                             Default RD            Protocols   Interfaces
+  BLUE                             <not set>             ipv4        Lo9
+                                                                     Lo10
+  RED                              <not set>             ipv4        
+  clab-mgmt                        <not set>             ipv4,ipv6   Et0/0

@@ -1,0 +1,2 @@
+  Name                             Default RD            Protocols   Interfaces
+  clab-mgmt                        <not set>             ipv4,ipv6   Et0/0

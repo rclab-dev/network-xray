@@ -634,7 +634,8 @@ var CMDS = [
   ['bgpSummary', 'show ip bgp summary'],
   ['bgp', 'show ip bgp'],
   ['protocols', 'show ip protocols'],   /* nx_bgp_no_nbr_mark: `router bgp <AS>` with no neighbor prints nothing in show ip bgp summary - this names it */
-  ['bridgeDomain', 'show bridge-domain']   /* nx_ios_bdi: which Ethernet port is in which BDI (optional) */
+  ['bridgeDomain', 'show bridge-domain'],   /* nx_ios_bdi: which Ethernet port is in which BDI (optional) */
+  ['vrf', 'show vrf']   /* nx_ios_vrf_detect: which VRFs exist - only to say they are not read (optional) */
 ];
 var fileOf = function (cmd) { return cmd.replace(/ /g, '_') + '.txt'; };
 function arg(k, d) { var i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; }
@@ -672,7 +673,7 @@ function parseWarnings(texts, opts, unparsed) {
     if (t == null) return;
     if (/--More--/.test(t)) w.push({ cmd: c[1], why: 'paging', note: 'output was cut by --More-- (terminal length 0 did not apply)' });
     var e = /^\s*% (Invalid input|Incomplete command|Ambiguous command)[^\n]*/m.exec(t);
-    if (e && c[0] !== 'bridgeDomain') w.push({ cmd: c[1], why: 'cli_error', note: e[0].trim() });   /* nx_ios_bdi: optional show */
+    if (e && c[0] !== 'bridgeDomain' && c[0] !== 'vrf') w.push({ cmd: c[1], why: 'cli_error', note: e[0].trim() });   /* nx_ios_bdi / nx_ios_vrf_detect: optional shows */
     // "empty" only for commands that always print something (a header): no OSPF neighbours / no BGP routes are real answers
     // (seen on IOL 17.18 with the link shut down, 2026-10-27)
     var _alwaysPrints = c[0] === 'ipInterface' || c[0] === 'route' || (c[0] === 'bgpSummary' && opts.bgpConfigured) || (c[0] === 'ospfInterface' && opts.ospfConfigured);
@@ -685,9 +686,29 @@ function parseWarnings(texts, opts, unparsed) {
     w.push({ cmd: cmd, why: 'unparsed', count: byCmd[cmd].length, note: byCmd[cmd].length + ' line(s) could not be read, first: ' + byCmd[cmd][0] });
   });
   if (texts.__syslog) w.push({ cmd: '(console)', why: 'syslog', note: texts.__syslog + ' syslog line(s) in the middle of the outputs were left out' });
-  if (/\bVRF\b|vrf forwarding|\(vrf /i.test(texts.ipInterface || '') || /Routing Table: /.test(texts.route || ''))
+  var _vrfs = parseVrfs(texts.vrf);   /* nx_ios_vrf_detect */
+  if (_vrfs.length) w.push({ cmd: 'show vrf', why: 'vrf', vrfs: _vrfs, note: 'VRFs other than the global table are not read yet: ' + _vrfs.join(', ') });
+  else if (/\bVRF\b|vrf forwarding|\(vrf /i.test(texts.ipInterface || '') || /Routing Table: /.test(texts.route || ''))
     w.push({ cmd: 'show ip route', why: 'vrf', note: 'VRFs other than the global table are not read yet' });
   return w;
+}
+
+// nx_ios_vrf_detect: `show vrf` -> the names of the VRFs a user made (the management VRF is left out).
+//   Name                             Default RD            Protocols   Interfaces
+//   BLUE                             <not set>             ipv4        Lo9
+//                                                                      Lo10        <- more interfaces of the row above
+//   clab-mgmt                        <not set>             ipv4,ipv6   Et0/0
+// A row starts with a name under the header's Name column; a line that is blank there continues the row above.
+var MGMT_VRF = /^(clab-mgmt|mgmt-intf|mgmt-vrf|mgmt|management)$/i;
+function parseVrfs(text) {
+  var out = [], col = -1;
+  String(text || '').replace(/\r/g, '').split('\n').forEach(function (l) {
+    if (col < 0) { var h = /^(\s*)Name\s+Default RD/.exec(l); if (h) col = h[1].length; return; }
+    if (l.length <= col || /\s/.test(l.charAt(col))) return;
+    var name = (/^\S+/.exec(l.slice(col)) || [])[0];
+    if (name && !MGMT_VRF.test(name) && out.indexOf(name) < 0) out.push(name);
+  });
+  return out;
 }
 
 // containerlab node -> its management address (labels set by containerlab; works for any name prefix).
@@ -932,7 +953,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseInterfaces: parseInterfaces, parseBridgeDomains: parseBridgeDomains, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
     parseBgpRoutes: parseBgpRoutes, parseAll: parseAll, collectFromIosxeText: collectFromIosxeText,
     normBgpState: normBgpState, parseOspfInterfaceDetail: parseOspfInterfaceDetail, parseOspfTraffic: parseOspfTraffic,
-    annotateOspfMismatch: annotateOspfMismatch, splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, CMDS: CMDS,
+    annotateOspfMismatch: annotateOspfMismatch, splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, parseVrfs: parseVrfs, CMDS: CMDS,
     SAFE_NAME: SAFE_NAME, SAFE_HOST: SAFE_HOST, makeAskpass: makeAskpass,
     run: run };   /* run(): a set of show outputs -> one state (the parser tests call it) */
 }
