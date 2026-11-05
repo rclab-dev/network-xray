@@ -382,12 +382,15 @@ window.__xrayGraphBoot = function () {
     /* nx_states_sig (v1.1.8): a poll first reads the small xray-states.sig.js and loads the whole xray-states.js only
        when the collector wrote it again (run / gen moved): a quiet poll downloads a few hundred bytes and stringifies
        nothing. The open router is redrawn only when some router's state changed (sig.nodes), as before. No sig file
-       (an older collector) -> the whole file every poll, compared as before. A hidden tab does not poll. */
-    var sigOk = null, sigKey = '', sigNodes = '';
-    function loadStates(mode){   // mode: '' = compare as before, 'redraw' = a router changed, 'quiet' = only the problem / validate part
+       (an older collector) -> the whole file every poll, compared as before. A hidden tab does not poll.
+       A restarted collector (new run) always redraws: its counters start again and can match the old ones. The sig is
+       taken as seen only once xray-states.js has loaded, so a failed load is tried again on the next poll. */
+    var sigOk = null, sigKey = '', sigNodes = '', sigRun = '';
+    function loadStates(mode, onLoaded){   // mode: '' = compare as before, 'redraw' = a router changed, 'quiet' = only the problem / validate part
       var s = document.createElement('script');
       s.src = base + 'xray-states.js?t=' + (+new Date());
       s.onload = function(){
+        if (onLoaded) onLoaded();
         try {
           var cur = mode ? '' : JSON.stringify(window.LIVE_STATES || {});
           if (mode === 'redraw' || (!mode && cur !== window.__xrayLastStates)) {
@@ -416,9 +419,8 @@ window.__xrayGraphBoot = function () {
         sigOk = true;
         var k = L.run + ':' + L.gen, nd = JSON.stringify(L.nodes || {});
         if (k === sigKey) return;
-        var mode = nd !== sigNodes ? 'redraw' : 'quiet';
-        sigKey = k; sigNodes = nd;
-        loadStates(mode);
+        var run = String(L.run), mode = (run !== sigRun || nd !== sigNodes) ? 'redraw' : 'quiet';
+        loadStates(mode, function(){ sigKey = k; sigNodes = nd; sigRun = run; });
       };
       g.onerror = function(){ g.remove(); sigOk = false; loadStates(''); };
       document.head.appendChild(g);

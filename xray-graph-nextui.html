@@ -817,8 +817,10 @@ window.__initNeXtOverview = function (data) {
      when the collector wrote it again (run / gen moved): a quiet poll downloads a few hundred bytes and stringifies
      nothing, and still calls cb (the Solved / validate ticks keep running). The open router is redrawn only when some
      router's state changed (sig.nodes). No sig file (an older collector), or an "xray-refresh" message from the picker
-     (__xrayForceFull) -> the whole file, compared as before. */
-  var _sigOk = null, _sigKey = "", _sigNodes = "";
+     (__xrayForceFull) -> the whole file, compared as before. A restarted collector (new run) always redraws: its
+     counters start again and can match the old ones. The sig is taken as seen only once xray-states.js has loaded,
+     so a failed load is tried again on the next refresh. */
+  var _sigOk = null, _sigKey = "", _sigNodes = "", _sigRun = "";
   window.__xrayLiveRefresh = function(cb){
     if (window.__xrayForceFull || _sigOk === false) { window.__xrayForceFull = false; return _xrayLoadStates(cb, ""); }
     var g = document.createElement("script");
@@ -830,17 +832,17 @@ window.__initNeXtOverview = function (data) {
       _sigOk = true;
       var k = L.run + ":" + L.gen, nd = JSON.stringify(L.nodes || {});
       if (k === _sigKey) { if (cb) cb(true); return; }
-      var mode = nd !== _sigNodes ? "redraw" : "quiet";
-      _sigKey = k; _sigNodes = nd;
-      _xrayLoadStates(cb, mode);
+      var run = String(L.run), mode = (run !== _sigRun || nd !== _sigNodes) ? "redraw" : "quiet";
+      _xrayLoadStates(cb, mode, function(){ _sigKey = k; _sigNodes = nd; _sigRun = run; });
     };
     g.onerror = function(){ g.remove(); _sigOk = false; _xrayLoadStates(cb, ""); };
     document.head.appendChild(g);
   };
-  function _xrayLoadStates(cb, mode){   // mode: "" = compare as before, "redraw" = a router changed, "quiet" = only the problem / validate part
+  function _xrayLoadStates(cb, mode, onLoaded){   // mode: "" = compare as before, "redraw" = a router changed, "quiet" = only the problem / validate part
     var s = document.createElement("script");
     s.src = (window.__xrayStatesBase || "") + "xray-states.js?t=" + Date.now();   // cache-bust; base=static/ (clab graph serves static-dir under /static/)
     s.onload = function(){
+      if (onLoaded) onLoaded();
       /* nx_live_poll (2026-10-08): nothing changed since the last load -> no redraw (no idle flicker; picker + poll never double-draw) */
       var _sig = ""; if (!mode) { try { _sig = JSON.stringify(window.LIVE_STATES || {}); } catch (_e) {} }
       if (mode === "quiet" || (!mode && _sig && _sig === window.__xrayLastStates)) { s.remove(); if (cb) cb(true); return; }
