@@ -124,9 +124,9 @@ Anyone who can reach the port. There is no authentication of any kind.
 
 ## 11. Does it work offline / air-gapped?
 
-Running it does.
+Running it does. network-xray has no telemetry, no analytics and no account; the page loads only from the graph server you start (the one exception is an optional preview video, fetched only when you press its button), and [docs/network.md](../network.md) lists every connection.
 
-- **No outside requests:** there are no CDN scripts, web fonts or analytics; CSS, JS and fonts are bundled (`css/`, `js/`, `fonts/`). The only external URLs are ordinary links (RFCs, the repo, the "Powered by" badge).
+- **No outside requests on load:** there are no CDN scripts, web fonts or analytics; CSS, JS and fonts are bundled (`css/`, `js/`, `fonts/`). The other external URLs are ordinary links (RFCs, the repo, the "Powered by" link). `scripts/check-no-external.js` checks this (a lint of the known kinds of load, not a proof).
 - **Building the image needs network access:** `docker/Dockerfile` downloads containerlab from GitHub.
 - **Without any lab:** `--fixtures` / `--from-dir` and `scripts/xray-query.js` work on saved state files.
 
