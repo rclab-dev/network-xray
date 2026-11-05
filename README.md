@@ -689,6 +689,8 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 **BGP はなぜこの経路を選んだのか。** network-xray は、ネットワークのラボで各ルータが選んだ経路、ほかの候補、その経路を選んだ理由を表示します。containerlab / netlab のラボの FRR・Nokia SR Linux・Cisco IOL のルータの今の状態を読み、ブラウザに描きます。
 
 <!-- nx_readme_entry (2026-10-20) -->
+![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
+
 ### ▶ [記録済み (recorded) Best-Path Decision デモを開く](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — ルータ不要
 
 本物の FRR / containerlab のラボで記録した物を、ブラウザで再生します。見るところは 3 つ:
@@ -717,6 +719,12 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 > **始める前に:** ご自身の Codespaces の枠を使います (使い終わったら codespace を削除してください)。画面はポート 8600 で転送されます。Codespaces の転送は、公開に切り替えない限り本人 (GitHub にログインした人) だけが見られます — 公開にしないでください。
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/rclab-dev/network-xray?quickstart=1)
+
+**ブラウザで試す** — このボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。インターフェースを止めると (`sudo docker exec clab-q21-bgp-lp-r1 vtysh -c 'conf t' -c 'interface eth2' -c 'shutdown'`)、数秒で図が自分で書き換わります。
+- ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。**
+- コンテナのノード (FRR など) だけ動きます — Codespaces では入れ子の仮想化ができません。
+
 **次に:** [自分の containerlab のラボで](#クイックスタート-containerlab-で例題を動かす) · [netlab で](#netlab-tool-ja) · [対応範囲](#スコープと保守)
 
 **ヒントと解説付きのライブ (live) ラボ:** 同じ X-Ray が RouteCrushLab で動きます — [Q21 をゲストで試す](https://routecrushlab.com/lab/tl/q21?try=guest&lang=ja&ref=oss) (登録不要・1 分以内にラボが立ちます)
@@ -730,11 +738,6 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
   - netlab の `validate:` の検査は `netlab validate` と同じ読み方: 宛先ごとの形 (`show bgp ipv4 unicast <宛先> json`) で、勝った経路は `bestpath.overall`。
   - SR Linux は `sr_cli 'info from state … | as json'`。
   - Cisco IOS-XE (containerlab の kind `cisco_iol`) は、SSH 経由でテキスト形式の `show` コマンド出力を取得します — [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol-1) を見てください。
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/rclab-dev/network-xray?quickstart=1)
-
-**ブラウザで試す** — このボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。
-- ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。** コンテナのノード (FRR など) だけ動きます (Codespaces では入れ子の仮想化ができないため)。
 
 **動作確認した版** (これらだけ確認済み。ほかの版も動く可能性があります):
 
@@ -761,15 +764,15 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストールされる経路)を描きます。操作は
 `xrayCore` API を数回呼び出すだけです。
 
-> これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss) を動かしているのと同じ描画コア**で、
+> これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=ja) を動かしているのと同じ描画コア**で、
 > フォークではありません — 共有モジュールとして切り出し、本体と食い違わないようにしています。
 
 **実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの
 FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
 
 **シミュレータではなく記述的 (descriptive)**: 入力で報告された状態を描くだけで、経路の計算もプロトコルの実行も
-しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念なので、
-FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (混ざったラボも同じように描けます)。Arista … も同じ小さなアダプタの形で載せられます。
+しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念です。
+FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みで (混ざったラボも同じように描けます)、Arista などは同じ種類の小さなアダプタが要ります。
 
 **現状:** containerlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。
 
@@ -792,12 +795,25 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 
 ## 見る
 
+**BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** 2 つの上流が `8.8.8.0/24` を違う Local Preference で広告します。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常に FRR 自身が best にした経路 (`bestpath`) です。** 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
+
+![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
+
+**記録した OSPF のラボも** — OSPF が Full になり (緑のトンネル・LSDB 同期の表示)、リンクが落ちてルータが孤立し (経路が消え、パケットは捨てられる)、その後に戻って収束し直します:
+
+![OSPF の隣接が Full になり、リンクが落ちて経路が消え、その後に復旧する — 本物の FRR/containerlab のラボで記録](docs/ospf-fail-recover.gif)
+
 ![ルータの中 — DeepDive 円柱](docs/deepdive.png)
 
 **DeepDive 円柱**(OSPF 隣接が Full:hello・ネイバー状態からの LSDB 同期表示・報告された経路)。
 **▶ 報告された状態を貼って試す(インストール不要)**:ルータの `show` 出力を貼る → トポロジが描かれ、ルータをクリックすると
 中が見える — **<https://rclab-dev.github.io/network-xray/>**(貼って試すなら
 [frr-paste.html](https://rclab-dev.github.io/network-xray/frr-paste.html))。
+
+**▶ 記録したラボの収束と復旧を見る** — 動いている FRR/containerlab のラボで取った場面を、バックエンド無しでブラウザで再生します (平常 → リンク断 / ルータ孤立 → 張り直し → 収束):
+**[Best-Path Decision](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html)** (eBGP: LocPref の競合 → なぜ 1 つが勝つか) ·
+**[OSPF の再生](https://rclab-dev.github.io/network-xray/demo/)** ·
+**[BGP の再生](https://rclab-dev.github.io/network-xray/demo/index-bgp.html)** (eBGP のセッション・AS パス・BGP の表)。
 
 <!-- nx_readme_quickstart (2026-10-07) -->
 ## クイックスタート: containerlab で例題を動かす
@@ -888,7 +904,8 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 
 ## よくある質問 / 困ったとき
 
-端末や画面に出た文と、その時にする事は [Troubleshooting](docs/troubleshooting.md) (英語) にまとめています。
+はじめての方は [FAQ](docs/ja/faq.md) から: 何を読むか・何をしないか・ほかの道具との違い・セキュリティ。
+端末や画面に出た文と、その時にする事は [困ったとき](docs/ja/troubleshooting.md) にまとめています。
 
 | 症状 | 対処 |
 |---|---|
@@ -900,7 +917,7 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 | ノードの多いラボで collector が重い | ルータを読む間隔を空ける: `./xray.sh --interval 3 <ラボ>.clab.yml` (秒・既定は 1)。遅いルータや止まったルータがあっても、ほかのルータは待たされません (そのルータは前の状態のまま印を付け、次の回にまた読む)。`docker run` / netlab のコンテナは既定で 2 秒ごと。変える時は `--topo …` の後に `--interval N`。`scripts/scale-bench.js` で、大きさを変えた合成のラボで Node の処理の時間を測れます。 |
 | `docker pull` が "toomanyrequests" (回数の上限) で失敗する | Docker Hub はログインなしの pull に回数の上限があり、IP アドレスごとに数える — 教室や会社など、同じ回線から大勢が一斉に始めると当たることがある。先に `docker login` しておく (無料のアカウントで上限が上がる)。 |
 | 起動直後に `zebra is not running` / ルータに IP や経路が無い | 例題のラボ・`run.sh`・`xray.sh` は、この時に自分で FRR を立て直します (最大 3 回・`containerlab deploy` だけで立てた時も)。v1.0.0 / v1.0.1 のパッケージや自分で作ったラボでは、手で `docker exec clab-<ラボ名>-<ノード> /usr/lib/frr/watchfrr.sh restart all`。わけ: まれに (FRR 8.4 の試しでルータの起動 100 回に数回)、コンテナの起動直後に zebra が落ちて (何も出さずに落ちることもある)、ルータに IP アドレスや経路が入らないまま残ります。FRR の起動時の不具合で、操作の誤りではありません。 |
-| ルータの中が空 / 経路が出ない | 30〜60 秒待つ (OSPF/BGP は立ち上がりに時間がかかる)。空のままなら `docker ps` (ルータが動いているか) と `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`。 |
+| ルータの中が空 / 経路が出ない | 30〜60 秒待つ (OSPF/BGP は立ち上がりに時間がかかる)。空のままなら `docker ps` (ルータが動いているか) と `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`。次に、ルータに直接聞く: `docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'` (または `show ip ospf neighbor json`)。それも空なら、ルータにはまだ何も無い。ルータは答えるのに画面が空のままなら、ログ (`docker logs <network-xray のコンテナ> 2>&1 | tail -30`: 読むコンテナ `clab-<lab>-*` の名前が出る) を見て、両方を付けて issue を開いてください。 |
 | 前のラボが残っている | `sudo containerlab inspect --all` で一覧、`sudo containerlab destroy -t <lab.clab.yml> --cleanup` で消す。 |
 | WSL2 | Docker Desktop (WSL2 バックエンド) か WSL2 の中の Docker で動く。PowerShell ではなく Linux のシェルで打つ。 |
 | ラボを立て直したら直しが消えた | 直しは動いているコンテナの中だけに残る。ラボを立て直す(`./xray.sh`・`containerlab deploy`)と壊れた初期の設定から始まる。ルータの中で FRR だけを立て直しても、`write memory` の後でも初期の設定に戻ることがある。 |
@@ -918,6 +935,13 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 | `ip address 10.0.0.1 255.255.255.0` | `ip address 10.0.0.1/24` |
 | `passive-interface eth1` (router の下) | `ip ospf passive` (`interface eth1` の下) |
 | `show cdp neighbors` / `show arp` / `show mac address-table` | FRR には無い (ルーティングのソフトなので) |
+
+## ライブで試す
+
+同じ X-Ray の可視化が **[RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=ja)** で動いています — ブラウザで動かす FRR のトラブルシュートのラボで、ネットワークが*なぜ*そう動くかを見られます。インストール不要・登録不要。
+
+→ **[BGP の best path のラボから始める](https://routecrushlab.com/lab/tl/q21?try=guest&lang=ja&ref=oss)**
+2 つの ISP が同じ経路を広告します — なぜ遅い方を通るのかを見て、直してください。
 
 ## 動かす
 
@@ -964,6 +988,8 @@ view.openDeepDive();                                      // ルータの中へ
 ノードの X-Ray DeepDive** が開きます:報告された OSPF/BGP 隣接・LSDB 表示・インストール経路。LSDB 表示は報告された OSPF/OSPFv3 経路のプレフィックスを使い、無ければローカルのインターフェースのサブネットと解決した宛先を使います。LSDB 全体を読んではいません (SR Linux だけは OSPF のリンク状態データベースから読みます)。隣が何台あっても、
 そのノードの**リンクを全部いっぺんに**描き、どのトンネルも全体図でその相手がいる向きから入ります(リンクの名前は置ける所だけに出します)。
 
+![containerlab deploy のあと graph --template xray-graph.html — ノードをクリックするとルータの中 (OSPF/BGP・LSDB・インストール経路) が見える。本物の containerlab/FRR のラボで記録](docs/clab-workflow.gif)
+
 ```
 containerlab graph \
   --topo lab.clab.yml \
@@ -992,7 +1018,7 @@ DeepDive エンジン(skin・routing table・Best-Path Decision)は共通で、�
 NeXt UI Toolkit(**EPL-1.0**・`js/` `css/` `fonts/` に同梱し `THIRD_PARTY_NOTICES.md` に帰属明記)を bundle します。
 `xray-graph.html` は純 MIT のままです。
 
-**混在ラボ:** `clab-xray-collect.js` は `VENDORS` 表で振り分けます。SR Linux の kind は `clab-srl-collect.js` (`sr_cli`)、`cisco_iol` は `clab-iosxe-collect.js` (SSH)、その他のノードは、FRR 用の `clab-collect.js` (`vtysh`) で収集を試みます。FRR の様に答えないノード (Linux のホストなど) は図には出ますが、読みません。3 つの collector は同じ `state` の形を使い、1 つの `window.LIVE_STATES` に入ります。SR Linux 1 台を手で渡すには `srl-paste.html` に `sr_cli … | as json` の出力を貼れます。
+単独のグラフではなく、自分の GUI の中の欄として使いたい時は → [自分のツールに DeepDive を埋め込む](#自分のツールに-deepdive-を埋め込む)
 
 **live state(任意):** `clab-collect.js` は、稼働中ラボの1ノードの実 FRR 状態を読み
 (`docker exec clab-<lab>-<node> vtysh -c "show … json"`)、DeepDive にそのまま渡せる `state` を出す
@@ -1010,6 +1036,91 @@ DeepDive を駆動)。JSON の形は FRR 10.7.1 (netlab 26.10 の既定) でも�
 `interface.json`・`route.json`・`bgp-summary.json`・`bgp.json`。`frr-collect.js --from-dir` の `show_ip_….json` の名前ではありません。
 ほかの名前のファイルは無いものとして読みます)、raw 出力を issue で報告ください。*(collector 無しでもテンプレは合成 state で
 描画します — トポロジは正しく、隣接は健全と仮定。)*
+
+**全体を一度に (任意):** `clab-xray-collect.js` は上のことを*全部の*ノードに一度に行います — トポロジのリンクから各ノードの隣接を求め、ノードごとに `clab-collect.js` を動かし、`xray-states.js` (`window.LIVE_STATES`) を資産の隣に書きます。`xray-graph.html` はこれがあれば自動で読み、各ノードの DeepDive に**報告された**状態を出します。無ければ合成の雛形に戻ります (足すだけの手順です):
+
+```
+node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ>     # writes <dir>/xray-states.js
+containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <この gallery ディレクトリ> -s 127.0.0.1:8080
+```
+**混在ラボ:** `clab-xray-collect.js` は `VENDORS` 表で振り分けます。SR Linux の kind は `clab-srl-collect.js` (`sr_cli`)、`cisco_iol` は `clab-iosxe-collect.js` (SSH)、その他のノードは、FRR 用の `clab-collect.js` (`vtysh`) で収集を試みます。FRR の様に答えないノード (Linux のホストなど) は図には出ますが、読みません。3 つの collector は同じ `state` の形を使い、1 つの `window.LIVE_STATES` に入ります。SR Linux 1 台を手で渡すには `srl-paste.html` に `sr_cli … | as json` の出力を貼れます。
+
+**ライブ (任意):** `--watch` を付けると collector は一定の間隔で集め直し、何か変わった時だけ `xray-states.js` を書き換えます。`window.LIVE_WATCH` も立てるので、グラフは更新を問い合わせ、**開いているノードをその場で**書き換えます (`applyState`・ちらつかず、状態が動いた時だけ描き直す)。`--watch` 無しなら静的なスナップショットで、問い合わせもしません:
+
+```
+node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --watch &
+containerlab graph --topo lab.clab.yml --template xray-graph.html --static-dir <この gallery ディレクトリ> -s 127.0.0.1:8080
+# ラボでリンクを止める → 開いているノードの DeepDive が数秒で変わる。
+```
+**管理インターフェースを隠す (任意):** containerlab は全ノードに管理網 (既定 `172.20.20.0/24`) を付けます。`--exclude-mgmt` を付けると collector がその IF を外し、DeepDive にはトポロジのデータ用リンクだけが出ます。既定以外の管理網なら `--mgmt-subnet <cidr>` を渡します。**IF の名前ではなくサブネット**で見分けるので、`eth0` をデータ用に使うラボもそのままです。既定は無効 (何も隠さない):
+
+```
+node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exclude-mgmt
+```
+## 1 台の欄 — 「Node Properties」 タブにそのまま入れる
+
+全体図が要らない時は、`xray-node-panel.js` が**1 台**のコントロールプレーンの表 — **経路表 + BGP の表 + Best-Path Decision** — を、**位置に依存しない**素の欄として描きます (D3 も座標も依存も無し)。レイアウトを自分で決められないトポロジの GUI の隣に置く用 — 例えば **containerlab / vscode-containerlab のノードの欄**: 利用者がノードを選んだら、そのノードの状態を入れると、グラフには出ない「ルータの中」が見えます。
+
+```html
+<script src="xray-node-panel.js"></script>
+<div id="xray-panel"></div>
+<script>
+  // nodeState = clab-collect.js が 1 ノード分出すオブジェクト (DATA-CONTRACT.md 参照)
+  XrayNodePanel.render(document.getElementById('xray-panel'), nodeState);
+
+  // 小さな図も欲しい時は、経路の矢印をクリックできるノードの図を足す:
+  XrayNodePanel.render(document.getElementById('xray-panel'), nodeState, { figure: true });
+</script>
+```
+- **位置に依存しない:** グラフの座標を読まないので、ノードがどこにあっても同じ出力 — ノードを自由に動かす時に向きます。
+- **`{ figure: true }`:** ノードを箱で描く (RoutingEngine の円・IF・円の中の緑の転送の矢印)。経路表の行をクリックするとその宛先の出口 IF へ矢印が向く。リンクは**灰色の物理線**、隣接が上がっていればその上に**プロトコルのトンネル** (**OSPF は緑・BGP は紫**、down / 無しは灰色)。省くと表だけ。
+- **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** トポロジの JSON / TopoViewer の注釈の座標を渡すと、各リンクを**相手への本当の角度**で描く (図がグラフと合う)。`positions` が無ければ扇形。
+- **DeepDive と同じ Best-Path の順** (Weight → LocPrf → AS-Path → Origin → MED) = *なぜその経路が勝ったか*を同じように説明します。
+- **データ:** `clab-collect.js` が出す `routing_table`・`bgp_routes`・`route_resolution` (もう出している物)。
+- **テーマ:** 色はすべて CSS 変数 (`--xnp-bg`・`--xnp-accent`・`--xnp-ok` …・既定は暗色)。`.xnp-root` で上書きして自分の UI に合わせる、例 `--xnp-bg: var(--vscode-editor-background)`。
+- **動く例:** `node-panel.html` (ノードとテーマを選べる・バックエンド無し)。
+
+## 全体図のオーバーレイ — グラフ全体をライブで
+
+`xray-topo-overlay.js` は**全体図そのもの**をライブのコントロールプレーンの絵にします (1 台の欄は 1 台の*中*を、こちらは*全部をまたいで*見る):
+
+1. **リンクを隣接で色分け** — OSPF Full = 緑のトンネル・BGP Established = 紫のトンネル・セッション無し = 灰色の破線。ラボが収束する様子やリンクが切れる様子を一目で見られます。
+2. **宛先をグラフの上でたどる** — 宛先を選んで送信元のノードをクリックすると、各ルータが報告する経路表 (最長一致) から**推定した経路**が 1 ホップずつ矢印で光ります。経路の無いルータは **✕ DROP**。最後のホップが接続 (leaf) の IF から出す時は、**宛先の網を小さなノードで描き**、最後の矢印がそこに届く — **DELIVERED** (報告された経路表からの推定で、パケットの試験ではありません)。リンクを切ると経路が変わります — 集めた状態が変わったからです。
+
+```html
+<script src="xray-topo-overlay.js"></script>
+<div id="xray-topo"></div>
+<script>
+  // states = clab-xray-collect.js の window.LIVE_STATES ({ r1:{…}, r2:{…} });
+  // positions = トポロジの JSON / TopoViewer の注釈から取ったノードの座標。
+  XrayTopoOverlay.render(document.getElementById('xray-topo'), { states, positions });
+</script>
+```
+- **そのまま入れられ・依存なし:** 素の DOM + SVG・D3 無し。各ノードの `<peer>_iface` から辺を求めるので、collector が出すノードごとの状態だけを渡せばよい (辺の一覧は要らない)。
+- **推定した経路:** 各ルータが報告する経路表 (`routing_table`・最長一致) をたどります。障害の後も含め、集めた経路が変わると変わります。
+- **テーマ:** 色はすべて CSS 変数 (`--xto-ospf`・`--xto-bgp`・`--xto-trace` …) を `.xto-root` で (1 台の欄と同じ仕組み) — 自分の UI / VS Code のテーマの変数に合わせる。
+- **`{ draggable: true }`:** ノードをドラッグで動かせる (containerlab の TopoViewer のように)。動かさないクリックは宛先のたどりの起点を変えるだけ。`onMove(name, {x,y})` を渡すと新しい座標を自分のトポロジの注釈に保存できる。タッチも動く (pointer events)。
+- **動く例:** `topo-overlay.html` (場面とテーマを選べる・ワンクリックでリンクを切る・ドラッグできる)。
+
+### ノードをクリック → 中を見る (2 つを組み合わせる)
+
+オーバーレイと 1 台の欄は一緒に使う作りです: `onSelect(name, state)` がノードのクリック時 (と既定のノードで 1 回) に呼ばれるので、`XrayNodePanel.render` につなぐと全体図が**クリックで中を見られる道具**になります — 左に全体図、右に選んだルータの**経路 / BGP / Best-Path + 図**。「Node Properties」 タブと同じ形です:
+
+```html
+<script src="xray-topo-overlay.js"></script>
+<script src="xray-node-panel.js"></script>
+<div id="graph"></div><div id="detail"></div>
+<script>
+  var positions = { r1:{x,y}, r2:{x,y}, … };          // トポロジの JSON / 注釈から
+  XrayTopoOverlay.render(document.getElementById('graph'), { states, positions }, {
+    draggable: true,
+    onSelect: function (name, state) {                 // ← グラフのノードをクリック
+      XrayNodePanel.render(document.getElementById('detail'), state, { figure: true, positions });
+    }
+  });
+</script>
+```
+両方を同じ `clab-collect.js` の状態が動かすので、そろえる物はありません。`onMoving(name, {x,y})` (ドラッグ中ずっと呼ばれる) で詳細を描き直すと、図の**IF の角度がドラッグに追いかけます**。**動く例:** `topo-explorer.html` (全体図と詳細が並ぶ・ドラッグに追いかける・リンク断の場面)。
 
 ## 何に使えるか
 
@@ -1049,6 +1160,77 @@ ping/パケットのアニメはこれらのデモでは非表示(通信内容�
 **npm パッケージ・ES Module・TypeScript 型はまだありません** — バンドラ依存ではなく埋め込み第一
 (ブログ記事・ダッシュボード・社内ツール)。ESM/型が必要ならフォークして包んでください。
 
+## スクリプトや AI アシスタントから問い合わせる
+
+`scripts/xray-query.js` はブラウザ無しでラボの状態に答えます。読むだけ (ルータには接続しない) で、JSON を 1 つ出します。入力は collector が書く `state_<node>.json` かそのディレクトリ (`test/fixtures/<lab>/`)、`clab-xray-collect.js` が書く `xray-states.js`、または保存した FRR の `show … json` のディレクトリ (`frr-collect.js --from-dir` の並び)。
+
+```
+node scripts/xray-query.js state test/fixtures/iosxe-q15
+node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
+```
+`state` はノード・リンク・OSPF の隣接・BGP のセッション (ここでは一部省略):
+
+```json
+{
+  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "bgp_established": 4, "bgp_total": 4 },
+  "ospf_adjacencies": [ { "node": "r1", "neighbor_id": "2.2.2.2", "iface": "Ethernet0/1", "state": "Full", "role": "DR", "peer": "r2" } ],
+  "bgp_sessions": [ { "node": "r1", "peer_ip": "2.2.2.2", "remote_as": 65001, "type": "iBGP", "state": "Established", "established": true } ]
+}
+```
+`why` はノードの宛先の BGP の最良経路と、一緒に保存された理由 (Best-Path の欄と同じ: FRR 自身の `selectionReason`。Cisco IOS-XE では collector が表示の列から求め、`reason_source` がどちらかを示す)。理由が無い時は `reason` が `null` で `note` が付く — 推測しない (一部省略):
+
+```json
+{
+  "node": "r1", "prefix": "8.8.8.0/24", "paths": 1,
+  "best": { "next_hop": "2.2.2.2", "as_path": "65002", "status": "*>", "local_pref": 100, "origin": "IGP", "best": true },
+  "reason": "First path received",
+  "candidates": [ "…every path for the prefix…" ]
+}
+```
+宛先が複数の VRF にある時は 5 つ目の引数に VRF 名 (`why <dir> r1 10.0.0.0/24 red`)。`--format table` で JSON の代わりに表 (`--color` で端末に色)。ファイルが無い・ノードや宛先が不明・引数の数が違う時は `{"error": "..."}` を出して終了コード 2。
+
+### MCP サーバ (stdio)
+
+`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。ツール: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors` と `bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
+
+```json
+{
+  "mcpServers": {
+    "network-xray": {
+      "command": "node",
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+    }
+  }
+}
+```
+Claude Code では `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js` (Windows は `C:\...\scripts\xray-mcp.js` のパス)。`--scope project` で足すと、起動の前に 1 度確認されます。
+
+詳しく (`path` に渡せるファイル・`xray.sh` で動かしたラボ・ほかのクライアント): [docs/ja/mcp.md](docs/ja/mcp.md)。
+
+例:「use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15」「r1 はなぜ 8.8.8.0/24 にその経路を選ぶ?」「r1 は 8.8.8.8 にどの経路を使う?」。相対パスはサーバの作業ディレクトリから解決するので、絶対パスが確実です。
+
+## 自分のツールに DeepDive を埋め込む
+
+X-Ray のノードごとの **DeepDive** は、ほかの UI (containerlab の GUI・NOC のダッシュボード・社内ツール) に**共同開発なしで**入れられる部品です。1 ノードの `state` を渡すと、ルータの中の図を描きます。約束はそれだけです。
+
+```html
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script>
+<div id="topo"></div>
+<div class="xray-deep-engine"></div>   <!-- DeepDive の置き場。全体図を自分で持っているなら #topo は隠す -->
+
+<script>
+  var view = xrayCore.renderTopology('#topo', config, { topology });
+  // *自分の* UI でノードが選ばれたら、そのノードの state を X-Ray に渡す:
+  view.openDeepDiveFor('r1', stateForR1);   // state = show コマンド 1 回分 — DATA-CONTRACT §4
+  view.startPolling(() => fetch('/state/r1').then(r => r.json()), 3000);  // …ライブにする
+</script>
+```
+**`state` の出どころは自由** — 決まった形を出せれば何でも。containerlab / FRR なら **`clab-collect.js`** が `vtysh … json` からノードごとに作ります (経路・OSPF/BGP の隣接・インストールされた next-hop)。ほかのベンダーも `show` の出力を同じように対応付けます (DATA-CONTRACT の FRR↔Cisco の表)。
+
+**全体図の GUI を既に持っている** (containerlab の `graph`・VS Code の画面など) なら、それはそのまま — X-Ray に要るのは DeepDive の置き場 (`.xray-deep-engine`) とノードごとの `state` だけ。全体図を補うもので、置き換えるものではありません。
+
+<!-- rcl-readme-ja-catchup-20261104 -->
 ## スコープと保守
 
 - **記述レンダラであってシミュレータではない** — 与えた状態を描くだけ。経路計算もプロトコル実行もしない。
