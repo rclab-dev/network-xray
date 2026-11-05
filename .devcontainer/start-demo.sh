@@ -11,6 +11,8 @@ LOG=/tmp/network-xray
 mkdir -p "$LOG"
 say() { echo "[$(date '+%F %T')] $*" | tee -a "$LOG/start.log"; }
 say "start-demo.sh (${1:-start}) as $(id -un), in $PWD"
+missing() { say "ERROR: $1 not found - the demo cannot start. $2"; exit 1; }
+for t in flock setsid timeout; do command -v "$t" >/dev/null 2>&1 || missing "$t" "(util-linux / coreutils)"; done
 
 # already serving? then there is nothing to do
 if timeout 2 bash -c 'exec 3<>/dev/tcp/127.0.0.1/8600' 2>/dev/null; then
@@ -38,14 +40,17 @@ if ! command -v node >/dev/null 2>&1; then
     [ -x "$d/node" ] && { export PATH="$d:$PATH"; break; }
   done
 fi
+command -v node >/dev/null 2>&1 || missing node "(the devcontainer node feature)"
+command -v containerlab >/dev/null 2>&1 || missing containerlab "(https://containerlab.dev/install/)"
+command -v docker >/dev/null 2>&1 || missing docker "(docker-in-docker)"
 
 # --foreground: stay in the foreground (run it by hand in a terminal to watch the demo; it stops with the terminal);
 # the lock (fd 9) is held by this shell until the demo ends.
 if [ "${2:-}" = "--foreground" ]; then
   say "network-xray is starting on port 8600 (Ports tab) - about 2-3 minutes. Log: $LOG/demo.log"
   for i in $(seq 1 90); do $SUDO docker info >/dev/null 2>&1 && break; sleep 2; done
-  bash ./xray.sh examples/q21-bgp-lp/q21.clab.yml 8600 9>&- < /dev/null 2>&1 | tee "$LOG/demo.log" 9>&-
-  exit 0
+  bash ./xray.sh --bind 127.0.0.1 examples/q21-bgp-lp/q21.clab.yml 8600 9>&- < /dev/null 2>&1 | tee "$LOG/demo.log" 9>&-
+  exit "${PIPESTATUS[0]}"
 fi
 
 # detached (own session, not a child of this hook) - waits for docker (DinD may still be starting), then the demo.
@@ -56,6 +61,6 @@ setsid -f bash -c '
   for i in $(seq 1 90); do $SUDO docker info >/dev/null 2>&1 && break; sleep 2; done
   $SUDO docker info >/dev/null 2>&1 || echo "[$(date "+%F %T")] docker did not answer in 3 minutes - trying anyway"
   echo "[$(date "+%F %T")] starting ./xray.sh (SUDO=${SUDO:-none}, node=$(command -v node || echo missing))"
-  bash ./xray.sh examples/q21-bgp-lp/q21.clab.yml 8600 9>&-
+  bash ./xray.sh --bind 127.0.0.1 examples/q21-bgp-lp/q21.clab.yml 8600 9>&-
 ' > "$LOG/demo.log" 2>&1 < /dev/null
 say "network-xray is starting on port 8600 (Ports tab) - about 2-3 minutes. Log: $LOG/demo.log"
