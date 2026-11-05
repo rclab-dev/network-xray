@@ -1,6 +1,6 @@
 # Likely questions
 
-The 15 questions a skeptical reader is most likely to ask, with short answers checked against the code.
+The 16 questions a skeptical reader is most likely to ask, with short answers checked against the code.
 File references are to the current tree; line numbers drift, so search for the named function or variable if one is off.
 Where the honest answer is "not supported" or "inferred", it says so.
 
@@ -167,3 +167,7 @@ It depends on the part of the answer:
 - **No coverage:** IPv6 BGP, IS-IS, VRFs on IOL, and Cisco kinds other than `cisco_iol`.
 - **Container image prefix:** the image supports only the default `clab` container-name prefix (`docker/entrypoint.sh`).
 - **IOL SSH:** host keys are not checked, and the login defaults to admin/admin unless `NX_IOS_USER` / `NX_IOS_PASSWORD` are set. That suits lab containers, not real devices.
+
+## 16. Did you use AI to write this?
+
+Yes, heavily — for most of the code, tests and docs. The parts I own are the networking decisions: what each OSPF / BGP state means, which device output is authoritative, and when the page should say "unknown" instead of guessing. Those were checked against real FRR, Nokia SR Linux and Cisco IOL routers in containerlab, and the suite has 600+ tests. Where the "why" comes from the router (FRR's own best-path reason) and where it is inferred by network-xray (Cisco IOS-XE, which does not print a reason) is stated in the page and the docs (see 14). Some test fixtures are hand-written rather than captured from devices; replacing them with real captures is ongoing.
