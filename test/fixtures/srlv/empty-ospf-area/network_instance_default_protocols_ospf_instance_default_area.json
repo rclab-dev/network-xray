@@ -1,0 +1,11 @@
+{
+  "name": "default",
+  "area": [
+    {
+      "area-id": "0.0.0.0",
+      "active-interfaces": 0,
+      "interface": [],
+      "lsdb": {}
+    }
+  ]
+}

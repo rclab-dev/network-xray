@@ -1,0 +1,10 @@
+{
+  "admin-state": "disable",
+  "address": [
+    {
+      "ip-prefix": "10.0.30.1/31",
+      "origin": "static",
+      "status": "preferred"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "route": [
+    {
+      "ipv4-prefix": "2.2.2.2/32",
+      "route-type": "ospfv2",
+      "next-hop-group": "g1"
+    },
+    {
+      "ipv4-prefix": "10.0.0.0/30",
+      "route-type": "local"
+    },
+    {
+      "ipv4-prefix": "1.1.1.1/32",
+      "route-type": "host",
+      "next-hop-group": "gL"
+    }
+  ]
+}

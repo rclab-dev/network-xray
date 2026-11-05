@@ -67,6 +67,8 @@ function ospfStateWord(v) {
   var k = typeof v === 'string' ? v.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
   return Object.prototype.hasOwnProperty.call(OSPF_WORDS, k) ? OSPF_WORDS[k] : 'Down';
 }
+// an identity value with its YANG module prefix ("srl_nokia-common:bgp") reads as the bare name ("bgp")
+function noMod(v) { return typeof v === 'string' ? v.replace(/^[A-Za-z][A-Za-z0-9_.-]*:/, '') : v; }
 function ospfStateRank(w) { return w ? OSPF_ORDER.indexOf(w) : -1; }
 var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 'ip-vrf': 'connected', static: 'static', 'bgp': 'bgp', 'bgp-vpn': 'bgp', arpnd: 'connected', 'arp-nd': 'connected' };
 
@@ -87,7 +89,10 @@ function buildState(fetch, node, adj, proto) {
   Object.keys(adj).concat(['system0.0']).forEach(function (ifn) {
     var s = splitIf(ifn);
     var j = fetch('interface ' + s.base + ' subinterface ' + s.sub + ' ipv4');
-    var ip = j && list(j.address)[0] && list(j.address)[0]['ip-prefix']; if (typeof ip !== 'string') ip = '';
+    // the address marked primary, else the first one that has an ip-prefix (a single address reads as before)
+    var _ad = list(j && j.address).filter(function (x) { return typeof x['ip-prefix'] === 'string'; });
+    var _a1 = _ad.filter(function (x) { return x.primary != null; })[0] || _ad[0];
+    var ip = _a1 ? _a1['ip-prefix'] : '';
     state.interfaces[ifn] = { ip: ipOnly(ip), up: !(j && j['admin-state'] === 'disable') };
     if (ip) _ipPfx[ifn] = ip;
   });
@@ -108,7 +113,7 @@ function buildState(fetch, node, adj, proto) {
       if (n['admin-state'] === 'disable' && _st !== 'established') _nm = 'Idle (Admin)';
       var _as = n['peer-as'] != null ? n['peer-as'] : (_grpAs[n['peer-group']] != null ? _grpAs[n['peer-group']] : '-');
       var _o = { ip: typeof n['peer-address'] === 'string' ? n['peer-address'] : '', remote_as: _as, ibgp: n['peer-type'] === 'ibgp', state: _nm };
-      var _af = list(n['afi-safi']).filter(function (a) { return a['afi-safi-name'] === 'ipv4-unicast'; })[0];
+      var _af = list(n['afi-safi']).filter(function (a) { return noMod(a['afi-safi-name']) === 'ipv4-unicast'; })[0];
       if (_af && _af['received-routes'] != null) _o.pfx_rcvd = _af['received-routes'];
       return _o;
     });
@@ -160,7 +165,8 @@ function buildState(fetch, node, adj, proto) {
   var nh = {}; list(nhJson && nhJson['next-hop']).forEach(function (n) { nh[n.index] = { ip: typeof n['ip-address'] === 'string' ? n['ip-address'] : '', iface: typeof n.subinterface === 'string' ? n.subinterface : '' }; });
   state.routing_table = list(rt && rt.route).filter(function (r) { return r.active !== false && typeof r['ipv4-prefix'] === 'string'; }).map(function (r) {
     var resolved = nh[nhg[r['next-hop-group']]] || {};
-    var protocol = (Object.prototype.hasOwnProperty.call(PROTO, r['route-type']) && PROTO[r['route-type']]) || String(r['route-type'] || '');
+    var _rt = noMod(r['route-type']);
+    var protocol = (Object.prototype.hasOwnProperty.call(PROTO, _rt) && PROTO[_rt]) || String(_rt || '');
     var oif = resolved.iface || (protocol === 'local' ? 'system0.0' : '');
     return { prefix: r['ipv4-prefix'], out_iface: oif, next_hop: resolved.ip || undefined, protocol: protocol, selected: true };
   });
@@ -187,7 +193,17 @@ function buildState(fetch, node, adj, proto) {
     var attrJson = fetch('network-instance default bgp-rib attr-sets');
     var attrById = {};
     list(attrJson && attrJson['attr-set']).forEach(function (a) {
-      var aspath = (a['as-path'] && list(a['as-path'].segment).map(function (s) { return (Array.isArray(s.member) ? s.member : []).join(' '); }).join(' ')) || '';
+      // segments in the spelling the view counts: an AS_SET as "{a,b}", a confederation sequence as "(a b)",
+      // a confederation set as "[a,b]"; a sequence (or no type) as before
+      var aspath = (a['as-path'] && list(a['as-path'].segment).map(function (s) {
+        var m = Array.isArray(s.member) ? s.member : [];
+        var t = String(noMod(s.type) || '').toLowerCase().replace(/[^a-z]/g, '');
+        if (!m.length) return '';
+        if (t === 'asset') return '{' + m.join(',') + '}';
+        if (t === 'asconfedsequence') return '(' + m.join(' ') + ')';
+        if (t === 'asconfedset') return '[' + m.join(',') + ']';
+        return m.join(' ');
+      }).join(' ')) || '';
       var o = String(a.origin || 'igp');
       attrById[String(a.index)] = {
         next_hop: a['next-hop'] || '',
@@ -268,7 +284,7 @@ function buildState(fetch, node, adj, proto) {
         list(t.lsas && t.lsas.lsa).forEach(function (L) {
           var adv = L['advertising-router'] || '';
           list(L['router-lsa'] && L['router-lsa'].links).forEach(function (lk) {
-            if (lk.type !== 'router-lsa-stub-network') return;
+            if (lk.type !== 'router-lsa-stub-network' || typeof lk['link-id'] !== 'string' || !lk['link-id']) return;
             var pfx = lk['link-id'] + '/' + maskToPfx(lk['link-data']);
             if (lsdbSeen[pfx]) return; lsdbSeen[pfx] = true;
             lsdb.push({ text: pfx, own: !!(myRid && adv === myRid), via: adv });

@@ -1,0 +1,23 @@
+{
+  "route": [
+    {
+      "prefix": "198.51.100.0/24",
+      "neighbor": "10.0.0.2",
+      "origin-protocol": "bgp",
+      "best-route": true,
+      "attr-id": "1"
+    },
+    {
+      "prefix": "198.51.100.0/24",
+      "neighbor": "10.0.0.6",
+      "origin-protocol": "bgp",
+      "attr-id": "2"
+    },
+    {
+      "prefix": "192.0.2.0/24",
+      "neighbor": "10.0.0.2",
+      "origin-protocol": "bgp",
+      "best-route": true
+    }
+  ]
+}

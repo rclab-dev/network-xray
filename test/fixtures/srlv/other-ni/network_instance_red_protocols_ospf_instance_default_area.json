@@ -1,0 +1,28 @@
+{
+  "name": "default",
+  "area": [
+    {
+      "area-id": "0.0.0.0",
+      "interface": [
+        {
+          "interface-name": "ethernet-1/3.0",
+          "admin-state": "enable",
+          "interface-type": "point-to-point",
+          "metric": 10,
+          "hello-interval": 10,
+          "dead-interval": 40,
+          "oper-state": "point-to-point",
+          "neighbor-count": 1,
+          "neighbor": [
+            {
+              "router-id": "9.9.9.9",
+              "adjacency-state": "full",
+              "priority": 1,
+              "dead-time": "2026-11-04T10:00:38.000Z (35 seconds from now)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "neighbor": [
+    {
+      "peer-address": "172.16.0.2",
+      "session-state": "established",
+      "peer-as": 65099
+    }
+  ]
+}

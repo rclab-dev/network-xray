@@ -1,0 +1,16 @@
+{
+  "neighbor": [
+    {
+      "peer-address": "10.1.0.0",
+      "session-state": "established",
+      "peer-as": 65002,
+      "peer-type": "ebgp"
+    },
+    {
+      "peer-address": "10.1.0.2",
+      "session-state": "active",
+      "peer-as": 65003,
+      "peer-type": "ebgp"
+    }
+  ]
+}

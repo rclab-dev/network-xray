@@ -1,0 +1,28 @@
+{
+  "route": [
+    {
+      "ipv4-prefix": "8.8.8.0/24",
+      "id": 0,
+      "route-type": "bgp",
+      "route-owner": "x",
+      "origin-network-instance": "default",
+      "metric": 0,
+      "preference": 0,
+      "active": true,
+      "next-hop-group": "gB",
+      "next-hop-group-network-instance": "default"
+    },
+    {
+      "ipv4-prefix": "10.1.0.0/31",
+      "id": 0,
+      "route-type": "local",
+      "route-owner": "x",
+      "origin-network-instance": "default",
+      "metric": 0,
+      "preference": 0,
+      "active": true,
+      "next-hop-group": "gC",
+      "next-hop-group-network-instance": "default"
+    }
+  ]
+}

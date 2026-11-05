@@ -1,0 +1,97 @@
+{
+  "attr-set": [
+    {
+      "index": "1",
+      "origin": "incomplete",
+      "next-hop": "10.0.0.2",
+      "local-pref": 0,
+      "med": 4294967295,
+      "as-path": {
+        "segment": [
+          {
+            "type": "as_sequence",
+            "member": [
+              4200000001
+            ]
+          },
+          {
+            "type": "as_set",
+            "member": [
+              65010,
+              65011
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": "2",
+      "origin": "egp",
+      "next-hop": "10.0.0.6",
+      "local-pref": 4294967295,
+      "med": 0,
+      "as-path": {
+        "segment": [
+          {
+            "type": "as_confed_sequence",
+            "member": [
+              65101,
+              65102
+            ]
+          },
+          {
+            "type": "as_sequence",
+            "member": [
+              65002,
+              65100
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": "3",
+      "origin": "igp",
+      "next-hop": "10.0.0.2",
+      "as-path": {
+        "segment": [
+          {
+            "type": "as_sequence",
+            "member": [
+              4200000001,
+              4200000001,
+              4200000001
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": "4",
+      "origin": "igp",
+      "next-hop": "10.0.0.2",
+      "as-path": {
+        "segment": [
+          {
+            "type": "as_confed_set",
+            "member": [
+              65103,
+              65104
+            ]
+          },
+          {
+            "type": "as_sequence",
+            "member": [
+              4200000001
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "index": "5",
+      "origin": "igp",
+      "next-hop": "0.0.0.0"
+    }
+  ]
+}

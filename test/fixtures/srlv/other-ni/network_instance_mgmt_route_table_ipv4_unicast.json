@@ -1,0 +1,16 @@
+{
+  "route": [
+    {
+      "ipv4-prefix": "0.0.0.0/0",
+      "id": 0,
+      "route-type": "dhcp",
+      "route-owner": "x",
+      "origin-network-instance": "default",
+      "metric": 0,
+      "preference": 0,
+      "active": true,
+      "next-hop-group": "gM",
+      "next-hop-group-network-instance": "default"
+    }
+  ]
+}

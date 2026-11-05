@@ -1,0 +1,26 @@
+{
+  "next-hop-group": [
+    {
+      "index": "g10",
+      "backup-next-hop-group": "0",
+      "next-hop": [
+        {
+          "id": 0,
+          "next-hop": "n10",
+          "resolved": "not-applicable"
+        }
+      ]
+    },
+    {
+      "index": "g20",
+      "backup-next-hop-group": "0",
+      "next-hop": [
+        {
+          "id": 0,
+          "next-hop": "n20",
+          "resolved": "not-applicable"
+        }
+      ]
+    }
+  ]
+}

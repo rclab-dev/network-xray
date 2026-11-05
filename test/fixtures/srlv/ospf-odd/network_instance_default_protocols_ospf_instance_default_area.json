@@ -1,0 +1,122 @@
+{
+  "name": "default",
+  "area": [
+    {
+      "area-id": "0.0.0.10",
+      "interface": [
+        {
+          "interface-name": "ethernet-1/1.0",
+          "admin-state": "enable",
+          "interface-type": "point-to-point",
+          "metric": 10,
+          "hello-interval": 1,
+          "dead-interval": 3,
+          "oper-state": "point-to-point",
+          "neighbor-count": 1,
+          "neighbor": [
+            {
+              "router-id": "2.2.2.2",
+              "adjacency-state": "full",
+              "priority": 1,
+              "dead-time": "2026-11-04T10:00:38.000Z (35 seconds from now)"
+            }
+          ]
+        }
+      ],
+      "lsdb": {
+        "lsa-types": {
+          "lsa-type": [
+            {
+              "type": "router-lsa",
+              "lsas": {
+                "lsa": [
+                  {
+                    "advertising-router": "1.1.1.1",
+                    "router-lsa": {
+                      "links": [
+                        {
+                          "type": "router-lsa-stub-network",
+                          "link-id": "1.1.1.1",
+                          "link-data": "255.255.255.255"
+                        },
+                        {
+                          "type": "router-lsa-stub-network",
+                          "link-id": "10.0.0.0",
+                          "link-data": "255.255.255.254"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "advertising-router": "2.2.2.2",
+                    "router-lsa": {
+                      "links": [
+                        {
+                          "type": "router-lsa-stub-network",
+                          "link-id": "2.2.2.2",
+                          "link-data": "255.255.255.255"
+                        },
+                        {
+                          "type": "router-lsa-transit-network",
+                          "link-id": "192.168.1.1",
+                          "link-data": "192.168.1.2"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "network-lsa",
+              "lsas": {
+                "lsa": [
+                  {
+                    "advertising-router": "2.2.2.2",
+                    "link-state-id": "192.168.1.1"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "area-id": "10.255.0.1",
+      "interface": [
+        {
+          "interface-name": "ethernet-1/2.0",
+          "admin-state": "enable",
+          "interface-type": "broadcast",
+          "metric": 10,
+          "hello-interval": 10,
+          "dead-interval": 40,
+          "oper-state": "dr-other",
+          "neighbor-count": 3,
+          "neighbor": [
+            {
+              "router-id": "3.3.3.3",
+              "adjacency-state": "two-way",
+              "priority": 1,
+              "dead-time": "2026-11-04T10:00:38.000Z (35 seconds from now)",
+              "role": "dr-other"
+            },
+            {
+              "router-id": "4.4.4.4",
+              "adjacency-state": "two-way",
+              "priority": 1,
+              "dead-time": "2026-11-04T10:00:38.000Z (35 seconds from now)"
+            },
+            {
+              "router-id": "5.5.5.5",
+              "adjacency-state": "loading",
+              "priority": 1,
+              "dead-time": "2026-11-04T10:00:38.000Z (35 seconds from now)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

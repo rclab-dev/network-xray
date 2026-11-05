@@ -1,0 +1,14 @@
+{
+  "admin-state": "enable",
+  "allow-directed-broadcast": false,
+  "address": [
+    {
+      "ip-prefix": "172.16.0.1/30",
+      "origin": "static",
+      "status": "preferred"
+    }
+  ],
+  "unnumbered": {
+    "admin-state": "disable"
+  }
+}

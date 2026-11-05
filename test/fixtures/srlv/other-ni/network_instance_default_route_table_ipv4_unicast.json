@@ -1,0 +1,29 @@
+{
+  "route": [
+    {
+      "ipv4-prefix": "2.2.2.2/32",
+      "id": 0,
+      "route-type": "ospfv2",
+      "route-owner": "x",
+      "origin-network-instance": "default",
+      "metric": 0,
+      "preference": 0,
+      "active": true,
+      "next-hop-group": "g1",
+      "next-hop-group-network-instance": "default"
+    },
+    {
+      "ipv4-prefix": "172.16.0.0/30",
+      "id": 0,
+      "route-type": "local",
+      "route-owner": "x",
+      "origin-network-instance": "red",
+      "metric": 0,
+      "preference": 0,
+      "active": true,
+      "next-hop-group": "gR",
+      "next-hop-group-network-instance": "red",
+      "leaked": true
+    }
+  ]
+}

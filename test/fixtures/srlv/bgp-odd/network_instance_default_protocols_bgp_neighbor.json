@@ -1,0 +1,36 @@
+{
+  "neighbor": [
+    {
+      "peer-address": "10.0.0.2",
+      "session-state": "established",
+      "peer-as": 4200000001,
+      "peer-type": "ebgp",
+      "afi-safi": [
+        {
+          "afi-safi-name": "srl_nokia-common:ipv4-unicast",
+          "received-routes": 0
+        },
+        {
+          "afi-safi-name": "ipv6-unicast",
+          "received-routes": 9
+        }
+      ]
+    },
+    {
+      "peer-address": "10.0.0.6",
+      "session-state": "openconfirm",
+      "peer-as": 65001,
+      "peer-type": "ibgp"
+    },
+    {
+      "peer-address": "10.0.0.10",
+      "session-state": "opensent",
+      "peer-as": 65003
+    },
+    {
+      "peer-address": "10.0.0.14",
+      "session-state": "connect",
+      "peer-as": 65004
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "next-hop": [
+    {
+      "index": "n1",
+      "resource-allocation-failed": false,
+      "type": "direct",
+      "ip-address": "10.0.0.2",
+      "subinterface": "ethernet-1/1.0"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "next-hop-group": [
+    {
+      "index": "g1",
+      "next-hop": [
+        {
+          "next-hop": "n1"
+        }
+      ]
+    },
+    {
+      "index": "gL"
+    }
+  ]
+}

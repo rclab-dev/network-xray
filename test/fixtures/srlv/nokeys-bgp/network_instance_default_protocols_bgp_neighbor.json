@@ -1,0 +1,13 @@
+{
+  "neighbor": [
+    {
+      "peer-address": "10.0.0.2",
+      "session-state": "established"
+    },
+    {
+      "peer-address": "10.0.0.6",
+      "admin-state": "enable",
+      "peer-group": "solo"
+    }
+  ]
+}

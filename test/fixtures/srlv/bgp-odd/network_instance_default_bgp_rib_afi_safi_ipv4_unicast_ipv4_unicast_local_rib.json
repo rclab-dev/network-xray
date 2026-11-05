@@ -1,0 +1,39 @@
+{
+  "route": [
+    {
+      "prefix": "203.0.113.0/24",
+      "neighbor": "10.0.0.2",
+      "origin-protocol": "bgp",
+      "best-route": true,
+      "attr-id": "1"
+    },
+    {
+      "prefix": "203.0.113.0/24",
+      "neighbor": "10.0.0.6",
+      "origin-protocol": "bgp",
+      "best-route": false,
+      "attr-id": "2"
+    },
+    {
+      "prefix": "198.51.100.0/24",
+      "neighbor": "10.0.0.2",
+      "origin-protocol": "bgp",
+      "best-route": true,
+      "attr-id": "3"
+    },
+    {
+      "prefix": "0.0.0.0/0",
+      "neighbor": "10.0.0.2",
+      "origin-protocol": "bgp",
+      "best-route": true,
+      "attr-id": "4"
+    },
+    {
+      "prefix": "1.1.1.1/32",
+      "neighbor": "0.0.0.0",
+      "origin-protocol": "local",
+      "best-route": true,
+      "attr-id": "5"
+    }
+  ]
+}

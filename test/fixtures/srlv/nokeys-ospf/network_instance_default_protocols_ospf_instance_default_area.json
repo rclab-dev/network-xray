@@ -1,0 +1,61 @@
+{
+  "name": "default",
+  "area": [
+    {
+      "interface": [
+        {
+          "interface-name": "ethernet-1/1.0",
+          "neighbor": [
+            {
+              "adjacency-state": "full"
+            }
+          ]
+        }
+      ],
+      "lsdb": {
+        "lsa-types": {
+          "lsa-type": [
+            {
+              "type": "router-lsa",
+              "lsas": {
+                "lsa": [
+                  {
+                    "advertising-router": "2.2.2.2",
+                    "router-lsa": {
+                      "links": [
+                        {
+                          "type": "router-lsa-stub-network",
+                          "link-id": "2.2.2.2"
+                        },
+                        {
+                          "type": "router-lsa-stub-network",
+                          "link-data": "255.255.255.252"
+                        },
+                        {
+                          "type": "router-lsa-p2p",
+                          "link-id": "1.1.1.1",
+                          "link-data": "10.0.0.2"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "router-lsa": {
+                      "links": [
+                        {
+                          "type": "router-lsa-stub-network",
+                          "link-id": "10.0.0.0",
+                          "link-data": "255.255.255.252"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
