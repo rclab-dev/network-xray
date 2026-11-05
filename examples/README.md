@@ -13,32 +13,35 @@ Open **http://localhost:8080/** and click a router to open its DeepDive. Fix the
 Each folder has its own README (the problem, the nodes, how to start and stop it). Requirements, the release packages and troubleshooting: see the [main README](../README.md).
 
 ## The labs
-| Folder (broken / solved) | Lab file | Routers & hosts | Problem |
-|---|---|---|---|
-| `q1-static` / `q1-static-solved` | `q1.clab.yml` | 3 | Problem 1 — "Why won't the ping go through?" |
-| `q2-static` / `q2-static-solved` | `q2.clab.yml` | 3 | Problem 2 — "Packets won't forward?" |
-| `q3-ospf` / `q3-ospf-solved` | `q3.clab.yml` | 2 | Problem 3 — "OSPF neighbor won't come up?" |
-| `q4-static` / `q4-static-solved` | `q4.clab.yml` | 2 | Problem 4 — "I wrote the route, but it won't work?" |
-| `q5-ospf` / `q5-ospf-solved` | `q5.clab.yml` | 2 | Problem 5 — "Hellos should be flowing, and yet…" |
-| `q6-ospf` / `q6-ospf-solved` | `q6.clab.yml` | 3 | Problem 6 — "There's a redundant path, so why no failover?" |
-| `q7-ospf-static` / `q7-ospf-static-solved` | `q7.clab.yml` | 2 | Problem 7 — "There's a route, but the ping won't go through?" |
-| `q8-ospf` / `q8-ospf-solved` | `q8.clab.yml` | 2 | Problem 8 — "Both sides are sending Hellos, and yet…" |
-| `q9-ospf` / `q9-ospf-solved` | `q9.clab.yml` | 3 | Problem 9 — "Two paths, and neither one works?" |
-| `q10-ospf` / `q10-ospf-solved` | `q10.clab.yml` | 2 | Problem 10 — "For some reason, no Hellos are going out?" |
-| `q11-ospf-static` / `q11-ospf-static-solved` | `q11.clab.yml` | 3 | Problem 11 — "There's a direct link, so why the detour?" |
-| `q12-ospf-static` / `q12-ospf-static-solved` | `q12.clab.yml` | 3 | Problem 12 — "Secure a backup route that surfaces in an emergency!" |
-| `q13-bgp-static` / `q13-bgp-static-solved` | `q13.clab.yml` | 2 | Problem 13 — "The BGP neighbor won't come up" |
-| `q14-bgp` / `q14-bgp-solved` | `q14.clab.yml` | 2 | Problem 14 — "The iBGP neighbor won't come up" |
-| `q15-bgp-ospf-static` / `q15-bgp-ospf-static-solved` | `q15.clab.yml` | 3 | Problem 15 — "The route is in the BGP table, but packets don't arrive?" |
-| `q16-bgp` / `q16-bgp-solved` | `q16.clab.yml` | 2 | Problem 16 — "BGP came up, but the route doesn't arrive?" |
-| `q17-ospf-static` / `q17-ospf-static-solved` | `q17.clab.yml` | 2 | Problem 17 — "I redistributed, but the route doesn't appear" |
-| `q18-bgp` / `q18-bgp-solved` | `q18.clab.yml` | 2 | Problem 18 — "Only some routes don't arrive" |
-| `q19-bgp` / `q19-bgp-solved` | `q19.clab.yml` | 2 | Problem 19 — "The BGP session suddenly dropped" |
-| `q20-bgp` / `q20-bgp-solved` | `q20.clab.yml` | 2 | Problem 20 — "The route I advertise never shows up on my peer" |
-| `q21-bgp-lp` / `q21-bgp-lp-solved` | `q21.clab.yml` | 3 | Problem 21 — "Two ISPs, yet everything takes the slow one" |
-| `bgp-bestpath-multiprefix` / `bgp-bestpath-multiprefix-solved` | `multiprefix.clab.yml` | 3 | Extra — a different best-path winner per prefix (Local Preference vs AS-Path) (no ✓ Solved check) |
+| Lab (broken / solved) | Protocol | Vendor | What is broken | Start |
+|---|---|---|---|---|
+| [q1-static](q1-static/) / [q1-static-solved](q1-static-solved/) | static | FRR | "Why won't the ping go through?" | `./xray.sh examples/q1-static/q1.clab.yml` |
+| [q2-static](q2-static/) / [q2-static-solved](q2-static-solved/) | static | FRR | "Packets won't forward?" | `./xray.sh examples/q2-static/q2.clab.yml` |
+| [q3-ospf](q3-ospf/) / [q3-ospf-solved](q3-ospf-solved/) | OSPF | FRR | "OSPF neighbor won't come up?" | `./xray.sh examples/q3-ospf/q3.clab.yml` |
+| [q4-static](q4-static/) / [q4-static-solved](q4-static-solved/) | static | FRR | "I wrote the route, but it won't work?" | `./xray.sh examples/q4-static/q4.clab.yml` |
+| [q5-ospf](q5-ospf/) / [q5-ospf-solved](q5-ospf-solved/) | OSPF | FRR | "Hellos should be flowing, and yet…" | `./xray.sh examples/q5-ospf/q5.clab.yml` |
+| [q5-ospf-iol](q5-ospf-iol/) / [q5-ospf-iol-solved](q5-ospf-iol-solved/) | OSPF | Cisco IOL | "Hellos should be flowing, and yet…" | `./xray.sh examples/q5-ospf-iol/q5.clab.yml` |
+| [q6-ospf](q6-ospf/) / [q6-ospf-solved](q6-ospf-solved/) | OSPF | FRR | "There's a redundant path, so why no failover?" | `./xray.sh examples/q6-ospf/q6.clab.yml` |
+| [q7-ospf-static](q7-ospf-static/) / [q7-ospf-static-solved](q7-ospf-static-solved/) | OSPF + static | FRR | "There's a route, but the ping won't go through?" | `./xray.sh examples/q7-ospf-static/q7.clab.yml` |
+| [q8-ospf](q8-ospf/) / [q8-ospf-solved](q8-ospf-solved/) | OSPF | FRR | "Both sides are sending Hellos, and yet…" | `./xray.sh examples/q8-ospf/q8.clab.yml` |
+| [q9-ospf](q9-ospf/) / [q9-ospf-solved](q9-ospf-solved/) | OSPF | FRR | "Two paths, and neither one works?" | `./xray.sh examples/q9-ospf/q9.clab.yml` |
+| [q10-ospf](q10-ospf/) / [q10-ospf-solved](q10-ospf-solved/) | OSPF | FRR | "For some reason, no Hellos are going out?" | `./xray.sh examples/q10-ospf/q10.clab.yml` |
+| [q11-ospf-static](q11-ospf-static/) / [q11-ospf-static-solved](q11-ospf-static-solved/) | OSPF + static | FRR | "There's a direct link, so why the detour?" | `./xray.sh examples/q11-ospf-static/q11.clab.yml` |
+| [q12-ospf-static](q12-ospf-static/) / [q12-ospf-static-solved](q12-ospf-static-solved/) | OSPF + static | FRR | "Secure a backup route that surfaces in an emergency!" | `./xray.sh examples/q12-ospf-static/q12.clab.yml` |
+| [q13-bgp-static](q13-bgp-static/) / [q13-bgp-static-solved](q13-bgp-static-solved/) | BGP + static | FRR | "The BGP neighbor won't come up" | `./xray.sh examples/q13-bgp-static/q13.clab.yml` |
+| [q14-bgp](q14-bgp/) / [q14-bgp-solved](q14-bgp-solved/) | BGP | FRR | "The iBGP neighbor won't come up" | `./xray.sh examples/q14-bgp/q14.clab.yml` |
+| [q15-bgp-ospf-static](q15-bgp-ospf-static/) / [q15-bgp-ospf-static-solved](q15-bgp-ospf-static-solved/) | BGP + OSPF + static | FRR | "The route is in the BGP table, but packets don't arrive?" | `./xray.sh examples/q15-bgp-ospf-static/q15.clab.yml` |
+| [q15-bgp-ospf-static-iol](q15-bgp-ospf-static-iol/) / [q15-bgp-ospf-static-iol-solved](q15-bgp-ospf-static-iol-solved/) | BGP + OSPF + static | Cisco IOL | "The route is in the BGP table, but packets don't arrive?" | `./xray.sh examples/q15-bgp-ospf-static-iol/q15.clab.yml` |
+| [q16-bgp](q16-bgp/) / [q16-bgp-solved](q16-bgp-solved/) | BGP | FRR | "BGP came up, but the route doesn't arrive?" | `./xray.sh examples/q16-bgp/q16.clab.yml` |
+| [q17-ospf-static](q17-ospf-static/) / [q17-ospf-static-solved](q17-ospf-static-solved/) | OSPF + static | FRR | "I redistributed, but the route doesn't appear" | `./xray.sh examples/q17-ospf-static/q17.clab.yml` |
+| [q18-bgp](q18-bgp/) / [q18-bgp-solved](q18-bgp-solved/) | BGP | FRR | "Only some routes don't arrive" | `./xray.sh examples/q18-bgp/q18.clab.yml` |
+| [q19-bgp](q19-bgp/) / [q19-bgp-solved](q19-bgp-solved/) | BGP | FRR | "The BGP session suddenly dropped" | `./xray.sh examples/q19-bgp/q19.clab.yml` |
+| [q20-bgp](q20-bgp/) / [q20-bgp-solved](q20-bgp-solved/) | BGP | FRR | "The route I advertise never shows up on my peer" | `./xray.sh examples/q20-bgp/q20.clab.yml` |
+| [q21-bgp-lp](q21-bgp-lp/) / [q21-bgp-lp-solved](q21-bgp-lp-solved/) | BGP | FRR | "Two ISPs, yet everything takes the slow one" | `./xray.sh examples/q21-bgp-lp/q21.clab.yml` |
+| [q21-bgp-lp-iol](q21-bgp-lp-iol/) / [q21-bgp-lp-iol-solved](q21-bgp-lp-iol-solved/) | BGP | Cisco IOL | "Two ISPs, yet everything takes the slow one" | `./xray.sh examples/q21-bgp-lp-iol/q21.clab.yml` |
+| [bgp-bestpath-multiprefix](bgp-bestpath-multiprefix/) / [bgp-bestpath-multiprefix-solved](bgp-bestpath-multiprefix-solved/) | BGP | FRR | Not broken: a different best-path winner per prefix (Local Preference vs AS-Path) | `./xray.sh examples/bgp-bestpath-multiprefix/multiprefix.clab.yml` |
 
-Cisco IOL (IOS-XE) versions of three problems (bring your own IOL image; see each folder's README): `q5-ospf-iol` / `q5-ospf-iol-solved`, `q15-bgp-ospf-static-iol` / `q15-bgp-ospf-static-iol-solved`, `q21-bgp-lp-iol` / `q21-bgp-lp-iol-solved`.
+The Cisco IOL (IOS-XE) labs need your own IOL image (see each folder's README). Each lab's routers and hosts are listed in its README.
 
 Hints and the explanation of each problem are on RouteCrushLab — the problem card in the page has a **"Solve it on RouteCrushLab (guest)"** button (no account needed).
 
@@ -62,32 +65,35 @@ Put a `problem.json` next to your `*.clab.yml` (the problem text, the route to f
 各フォルダに README があります(問題文・ノード・起動と停止)。必要なもの・リリースのパッケージ・困ったときは [本体の README](../README.md) へ。
 
 ## ラボの一覧
-| フォルダ(壊れた版 / 直した版) | ラボのファイル | ルータ・ホスト | 問題 |
-|---|---|---|---|
-| `q1-static` / `q1-static-solved` | `q1.clab.yml` | 3 | 第1問「pingが通らない原因は？」 |
-| `q2-static` / `q2-static-solved` | `q2.clab.yml` | 3 | 第2問「パケットが転送できない？」 |
-| `q3-ospf` / `q3-ospf-solved` | `q3.clab.yml` | 2 | 第3問「OSPFネイバーが確立しない？」 |
-| `q4-static` / `q4-static-solved` | `q4.clab.yml` | 2 | 第4問「ルートを書いたのに使えない？」 |
-| `q5-ospf` / `q5-ospf-solved` | `q5.clab.yml` | 2 | 第5問「Helloは飛んでいるはずなのに…」 |
-| `q6-ospf` / `q6-ospf-solved` | `q6.clab.yml` | 3 | 第6問「冗長パスがあるのに迂回しない？」 |
-| `q7-ospf-static` / `q7-ospf-static-solved` | `q7.clab.yml` | 2 | 第7問「経路があるのにpingが通らない？」 |
-| `q8-ospf` / `q8-ospf-solved` | `q8.clab.yml` | 2 | 第8問「お互いHelloを送っているのに…」 |
-| `q9-ospf` / `q9-ospf-solved` | `q9.clab.yml` | 3 | 第9問「2つの道、どちらも通れない？」 |
-| `q10-ospf` / `q10-ospf-solved` | `q10.clab.yml` | 2 | 第10問「なぜかHelloが出ていない？」 |
-| `q11-ospf-static` / `q11-ospf-static-solved` | `q11.clab.yml` | 3 | 第11問「直結があるのに、なぜ遠回り？」 |
-| `q12-ospf-static` / `q12-ospf-static-solved` | `q12.clab.yml` | 3 | 第12問「緊急時に浮上するバックアップルートを確保せよ！」 |
-| `q13-bgp-static` / `q13-bgp-static-solved` | `q13.clab.yml` | 2 | 第13問「BGPネイバーが張れない」 |
-| `q14-bgp` / `q14-bgp-solved` | `q14.clab.yml` | 2 | 第14問「iBGPネイバーが張れない」 |
-| `q15-bgp-ospf-static` / `q15-bgp-ospf-static-solved` | `q15.clab.yml` | 3 | 第15問「BGP テーブルに経路情報があるのに、パケットが届かない？」 |
-| `q16-bgp` / `q16-bgp-solved` | `q16.clab.yml` | 2 | 第16問「BGPは張れたのに経路が届かない？」 |
-| `q17-ospf-static` / `q17-ospf-static-solved` | `q17.clab.yml` | 2 | 第17問「Redistributeしたのに経路が出ない」 |
-| `q18-bgp` / `q18-bgp-solved` | `q18.clab.yml` | 2 | 第18問「一部の経路だけ来ない」 |
-| `q19-bgp` / `q19-bgp-solved` | `q19.clab.yml` | 2 | 第19問「BGPセッションが突然切れた」 |
-| `q20-bgp` / `q20-bgp-solved` | `q20.clab.yml` | 2 | 第20問「送ったはずの経路が相手に載らない」 |
-| `q21-bgp-lp` / `q21-bgp-lp-solved` | `q21.clab.yml` | 3 | 第21問「2つのISPがあるのに遅い方ばかり」 |
-| `bgp-bestpath-multiprefix` / `bgp-bestpath-multiprefix-solved` | `multiprefix.clab.yml` | 3 | 追加の見本 — プレフィックスごとに Best-Path の勝者が違う(Local Preference と AS-Path)(✓ Solved の判定なし) |
+| ラボ(壊れた版 / 直した版) | プロトコル | ベンダー | 何が壊れているか | 起動 |
+|---|---|---|---|---|
+| [q1-static](q1-static/) / [q1-static-solved](q1-static-solved/) | static | FRR | 「pingが通らない原因は？」 | `./xray.sh examples/q1-static/q1.clab.yml` |
+| [q2-static](q2-static/) / [q2-static-solved](q2-static-solved/) | static | FRR | 「パケットが転送できない？」 | `./xray.sh examples/q2-static/q2.clab.yml` |
+| [q3-ospf](q3-ospf/) / [q3-ospf-solved](q3-ospf-solved/) | OSPF | FRR | 「OSPFネイバーが確立しない？」 | `./xray.sh examples/q3-ospf/q3.clab.yml` |
+| [q4-static](q4-static/) / [q4-static-solved](q4-static-solved/) | static | FRR | 「ルートを書いたのに使えない？」 | `./xray.sh examples/q4-static/q4.clab.yml` |
+| [q5-ospf](q5-ospf/) / [q5-ospf-solved](q5-ospf-solved/) | OSPF | FRR | 「Helloは飛んでいるはずなのに…」 | `./xray.sh examples/q5-ospf/q5.clab.yml` |
+| [q5-ospf-iol](q5-ospf-iol/) / [q5-ospf-iol-solved](q5-ospf-iol-solved/) | OSPF | Cisco IOL | 「Helloは飛んでいるはずなのに…」 | `./xray.sh examples/q5-ospf-iol/q5.clab.yml` |
+| [q6-ospf](q6-ospf/) / [q6-ospf-solved](q6-ospf-solved/) | OSPF | FRR | 「冗長パスがあるのに迂回しない？」 | `./xray.sh examples/q6-ospf/q6.clab.yml` |
+| [q7-ospf-static](q7-ospf-static/) / [q7-ospf-static-solved](q7-ospf-static-solved/) | OSPF + static | FRR | 「経路があるのにpingが通らない？」 | `./xray.sh examples/q7-ospf-static/q7.clab.yml` |
+| [q8-ospf](q8-ospf/) / [q8-ospf-solved](q8-ospf-solved/) | OSPF | FRR | 「お互いHelloを送っているのに…」 | `./xray.sh examples/q8-ospf/q8.clab.yml` |
+| [q9-ospf](q9-ospf/) / [q9-ospf-solved](q9-ospf-solved/) | OSPF | FRR | 「2つの道、どちらも通れない？」 | `./xray.sh examples/q9-ospf/q9.clab.yml` |
+| [q10-ospf](q10-ospf/) / [q10-ospf-solved](q10-ospf-solved/) | OSPF | FRR | 「なぜかHelloが出ていない？」 | `./xray.sh examples/q10-ospf/q10.clab.yml` |
+| [q11-ospf-static](q11-ospf-static/) / [q11-ospf-static-solved](q11-ospf-static-solved/) | OSPF + static | FRR | 「直結があるのに、なぜ遠回り？」 | `./xray.sh examples/q11-ospf-static/q11.clab.yml` |
+| [q12-ospf-static](q12-ospf-static/) / [q12-ospf-static-solved](q12-ospf-static-solved/) | OSPF + static | FRR | 「緊急時に浮上するバックアップルートを確保せよ！」 | `./xray.sh examples/q12-ospf-static/q12.clab.yml` |
+| [q13-bgp-static](q13-bgp-static/) / [q13-bgp-static-solved](q13-bgp-static-solved/) | BGP + static | FRR | 「BGPネイバーが張れない」 | `./xray.sh examples/q13-bgp-static/q13.clab.yml` |
+| [q14-bgp](q14-bgp/) / [q14-bgp-solved](q14-bgp-solved/) | BGP | FRR | 「iBGPネイバーが張れない」 | `./xray.sh examples/q14-bgp/q14.clab.yml` |
+| [q15-bgp-ospf-static](q15-bgp-ospf-static/) / [q15-bgp-ospf-static-solved](q15-bgp-ospf-static-solved/) | BGP + OSPF + static | FRR | 「BGP テーブルに経路情報があるのに、パケットが届かない？」 | `./xray.sh examples/q15-bgp-ospf-static/q15.clab.yml` |
+| [q15-bgp-ospf-static-iol](q15-bgp-ospf-static-iol/) / [q15-bgp-ospf-static-iol-solved](q15-bgp-ospf-static-iol-solved/) | BGP + OSPF + static | Cisco IOL | 「BGP テーブルに経路情報があるのに、パケットが届かない？」 | `./xray.sh examples/q15-bgp-ospf-static-iol/q15.clab.yml` |
+| [q16-bgp](q16-bgp/) / [q16-bgp-solved](q16-bgp-solved/) | BGP | FRR | 「BGPは張れたのに経路が届かない？」 | `./xray.sh examples/q16-bgp/q16.clab.yml` |
+| [q17-ospf-static](q17-ospf-static/) / [q17-ospf-static-solved](q17-ospf-static-solved/) | OSPF + static | FRR | 「Redistributeしたのに経路が出ない」 | `./xray.sh examples/q17-ospf-static/q17.clab.yml` |
+| [q18-bgp](q18-bgp/) / [q18-bgp-solved](q18-bgp-solved/) | BGP | FRR | 「一部の経路だけ来ない」 | `./xray.sh examples/q18-bgp/q18.clab.yml` |
+| [q19-bgp](q19-bgp/) / [q19-bgp-solved](q19-bgp-solved/) | BGP | FRR | 「BGPセッションが突然切れた」 | `./xray.sh examples/q19-bgp/q19.clab.yml` |
+| [q20-bgp](q20-bgp/) / [q20-bgp-solved](q20-bgp-solved/) | BGP | FRR | 「送ったはずの経路が相手に載らない」 | `./xray.sh examples/q20-bgp/q20.clab.yml` |
+| [q21-bgp-lp](q21-bgp-lp/) / [q21-bgp-lp-solved](q21-bgp-lp-solved/) | BGP | FRR | 「2つのISPがあるのに遅い方ばかり」 | `./xray.sh examples/q21-bgp-lp/q21.clab.yml` |
+| [q21-bgp-lp-iol](q21-bgp-lp-iol/) / [q21-bgp-lp-iol-solved](q21-bgp-lp-iol-solved/) | BGP | Cisco IOL | 「2つのISPがあるのに遅い方ばかり」 | `./xray.sh examples/q21-bgp-lp-iol/q21.clab.yml` |
+| [bgp-bestpath-multiprefix](bgp-bestpath-multiprefix/) / [bgp-bestpath-multiprefix-solved](bgp-bestpath-multiprefix-solved/) | BGP | FRR | 壊れていない見本: プレフィックスごとに Best-Path の勝者が違う(Local Preference と AS-Path) | `./xray.sh examples/bgp-bestpath-multiprefix/multiprefix.clab.yml` |
 
-3 問は Cisco IOL (IOS-XE) 版もあります(IOL のイメージは自分で用意。各フォルダの README を参照): `q5-ospf-iol` / `q5-ospf-iol-solved`・`q15-bgp-ospf-static-iol` / `q15-bgp-ospf-static-iol-solved`・`q21-bgp-lp-iol` / `q21-bgp-lp-iol-solved`。
+Cisco IOL (IOS-XE) のラボは IOL のイメージを自分で用意します(各フォルダの README を参照)。ルータ・ホストの一覧も各フォルダの README にあります。
 
 各問のヒントと解説は RouteCrushLab にあります — 画面の問題カードの **「RouteCrushLab で解く (guest)」** から(アカウント不要)。
 

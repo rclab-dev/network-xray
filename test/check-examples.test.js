@@ -22,6 +22,48 @@ test('examples/README.md lists every example folder', function () {
   assert.deepStrictEqual(missing, []);
 });
 
+test('a wrong or incomplete examples/README.md table is reported', function () {
+  var root = fs.mkdtempSync(path.join(os.tmpdir(), 'xray-idx-'));
+  try {
+    ['q1-static', 'q1-static-solved', 'q2-ospf', 'q2-ospf-solved'].forEach(function (d) {
+      var dir = path.join(root, 'examples', d);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'q.clab.yml'), 'name: ' + d + '\ntopology:\n  nodes:\n    r1: { kind: linux, image: frrouting/frr:v8.4.1 }\n');
+      fs.writeFileSync(path.join(dir, 'README.md'), '# Problem — "Q of ' + d.replace(/-solved$/, '') + '"\n');
+    });
+    var head = '| Lab | Protocol | Vendor | What is broken | Start |\n|---|---|---|---|---|\n';
+    var idx = path.join(root, 'examples', 'README.md');
+    fs.writeFileSync(idx, head
+      + '| [q1-static](q1-static/) / [q1-static-solved](q1-static-solved/) | static | FRR | "Q of q1-static" | `./xray.sh examples/q1-static/q.clab.yml` |\n'
+      + '| [q2-ospf](q2-ospf/) / [q2-ospf-solved](q2-ospf-solved/) | OSPF | FRR | "Q of q2-ospf" | `./xray.sh examples/q2-ospf/q.clab.yml` |\n');
+    assert.deepStrictEqual(ce.checkIndexReadme(root).problems, []);
+
+    fs.writeFileSync(idx, head
+      + '| [q1-static](q1-static/) / [q1-static-solved](q2-ospf/) | BGP | Cisco IOL | "something else" | `./xray.sh examples/q1-static/x.clab.yml` |\n'
+      + '| [q9-bgp](q9-bgp/) / [q9-bgp-solved](q9-bgp-solved/) | BGP | FRR | "x" | `./xray.sh examples/q9-bgp/q.clab.yml` |\n');
+    var p = ce.checkIndexReadme(root).problems.join('\n');
+    [
+      '[q1-static-solved] links to q2-ospf/',
+      'protocol "BGP", expected "static"',
+      'vendor "Cisco IOL", expected "FRR"',
+      'the README title says "Q of q1-static"',
+      'start is `./xray.sh examples/q1-static/x.clab.yml`',
+      'examples/q9-bgp/ is not an example folder',
+      'q2-ospf is missing',
+      'q2-ospf-solved is missing',
+    ].forEach(function (want) { assert.ok(p.indexOf(want) >= 0, 'expected: ' + want + '\n got:\n' + p); });
+    assert.ok(Object.keys(ce.checkAll(root)).indexOf('examples/README.md') >= 0);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('protocolsOf names the protocols in the folder name', function () {
+  assert.deepStrictEqual(ce.protocolsOf('q15-bgp-ospf-static-iol'), ['BGP', 'OSPF', 'static']);
+  assert.deepStrictEqual(ce.protocolsOf('q21-bgp-lp'), ['BGP']);
+  assert.deepStrictEqual(ce.protocolsOf('bgp-bestpath-multiprefix-solved'), ['BGP']);
+});
+
 test('parseTopology reads one-line nodes, block nodes and kind default images', function () {
   var t = ce.parseTopology([
     'name: lab1',

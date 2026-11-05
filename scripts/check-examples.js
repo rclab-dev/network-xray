@@ -13,7 +13,8 @@
 //   - `examples/<dir>/` mentions and `docker pull <image>` match what exists
 //   - IPv4 addresses in `code` appear in the lab's files (topology, configs, problem.json)
 //   - relative markdown links (and #anchors) resolve
-// examples/README.md: every table row names existing folders, the lab file in both, and the node count.
+// examples/README.md: each table lists every example folder once (with its -solved twin in the same row),
+//   links each name to its folder, and has the right protocol, vendor, title line and ./xray.sh command.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -236,25 +237,81 @@ function checkExampleReadme(dirName, root = ROOT) {
   return [...new Set(problems)];
 }
 
-// examples/README.md: the table of labs
+// protocols as the index names them, from the folder name (q15-bgp-ospf-static -> BGP + OSPF + static)
+const PROTOCOLS = { static: 'static', ospf: 'OSPF', bgp: 'BGP' };
+function protocolsOf(dirName) {
+  return dirName.split('-').filter((w) => PROTOCOLS[w]).map((w) => PROTOCOLS[w]);
+}
+// router vendors of a lab, as the index names them (Linux hosts left out)
+function routerVendorsOf(topo) {
+  const names = { FRR: 'FRR', 'SR Linux': 'SR Linux', IOL: 'Cisco IOL' };
+  return [...new Set(Object.values(topo.nodes).map(vendorOf).filter((v) => names[v]).map((v) => names[v]))];
+}
+function sameSet(a, b) { return a.length === b.length && a.every((x) => b.includes(x)); }
+
+// examples/README.md: the tables of labs (English, and 日本語 after its heading).
+// Row: | [dir](dir/) / [dir-solved](dir-solved/) | protocols | vendors | what is broken | `./xray.sh examples/dir/lab.clab.yml` |
+// Each table lists every example folder exactly once; every row names folders that exist.
 function checkIndexReadme(root = ROOT) {
   const file = path.join(root, 'examples', 'README.md');
   const md = fs.readFileSync(file, 'utf8');
   const problems = [];
   const listed = new Set();
-  for (const m of md.matchAll(/^\|\s*`([^`]+)`\s*\/\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|\s*(\d+)\s*\|/gm)) {
-    const [, broken, solved, lab, count] = m;
-    for (const d of [broken, solved]) {
-      listed.add(d);
-      const p = path.join(root, 'examples', d, lab);
-      if (!fs.existsSync(p)) { problems.push(`table: examples/${d}/${lab} does not exist`); continue; }
-      const n = Object.keys(parseTopology(fs.readFileSync(p, 'utf8')).nodes).length;
-      if (n !== Number(count)) problems.push(`table: ${d} has ${n} nodes, table says ${count}`);
-    }
+  const all = exampleDirs(root);
+  const jaAt = md.search(/^## 日本語\s*$/m);
+  const tables = [];
+  let cur = null, offset = 0;
+  for (const line of md.split('\n')) {
+    if (/^\|\s*\[/.test(line)) {
+      if (!cur) tables.push(cur = { ja: jaAt >= 0 && offset > jaAt, rows: [] });
+      cur.rows.push(line);
+    } else if (!/^\|/.test(line)) cur = null;
+    offset += line.length + 1;
   }
-  // folders named elsewhere in the text (e.g. the IOL versions)
-  for (const m of md.matchAll(/`([A-Za-z0-9_.-]+)`/g)) {
-    if (fs.existsSync(path.join(root, 'examples', m[1], 'README.md'))) listed.add(m[1]);
+  if (!tables.length) problems.push('no table of labs');
+  for (const t of tables) {
+    const where = t.ja ? 'table (日本語)' : 'table';
+    const seen = new Set();
+    for (const row of t.rows) {
+      const cells = row.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((c) => c.trim());
+      if (cells.length !== 5) { problems.push(`${where}: expected 5 columns: ${row}`); continue; }
+      const [names, proto, vendor, broken, start] = cells;
+      const links = [...names.matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)];
+      if (links.length !== 2) { problems.push(`${where}: expected [lab](lab/) / [lab-solved](lab-solved/): ${names}`); continue; }
+      for (const [, text, target] of links) {
+        if (target.replace(/\/$/, '') !== text) problems.push(`${where}: [${text}] links to ${target}, not ${text}/`);
+      }
+      const dir = links[0][1];
+      const solved = links[1][1];
+      if (solved !== `${dir}-solved`) problems.push(`${where}: ${dir}: the solved twin is ${solved}, expected ${dir}-solved`);
+      for (const d of [dir, solved]) {
+        if (!all.includes(d)) { problems.push(`${where}: examples/${d}/ is not an example folder`); continue; }
+        if (seen.has(d)) problems.push(`${where}: ${d} is listed twice`);
+        seen.add(d);
+        listed.add(d);
+      }
+      if (!all.includes(dir)) continue;
+      const exDir = path.join(root, 'examples', dir);
+      const labs = labFiles(exDir);
+      if (labs.length !== 1) continue; // reported by checkExampleReadme
+      const want = `\`./xray.sh examples/${dir}/${labs[0]}\``;
+      if (start !== want) problems.push(`${where}: ${dir}: start is ${start}, expected ${want}`);
+      const wantProto = protocolsOf(dir);
+      const gotProto = proto.split('+').map((s) => s.trim()).filter(Boolean);
+      if (!sameSet(gotProto, wantProto)) problems.push(`${where}: ${dir}: protocol "${proto}", expected "${wantProto.join(' + ')}"`);
+      const wantVendor = routerVendorsOf(parseTopology(fs.readFileSync(path.join(exDir, labs[0]), 'utf8')));
+      const gotVendor = vendor.split('+').map((s) => s.trim()).filter(Boolean);
+      if (!sameSet(gotVendor, wantVendor)) problems.push(`${where}: ${dir}: vendor "${vendor}", expected "${wantVendor.join(' + ')}"`);
+      // what is broken: the quoted question of the folder README's title (English / 日本語)
+      const exMd = fs.readFileSync(path.join(exDir, 'README.md'), 'utf8');
+      const exJa = exMd.search(/^## 日本語\s*$/m);
+      const titlePart = t.ja ? (exJa >= 0 ? exMd.slice(exJa) : '') : (exJa >= 0 ? exMd.slice(0, exJa) : exMd);
+      const title = (titlePart.match(/^# (.*)$/m) || [])[1] || '';
+      const q = title.match(t.ja ? /「[^」]+」/ : /"[^"]+"/);
+      if (q && broken !== q[0]) problems.push(`${where}: ${dir}: what is broken is ${broken}, the README title says ${q[0]}`);
+      if (!broken) problems.push(`${where}: ${dir}: what is broken is empty`);
+    }
+    for (const d of all) if (!seen.has(d)) problems.push(`${where}: ${d} is missing`);
   }
   for (const m of md.matchAll(/xray\.sh\s+(examples\/\S+?\.clab\.ya?ml)/g)) {
     if (!fs.existsSync(path.join(root, m[1]))) problems.push(`xray.sh ${m[1]}: file does not exist`);
@@ -281,7 +338,7 @@ function checkAll(root = ROOT) {
   return result;
 }
 
-module.exports = { parseTopology, vendorOf, slug, anchorsOf, checkLinks, checkExampleReadme, checkIndexReadme, checkAll, exampleDirs };
+module.exports = { parseTopology, vendorOf, protocolsOf, slug, anchorsOf, checkLinks, checkExampleReadme, checkIndexReadme, checkAll, exampleDirs };
 
 if (require.main === module) {
   const result = checkAll();
