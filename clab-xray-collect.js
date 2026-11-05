@@ -112,6 +112,9 @@ if (!fs.existsSync(outDir)) {
 }
 var lab = (topo.match(/^name:\s*"?([^"\s]+)"?/m) || [])[1];
 if (!lab) { console.error('!! could not find `name:` in ' + topoPath); process.exit(1); }
+// containerlab_compat: only the default container names clab-<lab>-<node> are read (prefix: "" or another word would hide every router)
+var _pfxM = topo.match(/^prefix:[ \t]*(.*)$/m), _pfx = _pfxM ? _pfxM[1].replace(/\s+#.*$/, '').trim() : '';
+if (_pfx !== '' && !/^(clab|"clab"|'clab')$/.test(_pfx)) { console.error('!! the topology prefix (' + _pfx + ') is not supported: routers are read as clab-<lab>-<node>. Remove the prefix: line (or use prefix: clab).'); process.exit(1); }
 if (!SAFE_NAME.test(lab)) { console.error('!! the lab name ' + shown(lab) + ' is not a plain name (letters, digits, _ . -): not collecting'); process.exit(1); }   /* nx_no_shell */
 // nx_collect_mgmt_from_topo: --exclude-mgmt uses the lab's own mgmt subnet when the topology sets one
 //   (mgmt: / ipv4-subnet: ..., e.g. netlab = 192.168.121.0/24); otherwise containerlab's default 172.20.20.0/24.

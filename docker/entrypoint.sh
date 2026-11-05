@@ -46,12 +46,12 @@ rm -f "$WORK/problem.json"
 [ -f "$(dirname "$TOPO")/problem.json" ] && cp "$(dirname "$TOPO")/problem.json" "$WORK/problem.json"
 # read the topology where it is (netlab's clab.yml points at node_files/... relative to its own directory)
 LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$TOPO" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d '"'"'"'')"   # nx_yaml_inline_comment: drop a trailing "# ..."
-PREFIX="$(sed -n 's/^prefix:[[:space:]]*//p' "$TOPO" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d '"'"'"'')"
+PREFIX="$(sed -n 's/^prefix:[[:space:]]*//p' "$TOPO" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"   # quotes kept: prefix: "" (no prefix) is not the default
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $TOPO" >&2; exit 1; }
 # nx_no_shell (2026-10-17): the lab name becomes part of container names: plain names only (letters, digits, _ . -)
 case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $TOPO is not a plain name (letters, digits, _ . -): not starting" >&2; exit 1 ;; esac
 # the collectors name containers clab-<lab>-<node> (the containerlab / netlab default): other prefixes are not supported yet
-case "$PREFIX" in ''|clab) CPFX="clab-$LABNAME-" ;; *) echo "topology prefix '$PREFIX' is not supported (use the default 'clab')" >&2; exit 1 ;; esac
+case "$PREFIX" in ''|clab|'"clab"'|"'clab'") CPFX="clab-$LABNAME-" ;; *) echo "topology prefix ($PREFIX) is not supported (use the default 'clab')" >&2; exit 1 ;; esac
 # management network to leave out of the view: the topology's mgmt ipv4-subnet (netlab uses its own), else the clab default
 MGMT="$(awk '/^mgmt:/{f=1;next} f&&/^[^ ]/{f=0} f&&/ipv4[-_]subnet:/{print $2; exit}' "$TOPO" | tr -d '"'"'"'')"
 case "$MGMT" in *[!0-9./]*) MGMT="" ;; esac

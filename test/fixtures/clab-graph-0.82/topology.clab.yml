@@ -1,0 +1,9 @@
+name: w6graph
+topology:
+  nodes:
+    r1: { kind: linux, image: "frr<b>&x", group: g1 }
+    r2: { kind: nokia_srlinux, image: ghcr.io/nokia/srlinux }
+    r3: { kind: cisco_iol, image: vrnetlab/cisco_iol:17.18.02 }
+  links:
+    - endpoints: ["r1:eth1", "r2:e1-1"]
+    - endpoints: ["r1:eth2", "r3:Ethernet0/1"]
