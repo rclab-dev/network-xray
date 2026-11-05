@@ -12191,7 +12191,7 @@ function xrayBgpFrrReason(dec, grp) {
   var r = b && (b.reason || b.sel_reason);
   if (!r || typeof r !== "string") return "";
   r = r.replace(/[<>&"']/g, "").trim();
-  if (!r || /^first path received$/i.test(r)) return "";
+  if (!r || /^(first path received|nothing to select)$/i.test(r)) return "";
   return r;
 }
 
@@ -12222,9 +12222,10 @@ function xrayBgpReasonHtml(p, dec, grp) {
   }
   var _fr = xrayBgpFrrReason(dec, grp);   /* nx_frr_reason_small */
   if (_fr) {
-    if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
-    if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all visible attributes equal — best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
-    return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → best path by <b>" + _fr + "</b> (FRR)</div>" + chainHtml;
+    var _frBy = /^nothing left to compare$/i.test(_fr) ? "no step decided (FRR: <b>" + _fr + "</b>)" : "best path by <b>" + _fr + "</b> (FRR)";
+    if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — " + _frBy + "</div>" + chainHtml;
+    if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all visible attributes equal — " + _frBy + "</div>" + chainHtml;
+    return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → " + _frBy + "</div>" + chainHtml;
   }
   if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — " + _xrayBgpTieText() + "</div>" + chainHtml;
   if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all attributes equal — " + _xrayBgpTieText() + "</div>" + chainHtml;
@@ -12413,6 +12414,7 @@ function _xrayEcmpReasonHtml(p, dec, grp, cmap) {
   var joined = ja ? list.join(" と ") : (n === 2 ? list.join(" and ") : list.slice(0, -1).join(", ") + " and " + list[n - 1]);
   var fr = "";
   try { fr = (typeof xrayBgpFrrReason === "function" && xrayBgpFrrReason(dec, grp)) || ""; } catch (e) { fr = ""; }
+  if (/^nothing left to compare$/i.test(fr)) fr = "";
   var box = '<div class="bgp-ecmp-box">' + (ja
     ? "<b>ECMP — " + n + " 本で対等に転送</b> (maximum-paths): " + joined + " は multipath の段まで同じ。<b>&gt;</b> は代表の印で、<b>優先という意味ではない</b>。"
     : "<b>ECMP — " + n + " paths forward traffic equally</b> (maximum-paths): " + joined + " are equal up to the multipath step. <b>&gt;</b> only marks the representative — it is <b>not preferred</b>.") + "</div>";

@@ -165,10 +165,11 @@
     // nx_frr_reason_small (2026-10-09): when the state carries FRR's own selectionReason for the best path
     //   (bgp_routes[].reason), name it instead of the generic tie-break rule. 'First path received' is not a decider.
     var _frB = dec.best || {}, _fr = (typeof _frB.reason === 'string' ? _frB.reason : (typeof _frB.sel_reason === 'string' ? _frB.sel_reason : '')).replace(/[<>&"']/g, '').trim();
-    if (_fr && !/^first path received$/i.test(_fr)) {
-      if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>MED not compared</b> (different neighbor AS) — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
-      if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
-      return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → best path by <b>' + _fr + '</b> (FRR)</div>' + ch;
+    if (_fr && !/^(first path received|nothing to select)$/i.test(_fr)) {
+      var _frBy = /^nothing left to compare$/i.test(_fr) ? 'no step decided (FRR: <b>' + _fr + '</b>)' : 'best path by <b>' + _fr + '</b> (FRR)';
+      if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>MED not compared</b> (different neighbor AS) — ' + _frBy + '</div>' + ch;
+      if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — ' + _frBy + '</div>' + ch;
+      return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → ' + _frBy + '</div>' + ch;
     }
     var _rfc5004 = ' (<a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; Router ID only with compare-routerid)';
     // nos_wording (2026-10-06): an IOS-XE node (state.nos = 'ios-xe', set by the IOS-XE collector) names
@@ -280,6 +281,14 @@
   //   AIGP → AS_PATH → Origin → MED → eBGP over iBGP → IGP metric → oldest eBGP path → Router ID → cluster list →
   //   neighbor address). Used only when the node's state says nos = 'ios-xe'; FRR nodes keep the FRR legend as-is.
   var _BGP_IOS_ORDER = ['Weight', 'LocPrf', 'Local origin', 'AIGP', 'AS-Path', 'Origin', 'MED', 'eBGP&gt;iBGP', 'IGP metric', 'Older Path*', 'Router ID', 'Cluster list', 'Neighbor IP'];
+  // FRR selectionReason -> the step it names in _BGP_FRR_ORDER (highlighted when the attributes alone do not decide)
+  var _BGP_FRR_REASON_STEP = { 'Weight': 'Weight', 'Local Pref': 'LocPrf', 'AS Path': 'AS-Path', 'Confederation based AS Path': 'AS-Path',
+    'Origin': 'Origin', 'MED': 'MED', 'Peer Type': 'eBGP&gt;iBGP', 'Confed Peer Type': 'eBGP&gt;iBGP', 'IGP Metric': 'IGP metric',
+    'Older Path': 'Older Path', 'Router ID': 'Router ID*', 'Neighbor IP': 'Neighbor IP' };
+  function _bgpFrrReasonStep(dec) {
+    var b = (dec && dec.best) || {}, r = typeof b.reason === 'string' ? b.reason : (typeof b.sel_reason === 'string' ? b.sel_reason : '');
+    return (!_bgpIsIos() && _BGP_FRR_REASON_STEP.hasOwnProperty(r.trim())) ? _BGP_FRR_REASON_STEP[r.trim()] : '';
+  }
   function _bgpIsIos() { return !!(_lastState && /^ios/i.test(String(_lastState.nos || ''))); }
   function _bgpOrderLegend(primaryLabel) {
     var ios = _bgpIsIos();
@@ -340,6 +349,7 @@
       var _ec = (typeof _xrayEcmpOf === 'function') ? _xrayEcmpOf(grp) : null;
       if (_ec) { _xrayEcmpCss(); var _ecK = Object.keys(_ec).length; if (_ecN && _ecN !== _ecK) _ecMix = true; _ecN = Math.max(_ecN, _ecK); if (isSel) _ecAny = 'sel'; else if (!_ecAny) _ecAny = 'on'; }
       if (isSel && dec && dec.kind === 'decided' && dec.criterion) _primaryLabel = dec.criterion.label;
+      else if (isSel && dec && !_ec && (dec.kind === 'tie' || dec.kind === 'medskip')) _primaryLabel = _bgpFrrReasonStep(dec);
       grp.forEach(function (rt, gi) {
         var isBest = _bIsBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
         var nh = rt.next_hop || rt.nexthop || '';
