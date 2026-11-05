@@ -2,7 +2,7 @@
 # network-xray — one command: deploy a containerlab lab, keep collecting each router's live
 # state, and serve the X-Ray graph (click any node to look inside the router).
 #
-#   ./xray.sh [--bind <address>] [--interval <seconds>] [lab.clab.yml] [port] [template.html]
+#   ./xray.sh [--attach] [--bind <address>] [--interval <seconds>] [lab.clab.yml] [port] [template.html]
 #
 #   lab       default: examples/q21-bgp-lp/q21.clab.yml (BGP best-path / LocalPref)
 #   port      default: 8080   -> open http://<this machine>:8080/
@@ -12,6 +12,8 @@
 #   --interval <seconds>  how often the collector reads the routers (whole seconds). default: 1
 #   --check               only check what this run needs (docker, containerlab, node, port, topology,
 #                         IOL image) and say what to fix; nothing is started or changed. exit 0 = ready
+#   --attach              do not deploy: collect from and graph the lab that is already running (the lab named
+#                         in the topology), so changes made by hand in the routers are kept
 #   The options may come before, between or after lab / port / template.
 #
 # Examples:  ./xray.sh examples/q13-bgp-static/q13.clab.yml
@@ -24,7 +26,7 @@
 set -euo pipefail
 unset CDPATH   # a CDPATH from the environment would make the cd below print a path or pick another folder
 HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
-BIND=0.0.0.0; BIND_SET=""; INTERVAL=1; CHECK=""; POS=()
+BIND=0.0.0.0; BIND_SET=""; INTERVAL=1; CHECK=""; ATTACH=""; POS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) CHECK=1; shift ;;
@@ -33,6 +35,7 @@ while [ $# -gt 0 ]; do
       if [ "$1" = --bind ]; then BIND="$2"; BIND_SET=1; else INTERVAL="$2"; fi; shift 2 ;;
     --bind=*) BIND="${1#--bind=}"; BIND_SET=1; shift ;;
     --interval=*) INTERVAL="${1#--interval=}"; shift ;;
+    --attach) ATTACH=1; shift ;;
     *) POS+=("$1"); shift ;;
   esac
 done
@@ -147,7 +150,7 @@ case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $YML i
 # (checked before deploy, so nothing is left running). Same check as .devcontainer/start-demo.sh.
 if timeout 2 bash -c 'exec 3<>"/dev/tcp/127.0.0.1/$1"' _ "$PORT" 2>/dev/null; then
   echo "port ${PORT} is already in use (another graph is running there?)."
-  _opts=""; [ "$BIND" != 0.0.0.0 ] && _opts+="--bind $(printf '%q' "$BIND") "; [ "$INTERVAL" != 1 ] && _opts+="--interval $INTERVAL "
+  _opts=""; [ -n "$ATTACH" ] && _opts+="--attach "; [ "$BIND" != 0.0.0.0 ] && _opts+="--bind $(printf '%q' "$BIND") "; [ "$INTERVAL" != 1 ] && _opts+="--interval $INTERVAL "
   echo "  add a port:  ./xray.sh ${_opts}$(printf '%q' "${1:-examples/q21-bgp-lp/q21.clab.yml}") $((PORT + 1))   - or stop the other one."
   exit 1
 fi
@@ -161,6 +164,15 @@ if ! _berr="$(node -e 'var s=require("net").createServer();s.on("error",function
     *EACCES*) echo "  no permission to listen on port ${PORT}: use a port above 1023." ;;
   esac
   exit 1
+fi
+
+# is the lab named in the topology already running? (its containers carry the containerlab=<name> label)
+RUNNING=""
+if _ps="$(docker ps --filter "label=containerlab=${LABNAME}" --format '{{.Names}}' 2>/dev/null)" && [ -n "$_ps" ]; then RUNNING=1; fi
+if [ -n "$ATTACH" ]; then
+  [ -n "$RUNNING" ] || { echo "lab '$LABNAME' is not running - start it first, or run xray.sh without --attach to deploy it."; exit 1; }
+else
+  [ -n "$RUNNING" ] && echo "==> warning: lab '$LABNAME' is already running - redeploying it loses changes made by hand; --attach (or the docker run command in the README) keeps them."
 fi
 
 # which protocol to collect: BGP if any router runs BGP, else OSPF if any runs OSPF, else static
@@ -188,14 +200,18 @@ fi
 echo $$ > "$LOCK/pid"
 pj_ours() { [ -L "$PJ" ] && case "$(readlink "$PJ")" in "$HERE"/examples/*/problem.json) return 0 ;; esac; return 1; }
 pj_cleanup() { [ -n "$PJ_MADE" ] && [ -L "$PJ" ] && [ "$(readlink "$PJ")" = "$PJ_MADE" ] && rm -f "$PJ"; return 0; }
+STOPPED="stopped."; [ -n "$ATTACH" ] && STOPPED="stopped (the lab is still running)."
 # nx_demo_trap_true: set +e first - a failing step (e.g. the collector already ended on Ctrl-C) must not cut the clean-up short
-trap 'set +e; pj_cleanup; [ -n "$CPID" ] && kill "$CPID" 2>/dev/null; rm -rf "$LOCK"; echo; echo "stopped. remove the lab with:  ${SUDO:+$SUDO }containerlab destroy -t $(printf '"'"'%q'"'"' "$YML") --cleanup"' EXIT
+trap 'set +e; pj_cleanup; [ -n "$CPID" ] && kill "$CPID" 2>/dev/null; rm -rf "$LOCK"; echo; echo "$STOPPED remove the lab with:  ${SUDO:+$SUDO }containerlab destroy -t $(printf '"'"'%q'"'"' "$YML") --cleanup"' EXIT
 if pj_ours; then rm -f "$PJ"; fi   # left by an earlier xray.sh that was killed
 if [ -f "$LABDIR/problem.json" ]; then
   if [ -e "$PJ" ] || [ -L "$PJ" ]; then echo "==> $PJ was not made by xray.sh - left as is (the problem band shows that file)"
   else ln -s "$LABDIR/problem.json" "$PJ" && PJ_MADE="$LABDIR/problem.json"; fi
 fi
 
+if [ -n "$ATTACH" ]; then
+  echo "==> attaching to running lab '$LABNAME' ($PROTO) - not redeployed"
+else
 echo "==> deploying lab '$LABNAME' ($PROTO) ..."
 $SUDO containerlab deploy -t "$YML" --reconfigure
 set +e   # frr_wait (10-08): the checks below return non-zero on purpose
@@ -217,6 +233,7 @@ for c in $(docker ps --filter "label=containerlab=${LAB}" --format '{{.Names}}')
   [ -z "$ok" ] && echo "==> $c: FRR is still not running. Try: docker exec $c /usr/lib/frr/watchfrr.sh restart all"
 done
 set -e
+fi   # --attach: the FRR wait is skipped too (a restart would drop changes made by hand)
 
 # nx_cli_msgs: the IOS read interval is said only when the lab has a Cisco IOL node
 _iosint=""; grep -qsE "kind:[[:space:]]*cisco_iol" "$YML" && _iosint=", Cisco IOS every ${NX_IOS_INTERVAL:-10} s"

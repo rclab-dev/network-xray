@@ -41,8 +41,9 @@ var FAKES = {
     '         [ -n "$NX_GRAPH_BLOCK" ] && exec "$NX_REAL_SLEEP" 30 ;;\n' +
     'esac\n' +
     'exit 0\n',
-  // docker ps: no containers, so the FRR wait loop has nothing to do
-  docker: LOGLINE + 'exit 0\n',
+  // docker ps: no containers (the lab is not running, the FRR wait loop has nothing to do);
+  // NX_DOCKER_PS=<names> lists those containers, as for a lab that is already running
+  docker: LOGLINE + '[ "$1" = ps ] && [ -n "$NX_DOCKER_PS" ] && echo "$NX_DOCKER_PS"\n' + 'exit 0\n',
   // node (the collector, started in the background); `node -e` (the --bind check) runs the real node
   node:
     '[ "$1" = -e ] && exec "$NX_REAL_NODE" "$@"\n' +
@@ -462,4 +463,52 @@ test('xray.sh --check: cisco_iol images named in the topology must exist locally
   r = await run(env, 'xray.sh', ['--check', path.join(ROOT, 'examples', 'q5-ospf-iol', 'q5.clab.yml'), String(await freePort())]);
   assert.strictEqual(r.code, 0, r.stdout + r.stderr);
   assert.deepStrictEqual(calls(r, 'docker').filter(function (c) { return c[0] === 'image'; }), [['image', 'inspect', 'vrnetlab/cisco_iol:17.18.02']]);
+});
+
+test('xray.sh: --attach collects from and graphs a running lab without deploying it', { skip: SKIP }, async function () {
+  var env = setup();
+  var port = await freePort();
+  var yml = path.join(env.here, 'examples', 'q21-bgp-lp', 'q21.clab.yml');
+  var r = await run(env, 'xray.sh', ['--attach', 'examples/q21-bgp-lp/q21.clab.yml', String(port)],
+    { env: { NX_DOCKER_PS: 'clab-q21-bgp-lp-r1' } });
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /==> attaching to running lab 'q21-bgp-lp' \(bgp\) - not redeployed/);
+  assert.doesNotMatch(r.stdout, /deploying lab|warning/);
+  assert.deepStrictEqual(calls(r, 'sudo'), [], 'no deploy');
+  assert.ok(!calls(r, 'containerlab').some(function (c) { return c[0] === 'deploy'; }), 'no deploy');
+  assert.deepStrictEqual(calls(r, 'docker'), [['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']],
+    'only the running check: no FRR wait / restart');
+  assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
+  assert.deepStrictEqual(calls(r, 'containerlab').pop(),
+    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', env.here, '-s', '0.0.0.0:' + port]);
+  assert.match(r.stdout, /stopped \(the lab is still running\)\. remove the lab with:/);
+});
+
+test('xray.sh: --attach when the lab is not running stops with a short message', { skip: SKIP }, async function () {
+  var env = setup();
+  var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort()), '--attach']);
+  assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /lab 'q21-bgp-lp' is not running - start it first, or run xray\.sh without --attach to deploy it\./);
+  assert.deepStrictEqual(r.calls.map(function (c) { return c[0]; }), ['docker'], 'only docker ps: nothing deployed or started');
+  assert.ok(!fs.existsSync(path.join(env.here, '.xray.lock')), 'no lock left');
+  assert.ok(!isLink(path.join(env.here, 'problem.json')), 'no problem.json link');
+});
+
+test('xray.sh: redeploying a lab that is already running prints one warning and asks nothing', { skip: SKIP }, async function () {
+  var env = setup();
+  var yml = path.join(env.here, 'examples', 'q21-bgp-lp', 'q21.clab.yml');
+  // stdin stays open: a prompt would block until the run is killed
+  var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort())],
+    { env: { NX_DOCKER_PS: 'clab-q21-bgp-lp-r1' } });
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  var warn = r.stdout.split('\n').filter(function (l) { return /warning/.test(l); });
+  assert.deepStrictEqual(warn, ["==> warning: lab 'q21-bgp-lp' is already running - redeploying it loses changes made by hand; " +
+    '--attach (or the docker run command in the README) keeps them.']);
+  assert.ok(r.stdout.indexOf('warning') < r.stdout.indexOf('deploying lab'), 'warning comes before the deploy');
+  assert.deepStrictEqual(calls(r, 'sudo'), [['containerlab', 'deploy', '-t', yml, '--reconfigure']]);
+
+  // a lab that is not running: no warning
+  r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort())]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stdout, /warning/);
 });
