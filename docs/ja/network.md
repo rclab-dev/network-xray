@@ -1,0 +1,42 @@
+[English](../network.md)
+
+# network-xray が通信する先
+
+network-xray には、テレメトリも、アクセス解析も、アカウントもありません。自分で確かめられる様に、通信する先をここに全部
+並べます。`node scripts/check-no-external.js` は、頁やスクリプトがほかの機械へ届く「よくある書き方」(script / style の
+タグ・`fetch`・WebSocket・Worker・`curl`・解析のタグ …) を探し、下に無い物があれば失敗する lint です。ソースの文字を
+読む物で、よくある形を見つける物です (証明ではありません)。
+
+## ブラウザの頁
+
+- 頁が読み込む物は、あなたが起こした graph のサーバ (`./xray.sh`・コンテナ・`containerlab graph`) からだけです: 頁・
+  スクリプト・スタイル・フォント・`xray-states.js`。CDN・Web フォント・アクセス解析はありません。
+- **例外 1 つ (押した時だけ):** RouteCrushLab の問題 (RCL のリンクのある `problem.json`) を解いた後に出る **Preview**
+  のボタンは、`https://routecrushlab.com/static/pip/` の短い動画を再生します。ボタンを押すまでは何も取りに行きません。
+
+## ルータを読む (collector)
+
+- ラボのコンテナへの `docker exec` (FRR の `vtysh`・SR Linux の `sr_cli`) と、Cisco IOL へのラボの管理網での SSH。
+  どれもあなたの機械の中です。送るのは `show` の命令だけです。
+
+## ラボを起こす (`xray.sh`・containerlab・netlab)
+
+- ルータの image が手元に無ければ、containerlab (や netlab) がその registry から取ってきます。これは containerlab /
+  Docker のいつもの動きで、network-xray が足す通信ではありません。
+- `./xray.sh` とコンテナは、案内のリンク (containerlab・Docker・Node.js の入れ方の頁) を表示します。表示するだけで、
+  開きません。
+
+## image を作る / 取る
+
+- `docker pull ghcr.io/rclab-dev/network-xray` は GitHub の registry から image を取ります。
+- `docker build` は土台の image (`node`・digest で固定) と、固定した版の containerlab 1 つを GitHub から取り、SHA-256 で
+  確かめます。
+
+## あなたが押すリンク
+
+- README・頁・`problem.json` には普通のリンク (GitHub・routecrushlab.com・RFC …) があります。押した時だけ開きます。
+
+## MCP サーバ
+
+- `scripts/xray-mcp.js` は stdio でクライアントと話し、あなたの機械の `xray-states.js` と `problem.json` を読みます。
+  網には出ません。
