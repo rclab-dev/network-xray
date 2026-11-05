@@ -1,3 +1,5 @@
+[日本語](ja/troubleshooting.md)
+
 # Troubleshooting
 
 Problems that `xray.sh` and the collector (`clab-xray-collect.js`) detect, and what to do about them.

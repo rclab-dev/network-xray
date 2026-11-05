@@ -1,3 +1,5 @@
+[日本語](ja/faq.md)
+
 # network-xray FAQ
 
 Short answers for network engineers looking at network-xray for the first time. Each answer points to the part of the

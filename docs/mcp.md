@@ -1,3 +1,5 @@
+[日本語](ja/mcp.md)
+
 # MCP server: ask an AI assistant about a lab
 
 `scripts/xray-mcp.js` is a small [Model Context Protocol](https://modelcontextprotocol.io) server. It lets an MCP
