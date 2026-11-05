@@ -155,7 +155,7 @@ real FRR lab in the browser. The paste pages (`frr-paste.html`, `bgp-paste.html`
 Yes, with GitHub Codespaces: the button in the README starts a 3-router FRR lab and opens the page on port 8600 in about
 2–3 minutes. It needs a GitHub login, uses your own Codespaces quota (delete the codespace when you are done), and only
 runs container-based nodes such as FRR. See
-[Change a real lab yourself — GitHub Codespaces](../README.md#-change-a-real-lab-yourself--github-codespaces).
+[Live lab — GitHub Codespaces](../README.md#-live-lab--github-codespaces).
 
 ### Can I use it offline, from saved output?
 

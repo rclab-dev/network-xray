@@ -155,7 +155,7 @@ netlab のツールでは、ラボが動いている間 `network-xray.json` に�
 GitHub Codespaces で試せます。README のボタンで 3 台の FRR のラボが立ち上がり、2〜3 分ほどでポート 8600 の画面が
 開きます。GitHub のログインが要り、自分の Codespaces の枠を使います (終わったら codespace を消してください)。動かせるのは
 FRR のようなコンテナのノードだけです。
-[Change a real lab yourself — GitHub Codespaces](../../README.md#-change-a-real-lab-yourself--github-codespaces) を参照してください。
+[ライブ (live) ラボ — GitHub Codespaces](../../README.md#-ライブ-live-ラボ--github-codespaces) を参照してください。
 
 ### 保存した出力から、オフラインで使えますか?
 
