@@ -103,7 +103,7 @@ Anyone who can reach the port. There is no authentication of any kind.
 | `xray.sh` | `0.0.0.0` by default (`BIND=0.0.0.0` in `xray.sh`) | warns when you didn't pick an address; `--bind 127.0.0.1` restricts it |
 | README `docker run` | `127.0.0.1:8600` | |
 | netlab tool | `-p 8600:8600`, every host interface | `docker/netlab-defaults.yml` |
-| compose demo | `8080:8080`, every host interface | |
+| compose demo | `127.0.0.1:8080:8080`, this machine only | change it to `"8080:8080"` in `compose.yml` to open it to other machines |
 
 - **Recommendation:** use `--bind 127.0.0.1` plus an SSH tunnel on shared machines.
 - **Escaping:** collected strings (node names, BGP fields, reasons) are HTML-escaped before rendering; `test/escape.test.js` and `test/dom-insert-escape.test.js` cover injection attempts.
