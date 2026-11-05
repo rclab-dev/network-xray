@@ -438,7 +438,7 @@ for (var _i = 2; _i < process.argv.length; _i++) {
   else if (_s === '-h' || _s === '--help') _help = true;
   else if (_s !== '--self-test' && _s.charAt(0) === '-' && !_bad) _bad = _s;
 }
-if (_help) { console.log(USAGE); process.exit(0); }
+if (_help) { console.log(USAGE); process.exit(0); }   // release-check: ok (the --help text)
 if (_bad) { console.error('clab-srl-collect.js: unknown option: ' + _bad + "\nTry 'node clab-srl-collect.js --help'."); process.exit(2); }
 
 if (process.argv.indexOf('--self-test') >= 0) {

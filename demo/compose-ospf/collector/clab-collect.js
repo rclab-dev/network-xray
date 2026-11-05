@@ -1540,7 +1540,7 @@ if (typeof require !== 'undefined' && require.main === module) {
     return r;
   }
   var _cli = _cliCheck(process.argv.slice(2), ['self-test', 'fixtures', 'lab', 'node', 'adj', 'proto', 'exclude-mgmt', 'mgmt-subnet', 'out'], ['self-test', 'exclude-mgmt']);
-  if (_cli.help) { console.log(USAGE); process.exit(0); }
+  if (_cli.help) { console.log(USAGE); process.exit(0); }   // release-check: ok (the --help text)
   if (_cli.bad) { console.error('clab-collect.js: unknown option: ' + _cli.bad + "\nTry 'node clab-collect.js --help'."); process.exit(2); }
   var a = _argMap(process.argv.slice(2));
   // --mgmt-subnet <cidr> (explicit) or --exclude-mgmt (default clab mgmt 172.20.20.0/24); else off.
@@ -1564,7 +1564,7 @@ if (typeof require !== 'undefined' && require.main === module) {
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, outl); console.log('wrote ' + a.out); } else console.log(outl);
   }
   else {
-    console.log(USAGE);
+    console.log(USAGE);   // release-check: ok (the --help text)
   }
 }
 

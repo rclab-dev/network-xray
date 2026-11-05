@@ -271,7 +271,7 @@ if (typeof require !== 'undefined' && require.main === module) {
     } else if (_s === '-h') _help = true;
     else if (_s.charAt(0) === '-' && _s.length > 1 && !_bad) _bad = _s;
   }
-  if (_help) { console.log(USAGE); process.exit(0); }
+  if (_help) { console.log(USAGE); process.exit(0); }   // release-check: ok (the --help text)
   if (_bad) { console.error('frr-collect.js: unknown option: ' + _bad + "\nTry 'node frr-collect.js --help'."); process.exit(2); }
   var a = _argMap(process.argv.slice(2));
   var mgmt = (a['mgmt-subnet'] && a['mgmt-subnet'] !== true) ? a['mgmt-subnet']
@@ -290,7 +290,7 @@ if (typeof require !== 'undefined' && require.main === module) {
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, o2); console.log('wrote ' + a.out); } else console.log(o2);
   }
   else {
-    console.log(USAGE);
+    console.log(USAGE);   // release-check: ok (the --help text)
   }
 }
 

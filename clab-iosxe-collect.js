@@ -903,7 +903,7 @@ function cliCheck(argv) {
 
 function main() {
   var cli = cliCheck(process.argv.slice(2));
-  if (cli.help) { console.log(USAGE); process.exit(0); }
+  if (cli.help) { console.log(USAGE); process.exit(0); }   // release-check: ok (the --help text)
   if (cli.bad) { console.error('clab-iosxe-collect.js: unknown option: ' + cli.bad + "\nTry 'node clab-iosxe-collect.js --help'."); process.exit(2); }
   if (process.argv.indexOf('--self-test') > 0) return selfTest();
   var node = arg('--node'), lab = arg('--lab'), proto = (arg('--proto', 'ospf') || 'ospf').toLowerCase();

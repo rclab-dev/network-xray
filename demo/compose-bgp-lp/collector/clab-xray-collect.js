@@ -35,7 +35,7 @@ var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] 
   '  env: NX_IOS_INTERVAL (seconds between Cisco IOS reads, default 10), NX_CYCLE_WAIT_MS (default 4000)';
 var HINT = "Try 'node clab-xray-collect.js --help'.";
 for (var ai = 0; ai < argv.length; ai++) {
-  if (argv[ai] === '-h' || argv[ai] === '--help') { console.log(USAGE); process.exit(0); }
+  if (argv[ai] === '-h' || argv[ai] === '--help') { console.log(USAGE); process.exit(0); }   // release-check: ok (the --help text)
   if (argv[ai] === '--validate' || argv[ai] === '--interval' || argv[ai] === '--mgmt-subnet') ai++;
 }
 for (ai = 0; ai < argv.length; ai++) {
