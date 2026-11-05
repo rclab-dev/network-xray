@@ -89,7 +89,7 @@ function readShowFromDir(dir, showCmd) {
   if (ALT_NAME[showCmd]) candidates.push(ALT_NAME[showCmd]);
   for (var i = 0; i < candidates.length; i++) {
     var fp = path.join(dir, candidates[i]);
-    try { return JSON.parse(fs.readFileSync(fp, 'utf8')); } catch (e) { /* try next */ }
+    try { if (fs.statSync(fp).isFile()) return JSON.parse(fs.readFileSync(fp, 'utf8')); } catch (e) { /* try next */ }
   }
   return null;
 }

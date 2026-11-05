@@ -71,6 +71,7 @@ function loadStates(input) {
   if (!input) throw new QueryError('missing input (a state JSON file or a directory)');
   var stat;
   try { stat = fs.statSync(input); } catch (e) { throw new QueryError('not found: ' + input); }
+  if (!stat.isDirectory() && !stat.isFile()) throw new QueryError('not a regular file or a directory: ' + input);
   if (!stat.isDirectory()) {
     var text;
     try { text = fs.readFileSync(input, 'utf8'); } catch (e) { throw new QueryError('cannot read: ' + input); }
@@ -79,16 +80,19 @@ function loadStates(input) {
   }
   var files = fs.readdirSync(input).sort();
   var out = {};
-  files.filter(function (f) { return /^state_.+\.json$/.test(f); }).forEach(function (f) {
+  var isFile = function (f) { try { return fs.statSync(path.join(input, f)).isFile(); } catch (e) { return false; } };
+  files.filter(function (f) { return /^state_.+\.json$/.test(f) && isFile(f); }).forEach(function (f) {
     var s = parseText(fs.readFileSync(path.join(input, f), 'utf8'), f.slice(6, -5));
     Object.keys(s).forEach(function (k) { out[k] = s[k]; });
   });
   if (Object.keys(out).length) return out;
-  if (files.indexOf('xray-states.js') >= 0) return parseText(fs.readFileSync(path.join(input, 'xray-states.js'), 'utf8'));
+  if (files.indexOf('xray-states.js') >= 0 && isFile('xray-states.js')) return parseText(fs.readFileSync(path.join(input, 'xray-states.js'), 'utf8'));
   if (isFrrDir(input)) { var st = collectFrrDir(input); out[nodeName(st)] = st; return out; }
   files.forEach(function (f) {
     var sub = path.join(input, f);
-    if (fs.statSync(sub).isDirectory() && isFrrDir(sub)) { var s2 = collectFrrDir(sub); out[nodeName(s2, f)] = s2; }
+    var st2;
+    try { st2 = fs.statSync(sub); } catch (e) { return; }
+    if (st2.isDirectory() && isFrrDir(sub)) { var s2 = collectFrrDir(sub); out[nodeName(s2, f)] = s2; }
   });
   if (Object.keys(out).length) return out;
   throw new QueryError('no state files (state_<node>.json, xray-states.js or FRR show_*.json) in ' + input);

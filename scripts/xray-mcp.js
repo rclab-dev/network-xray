@@ -219,7 +219,11 @@ function handle(msg) {
         break;
       }
       try { result = toolResult(callTool(params.name, params.arguments), false); }
-      catch (e) { result = toolResult({ error: (e && e.message) || String(e) }, true); }
+      catch (e) {
+        var text = (e && e.message) || String(e);
+        if (e instanceof TypeError) text = 'unexpected data (maybe a field in the lab state has the wrong type): ' + text;
+        result = toolResult({ error: text }, true);
+      }
       break;
     default:
       if (isNotification) return null;   // notifications/initialized, notifications/cancelled, ...
