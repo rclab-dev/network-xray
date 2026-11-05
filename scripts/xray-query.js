@@ -120,7 +120,8 @@ function summarize(states) {
       if (!r || !r.peer) return;
       var back = n + '>' + r.peer, fwd = r.peer + '>' + n;
       var row = { a: n, a_iface: r.iface || '', b: r.peer, b_iface: null, up: !!r.up };
-      if (r.ospf_state) row.ospf_state = r.ospf_state;
+      var ospfState = r.ospf_state || (r.proto === 'ospf' ? r.state : '');   // SR Linux rows: proto + state
+      if (ospfState) row.ospf_state = ospfState;
       if (pending[back] && pending[back].length) {
         var other = pending[back].shift();
         other.b_iface = row.a_iface;
