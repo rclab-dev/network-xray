@@ -119,7 +119,7 @@ router at the forwarding decision (the deepdive).
 **Why one BGP route wins — and the picture follows live.** Two upstreams advertise `8.8.8.0/24` with
 different Local Preference. Open r1: the BGP table shows both candidates and a **Best-Path
 Decision** panel that explains *why* the winner won (LocPref) — then change the LocPref on the running
-lab and the best path flips **in place, no reload** (via r3 at 100 ⇄ via r2 at 150). X-Ray re-reads the
+lab and the best path flips **in place, no reload** (in the GIF below, recorded on the q21 example: via r3 at 100 ⇄ via r2 at 150). X-Ray re-reads the
 real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path FRR itself marked best** (`bestpath`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
 version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
