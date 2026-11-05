@@ -1,0 +1,172 @@
+{
+  "bgp-bestpath-multiprefix": {
+    "fix": "showcase: r1 sets LocalPref 150 (not 50) on r2's route, so r2 is best for 8.8.8.0/24",
+    "files": {
+      "r1/frr.conf": { "removed": ["set local-preference 50"], "added": ["set local-preference 150"] }
+    }
+  },
+  "q1-static": {
+    "fix": "Q1: r1's interface is no longer shut down, so sv reaches 8.8.8.8",
+    "files": {
+      "r1/frr.conf": { "removed": ["shutdown"], "added": [] }
+    }
+  },
+  "q2-static": {
+    "fix": "Q2: r1 gets a default route (staticd on) so sv reaches any internet address",
+    "files": {
+      "r1/daemons": { "removed": ["staticd=no"], "added": ["staticd=yes", "staticd_options=\"  -A 127.0.0.1\""] },
+      "r1/frr.conf": { "removed": [], "added": ["ip route 0.0.0.0/0 10.10.0.1"] }
+    }
+  },
+  "q3-ospf": {
+    "fix": "Q3: r1 runs OSPF on the r1-r2 link, so the neighbor comes up Full",
+    "files": {
+      "r1/frr.conf": { "removed": [], "added": ["router ospf", "ospf router-id 10.10.0.10", "network 10.10.0.0/24 area 0", "exit"] }
+    }
+  },
+  "q4-static": {
+    "fix": "Q4: r1's static route to 2.2.2.2 uses the real next hop on the link",
+    "files": {
+      "r1/frr.conf": { "removed": ["ip route 2.2.2.2/32 10.255.255.1"], "added": ["ip route 2.2.2.2/32 10.10.0.20"] }
+    }
+  },
+  "q5-ospf": {
+    "fix": "Q5: r1's OSPF hello interval matches r2",
+    "files": {
+      "r1/frr.conf": { "removed": [], "added": ["ip ospf hello-interval 5"] }
+    }
+  },
+  "q5-ospf-iol": {
+    "fix": "Q5 (IOL): r1's OSPF hello interval matches r2",
+    "files": {
+      "r1.partial.cfg": { "removed": [], "added": ["ip ospf hello-interval 5"] }
+    }
+  },
+  "q6-ospf": {
+    "fix": "Q6: r2's OSPF hello interval matches on the redundant path, so failover works",
+    "files": {
+      "r2/frr.conf": { "removed": [], "added": ["ip ospf hello-interval 5"] }
+    }
+  },
+  "q7-ospf-static": {
+    "fix": "Q7: r1's static route with an unreachable next hop is removed (staticd off), so the OSPF route to 2.2.2.2 is used",
+    "files": {
+      "r1/daemons": { "removed": ["staticd=yes", "staticd_options=\"  -A 127.0.0.1\""], "added": ["staticd=no"] },
+      "r1/frr.conf": { "removed": ["ip route 2.2.2.2/32 10.10.0.99"], "added": [] }
+    }
+  },
+  "q8-ospf": {
+    "fix": "Q8: r1's link network is in OSPF area 0 like r2",
+    "files": {
+      "r1/frr.conf": { "removed": ["network 10.10.0.0/24 area 1"], "added": ["network 10.10.0.0/24 area 0"] }
+    }
+  },
+  "q9-ospf": {
+    "fix": "Q9 (fix r1 only): r1's OSPF router-id no longer duplicates r2 (backup path) and the primary static route uses r3's link address",
+    "files": {
+      "r1/frr.conf": {
+        "removed": ["ospf router-id 2.2.2.2", "ip route 3.3.3.3/32 10.11.0.99"],
+        "added": ["ospf router-id 1.1.1.1", "ip route 3.3.3.3/32 10.11.0.20"]
+      }
+    }
+  },
+  "q10-ospf": {
+    "fix": "Q10: r1's interface is no longer OSPF passive",
+    "files": {
+      "r1/frr.conf": { "removed": ["ip ospf passive"], "added": [] }
+    }
+  },
+  "q11-ospf-static": {
+    "fix": "Q11: r1's static route via r2 is removed (staticd off), so the direct OSPF route is used",
+    "files": {
+      "r1/daemons": { "removed": ["staticd=yes", "staticd_options=\"  -A 127.0.0.1\""], "added": ["staticd=no"] },
+      "r1/frr.conf": { "removed": ["ip route 3.3.3.3/32 10.10.0.20"], "added": [] }
+    }
+  },
+  "q12-ospf-static": {
+    "fix": "Q12: r1's r1-r3 network goes to area 0, and a floating static route (AD 120) via r2 is the backup",
+    "files": {
+      "r1/daemons": { "removed": ["staticd=no"], "added": ["staticd=yes"] },
+      "r1/frr.conf": {
+        "removed": ["network 10.11.0.0/24 area 1"],
+        "added": ["network 10.11.0.0/24 area 0", "ip route 3.3.3.3/32 10.10.0.20 120"]
+      }
+    }
+  },
+  "q13-bgp-static": {
+    "fix": "Q13: r1's BGP neighbor is r2's real address 10.10.0.20",
+    "files": {
+      "r1/frr.conf": {
+        "removed": ["neighbor 10.10.0.2 remote-as 65002", "neighbor 10.10.0.2 timers connect 5"],
+        "added": ["neighbor 10.10.0.20 remote-as 65002", "neighbor 10.10.0.20 timers connect 5"]
+      }
+    }
+  },
+  "q14-bgp": {
+    "fix": "Q14: r1 sources the loopback iBGP session from lo",
+    "files": {
+      "r1/frr.conf": { "removed": [], "added": ["neighbor 2.2.2.2 update-source lo"] }
+    }
+  },
+  "q15-bgp-ospf-static": {
+    "fix": "Q15: r2 sets next-hop-self toward r1",
+    "files": {
+      "r2/frr.conf": { "removed": [], "added": ["neighbor 1.1.1.1 next-hop-self"] }
+    }
+  },
+  "q15-bgp-ospf-static-iol": {
+    "fix": "Q15 (IOL): r2 sets next-hop-self toward r1",
+    "files": {
+      "r2.partial.cfg": { "removed": [], "added": ["neighbor 1.1.1.1 next-hop-self"] }
+    }
+  },
+  "q16-bgp": {
+    "fix": "Q16: r1 advertises its loopback 1.1.1.1/32 in BGP",
+    "files": {
+      "r1/frr.conf": { "removed": [], "added": ["network 1.1.1.1/32"] }
+    }
+  },
+  "q17-ospf-static": {
+    "fix": "Q17: the redistribution route-map on r1 permits the static route into OSPF",
+    "files": {
+      "r1/frr.conf": { "removed": ["route-map STATIC-TO-OSPF deny 10"], "added": ["route-map STATIC-TO-OSPF permit 10"] }
+    }
+  },
+  "q18-bgp": {
+    "fix": "Q18: r1's inbound prefix-list permits 2.2.2.0/24",
+    "files": {
+      "r1/frr.conf": { "removed": ["ip prefix-list FILTER seq 5 deny 2.2.2.0/24"], "added": ["ip prefix-list FILTER seq 5 permit 2.2.2.0/24"] }
+    }
+  },
+  "q19-bgp": {
+    "fix": "Q19: r1 accepts up to 15 routes from r2 and rejects all RFC 1918 ranges",
+    "files": {
+      "r1/frr.conf": {
+        "removed": ["ip prefix-list NO-BOGON seq 10 permit 172.16.0.0/12 le 32", "neighbor 10.10.0.20 maximum-prefix 5"],
+        "added": [
+          "ip prefix-list NO-BOGON seq 10 deny 172.16.0.0/12 le 32",
+          "ip prefix-list NO-BOGON seq 15 deny 192.168.0.0/16 le 32",
+          "neighbor 10.10.0.20 maximum-prefix 15"
+        ]
+      }
+    }
+  },
+  "q20-bgp": {
+    "fix": "Q20: r1 no longer applies the OUTBOUND route-map to r2",
+    "files": {
+      "r1/frr.conf": { "removed": ["neighbor 10.10.0.20 route-map OUTBOUND out"], "added": [] }
+    }
+  },
+  "q21-bgp-lp": {
+    "fix": "Q21: r1 sets LocalPref 150 (not 50) on r2's route, so the fast ISP is best and r3 stays as backup",
+    "files": {
+      "r1/frr.conf": { "removed": ["set local-preference 50"], "added": ["set local-preference 150"] }
+    }
+  },
+  "q21-bgp-lp-iol": {
+    "fix": "Q21 (IOL): r1 sets LocalPref 150 (not 50) on r2's route, so the fast ISP is best and r3 stays as backup",
+    "files": {
+      "r1.partial.cfg": { "removed": ["set local-preference 50"], "added": ["set local-preference 150"] }
+    }
+  }
+}
