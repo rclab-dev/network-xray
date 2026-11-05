@@ -119,6 +119,8 @@ test('tools.network_xray: docker runtime, up / message / down', () => {
   const down = asList(d.down);
   assert.ok(down.includes('rm -f network-xray.json'));
   assert.ok(down.includes("docker kill '{name}_network_xray'"));
+  assert.ok(down.indexOf('rm -f network-xray.json') < down.indexOf("docker kill '{name}_network_xray'"),
+    'the file is removed before docker kill (a failed kill must not keep it)');
 });
 
 test('tool commands have balanced { } (netlab format strings)', () => {
