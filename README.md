@@ -156,6 +156,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
 cd network-xray
+./xray.sh --check examples/q21-bgp-lp/q21.clab.yml   # optional: check docker, containerlab, node, the port and the lab (starts nothing)
 ./xray.sh examples/q21-bgp-lp/q21.clab.yml     # deploy -> keep collecting -> serve the graph
 ```
 `xray.sh` was called `demo.sh` before; `./demo.sh` still works (it runs `xray.sh`).
@@ -808,6 +809,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
 cd network-xray
+./xray.sh --check examples/q21-bgp-lp/q21.clab.yml   # 任意: docker・containerlab・node・ポート・ラボを先に確かめる (何も起動しない)
 ./xray.sh examples/q21-bgp-lp/q21.clab.yml     # deploy → 状態を集め続ける → graph を配信
 ```
 `xray.sh` は前は `demo.sh` という名前でした。`./demo.sh` も今まで通り動きます (`xray.sh` を動かします)。
