@@ -11,8 +11,13 @@ const { spawnSync } = require('child_process');
 const SCRIPT = path.join(__dirname, '..', 'scripts', 'release-check.js');
 const TODO_REL = 'TODO ' + 'release';
 
+// every fixture folder is removed when the tests end (pass or fail)
+const TMPS = [];
+test.after(() => { for (const d of TMPS) fs.rmSync(d, { recursive: true, force: true }); });
+
 function fixture(over = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-release-check-'));
+  TMPS.push(root);
   const files = Object.assign({
     'CHANGELOG.md': '# Changelog\n\n## [1.1.7] - 2026-11-04\n- fixes\n\n## [1.1.6] - 2026-10-20\n- earlier\n',
     'docker/Dockerfile': 'FROM node:22-alpine\nARG CLAB_VERSION=0.82.0\nLABEL org.opencontainers.image.version="1.1.7"\n',
