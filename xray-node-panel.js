@@ -34,7 +34,7 @@
     { key: 'weight', col: 'weight', label: 'Weight',  dir: 1,  val: function (r) { return bnum(r.weight, 0); } },
     { key: 'locprf', col: 'locprf', label: 'LocPrf',  dir: 1,  val: function (r) { return bnum(r.local_pref, 100); } },
     { key: 'aspath', col: 'path',   label: 'AS-Path', dir: -1, val: function (r) { return r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0; } },
-    { key: 'origin', col: 'path',   label: 'Origin',  dir: -1, val: function (r) { var m = { i: 0, e: 1, '?': 2 }; return (r.origin in m) ? m[r.origin] : 3; } },
+    { key: 'origin', col: 'path',   label: 'Origin',  dir: -1, val: function (r) { var m = { i: 0, e: 1, '?': 2, igp: 0, egp: 1, incomplete: 2 }; var o = String(r.origin == null ? '' : r.origin).trim().toLowerCase(); return (o in m) ? m[o] : 3; } },   /* nx_readme_audit_v2: the collectors write IGP / EGP / incomplete */
     { key: 'metric', col: 'metric', label: 'MED',     dir: -1, val: function (r) { return bnum(r.metric, 0); } }
   ];
   function bnum(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : n; }
