@@ -1,0 +1,21 @@
+{
+  "::/0": [ { "prefix": "::/0", "protocol": "static", "selected": true, "installed": true,
+    "nexthops": [ { "ip": "fe80::a8c1:abff:fe00:201", "afi": "ipv6", "interfaceName": "eth1", "active": true, "fib": true } ] } ],
+  "2001:db8:12::/64": [ { "prefix": "2001:db8:12::/64", "protocol": "connected", "selected": true,
+    "nexthops": [ { "directlyConnected": true, "interfaceName": "eth1", "active": true, "fib": true } ] } ],
+  "2001:db8:14::/64": [ { "prefix": "2001:db8:14::/64", "protocol": "connected", "selected": true,
+    "nexthops": [ { "directlyConnected": true, "interfaceName": "eth3", "active": true, "fib": true } ] } ],
+  "2001:db8:ff::1/128": [ { "prefix": "2001:db8:ff::1/128", "protocol": "connected", "selected": true,
+    "nexthops": [ { "directlyConnected": true, "interfaceName": "lo", "active": true, "fib": true } ] } ],
+  "2001:db8:ff::2/128": [ { "prefix": "2001:db8:ff::2/128", "protocol": "bgp", "selected": true, "installed": true,
+    "nexthops": [ { "ip": "fe80::a8c1:abff:fe00:201", "afi": "ipv6", "interfaceName": "eth1", "active": true, "fib": true } ] } ],
+  "2001:db8:100::/48": [ { "prefix": "2001:db8:100::/48", "protocol": "bgp", "selected": true, "installed": true,
+    "nexthops": [
+      { "ip": "fe80::a8c1:abff:fe00:201", "afi": "ipv6", "interfaceName": "eth1", "active": true, "fib": true },
+      { "ip": "fe80::a8c1:abff:fe00:302", "afi": "ipv6", "interfaceName": "eth2", "active": true, "fib": true } ] } ],
+  "fe80::/64": [
+    { "prefix": "fe80::/64", "protocol": "connected", "selected": true,
+      "nexthops": [ { "directlyConnected": true, "interfaceName": "eth1", "active": true, "fib": true } ] },
+    { "prefix": "fe80::/64", "protocol": "connected", "selected": false,
+      "nexthops": [ { "directlyConnected": true, "interfaceName": "eth2", "active": true } ] } ]
+}

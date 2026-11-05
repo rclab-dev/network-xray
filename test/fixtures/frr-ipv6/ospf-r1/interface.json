@@ -1,0 +1,7 @@
+{
+  "eth1": { "operationalStatus": "up", "vrfName": "default", "ipAddresses": [
+    { "address": "10.1.0.1/30" }, { "address": "2001:db8:12::1/64" }, { "address": "fe80::a8c1:abff:fe00:101/64" } ] },
+  "eth3": { "operationalStatus": "up", "vrfName": "default", "ipAddresses": [
+    { "address": "fe80::a8c1:abff:fe00:103/64" }, { "address": "2001:db8:13::1/64" } ] },
+  "lo": { "operationalStatus": "up", "vrfName": "default", "ipAddresses": [ { "address": "10.0.0.1/32" }, { "address": "2001:db8:ff::1/128" } ] }
+}

@@ -1,0 +1,1 @@
+{ "neighbors": { "10.0.0.2": [ { "priority": 1, "state": "Full/-", "address": "10.1.0.2", "ifaceName": "eth1:10.1.0.1", "upTimeInMsec": 61000 } ] } }

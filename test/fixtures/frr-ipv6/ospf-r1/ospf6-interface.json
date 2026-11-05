@@ -1,0 +1,10 @@
+{
+  "eth1": { "status": "up", "type": "BROADCAST", "interfaceId": 3,
+    "internetAddress": [ { "type": "inet6", "address": "fe80::a8c1:abff:fe00:101/64" }, { "type": "inet6", "address": "2001:db8:12::1/64" } ],
+    "attachedToArea": true, "instanceId": 0, "areaId": "0.0.0.0", "cost": 10, "ospf6InterfaceState": "PointToPoint",
+    "timerIntervalsConfigHello": 10, "timerPassiveIface": false },
+  "eth3": { "status": "up", "type": "BROADCAST", "interfaceId": 5,
+    "internetAddress": [ { "type": "inet6", "address": "fe80::a8c1:abff:fe00:103/64" }, { "type": "inet6", "address": "2001:db8:13::1/64" } ],
+    "attachedToArea": true, "instanceId": 0, "areaId": "0.0.0.0", "cost": 10, "ospf6InterfaceState": "PointToPoint",
+    "timerIntervalsConfigHello": 10, "timerPassiveIface": false }
+}

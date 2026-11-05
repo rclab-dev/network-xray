@@ -1,0 +1,10 @@
+{
+  "0.0.0.0/0": [ { "prefix": "0.0.0.0/0", "protocol": "bgp", "selected": true, "installed": true,
+    "nexthops": [ { "ip": "10.1.0.2", "afi": "ipv4", "interfaceName": "eth1", "active": true, "fib": true } ] } ],
+  "10.0.0.1/32": [ { "prefix": "10.0.0.1/32", "protocol": "connected", "selected": true,
+    "nexthops": [ { "directlyConnected": true, "interfaceName": "lo", "active": true, "fib": true } ] } ],
+  "10.0.0.3/32": [ { "prefix": "10.0.0.3/32", "protocol": "bgp", "selected": true, "installed": true,
+    "nexthops": [ { "ip": "fe80::a8c1:abff:fe00:302", "afi": "ipv6", "interfaceName": "eth2", "active": true, "fib": true } ] } ],
+  "10.1.0.0/30": [ { "prefix": "10.1.0.0/30", "protocol": "connected", "selected": true,
+    "nexthops": [ { "directlyConnected": true, "interfaceName": "eth1", "active": true, "fib": true } ] } ]
+}

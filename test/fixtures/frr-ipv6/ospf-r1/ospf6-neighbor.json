@@ -1,0 +1,3 @@
+{ "neighbors": [
+  { "neighborId": "10.0.0.2", "priority": 1, "deadTime": "00:00:35", "state": "Full", "ifState": "PointToPoint", "duration": "00:01:00", "interfaceName": "eth1", "interfaceState": "PointToPoint" },
+  { "neighborId": "10.0.0.3", "priority": 1, "deadTime": "00:00:36", "state": "Full", "ifState": "PointToPoint", "duration": "00:00:59", "interfaceName": "eth3", "interfaceState": "PointToPoint" } ] }

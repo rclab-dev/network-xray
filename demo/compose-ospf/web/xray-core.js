@@ -11861,7 +11861,7 @@ function xrayIpInPrefix(ip, prefix) {
   var len = parseInt(parts[1], 10);
   function toInt(a) {
     var o = String(a).split(".");
-    if (o.length !== 4) return null;
+    if (o.length !== 4 || !o.every(function(x) { return /^\d{1,3}$/.test(x) && +x <= 255; })) return null;
     return (+o[0] << 24 | +o[1] << 16 | +o[2] << 8 | +o[3]) >>> 0;
   }
   var ipN = toInt(ip), netN = toInt(net);

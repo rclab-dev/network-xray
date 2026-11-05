@@ -1,0 +1,14 @@
+{
+  "eth1": { "operationalStatus": "up", "vrfName": "default", "ipAddresses": [
+    { "address": "fe80::a8c1:abff:fe00:101/64", "secondary": false },
+    { "address": "10.1.0.1/30", "secondary": false },
+    { "address": "2001:db8:12::1/64", "secondary": false } ] },
+  "eth2": { "operationalStatus": "up", "vrfName": "default", "ipAddresses": [
+    { "address": "fe80::a8c1:abff:fe00:102/64", "secondary": false } ] },
+  "eth3": { "operationalStatus": "up", "vrfName": "default", "ipAddresses": [
+    { "address": "FE80::A8C1:ABFF:FE00:103/64", "secondary": false },
+    { "address": "2001:db8:14::1/64", "secondary": false } ] },
+  "lo": { "operationalStatus": "up", "vrfName": "default", "ipAddresses": [
+    { "address": "10.0.0.1/32", "secondary": false },
+    { "address": "2001:db8:ff::1/128", "secondary": false } ] }
+}
