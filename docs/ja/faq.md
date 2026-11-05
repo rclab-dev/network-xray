@@ -110,7 +110,7 @@ IPv6 の BGP テーブルは読みません。[When to use](../../README.md#when
 ### 解析できない出力があったら?
 
 Cisco IOL では、パーサーが分からない行を `parse_warnings` に記録し、画面にその数を出します。推測はしません。
-ルータは応えているのに画面が空のままの時は、[FAQ / Troubleshooting](../../README.md#faq--troubleshooting) の手順で
+ルータは応えているのに画面が空のままの時は、[経路が出ない](troubleshooting.md#routes-do-not-show) の手順で
 ルータを直接確かめられます。
 
 ## セキュリティ

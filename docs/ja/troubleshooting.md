@@ -4,16 +4,43 @@
 
 `xray.sh` と collector (`clab-xray-collect.js`) が見つける問題と、その時にする事をまとめています。
 メッセージはツールが出すそのままの英語で載せています。`<...>` は自分の値に読み替えてください。
+「network-xray のログ」は、`xray.sh` (または collector) を動かしている端末のことです。`docker run` / netlab のコンテナでは
+`docker logs <コンテナ>` です。
 
+- [画面が開かない](#the-page-does-not-open)
 - [ポートがもう使われている](#port-already-in-use)
 - [トポロジのファイルが見つからない](#topology-not-found)
 - [ラボの名前が単純な名前ではない](#lab-name-is-not-a-plain-name)
 - [containerlab か Node.js が無い](#containerlab-or-nodejs-missing)
 - [Docker のソケットの権限](#docker-socket-permission)
 - [ルータがまだ起動中 (Cisco IOL)](#routers-still-booting-cisco-iol)
+- [FRR がきちんと立ち上がらない](#frr-did-not-start-cleanly)
 - [読まない種類の機器 (描くだけ)](#device-type-that-is-not-read-drawn-only)
+- [経路が出ない](#routes-do-not-show)
 - [ラボを消した後に古い状態が残る](#old-state-after-the-lab-is-destroyed)
 - [止め方と後片付け](#stopping-and-cleaning-up)
+
+<!-- nx-docs-gaps-20261104 -->
+<a id="the-page-does-not-open"></a>
+## 画面が開かない
+
+**出ること。** ブラウザが繋がらない (接続を拒否された・時間切れ)、またはどのアドレスを開けばよいか分からない。
+
+**開くアドレス。**
+
+- `xray.sh`: 画面の準備ができた時に出すアドレス `==> open  http://<this machine>:8080/` (またはポートを渡した時はそのポート)。
+  `--bind` を渡さなければ、すべてのアドレスで待ち受けます。
+- `docker run` (README の最初の行): それを動かしているマシンで `http://localhost:8600/`。この行はポートを `127.0.0.1` だけに
+  公開するので、別のマシンからは開けません。`-p 8600:8600` にするか、SSH のトンネル
+  (`ssh -L 8600:localhost:8600 <ラボのホスト>` の後、自分のマシンで `http://localhost:8600/`) を使います。
+- netlab のツール: `netlab up` が出すアドレス `Open http://<host>:8600/` (`multilab` のプラグインでは 8600 + N)。
+
+**わけ。** `xray.sh` はラボを作り終えてから画面を始めます (その時に `==> open` の行を出します)。コンテナはラボを最大 2 分
+待ってから画面を始めます。それまではポートに何も応えません。
+
+**する事。** network-xray のログを見ます: `==> open` の行を待つか、その上のエラーを読みます。多くはこのページにあります
+(例えば [ポートがもう使われている](#port-already-in-use))。ラボのマシンでは開くのに別のマシンから開かない時は、上の
+`127.0.0.1` と、ラボのマシンのファイアウォールでそのポートが通るかを確かめます。
 
 <a id="port-already-in-use"></a>
 ## ポートがもう使われている
@@ -142,9 +169,20 @@ FRR より少しゆっくり画面が追いつきます。
 - `!! SSH login to <host> was denied: set NX_IOS_USER / NX_IOS_PASSWORD (default admin / admin)`: この 2 つの
   変数に、自分のルータのログインを設定します。
 
-FRR のルータも起動の後に少し時間がかかることがあります。`xray.sh` はそれを待ち、FRR がきちんと立ち上がらなかった時は
-FRR を立て直します (`==> <container>: FRR did not start cleanly, restarting FRR (1/3) ...`)。それでも駄目な時は:
-`==> <container>: FRR is still not running. Try: docker exec <container> /usr/lib/frr/watchfrr.sh restart all`。
+<a id="frr-did-not-start-cleanly"></a>
+## FRR がきちんと立ち上がらない
+
+**出る文**
+
+```
+==> <container>: FRR did not start cleanly, restarting FRR (1/3) ...
+```
+
+**わけ。** FRR のルータも起動の後に少し時間がかかることがあります。`xray.sh` はそれを待ち、FRR がきちんと立ち上がらなかった時は
+FRR を立て直します。FRR が動くまでは、そのルータは読めません。
+
+**する事。** 待ちます。それでも駄目な時は `xray.sh` が
+`==> <container>: FRR is still not running. Try: docker exec <container> /usr/lib/frr/watchfrr.sh restart all` と出すので、そのコマンドを動かします。
 
 <a id="device-type-that-is-not-read-drawn-only"></a>
 ## 読まない種類の機器 (描くだけ)
@@ -159,9 +197,35 @@ FRR を立て直します (`==> <container>: FRR did not start cleanly, restarti
 
 **わけ。** collector は、ノードの containerlab の `kind` で読み方を選びます: `nokia_srlinux` (SR Linux)、
 `cisco_iol` (Cisco IOL)、それ以外はすべて FRR。`vtysh` の無いノード (例えば Alpine のホストや
-他のベンダーのイメージ) は読めないので、トポロジには描きますが DeepDive はありません。
+他のベンダーのイメージ) は読めないので、トポロジには描きますが DeepDive (ルータをクリックすると開く、ルータの中を見る欄) はありません。
 
 **する事。** そのノードがホストなら、何もしなくて大丈夫です。想定どおりの動きで、ほかのルータには影響しません。
+
+<a id="routes-do-not-show"></a>
+## 経路が出ない
+
+**出ること。** ルータは読めている (灰色ではない) のに、DeepDive の経路表や BGP の表が空、またはリンクに OSPF / BGP の色が付かない。
+
+**わけ。** network-xray はルータが報告する物だけを出します。多くは OSPF / BGP がまだ上がっていない (ラボを始めてから 30〜60 秒
+かかる) か、ルータに本当にその経路が無い時です。例題のラボでは、それが見つける障害そのものであることがよくあります。
+
+**する事。**
+
+1. 30〜60 秒待ちます。
+2. ルータに直接聞きます (FRR):
+
+   ```
+   docker exec clab-<lab>-r1 vtysh -c 'show ip route'
+   docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'
+   docker exec clab-<lab>-r1 vtysh -c 'show ip ospf neighbor json'
+   ```
+
+   ルータ自身にも経路やネイバーが無ければ、原因はラボの方です。設定を見ます
+   (`docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`)。
+3. 読まない物があります: FRR の IPv6 の BGP の表 ([FAQ](faq.md#ipv6-は読みますか)) と、Cisco IOL の VRF
+   ([FAQ](faq.md#vrf-には対応していますか))。FRR では、VRF のボタンで 1 度に 1 つの VRF を見ます。
+4. ルータは答えるのに画面が空のままなら、network-xray のログを見て (コンテナでは
+   `docker logs <network-xray のコンテナ> 2>&1 | tail -30`: 読むコンテナ `clab-<lab>-*` の名前が出る)、両方を付けて issue を開いてください。
 
 <a id="old-state-after-the-lab-is-destroyed"></a>
 ## ラボを消した後に古い状態が残る

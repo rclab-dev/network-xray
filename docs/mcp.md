@@ -30,6 +30,18 @@ directory, which is set by the client and is often not the repo. Use absolute pa
 `/path/to/network-xray/xray-states.js`; the collector rewrites it whenever the routers' state changes. Give that file (or
 the repo folder) as `path` while the lab is running; each call reads the latest state. After you stop `xray.sh`, the file keeps the last state.
 
+**A containerlab lab you graph yourself** (the README's "Labs started another way"): `clab-xray-collect.js … --watch`
+writes `xray-states.js` into the folder you give it. Give that folder as `path`; it stays live the same way.
+
+**`docker run` or the netlab tool:** the state is inside the container. The page serves it, so save a copy and give
+that file as `path` (use the port the page is on):
+
+```
+mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/nx-state/xray-states.js
+```
+
+This is a snapshot: run `curl` again for the current state.
+
 ## Start it
 
 ```
@@ -41,7 +53,8 @@ message per line (the MCP stdio transport), and writes logs to stderr. It suppor
 revisions 2024-11-05 to 2025-11-25. The stateless 2026-07-28 revision is not implemented. When you run it by hand it
 waits for input on stdin and exits when stdin closes. Normally the MCP client starts it for you.
 
-To check it without a client, pipe requests in from the repo root:
+To check it without a client, pipe requests in from the repo root (this is bash; on Windows use Git Bash or WSL). The
+server runs in the repo here, so the relative `path` works; from a client, use an absolute path:
 
 ```
 printf '%s\n' \
@@ -129,8 +142,10 @@ only read the `path` you give them.
 Once the client knows about the server, ask in plain language and give the path, for example:
 
 - "Use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15. Which links are down?"
-- "Why does r1 pick its path to 8.8.8.0/24?"
-- "Which route does r1 use for 8.8.8.8?"
+- "Same lab: why does r1 pick its path to 8.8.8.0/24?"
+- "Same lab: which route does r1 use for 8.8.8.8?"
+
+If the assistant does not know which lab you mean, give the path again.
 
 ## Tools
 
@@ -143,6 +158,9 @@ Once the client knows about the server, ask in plain language and give the path,
 | `bgp_neighbors` | `path`, `router?` | per router: peer, remote AS, iBGP/eBGP, state, prefixes received |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | longest-prefix match in the collected routing table |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | the selected BGP path, the other candidates with their attributes, the deciding step and where that reason came from |
+
+`why_best_path` gives only the reason stored in the data (`null` with a note when there is none). `why_path` also lists
+the other candidates, and when the router gave no reason it compares their attributes itself (`reason_source`).
 
 All arguments are strings. `?` marks an optional argument. Each successful call returns the same JSON object twice:
 as text in `content[0].text` and as `structuredContent`. For example, here is the full wire reply to the

@@ -111,7 +111,7 @@ table is not read. See [When to use](../README.md#when-to-use).
 
 For Cisco IOL, lines the parser does not understand are recorded as `parse_warnings`, and the page shows how many; it
 does not guess. If a router answers but the page stays empty, the steps in
-[FAQ / Troubleshooting](../README.md#faq--troubleshooting) show how to check the router directly.
+[Routes do not show](troubleshooting.md#routes-do-not-show) show how to check the router directly.
 
 ## Security
 

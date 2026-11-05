@@ -4,16 +4,42 @@
 
 Problems that `xray.sh` and the collector (`clab-xray-collect.js`) detect, and what to do about them.
 Messages are shown as the tools print them; `<...>` stands for your own value.
+"The network-xray log" means the terminal that runs `xray.sh` (or the collector), or `docker logs <container>` for the
+`docker run` / netlab container.
 
+- [The page does not open](#the-page-does-not-open)
 - [Port already in use](#port-already-in-use)
 - [Topology not found](#topology-not-found)
 - [Lab name is not a plain name](#lab-name-is-not-a-plain-name)
 - [containerlab or Node.js missing](#containerlab-or-nodejs-missing)
 - [Docker socket permission](#docker-socket-permission)
 - [Routers still booting (Cisco IOL)](#routers-still-booting-cisco-iol)
+- [FRR did not start cleanly](#frr-did-not-start-cleanly)
 - [Device type that is not read (drawn only)](#device-type-that-is-not-read-drawn-only)
+- [Routes do not show](#routes-do-not-show)
 - [Old state after the lab is destroyed](#old-state-after-the-lab-is-destroyed)
 - [Stopping and cleaning up](#stopping-and-cleaning-up)
+
+<!-- nx-docs-gaps-20261104 -->
+## The page does not open
+
+**What you see.** The browser cannot connect (connection refused or a time-out), or you are not sure which address to open.
+
+**Which address.**
+
+- `xray.sh`: the address it prints once the page is up, `==> open  http://<this machine>:8080/` (or the port you gave).
+  It listens on all addresses unless you pass `--bind`.
+- `docker run` (the line at the top of the README): `http://localhost:8600/` on the machine that runs it. That line
+  publishes the port on `127.0.0.1` only, so another machine cannot open it: use `-p 8600:8600` instead, or an SSH tunnel
+  (`ssh -L 8600:localhost:8600 <lab host>`, then open `http://localhost:8600/` on your own machine).
+- netlab tool: the address `netlab up` prints, `Open http://<host>:8600/` (8600 + N with the `multilab` plugin).
+
+**Why.** `xray.sh` starts the page only after the lab is deployed (that is when it prints the `==> open` line), and the
+container waits up to 2 minutes for the lab before it starts the page. Until then nothing answers on the port.
+
+**What to do.** Look at the network-xray log: wait for the `==> open` line, or read the error above it — most are on
+this page (for example [Port already in use](#port-already-in-use)). If the page opens on the lab machine but not from
+another one, check the `127.0.0.1` binding above and the lab machine's firewall for that port.
 
 ## Port already in use
 
@@ -136,9 +162,19 @@ picture follows a little more slowly than with FRR.
 - `!! SSH login to <host> was denied: set NX_IOS_USER / NX_IOS_PASSWORD (default admin / admin)`: set those
   two variables to the login of your routers.
 
-FRR routers can also need a short while after start; `xray.sh` waits for them and restarts FRR if it did not
-start cleanly (`==> <container>: FRR did not start cleanly, restarting FRR (1/3) ...`). If it still fails:
-`==> <container>: FRR is still not running. Try: docker exec <container> /usr/lib/frr/watchfrr.sh restart all`.
+## FRR did not start cleanly
+
+**What you see**
+
+```
+==> <container>: FRR did not start cleanly, restarting FRR (1/3) ...
+```
+
+**Why.** FRR routers can also need a short while after start. `xray.sh` waits for them and restarts FRR if it did not
+start cleanly. Until FRR runs, the router cannot be read.
+
+**What to do.** Wait. If it still fails, `xray.sh` prints
+`==> <container>: FRR is still not running. Try: docker exec <container> /usr/lib/frr/watchfrr.sh restart all`: run that command.
 
 ## Device type that is not read (drawn only)
 
@@ -152,9 +188,37 @@ On the page, clicking the node shows `network-xray does not read inside this dev
 
 **Why.** The collector picks a reader by the node's containerlab `kind`: `nokia_srlinux` (SR Linux),
 `cisco_iol` (Cisco IOL), and FRR for everything else. A node with no `vtysh` (for example an Alpine host,
-or another vendor's image) cannot be read, so it is drawn in the topology but has no DeepDive.
+or another vendor's image) cannot be read, so it is drawn in the topology but has no DeepDive (the panel that opens when you click a router and shows inside it).
 
 **What to do.** Nothing, if the node is a host. This is expected and does not affect the other routers.
+
+## Routes do not show
+
+**What you see.** The router is read (not grey), but its routing table or BGP table in the DeepDive is empty, or a link
+has no OSPF / BGP colour.
+
+**Why.** network-xray shows only what the router reports. Most often OSPF / BGP have not come up yet (they need 30–60
+seconds after the lab starts), or the router really has no such route — in the example labs that is often the fault
+you are meant to find.
+
+**What to do.**
+
+1. Give it 30–60 seconds.
+2. Ask the router directly (FRR):
+
+   ```
+   docker exec clab-<lab>-r1 vtysh -c 'show ip route'
+   docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'
+   docker exec clab-<lab>-r1 vtysh -c 'show ip ospf neighbor json'
+   ```
+
+   If the router has no route or no neighbor either, the lab itself is the cause: look at its configuration
+   (`docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`).
+3. Some state is not read: the IPv6 BGP table on FRR ([FAQ](faq.md#is-ipv6-read)) and VRFs on Cisco IOL
+   ([FAQ](faq.md#are-vrfs-supported)). On FRR, the VRF buttons show one VRF at a time.
+4. If the router answers but the page stays empty, look at the network-xray log (with the container,
+   `docker logs <network-xray container> 2>&1 | tail -30`: it names the containers it reads, `clab-<lab>-*`) and open an
+   issue with both outputs.
 
 ## Old state after the lab is destroyed
 

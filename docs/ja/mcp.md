@@ -29,6 +29,18 @@
 `/path/to/network-xray/xray-states.js` です。collector はルータの状態が変わった時にこのファイルを書き直します。ラボが動いている間、
 このファイル (またはリポジトリのフォルダ) を `path` に渡します。呼ぶたびに最新の状態を読みます。`xray.sh` を止めた後も、ファイルには最後の状態が残ります。
 
+**自分で graph を動かす containerlab のラボ** (README の「Labs started another way」): `clab-xray-collect.js … --watch` は
+渡したフォルダに `xray-states.js` を書きます。そのフォルダを `path` に渡します。同じように最新の状態を読みます。
+
+**`docker run` か netlab のツール:** state はコンテナの中です。画面がそれを配っているので、写しを保存して、そのファイルを
+`path` に渡します (ポートは画面のポート):
+
+```
+mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/nx-state/xray-states.js
+```
+
+これはその時の写しです。今の状態にするには `curl` をもう一度動かします。
+
 ## 起動する
 
 ```
@@ -40,7 +52,8 @@ node scripts/xray-mcp.js
 リビジョン 2024-11-05 から 2025-11-25 までです。ステートレスな 2026-07-28 のリビジョンは実装していません。手で動かすと
 stdin の入力を待ち、stdin が閉じると終わります。普段は MCP クライアントが起動してくれます。
 
-クライアントなしで確かめるには、リポジトリのルートでリクエストをパイプで流し込みます:
+クライアントなしで確かめるには、リポジトリのルートでリクエストをパイプで流し込みます (bash の書き方です。Windows では
+Git Bash か WSL で)。ここではサーバをリポジトリで動かすので相対の `path` で動きます。クライアントからは絶対パスにします:
 
 ```
 printf '%s\n' \
@@ -127,8 +140,10 @@ Claude Desktop では `claude_desktop_config.json` に書きます (Settings →
 クライアントがサーバを知ったら、普通の言葉で、パスを付けて聞きます。例:
 
 - 「/path/to/network-xray/test/fixtures/iosxe-q15 に lab_state を使って。どのリンクが落ちている?」
-- 「r1 はなぜ 8.8.8.0/24 にその経路を選ぶの?」
-- 「r1 は 8.8.8.8 にどの経路を使う?」
+- 「同じラボで、r1 はなぜ 8.8.8.0/24 にその経路を選ぶの?」
+- 「同じラボで、r1 は 8.8.8.8 にどの経路を使う?」
+
+AI がどのラボのことか分からない時は、もう一度パスを付けて聞きます。
 
 ## ツール
 
@@ -141,6 +156,9 @@ Claude Desktop では `claude_desktop_config.json` に書きます (Settings →
 | `bgp_neighbors` | `path`, `router?` | ルータごと: ピア・リモート AS・iBGP/eBGP・状態・受け取ったプレフィックスの数 |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | 集めたルーティングテーブルでの最長一致 |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | 選ばれた BGP の経路・ほかの候補と属性・決め手になったステップ・そのわけの出どころ |
+
+`why_best_path` は、データに保存されているわけだけを返します (無ければ `null` と注記)。`why_path` はほかの候補も並べ、
+ルータがわけを出していない時は、属性を自分で比べます (`reason_source`)。
 
 引数はすべて文字列です。`?` は省ける引数の印です。うまくいった呼び出しは、同じ JSON のオブジェクトを 2 回返します:
 `content[0].text` の文字として、そして `structuredContent` として。例えば、上の `list_routers` の呼び出しへの
