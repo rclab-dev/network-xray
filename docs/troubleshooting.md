@@ -12,6 +12,7 @@ Messages are shown as the tools print them; `<...>` stands for your own value.
 - [Topology not found](#topology-not-found)
 - [Lab name is not a plain name](#lab-name-is-not-a-plain-name)
 - [containerlab or Node.js missing](#containerlab-or-nodejs-missing)
+- [Filename too long when cloning (Windows)](#filename-too-long-when-cloning-windows)
 - [Docker socket permission](#docker-socket-permission)
 - [Routers still booting (Cisco IOL)](#routers-still-booting-cisco-iol)
 - [FRR did not start cleanly](#frr-did-not-start-cleanly)
@@ -112,6 +113,18 @@ node.js not found (needed to collect router state)
 
 **What to do.** Install containerlab from <https://containerlab.dev/install/> and Node.js 18 or newer.
 If they are installed but not found, check `command -v containerlab` and `command -v node` in the same shell.
+
+## Filename too long when cloning (Windows)
+
+**What you see**
+
+```
+error: unable to create file test/fixtures/...: Filename too long
+```
+
+**Why.** Some test fixture paths are long (up to about 110 characters), and Windows limits a full path to 260 characters unless long paths are enabled.
+
+**What to do.** Run `git config --global core.longpaths true` and clone again, or clone into a shorter folder (for example `C:src`).
 
 ## Docker socket permission
 

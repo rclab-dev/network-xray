@@ -12,6 +12,7 @@
 - [トポロジのファイルが見つからない](#topology-not-found)
 - [ラボの名前が単純な名前ではない](#lab-name-is-not-a-plain-name)
 - [containerlab か Node.js が無い](#containerlab-or-nodejs-missing)
+- [Windows で clone すると Filename too long と出る](#filename-too-long-when-cloning-windows)
 - [Docker のソケットの権限](#docker-socket-permission)
 - [ルータがまだ起動中 (Cisco IOL)](#routers-still-booting-cisco-iol)
 - [FRR がきちんと立ち上がらない](#frr-did-not-start-cleanly)
@@ -117,6 +118,19 @@ node.js not found (needed to collect router state)
 
 **する事。** containerlab を <https://containerlab.dev/install/> から入れ、Node.js 18 以降を入れます。
 入れたのに見つからない時は、同じシェルで `command -v containerlab` と `command -v node` を確かめます。
+
+<a id="filename-too-long-when-cloning-windows"></a>
+## Windows で clone すると Filename too long と出る
+
+**見える物**
+
+```
+error: unable to create file test/fixtures/...: Filename too long
+```
+
+**わけ。** 試験の資料のパスに長い物があり (110 字ほどまで)、Windows は長いパスを許す設定にしないとパス全体を 260 字までに限ります。
+
+**する事。** `git config --global core.longpaths true` を打ってから clone し直すか、短いフォルダ (例 `C:src`) に clone します。
 
 <a id="docker-socket-permission"></a>
 ## Docker のソケットの権限
