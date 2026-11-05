@@ -930,11 +930,19 @@ function _normArea(a) {
   return m ? m[1] : s;
 }
 
+// dotted IPv4 (an optional /len is ignored) -> 32-bit number, or null when it is not 4 octets of 0..255
+function _ip4(s) {
+  var o = String(s).split('/')[0].split('.');
+  if (o.length !== 4) return null;
+  var a = Number(o[0]), b = Number(o[1]), c = Number(o[2]), d = Number(o[3]);
+  if (!(a >= 0 && a <= 255 && b >= 0 && b <= 255 && c >= 0 && c <= 255 && d >= 0 && d <= 255)) return null;
+  return (a * 16777216) + (b << 16) + (c << 8) + d;
+}
+
 function _sameSubnet(prefix, ip) {
   if (!prefix || !ip) return false;
   // nx_collect_peer_map: the real prefix length when given (a /30 link must not match the next /30); no length -> first 3 octets as before
   var _pl = parseInt(String(prefix).split('/')[1], 10);
-  var _ip4 = function (s) { var o = String(s).split('/')[0].split('.').map(Number); return o.length === 4 && o.every(function (x) { return x >= 0 && x <= 255; }) ? ((o[0] * 16777216) + (o[1] << 16) + (o[2] << 8) + o[3]) : null; };
   var _a = _ip4(prefix), _b = _ip4(ip);
   if (!isNaN(_pl) && _pl >= 0 && _pl <= 32 && _a !== null && _b !== null) {
     var _sz = Math.pow(2, 32 - _pl);
@@ -1571,5 +1579,6 @@ if (typeof require !== 'undefined' && require.main === module) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { parseOspfNeighbors: parseOspfNeighbors, parseOspfInterfaces: parseOspfInterfaces,
     parseInterfaces: parseInterfaces, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
-    parseBgpRoutes: parseBgpRoutes, buildState: buildState, collectFromJson: collectFromJson, collectLive: collectLive };
+    parseBgpRoutes: parseBgpRoutes, buildState: buildState, collectFromJson: collectFromJson, collectLive: collectLive,
+    _sameSubnet: _sameSubnet };
 }
