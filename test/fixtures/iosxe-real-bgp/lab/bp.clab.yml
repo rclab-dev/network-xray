@@ -1,0 +1,15 @@
+name: nx-ibp
+# Capture lab for test/fixtures/iosxe-real-bgp (see the README there).
+topology:
+  kinds:
+    cisco_iol:
+      image: vrnetlab/cisco_iol:17.18.02
+  nodes:
+    r1: { kind: cisco_iol, startup-config: r1.partial.cfg }
+    r2: { kind: cisco_iol, startup-config: r2.partial.cfg }
+    r3: { kind: cisco_iol, startup-config: r3.partial.cfg }
+    r4: { kind: cisco_iol, startup-config: r4.partial.cfg }
+  links:
+    - endpoints: ["r1:Ethernet0/1", "r2:Ethernet0/1"]
+    - endpoints: ["r1:Ethernet0/2", "r3:Ethernet0/1"]
+    - endpoints: ["r1:Ethernet0/3", "r4:Ethernet0/1"]

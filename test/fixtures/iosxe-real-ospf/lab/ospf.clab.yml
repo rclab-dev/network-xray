@@ -1,0 +1,23 @@
+name: nx-iosp
+# Capture lab for test/fixtures/iosxe-real-ospf (see the README there).
+#   LAN 10.20.0.0/24: r1 (priority 0), r2 (DR, 100), r3 (BDR, 50), r4 (0) through sw (a Linux bridge): r1 sees r4 as 2WAY/DROTHER
+#   r1 E0/2 - r2 E0/2 (10.21.0.0/24): an MTU mismatch gives EXSTART / EXCHANGE, an inbound ACL on r2 gives INIT
+topology:
+  kinds:
+    cisco_iol:
+      image: vrnetlab/cisco_iol:17.18.02
+  nodes:
+    r1: { kind: cisco_iol, startup-config: r1.partial.cfg }
+    r2: { kind: cisco_iol, startup-config: r2.partial.cfg }
+    r3: { kind: cisco_iol, startup-config: r3.partial.cfg }
+    r4: { kind: cisco_iol, startup-config: r4.partial.cfg }
+    sw:
+      kind: linux
+      image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce
+      exec: ["sh -c 'ip link add br0 type bridge && ip link set br0 up && for i in eth1 eth2 eth3 eth4; do ip link set $i master br0; ip link set $i up; done'"]
+  links:
+    - endpoints: ["r1:Ethernet0/1", "sw:eth1"]
+    - endpoints: ["r2:Ethernet0/1", "sw:eth2"]
+    - endpoints: ["r3:Ethernet0/1", "sw:eth3"]
+    - endpoints: ["r4:Ethernet0/1", "sw:eth4"]
+    - endpoints: ["r1:Ethernet0/2", "r2:Ethernet0/2"]
