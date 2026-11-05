@@ -19,7 +19,7 @@ The official examples in [`examples/`](../examples) all use this format. You can
 | `focus` | no | `{"node": "r1", "prefix": "8.8.8.0/24"}` — `node` is the router whose DeepDive opens first. `prefix` is selected automatically in the Routing table of **any** router you open (once, when the row appears; not while you have another row selected), except where the row is the router's own destination: a connected / local route, a route out of `lo`, or a route with no outgoing interface. |
 | `check` | no | When the lab counts as solved (below). No `check` = no ✓ Solved mark. |
 | `check_note_en`, `check_note_ja` | no | A note for people (e.g. "Also try: ping 8.8.8.8 from r1"). Not used by the page. |
-| `solved_cta` | no | `{"label_en": "…", "label_ja": "…", "url_en": "https://…", "url_ja": "https://…"}` — one link shown under the problem **only while the lab is solved** (e.g. a step-by-step walkthrough of the same problem). The label is plain text; the part in `[square brackets]` is the link (a label without brackets is a link as a whole); only `http(s)` links; a missing language falls back to the other one. |
+| `solved_cta` | no | `{"label_en": "…", "label_ja": "…", "url_en": "https://…", "url_ja": "https://…"}` — one link shown under the problem **only while the lab is solved** (e.g. a step-by-step walkthrough of the same problem). The label is plain text; the part in `[square brackets]` is the link (if there are no brackets, the whole label is the link); only `http(s)` links; a missing language falls back to the other one. |
 
 The problem band appears when the file has a title or a problem text.
 
@@ -35,7 +35,7 @@ The problem band appears when the file has a title or a problem text.
 
 - `check.all` is a list of conditions. The lab is solved when **every** condition holds. (`all` is the only form in format 0.)
 - Each condition is `[node, path, op, value]`:
-  - **node** — a node name from your topology (`r1`). It reads that node's live state, collected by `clab-xray-collect.js`. If the node has no state yet, the condition does not hold.
+  - **node** — a node name from your topology (`r1`). The condition reads that node's live state, collected by `clab-xray-collect.js`. If the node has no state yet, the condition does not hold.
   - **path** — a dot path into the node's state, e.g. `interfaces.eth1.up`. `{key}` is replaced with that node's own value, e.g. `interfaces.{wan_iface}.up`.
   - **op** and **value** — one of the 12 ops below.
 - The page checks the state every time it refreshes (about once a second). **✓ Solved appears once the check has held for about 10 seconds without a break** while the collector runs with `--watch` (as `xray.sh` does), so a lab that is still converging does not flash Solved. It disappears again as soon as the check stops holding. With a one-shot collect (no `--watch`) the page does not refresh by itself, so one pass is enough.
@@ -46,7 +46,7 @@ The problem band appears when the file has a title or a problem text.
 | op | value | holds when |
 |---|---|---|
 | `eq` / `ne` | any | the value is equal / not equal (same type) |
-| `gt` `ge` `lt` `le` | number | numeric compare (numbers only) |
+| `gt` `ge` `lt` `le` | number | numeric comparison (numbers only) |
 | `in` | array | the value equals one of the array items |
 | `exists` / `absent` | (none) | the value is present / missing (null counts as missing) |
 | `some` | list of `[path, op, value]` | the path is an array and **at least one** item satisfies all the item conditions |
@@ -77,7 +77,7 @@ A good check says "**the network now works**", not "**the user typed this exact 
 - Prefer **where the traffic goes** — the route is `selected` and leaves through the right interface (`out_iface`), or uses the right `next_hop` — over which protocol or which command produced it.
   The example above (official example q11) holds whether you delete the wrong static route or raise its distance. Re-pointing the static route does not count: the problem asks for the route learned by OSPF.
 - Add **one piece of evidence that the fault is gone**, such as an OSPF neighbor that is now `full`, or a BGP neighbor that is now `Established`.
-- If the problem says "do not change X", look for a trace that such a change would leave in the state — e.g. in official example q20, fixing it on r2 leaves 65099 in the AS path, so the check requires an AS path of only r1's AS.
+- If the problem says "do not change X", look for a trace that such a change would leave in the state — e.g. in official example q20, fixing the fault on r2 leaves 65099 in the AS path, so the check requires an AS path of only r1's AS.
 - Watch out for a broken next hop that sits **inside a connected subnet** (e.g. `10.10.0.99` on a `/24`): such a route is still selected and still looks "resolved". Check its `next_hop` against the real neighbor address instead.
 - If you cannot describe "solved" by state alone (for example, the only difference is a config line that changes nothing visible), leave `check` out. No mark is better than a wrong mark.
 

@@ -9,7 +9,7 @@ Some files live in more than one place:
   both bundles.
 - `demo/decision-bracket.html` is the GitHub Pages copy of the root `decision-bracket.html`.
 
-These copies should be identical to the root file. After changing one of the root files, copy it into the bundles
+Each copy should be identical to its root file. After changing one of the root files, copy it into the bundles
 (or regenerate them with `scripts/gen_compose_bundle.js`) in the same commit.
 
 `node scripts/check-copies.js` exits 1 and prints the paths when a copy differs from its root file.
