@@ -1,0 +1,8 @@
+{
+  "eth1": { "administrativeStatus": "up", "operationalStatus": "up", "vrfName": "default", "ipAddresses": [ { "address": "fe80::a8c1:abff:fe00:101/64" }, { "address": "2001:db8:12::1/64" } ] },
+  "eth2": { "administrativeStatus": "up", "operationalStatus": "up", "vrfName": "default", "ipAddresses": [ { "address": "fe80::a8c1:abff:fe00:102/64" }, { "address": "2001:db8:100::1/64" } ] },
+  "eth3": { "administrativeStatus": "up", "operationalStatus": "up", "vrfName": "red", "ipAddresses": [ { "address": "2001:db8:16::1/64" } ] },
+  "eth4": { "administrativeStatus": "up", "operationalStatus": "up", "vrfName": "default", "ipAddresses": [ { "address": "2001:db8:400::1/64" } ] },
+  "eth5": { "administrativeStatus": "up", "operationalStatus": "up", "vrfName": "default", "ipAddresses": [ { "address": "2001:db8:500::1/64" } ] },
+  "lo": { "administrativeStatus": "up", "operationalStatus": "up", "vrfName": "default", "ipAddresses": [ { "address": "2001:db8:ff::1/128" } ] }
+}

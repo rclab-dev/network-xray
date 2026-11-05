@@ -1,0 +1,24 @@
+[
+  {
+    "eth1": { "status": "up", "type": "BROADCAST", "interfaceId": 11, "operatingAsType": "POINTOPOINT",
+      "internetAddress": [ { "type": "inet6", "address": "2001:db8:12::1/64" }, { "type": "inet6", "address": "fe80::a8c1:abff:fe00:101/64" } ],
+      "attachedToArea": true, "instanceId": 0, "interfaceMtu": 1500, "areaId": "0.0.0.0", "cost": 10, "ospf6InterfaceState": "PointToPoint",
+      "transmitDelaySec": 1, "priority": 1, "timerIntervalsConfigHello": 10, "timerIntervalsConfigDead": 40, "timerIntervalsConfigRetransmit": 5, "timerPassiveIface": false },
+    "eth2": { "status": "up", "type": "BROADCAST", "interfaceId": 12, "operatingAsType": "BROADCAST",
+      "internetAddress": [ { "type": "inet6", "address": "fe80::a8c1:abff:fe00:102/64" }, { "type": "inet6", "address": "2001:db8:100::1/64" } ],
+      "attachedToArea": true, "instanceId": 0, "interfaceMtu": 1500, "areaId": "0.0.0.1", "cost": 10, "ospf6InterfaceState": "DROther",
+      "transmitDelaySec": 1, "priority": 0, "timerIntervalsConfigHello": 2, "timerIntervalsConfigDead": 8, "timerIntervalsConfigRetransmit": 5, "timerPassiveIface": false },
+    "eth4": { "status": "up", "type": "BROADCAST", "interfaceId": 14, "operatingAsType": "BROADCAST",
+      "internetAddress": [ { "type": "inet6", "address": "2001:db8:400::1/64" } ],
+      "attachedToArea": true, "instanceId": 0, "interfaceMtu": 1500, "areaId": "0.0.0.1", "cost": 10, "ospf6InterfaceState": "DR",
+      "transmitDelaySec": 1, "priority": 1, "timerIntervalsConfigHello": 10, "timerIntervalsConfigDead": 40, "timerIntervalsConfigRetransmit": 5, "timerPassiveIface": true },
+    "eth5": { "status": "up", "type": "BROADCAST", "interfaceId": 15, "attachedToArea": false },
+    "gre0": { "status": "down", "type": "BROADCAST", "interfaceId": 2 }
+  },
+  {
+    "eth3": { "status": "up", "type": "BROADCAST", "interfaceId": 13, "operatingAsType": "POINTOPOINT",
+      "internetAddress": [ { "type": "inet6", "address": "2001:db8:16::1/64" } ],
+      "attachedToArea": true, "instanceId": 0, "interfaceMtu": 1500, "areaId": "0.0.0.0", "cost": 10, "ospf6InterfaceState": "PointToPoint",
+      "transmitDelaySec": 1, "priority": 1, "timerIntervalsConfigHello": 10, "timerIntervalsConfigDead": 40, "timerIntervalsConfigRetransmit": 5, "timerPassiveIface": false }
+  }
+]

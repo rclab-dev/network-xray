@@ -1,0 +1,15 @@
+[
+  {
+    "neighbors": [
+      { "neighborId": "10.0.0.2", "priority": 1, "deadTime": "00:00:36", "state": "Full", "ifState": "PointToPoint", "duration": "00:05:12", "interfaceName": "eth1", "interfaceState": "PointToPoint" },
+      { "neighborId": "10.0.0.3", "priority": 10, "deadTime": "00:00:34", "state": "Full", "ifState": "DR", "duration": "00:05:01", "interfaceName": "eth2", "interfaceState": "DROther" },
+      { "neighborId": "10.0.0.4", "priority": 5, "deadTime": "00:00:33", "state": "Full", "ifState": "BDR", "duration": "00:04:58", "interfaceName": "eth2", "interfaceState": "DROther" },
+      { "neighborId": "10.0.0.5", "priority": 1, "deadTime": "00:00:31", "state": "Twoway", "ifState": "DROther", "duration": "00:04:40", "interfaceName": "eth2", "interfaceState": "DROther" }
+    ]
+  },
+  {
+    "neighbors": [
+      { "neighborId": "10.0.0.6", "priority": 1, "deadTime": "00:00:39", "state": "Init", "ifState": "PointToPoint", "duration": "00:00:01", "interfaceName": "eth3", "interfaceState": "PointToPoint" }
+    ]
+  }
+]

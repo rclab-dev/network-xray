@@ -1,0 +1,24 @@
+{
+  "default": {
+    "2001:db8:12::/64": [
+      { "prefix": "2001:db8:12::/64", "prefixLen": 64, "protocol": "ospf6", "vrfName": "default", "selected": false, "distance": 110, "metric": 10,
+        "nexthops": [ { "directlyConnected": true, "interfaceName": "eth1", "active": true } ] },
+      { "prefix": "2001:db8:12::/64", "prefixLen": 64, "protocol": "connected", "vrfName": "default", "selected": true, "installed": true, "distance": 0, "metric": 0,
+        "nexthops": [ { "fib": true, "directlyConnected": true, "interfaceName": "eth1", "active": true } ] }
+    ],
+    "2001:db8:ff::2/128": [
+      { "prefix": "2001:db8:ff::2/128", "prefixLen": 128, "protocol": "ospf6", "vrfName": "default", "selected": true, "installed": true, "distance": 110, "metric": 10,
+        "nexthops": [ { "fib": true, "ip": "fe80::a8c1:abff:fe00:201", "afi": "ipv6", "interfaceName": "eth1", "active": true } ] }
+    ],
+    "2001:db8:300::/64": [
+      { "prefix": "2001:db8:300::/64", "prefixLen": 64, "protocol": "ospf6", "vrfName": "default", "selected": true, "installed": true, "distance": 110, "metric": 20,
+        "nexthops": [ { "fib": true, "ip": "fe80::a8c1:abff:fe00:301", "afi": "ipv6", "interfaceName": "eth2", "active": true } ] }
+    ]
+  },
+  "red": {
+    "2001:db8:66::/64": [
+      { "prefix": "2001:db8:66::/64", "prefixLen": 64, "protocol": "ospf6", "vrfName": "red", "selected": true, "installed": true, "distance": 110, "metric": 20,
+        "nexthops": [ { "fib": true, "ip": "fe80::a8c1:abff:fe00:601", "afi": "ipv6", "interfaceName": "eth3", "active": true } ] }
+    ]
+  }
+}

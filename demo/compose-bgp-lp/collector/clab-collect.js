@@ -104,13 +104,15 @@ function parseOspfNeighbors(j) {
 /* nx_ospf6 (2026-10-19): OSPFv3. `show ipv6 ospf6 [vrf <v>] neighbor json` = {neighbors:[{neighborId, state:"Full", ifState,
    interfaceName}]} (an array, unlike v2). `vrf all` prints one such object per VRF with no VRF key, so the caller passes an
    array of objects (one per VRF) and the VRF comes from opts.vrfOf(iface). Same output shape as parseOspfNeighbors + af:"v6".
-   ifState is OUR interface state (PointToPoint / DR / ...), not the neighbor's role, so it is not copied into the role. */
+   The role is not copied (state stays "Full", as before). ospf6d spells 2-Way "Twoway" -> "2-Way" (the v2 spelling the state
+   checks use); a 2-Way neighbor with ifState DROther gets "/DROther" like v2, so a DROther pair on a LAN counts as good. */
 function parseOspf6Neighbors(objs, vrfOf) {
   var out = { byIface: {}, list: [] };
   (Array.isArray(objs) ? objs : [objs]).forEach(function (j) {
     if (!j || !Array.isArray(j.neighbors)) return;
     j.neighbors.forEach(function (n) {
       var state = String(n.state || '');
+      if (/^twoway$/i.test(state)) state = '2-Way' + (/^drother$/i.test(String(n.ifState || '')) ? '/DROther' : '');
       var rec = { rid: n.neighborId || '', address: '', iface: String(n.interfaceName || '').split(':')[0], state: state,
         full: /^full/i.test(state), af: 'v6' };
       var _v = vrfOf ? vrfOf(rec.iface) : '';
