@@ -3,7 +3,7 @@
 //
 // Each fixture in test/fixtures/bestpath-frr/ is a `show ip bgp json` table with one prefix and two or three
 // paths, built to be decided at one step of FRR's documented order (RFC 4271 9.1 + FRR): Weight, Local Pref,
-// Local Route, AS Path, ORIGIN, MED, Peer Type (eBGP over iBGP), IGP Metric, multipath, Older Path / Router ID,
+// Local Route, AS Path, Origin, MED, Peer Type (eBGP over iBGP), IGP Metric, multipath, Older Path / Router ID,
 // Neighbor IP. The best path carries FRR's own `bestpath` and `selectionReason` fields.
 //
 // The data goes the way it goes in the product:
@@ -91,7 +91,7 @@ function explain(name) {
 }
 
 // the decider the Best-Path box names, in FRR's selectionReason words
-var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'ORIGIN', 'MED': 'MED' };
+var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'Origin', 'MED': 'MED' };   // FRR's words (captured: test/fixtures/bestpath-frr-real)
 function shownDecider(text) {
   var m;
   if (/locally originated/.test(text)) return 'Local Route';
@@ -109,12 +109,11 @@ function shownDecider(text) {
 var CASES = [
   { f: 'weight',          step: 'Weight' },
   { f: 'local-pref',      step: 'Local Pref' },
-  { f: 'local-route',     step: 'Local Route',
-    known: 'AS Path', note: 'by design (nx_bestpath_fix): FRR gives a local route weight 32768, so the view names it by Weight / locally originated; with weights forced equal there is no Local Route step: with equal weight the locally originated path wins by its empty AS_PATH in the view' },
+  { f: 'local-route',     step: 'Weight (a locally originated route has weight 32768, as captured)' },
   { f: 'as-path',         step: 'AS Path' },
   { f: 'as-path-set',     step: 'AS Path (AS_SET counts as 1)' },
   { f: 'as-path-confed',  step: 'AS Path (confederation segments do not count)' },
-  { f: 'origin',          step: 'ORIGIN' },
+  { f: 'origin',          step: 'Origin' },
   { f: 'med',             step: 'MED' },
   { f: 'med-missing',     step: 'MED (missing MED = 0)' },
   { f: 'med-diff-as',     step: 'MED not compared (different neighbor AS) -> Older Path' },
@@ -152,7 +151,7 @@ CASES.forEach(function (c) {
 });
 
 // the attribute steps the view derives itself must agree with FRR's order, step by step
-test('derived steps follow FRR\'s order: Weight, Local Pref, AS Path, ORIGIN, MED', function () {
+test('derived steps follow FRR\'s order: Weight, Local Pref, AS Path, Origin, MED', function () {
   var keys = JSON.parse(JSON.stringify(ctx.XRAY_BGP_CRITERIA.map(function (c) { return c.key; })));
   assert.deepStrictEqual(keys, ['weight', 'locprf', 'aspath', 'origin', 'metric']);
   var dirs = JSON.parse(JSON.stringify(ctx.XRAY_BGP_CRITERIA.map(function (c) { return c.dir; })));

@@ -79,7 +79,7 @@ function explain(file) {
 }
 
 // the decider the Best-Path box names, in FRR's selectionReason words
-var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'ORIGIN', 'MED': 'MED' };
+var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'Origin', 'MED': 'MED' };
 function shownDecider(text) {
   var m;
   if (/locally originated/.test(text)) return 'Local Route';
@@ -106,8 +106,7 @@ VERSIONS.forEach(function (v) {
       var x = explain(path.join(FIX, v, s + '.json'));
       assert.ok(x.frrBest >= 0 && x.frrReason, 'capture has a best path with a selectionReason');
       assert.strictEqual(x.shownBest, x.frrBest, 'best path marked by the view; text: ' + x.text);
-      // FRR prints "Origin"; the view's attribute label maps to "ORIGIN" (the hand-made fixtures' spelling)
-      assert.strictEqual(x.shown.toLowerCase(), x.frrReason.toLowerCase(), 'decider shown = FRR selectionReason; text: ' + x.text);
+      assert.strictEqual(x.shown, x.frrReason, 'decider shown = FRR selectionReason; text: ' + x.text);
     });
   });
   test(v + ' peers-summary: peers that are not Established keep FRR\'s state words', function () {

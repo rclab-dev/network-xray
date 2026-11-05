@@ -10,7 +10,7 @@
       {
         "valid": true,
         "bestpath": true,
-        "selectionReason": "ORIGIN",
+        "selectionReason": "Origin",
         "pathFrom": "external",
         "prefix": "203.0.113.0",
         "prefixLen": 24,

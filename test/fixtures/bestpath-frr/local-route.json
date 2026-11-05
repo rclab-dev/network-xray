@@ -10,7 +10,7 @@
       {
         "valid": true,
         "bestpath": true,
-        "selectionReason": "Local Route",
+        "selectionReason": "Weight",
         "pathFrom": "external",
         "prefix": "203.0.113.0",
         "prefixLen": 24,
@@ -34,7 +34,7 @@
         "prefix": "203.0.113.0",
         "prefixLen": 24,
         "network": "203.0.113.0/24",
-        "weight": 32768,
+        "weight": 0,
         "peerId": "10.1.0.2",
         "path": "65002",
         "origin": "IGP",
