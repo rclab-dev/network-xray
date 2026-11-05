@@ -186,6 +186,7 @@ No git? Download one problem as a folder from the **[Releases](https://github.co
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
+> `--static-dir` serves every file in that folder. When it is your clone, keep `-s 127.0.0.1:…`; to open the page from other machines, use `./xray.sh`, which serves only the page files.
 Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `xray.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://localhost:8080/`. The path display is inferred from the routing table each router reports. To stop: Ctrl-C, then `kill %1` for the collector.
 If a `problem.json` is left in `<network-xray>` (e.g. from an older `xray.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
 
@@ -340,6 +341,8 @@ containerlab graph \
 Clone this repo and point `--static-dir` at it. The topology view comes from clab's own
 `{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so there is no fixed limit on nodes or links; speed depends on lab size — X-Ray adds
 the per-node DeepDive on top.
+
+> `--static-dir` serves every file in that folder. When it is your clone, keep `-s 127.0.0.1:…`; to open the page from other machines, use `./xray.sh`, which serves only the page files.
 
 ### Interactive topology view — `xray-graph-nextui.html`
 
@@ -857,6 +860,7 @@ git を使わない場合は **[Releases](https://github.com/rclab-dev/network-x
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
+> `--static-dir` はそのフォルダの全部のファイルを配ります。clone をそのまま指す時は `-s 127.0.0.1:…` のままに。ほかの機械から開くなら `./xray.sh` を使ってください (頁のファイルだけを配ります)。
 OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://localhost:8080/` を開きます。パス表示は各ルータが報告する経路表から推定します。OSPF と BGP の両方があるラボでは `bgp` を使ってください (OSPF の隣接も読みます。コンテナと `xray.sh` は自動で選びます)。止める時は Ctrl-C のあと `kill %1` (collector)。
 `<network-xray>` に `problem.json` が残っていたら (古い `xray.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
 
@@ -1001,6 +1005,8 @@ containerlab graph \
 このリポジトリを clone して `--static-dir` をそこへ向けるだけ。全体図は clab 自身の
 `{{ .Name }}` / `{{ .Data }}`(nodes + links)注入から作るのでノード数・リンク数に固定上限はありません (速度はラボの規模によります) — X-Ray は
 その上に per-node DeepDive を足します。
+
+> `--static-dir` はそのフォルダの全部のファイルを配ります。clone をそのまま指す時は `-s 127.0.0.1:…` のままに。ほかの機械から開くなら `./xray.sh` を使ってください (頁のファイルだけを配ります)。
 
 ### インタラクティブな全体図 — `xray-graph-nextui.html`
 

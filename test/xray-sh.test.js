@@ -28,6 +28,8 @@ var TMPS = [];
 test.after(function () { TMPS.forEach(function (d) { fs.rmSync(d, { recursive: true, force: true }); }); });
 var SKIP = !POSIX ? 'POSIX only' : (!BASH || !REAL_SLEEP) ? 'bash and sleep are needed' : false;
 
+// nx_serve_dir: --static-dir is a temp folder of links (network-xray-serve.XXXXXX); calls() shows it as SERVED
+var SERVED = '<served>';
 var LOGLINE = '{ printf \'%s\' "$(basename "$0")"; for a in "$@"; do printf \'\\t%s\' "$a"; done; printf \'\\n\'; } >> "$NX_LOG"\n';
 var FAKES = {
   // sudo: record, then run the command (the fake containerlab, first on PATH)
@@ -38,6 +40,7 @@ var FAKES = {
     'case "$1" in\n' +
     '  deploy) echo "INFO Containerlab started"; echo "| clab-lab-r1 | linux | running |" ;;\n' +
     '  graph) echo "INFO Serving topology graph on http://${7}"\n' +
+    '         { ls -A "$7" | sort | tr "\\n" " "; printf "\\n%s\\n" "$(readlink "$7/xray-states.js")"; } > "$NX_LOG.served"\n' +
     '         [ -n "$NX_GRAPH_BLOCK" ] && exec "$NX_REAL_SLEEP" 30 ;;\n' +
     'esac\n' +
     'exit 0\n',
@@ -71,7 +74,9 @@ function setup() {
     fs.chmodSync(path.join(here, f), 0o755);
   });
   fs.cpSync(path.join(ROOT, 'examples', 'q21-bgp-lp'), path.join(here, 'examples', 'q21-bgp-lp'), { recursive: true });
-  fs.copyFileSync(path.join(ROOT, 'xray-graph-nextui.html'), path.join(here, 'xray-graph-nextui.html'));   // xray.sh stops when the template is missing
+  fs.copyFileSync(path.join(ROOT, 'xray-graph-nextui.html'), path.join(here, 'xray-graph-nextui.html'));
+  fs.mkdirSync(path.join(here, '.git'), { recursive: true }); fs.writeFileSync(path.join(here, '.git', 'config'), '[core]\n');   // nx_serve_dir: never served
+  fs.mkdirSync(path.join(here, 'css'), { recursive: true }); fs.writeFileSync(path.join(here, 'xray-core.js'), '// page code\n');   // xray.sh stops when the template is missing
   Object.keys(FAKES).forEach(function (n) {
     fs.writeFileSync(path.join(bin, n), '#!' + BASH + '\n' + FAKES[n], { mode: 0o755 });
   });
@@ -108,7 +113,12 @@ function readCalls(log) {
   try { s = fs.readFileSync(log, 'utf8'); } catch (e) { return []; }
   return s.split('\n').filter(Boolean).map(function (l) { return l.split('\t'); });
 }
-function calls(r, name) { return r.calls.filter(function (c) { return c[0] === name; }).map(function (c) { return c.slice(1); }); }
+function calls(r, name) {
+  return r.calls.filter(function (c) { return c[0] === name; }).map(function (c) {
+    // nx_serve_dir: the temp folder given to --static-dir is shown as SERVED (its name changes every run)
+    return c.slice(1).map(function (x, i, a) { return a[i - 1] === '--static-dir' && /network-xray-serve\./.test(x) ? SERVED : x; });
+  });
+}
 
 function freePort() {
   return new Promise(function (resolve, reject) {
@@ -145,7 +155,7 @@ test('xray.sh: default lab and port deploy q21, start the collector and serve th
   assert.deepStrictEqual(calls(r, 'docker')[0], ['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']);
   assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
-    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', env.here, '-s', '0.0.0.0:8080']);
+    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '0.0.0.0:8080']);
   assert.match(r.stdout, /open {2}http:\/\/<this machine>:8080\/ {3}\(listening on all addresses, 0\.0\.0\.0:8080/);
   assert.match(r.stdout, /docker exec -it clab-q21-bgp-lp-r1 vtysh/);
   assert.match(r.stdout, /stopped\. remove the lab with: {2}sudo containerlab destroy -t .*q21\.clab\.yml --cleanup/);
@@ -264,7 +274,7 @@ test('demo.sh: forwards all arguments to xray.sh', { skip: SKIP }, async functio
   assert.match(r.stderr, /demo\.sh is now xray\.sh - running \.\/xray\.sh/);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
     ['graph', '--topo', path.join(env.here, 'examples', 'q21-bgp-lp', 'q21.clab.yml'), '--template', tpl,
-      '--static-dir', env.here, '-s', '0.0.0.0:' + port]);
+      '--static-dir', SERVED, '-s', '0.0.0.0:' + port]);
 });
 
 test('demo.sh: forwards --bind and --interval to xray.sh', { skip: SKIP }, async function () {
@@ -297,7 +307,7 @@ test('xray.sh: --bind and --interval go to the graph server and the collector, i
   assert.strictEqual(r.code, 0, r.stdout + r.stderr);
   assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '5']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
-    ['graph', '--topo', yml, '--template', tpl, '--static-dir', env.here, '-s', '0.0.0.0:' + port]);
+    ['graph', '--topo', yml, '--template', tpl, '--static-dir', SERVED, '-s', '0.0.0.0:' + port]);
   assert.match(r.stdout, /==> collecting router state every 5 s /);
   assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
   assert.doesNotMatch(r.stdout, /to allow only this machine, use --bind/);   // nx_bind_note: only when --bind was not given
@@ -504,7 +514,7 @@ test('xray.sh: --attach collects from and graphs a running lab without deploying
     'only the running check: no FRR wait / restart');
   assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
-    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', env.here, '-s', '0.0.0.0:' + port]);
+    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '0.0.0.0:' + port]);
   assert.match(r.stdout, /stopped \(the lab is still running\)\. remove the lab with:/);
 });
 
@@ -535,4 +545,22 @@ test('xray.sh: redeploying a lab that is already running prints one warning and 
   r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort())]);
   assert.strictEqual(r.code, 0, r.stdout + r.stderr);
   assert.doesNotMatch(r.stdout, /warning/);
+});
+
+test('xray.sh: the graph serves only the page files (not .git, examples/ or the rest of the checkout), and the folder goes at the end', { skip: SKIP }, async function () {
+  var env = setup(), port = await freePort();
+  var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port)]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  var dir = r.calls.filter(function (c) { return c[0] === 'containerlab' && c[1] === 'graph'; }).pop();
+  dir = dir[dir.indexOf('--static-dir') + 1];
+  assert.match(dir, /network-xray-serve\./, 'a folder of its own, not the checkout: ' + dir);
+  assert.notStrictEqual(dir, env.here);
+  var served = fs.readFileSync(env.log + '.served', 'utf8').split('\n');
+  var names = served[0].trim().split(' ');
+  assert.ok(names.indexOf('.git') < 0 && names.indexOf('examples') < 0 && names.indexOf('xray.sh') < 0, 'not served: ' + served[0]);
+  assert.ok(names.indexOf('xray-graph-nextui.html') >= 0 && names.indexOf('xray-core.js') >= 0 && names.indexOf('css') >= 0, 'the page files are served: ' + served[0]);
+  assert.ok(names.indexOf('xray-states.js') >= 0, 'xray-states.js (a link, live): ' + served[0]);
+  assert.strictEqual(served[1], path.join(env.here, 'xray-states.js'), 'xray-states.js links to the file the collector writes');
+  assert.ok(!fs.existsSync(dir), 'the served folder is removed when xray.sh stops');
+  assert.ok(fs.existsSync(path.join(env.here, '.git', 'config')) && fs.existsSync(path.join(env.here, 'xray-core.js')), 'removing the folder of links leaves the checkout alone');
 });

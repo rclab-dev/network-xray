@@ -209,7 +209,7 @@ elif grep -qsE '^router ospf' "$LABDIR"/*/frr.conf "$LABDIR"/*.cfg "$LABDIR"/*/*
 # the problem text band reads problem.json next to the page (repo root): link this lab's one.
 # nx_demo_pj_cleanup: xray.sh only touches a link it made (one into examples/ left by an earlier run, or the one made
 # now); a problem.json you put there yourself is left alone. The link is removed again when xray.sh stops.
-PJ="$HERE/problem.json"; PJ_MADE=""; CPID=""
+PJ="$HERE/problem.json"; PJ_MADE=""; CPID=""; SERVE=""
 # one xray.sh per checkout: every run writes the same xray-states.js and problem.json link in $HERE.
 # The lock folder holds the pid; a lock whose pid is gone (xray.sh was killed) is taken over.
 LOCK="$HERE/.xray.lock"
@@ -227,7 +227,7 @@ pj_ours() { [ -L "$PJ" ] && case "$(readlink "$PJ")" in "$HERE"/examples/*/probl
 pj_cleanup() { [ -n "$PJ_MADE" ] && [ -L "$PJ" ] && [ "$(readlink "$PJ")" = "$PJ_MADE" ] && rm -f "$PJ"; return 0; }
 STOPPED="stopped."; [ -n "$ATTACH" ] && STOPPED="stopped (the lab is still running)."
 # nx_demo_trap_true: set +e first - a failing step (e.g. the collector already ended on Ctrl-C) must not cut the clean-up short
-trap 'set +e; pj_cleanup; [ -n "$CPID" ] && kill "$CPID" 2>/dev/null; rm -rf "$LOCK"; echo; echo "$STOPPED remove the lab with:  ${SUDO:+$SUDO }containerlab destroy -t $(printf '"'"'%q'"'"' "$YML") --cleanup"' EXIT
+trap 'set +e; pj_cleanup; [ -n "$CPID" ] && kill "$CPID" 2>/dev/null; [ -n "$SERVE" ] && rm -rf "$SERVE"; rm -rf "$LOCK"; echo; echo "$STOPPED remove the lab with:  ${SUDO:+$SUDO }containerlab destroy -t $(printf '"'"'%q'"'"' "$YML") --cleanup"' EXIT
 if pj_ours; then rm -f "$PJ"; fi   # left by an earlier xray.sh that was killed
 if [ -f "$LABDIR/problem.json" ]; then
   if [ -e "$PJ" ] || [ -L "$PJ" ]; then echo "==> $PJ was not made by xray.sh - left as is (the problem band shows that file)"
@@ -286,4 +286,11 @@ _srln="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:sp
 [ -n "$_srln" ] && echo "      docker exec -it clab-${LABNAME}-${_srln} sr_cli"
 [ -z "$_frrn$_ioln$_srln" ] && echo "      docker exec -it clab-${LABNAME}-<node> vtysh   (FRR; sr_cli on SR Linux, ssh on Cisco IOL)"
 echo "    and the picture follows within a few seconds."
-containerlab graph --topo "$YML" --template "$TEMPLATE" --static-dir "$HERE" -s "${BIND_HP}:${PORT}"
+# nx_serve_dir: the graph serves a folder of links to the page's own files only - not the whole checkout
+# (the page asks for /static/<file>; .git, examples/<lab>/clab-<name>/ and the rest are not reachable).
+# Links, not copies: xray-states.js and the problem.json link stay live. The EXIT trap removes the folder.
+SERVE="$(mktemp -d "${TMPDIR:-/tmp}/network-xray-serve.XXXXXX")"
+for f in "$HERE"/*.html "$HERE"/*.js "$HERE"/*.css; do [ -f "$f" ] && ln -s "$f" "$SERVE/"; done
+for d in css js fonts pip; do [ -d "$HERE/$d" ] && ln -s "$HERE/$d" "$SERVE/$d"; done
+for f in xray-states.js problem.json; do [ -e "$SERVE/$f" ] || ln -s "$HERE/$f" "$SERVE/$f"; done   # may not exist yet: the link works once it does
+containerlab graph --topo "$YML" --template "$TEMPLATE" --static-dir "$SERVE" -s "${BIND_HP}:${PORT}"
