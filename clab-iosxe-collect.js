@@ -437,11 +437,18 @@ function parseAll(args) {
 // columns IOS does print, in the IOS best-path order. For each losing path find the FIRST step where the
 // best path wins; the reason shown is the step that beat the CLOSEST rival (the one that tied longest).
 // Steps IOS does not print (IGP metric to next hop, age, router id) cannot be judged -> reason "".
+// "" is also given when the printed columns cannot settle it (see explainBestPath).
+// AS_PATH length as IOS counts it: an AS_SET {..} counts as one, confederation segments (..) not at all.
+function asPathLen(p) {
+  if (!p) return 0;
+  var sets = (p.match(/\{[^}]*\}/g) || []).length;
+  return sets + p.replace(/\{[^}]*\}|\([^)]*\)/g, ' ').split(/\s+/).filter(function (x) { return /^\d/.test(x); }).length;
+}
 var BP_STEPS = [
   ['Weight', function (r) { return r.weight == null ? 0 : r.weight; }, 'high'],
   ['Local Pref', function (r) { return r.local_pref == null ? 100 : r.local_pref; }, 'high'],
   ['Local Route', function (r) { return r.nextHop === '0.0.0.0' ? 1 : 0; }, 'high'],
-  ['AS Path', function (r) { return r.as_path ? r.as_path.split(/\s+/).filter(function (x) { return /^\d/.test(x); }).length : 0; }, 'low'],
+  ['AS Path', function (r) { return asPathLen(r.as_path); }, 'low'],
   ['Origin', function (r) { return r.origin === 'IGP' ? 0 : r.origin === 'EGP' ? 1 : 2; }, 'low'],
   ['MED', function (r) { return r.metric == null ? 0 : r.metric; }, 'low', true],
   ['Peer Type', function (r) { return r.ibgp ? 1 : 0; }, 'low']   // eBGP (0) over iBGP (1)
@@ -450,26 +457,32 @@ function explainBestPath(routes) {
   var byPfx = {};
   routes.forEach(function (r) { (byPfx[r.prefix] = byPfx[r.prefix] || []).push(r); });
   Object.keys(byPfx).forEach(function (pfx) {
-    var paths = byPfx[pfx], best = paths.filter(function (r) { return r.best; })[0];
+    var paths = byPfx[pfx], bests = paths.filter(function (r) { return r.best; }), best = bests[0];
     if (!best) return;
+    if (bests.length > 1) { bests.forEach(function (r) { r.reason = ''; }); return; }
     if (paths.length === 1) { best.reason = 'First path received'; return; }
-    var firstAs = function (r) { return (r.as_path.split(/\s+/)[0] || ''); };
-    var deepest = -1;
+    var firstAs = function (r) { return (r.as_path.replace(/^\([^)]*\)\s*/, '').split(/\s+/)[0] || ''); };
+    var deepest = -1, unknown = false;
     paths.forEach(function (o) {
       if (o === best || o.valid === false) return;   // a not-valid path (no '*') is not a best-path candidate
-      var step = -1;
+      var step = -1, medSkip = false;
       for (var i = 0; i < BP_STEPS.length; i++) {
         var s = BP_STEPS[i];
-        if (s[3] && firstAs(o) !== firstAs(best)) continue;   // MED only between paths from the same neighbour AS
+        if (s[0] === 'AS Path' && (!best.origin || !o.origin || /\(/.test(best.as_path + o.as_path))) { unknown = true; break; }
+        if (s[3] && firstAs(o) !== firstAs(best)) {   // MED only between paths from the same neighbour AS
+          if (s[1](best) < s[1](o)) medSkip = true;
+          continue;
+        }
         var a = s[1](best), b = s[1](o);
         if (a === b) continue;
         step = (s[2] === 'high' ? a > b : a < b) ? i : -2;   // -2 = the columns say the other path should win
         break;
       }
+      if (step === -2 || (medSkip && step >= 0)) unknown = true;
       if (step === -1) step = BP_STEPS.length;   // tied on everything IOS prints
       if (step > deepest) deepest = step;
     });
-    best.reason = deepest >= 0 && deepest < BP_STEPS.length ? BP_STEPS[deepest][0] : '';
+    best.reason = !unknown && deepest >= 0 && deepest < BP_STEPS.length ? BP_STEPS[deepest][0] : '';
   });
 }
 
@@ -951,7 +964,7 @@ if (require.main === module) main();
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { normIf: normIf, parseOspfNeighbors: parseOspfNeighbors, parseOspfInterfaces: parseOspfInterfaces,
     parseInterfaces: parseInterfaces, parseBridgeDomains: parseBridgeDomains, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
-    parseBgpRoutes: parseBgpRoutes, parseAll: parseAll, collectFromIosxeText: collectFromIosxeText,
+    parseBgpRoutes: parseBgpRoutes, explainBestPath: explainBestPath, parseAll: parseAll, collectFromIosxeText: collectFromIosxeText,
     normBgpState: normBgpState, parseOspfInterfaceDetail: parseOspfInterfaceDetail, parseOspfTraffic: parseOspfTraffic,
     annotateOspfMismatch: annotateOspfMismatch, splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, parseVrfs: parseVrfs, CMDS: CMDS,
     SAFE_NAME: SAFE_NAME, SAFE_HOST: SAFE_HOST, makeAskpass: makeAskpass,
