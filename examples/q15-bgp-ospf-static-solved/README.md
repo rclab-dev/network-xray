@@ -65,7 +65,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第15問「BGP テーブルに経路情報があるのに、パケットが届かない？」
 
-**RouteCrushLab の第15問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q15-bgp-ospf-static/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第15問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q15-bgp-ospf-static/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)・r3(FRR)
 
 > r1 から r3 のループバック (`8.8.8.8`) に ping が通りません。

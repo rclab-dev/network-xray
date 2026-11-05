@@ -62,7 +62,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第7問「経路があるのにpingが通らない？」
 
-**RouteCrushLab の第7問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q7-ospf-static/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第7問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q7-ospf-static/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)
 
 > r1 から r2 のループバック (`2.2.2.2`) に ping が通りません。

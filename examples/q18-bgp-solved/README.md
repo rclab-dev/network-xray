@@ -62,7 +62,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第18問「一部の経路だけ来ない」
 
-**RouteCrushLab の第18問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q18-bgp/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第18問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q18-bgp/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)
 
 > r2 は `2.2.2.0/24` と `1.1.1.0/24` を BGP で広報しています。

@@ -62,7 +62,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第4問「ルートを書いたのに使えない？」
 
-**RouteCrushLab の第4問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q4-static/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第4問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q4-static/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)
 
 > r1 から r2 のループバック (`2.2.2.2`) に ping が通りません。

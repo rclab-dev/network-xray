@@ -65,7 +65,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第6問「冗長パスがあるのに迂回しない？」
 
-**RouteCrushLab の第6問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q6-ospf/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第6問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q6-ospf/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)・r3(FRR)
 
 > r1 から r3 のループバック (`3.3.3.3`) への ping は通っています。

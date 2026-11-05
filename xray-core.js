@@ -8279,7 +8279,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
       }, {
         label: "② Area 変更",
         text: function(s) {
-          return "Area 不一致 → neighbor 破壊";
+          return "Area 不一致 → neighbor 消失";
         },
         engine: "fault ospf-hello-out",
         arrow: false,
@@ -8394,7 +8394,7 @@ window.xrayBuildTraceSteps = function(tracePattern, labMode) {
         arrow: true,
         ping: false,
         panel: function(s) {
-          return h.title(s._target) + h.dim("Static NH: Connected 帯内 → RIB install") + h.ribInstalled(s._target + "/32", "1/0") + h.nhReachable("", false) + h.dim("障害②: r1 RID = 2.2.2.2 (r2 と重複) → backup 未確立") + h.action("DROP");
+          return h.title(s._target) + h.dim("Static NH: Connected のサブネット内 → RIB install") + h.ribInstalled(s._target + "/32", "1/0") + h.nhReachable("", false) + h.dim("障害②: r1 RID = 2.2.2.2 (r2 と重複) → backup 未確立") + h.action("DROP");
         }
       }, {
         label: "② メイン修復",

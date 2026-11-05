@@ -63,7 +63,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第21問「2つのISPがあるのに遅い方ばかり」
 
-**RouteCrushLab の第21問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q21-bgp-lp/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第21問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q21-bgp-lp/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)・r3(FRR)
 
 > r1 は r2 (高速 ISP, AS65002) と r3 (低速 ISP, AS65003) の 2 つの ISP につながっていて、両方から `8.8.8.0/24` を受け取っています。

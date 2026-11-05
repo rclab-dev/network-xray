@@ -62,7 +62,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第14問「iBGPネイバーが張れない」
 
-**RouteCrushLab の第14問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q14-bgp/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第14問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q14-bgp/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)
 
 > r1 と r2 は同じ AS (65001) の iBGP ネイバーで、ループバック同士 (`1.1.1.1` ⇔ `2.2.2.2`) でセッションを張る設定です。

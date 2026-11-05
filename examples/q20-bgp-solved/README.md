@@ -63,7 +63,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第20問「送ったはずの経路が相手に載らない」
 
-**RouteCrushLab の第20問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q20-bgp/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第20問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q20-bgp/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)
 
 > r2 で、r1 が広報しているはずの `1.1.1.0/24` が見えません。

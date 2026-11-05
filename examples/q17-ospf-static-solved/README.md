@@ -61,7 +61,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第17問「Redistributeしたのに経路が出ない」
 
-**RouteCrushLab の第17問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q17-ospf-static/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第17問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q17-ospf-static/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)
 
 > r2 から r1 のループバック (`1.1.1.1`) に ping を飛ばしたいのですが、通信できません。

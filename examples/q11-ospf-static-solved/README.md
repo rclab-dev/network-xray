@@ -62,7 +62,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第11問「直結があるのに、なぜ遠回り？」
 
-**RouteCrushLab の第11問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q11-ospf-static/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第11問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q11-ospf-static/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)・r3(FRR)
 
 > r1 から r3 のループバック (`3.3.3.3`) への ping は通ります。

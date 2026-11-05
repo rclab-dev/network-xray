@@ -92,9 +92,9 @@ var I18N = {
     title:'判定の全ステップを見る',
     sub:'上の基準から順に勝ち抜き戦。<b>勝者が決まった行で評価は止まり</b>、それより下は評価されない。',
     critHead:'判定基準（上から順に）',
-    pillTie:'引分 → 継続', pillDecide:'★ 決定', pillCut:'一部脱落', pillNa:'未評価',
+    pillTie:'引き分け → 継続', pillDecide:'★ 決定', pillCut:'一部脱落', pillNa:'未評価',
     winnerLabel:'ベストパス', why:'決め手：<b>{crit}</b>（{a} {op} {b}）。以降の基準は見ていない。',
-    legAlive:'生存（引分で継続）', legDecide:'★決定ラウンド', legOut:'この行で脱落 ✗', legNa:'未評価（決定後は見ない）',
+    legAlive:'生存（引き分けで継続）', legDecide:'★決定ラウンド', legOut:'この行で脱落 ✗', legNa:'未評価（決定後は見ない）',
     routeA:'経路A', routeB:'経路B', rid:'Router ID',
     note:'※ 簡略版の主要順序。実 FRR のベストパス選択はさらに多段（locally-originated / AIGP / neighbor-type / 最古経路 / peer-IP 等）。'
   },
@@ -116,7 +116,7 @@ var T = I18N[LANG];
 //   The < > inside rule text are inserted via innerHTML, so they use HTML entities (&lt;/&gt;). label is rendered through esc().
 var originRank = { i:0, e:1, '?':2 };
 var CRITERIA = [
-  { key:'weight',    label:{ja:'Weight',           en:'Weight'},           rule:{ja:'大きい方が勝ち（ローカル）', en:'Higher wins (router-local, not advertised)'}, dir:'high',   fmt:function(v){return v;} },
+  { key:'weight',    label:{ja:'Weight',           en:'Weight'},           rule:{ja:'大きい方が勝ち（このルータだけの値・広告しない）', en:'Higher wins (router-local, not advertised)'}, dir:'high',   fmt:function(v){return v;} },
   { key:'localpref', label:{ja:'Local Preference', en:'Local Preference'}, rule:{ja:'大きい方が勝ち',           en:'Higher wins'},            dir:'high',   fmt:function(v){return v;} },
   { key:'aspathlen', label:{ja:'AS-Path 長',       en:'AS-Path Length'},   rule:{ja:'短い方が勝ち',            en:'Shorter wins'},           dir:'low',    fmt:function(v){return v + (LANG==='en' ? (v===1?' hop':' hops') : ' hop');} },
   { key:'origin',    label:{ja:'Origin コード',    en:'Origin Code'},      rule:{ja:'i &lt; e &lt; ?（i が最強）', en:'i &lt; e &lt; ? (IGP is best)'}, dir:'origin', fmt:function(v){return ({i:'IGP (i)',e:'EGP (e)','?':'Incomplete (?)'})[v]||v;} },

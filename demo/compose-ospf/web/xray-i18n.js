@@ -203,7 +203,7 @@ window.xrayI18n = {
   "r2 から 8.8.8.0/24 消失 → 通信断": "8.8.8.0/24 lost from r2 → connectivity down",
   "Area 不一致 + Floating 未設定": "Area mismatch + Floating not configured",
   "成功 — OSPF main + Static backup": "Success — OSPF main + Static backup",
-  "Area 不一致 → neighbor 破壊": "Area mismatch → neighbor broken",
+  "Area 不一致 → neighbor 消失": "Area mismatch → neighbor broken",
   "no ip route → バックアップも消失": "no ip route → backup also lost",
   "OSPF 経路のみ（r3 直結パス）": "OSPF route only (r3 direct path)",
   "ip route 3.3.3.3/32 (r2のIP)": "ip route 3.3.3.3/32 (r2's IP)",
@@ -455,7 +455,7 @@ window.xrayI18n = {
   "NH(到達不能)は下流 ARP 失敗 → DROP": "NH (unreachable): ARP fails downstream → DROP",
 
   // --- Trace steps: Static main + OSPF backup (duplicate RID) ---
-  "Static NH: Connected 帯内 → RIB install": "Static NH: inside a connected subnet → RIB install",
+  "Static NH: Connected のサブネット内 → RIB install": "Static NH: inside a connected subnet → RIB install",
   "障害②: r1 RID = 2.2.2.2 (r2 と重複) → backup 未確立": "Fault ②: r1 RID = 2.2.2.2 (duplicate of r2) → backup not established",
   "② メイン修復": "② Main path fix",
   "Static NH 修正 → メイン復旧": "Static NH fix → main path restored",

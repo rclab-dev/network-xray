@@ -62,7 +62,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第2問「パケットが転送できない？」
 
-**RouteCrushLab の第2問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q2-static/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第2問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q2-static/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・inet(Linux)・sv(Linux)
 
 > sv (サーバ) からインターネット (`8.8.8.8`) に ping を飛ばしたいのですが、通信できません。

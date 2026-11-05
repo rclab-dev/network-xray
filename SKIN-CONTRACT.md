@@ -136,7 +136,7 @@ skin. 以下は**合意済 moat セマンティクスの符号化**であり tas
 - `arrowFollowsWinner` — forwarding arrow colored by `route_resolution.protocol` (health ≠ winner).
   / 転送矢印は `route_resolution.protocol` で着色(健康状態ではなく採用経路で色が決まる)。
 - `processEnlargeOnActive` — process ball enlarges only when established (BGP est / OSPF Full).
-  / プロセスボールは確立時のみ拡大(BGP established / OSPF Full)。
+  / プロセスボールは確立時のみ拡大(BGP Established / OSPF Full)。
 - `junctionOrb: link-constant` — junction orb stays `link` color regardless of protocol state.
   / 接合部 orb はプロトコル状態によらず `link` 色で固定。
 - `tunnel: concentric` — co-located link = concentric layers (center link → OSPF → BGP outermost).

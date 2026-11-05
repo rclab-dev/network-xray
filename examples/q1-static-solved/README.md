@@ -63,7 +63,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第1問「pingが通らない原因は？」
 
-**RouteCrushLab の第1問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q1-static/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第1問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q1-static/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・inet(Linux)・sv(Linux)
 
 > sv (サーバ) からインターネット (`8.8.8.8`) に ping を飛ばしたいのですが、通信できません。

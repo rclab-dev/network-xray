@@ -79,7 +79,7 @@ This package gives you the broken lab and the X-Ray view. **Hints and the explan
 ./xray.sh examples/q17-ospf-static/q17.clab.yml      # deploy → 状態を集め続ける → graph を配信
 ```
 ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。ポートが使用中なら末尾にポート: `./xray.sh examples/q17-ospf-static/q17.clab.yml 8081`。
-解決版と比べるなら: `./xray.sh examples/q17-ospf-static-solved/q17.clab.yml` (先にこちらを止めてから)。
+直した版と比べるなら: `./xray.sh examples/q17-ospf-static-solved/q17.clab.yml` (先にこちらを止めてから)。
 リリースのパッケージ (1 問ずつのフォルダ) なら、そのフォルダで `./run.sh` を実行して `:50080` を開く。
 
 ## 画面の見方

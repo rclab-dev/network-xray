@@ -241,13 +241,13 @@ scenario needs; everything is optional and defaults sensibly.
 | `ospf_active_on_interface` | boolean | OSPF is enabled & sending Hellos on the interface. IF 上で OSPF 有効・Hello 送信中。 |
 | `peer_sending_hello` | boolean | The peer's Hello is being received. 対向の Hello を受信している。 |
 | `target_hello` / `r1_hello` / `r2_hello` | number | Hello timer (seconds) per node. ノード別 Hello タイマ(秒)。 |
-| `timer_match` | boolean | Hello/Dead timers match between peers. 両端でタイマ一致。 |
+| `timer_match` | boolean | Hello/Dead timers match between peers. 両端で Hello/Dead タイマが一致。 |
 | `target_area` / `r1_area` / `r2_area` | string | OSPF area id, e.g. `"0.0.0.0"`. OSPF エリア id。 |
 | `area_match` | boolean | Areas match between peers. 両端でエリア一致。 |
 | `target_rid` / `r1_rid` / `r2_rid` | string | OSPF Router ID per node. ノード別 Router ID。 |
 | `rid_duplicate` | boolean | Duplicate Router ID detected. Router ID 重複を検出。 |
-| `dr_rid` / `bdr_rid` | string | DR / BDR Router ID (broadcast networks). DR / BDR の Router ID(broadcast)。 |
-| `is_passive` | boolean | Interface is `passive-interface` (no Hellos). IF が passive(Hello 送らない)。 |
+| `dr_rid` / `bdr_rid` | string | DR / BDR Router ID (broadcast networks). DR / BDR の Router ID(broadcast ネットワーク)。 |
+| `is_passive` | boolean | Interface is `passive-interface` (no Hellos). IF が `passive-interface`(Hello を送らない)。 |
 | `has_redistribute` | boolean | Redistribution is configured. 再配布が設定されている。 |
 | `route_map_status` | string | Route-map result: `"permit"` / `"deny"`. ルートマップ結果。 |
 
@@ -336,7 +336,7 @@ keys come from the one that is **up** (Full / Established).
 
 | Field | Type | Meaning / 意味 |
 |---|---|---|
-| `target_on_path` | boolean | Whether the inspected node sits on the active forwarding path. `false` dims its packet/ping animation ("bystander"). 調査対象が能動経路上にいるか。`false` で packet/ping 演出を抑制(傍観者)。 |
+| `target_on_path` | boolean | Whether the inspected node sits on the active forwarding path. `false` dims its packet/ping animation ("bystander"). 調査対象が実際の転送経路上にいるか。`false` で packet/ping 演出を抑制(傍観者)。 |
 | `cleared` | boolean | The scenario is in its "solved/healthy" final state. シナリオが「解決済み/正常」最終状態。 |
 | `nos` | string | Which NOS the state came from, e.g. `"srlinux"` (set by `clab-srl-collect.js`). Absent = FRR. The Best-Path panel shows its order legend only for the orders it knows (FRR, and IOS-XE when `nos` starts with `ios`); for another NOS (e.g. `srlinux`) it shows no legend rather than a wrong one. どの NOS の状態か (例 `"srlinux"`・`clab-srl-collect.js` が付ける)。無ければ FRR。Best-Path の欄は、知っている順 (FRR と、`nos` が `ios` で始まる時の IOS-XE) の時だけ凡例を出し、ほかの NOS (例 `srlinux`) では間違った凡例を出さずに凡例なしにする。 |
 

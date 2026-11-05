@@ -63,7 +63,7 @@ This package gives you the solved lab and the X-Ray view. **Hints and the explan
 
 # 第16問「BGPは張れたのに経路が届かない？」
 
-**RouteCrushLab の第16問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**解決版**です (壊れた版は `examples/q16-bgp/`)。直した後の様子と比べるために使ってください。
+**RouteCrushLab の第16問を containerlab で動かし、X-Ray で中を見られるラボです。** これは**直した版**です (壊れた版は `examples/q16-bgp/`)。直した後の様子と比べるために使ってください。
 ノード: r1(FRR)・r2(FRR)
 
 > r2 から r1 のループバック (`1.1.1.1`) に ping が通りません。
