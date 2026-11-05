@@ -314,5 +314,5 @@ echo "    and the picture follows within a few seconds."
 SERVE="$(mktemp -d "${TMPDIR:-/tmp}/network-xray-serve.XXXXXX")"
 for f in "$HERE"/*.html "$HERE"/*.js "$HERE"/*.css; do [ -f "$f" ] && ln -s "$f" "$SERVE/"; done
 for d in css js fonts pip; do [ -d "$HERE/$d" ] && ln -s "$HERE/$d" "$SERVE/$d"; done
-for f in xray-states.js problem.json; do [ -e "$SERVE/$f" ] || ln -s "$HERE/$f" "$SERVE/$f"; done   # may not exist yet: the link works once it does
+for f in xray-states.js xray-states.sig.js problem.json; do [ -e "$SERVE/$f" ] || ln -s "$HERE/$f" "$SERVE/$f"; done   # may not exist yet: the link works once it does
 containerlab graph --topo "$YML" --template "$TEMPLATE" --static-dir "$SERVE" -s "${BIND_HP}:${PORT}"

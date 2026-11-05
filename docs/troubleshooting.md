@@ -264,8 +264,8 @@ the next run rewrites it.
 - If you meant to stop: stop the collector too (`Ctrl-C` in the `xray.sh` terminal). If that terminal is gone, find the collector of this lab
   with `pgrep -af clab-xray-collect.js` and `kill <its pid>` (not `pkill -f`, which also stops the collectors of your other labs).
 - If you did not mean to stop: `docker ps -a` shows which containers are down; deploy the lab again with `./xray.sh <lab.clab.yml>`.
-- To clear the old picture, delete `xray-states.js` in the repository folder (it is not tracked by git and
-  is written again on the next run).
+- To clear the old picture, delete `xray-states.js` and `xray-states.sig.js` in the repository folder (they are not
+  tracked by git and are written again on the next run).
 - If `xray.sh` refuses to start with `another xray.sh (pid <pid>) is already running from <folder> - stop it first.`,
   stop that one first. A lock left behind by a run that is no longer running is removed by `xray.sh` itself.
 

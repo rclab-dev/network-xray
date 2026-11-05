@@ -813,14 +813,38 @@ window.__initNeXtOverview = function (data) {
   // ---- live in-place refresh: re-fetch xray-states.js + re-apply the current
   // node DeepDive WITHOUT reloading the page, so the NeXt UI overview keeps its layout/positions.
   // Driven by the :8610 picker via postMessage (cross-origin). No iframe reload = no force-relayout.
+  /* nx_states_sig (v1.1.8): a refresh first reads the small xray-states.sig.js and loads the whole xray-states.js only
+     when the collector wrote it again (run / gen moved): a quiet poll downloads a few hundred bytes and stringifies
+     nothing, and still calls cb (the Solved / validate ticks keep running). The open router is redrawn only when some
+     router's state changed (sig.nodes). No sig file (an older collector), or an "xray-refresh" message from the picker
+     (__xrayForceFull) -> the whole file, compared as before. */
+  var _sigOk = null, _sigKey = "", _sigNodes = "";
   window.__xrayLiveRefresh = function(cb){
+    if (window.__xrayForceFull || _sigOk === false) { window.__xrayForceFull = false; return _xrayLoadStates(cb, ""); }
+    var g = document.createElement("script");
+    g.src = (window.__xrayStatesBase || "") + "xray-states.sig.js?t=" + Date.now();
+    g.onload = function(){
+      g.remove();
+      var L = window.LIVE_SIG;
+      if (!L || L.gen == null) { _sigOk = false; _xrayLoadStates(cb, ""); return; }
+      _sigOk = true;
+      var k = L.run + ":" + L.gen, nd = JSON.stringify(L.nodes || {});
+      if (k === _sigKey) { if (cb) cb(true); return; }
+      var mode = nd !== _sigNodes ? "redraw" : "quiet";
+      _sigKey = k; _sigNodes = nd;
+      _xrayLoadStates(cb, mode);
+    };
+    g.onerror = function(){ g.remove(); _sigOk = false; _xrayLoadStates(cb, ""); };
+    document.head.appendChild(g);
+  };
+  function _xrayLoadStates(cb, mode){   // mode: "" = compare as before, "redraw" = a router changed, "quiet" = only the problem / validate part
     var s = document.createElement("script");
     s.src = (window.__xrayStatesBase || "") + "xray-states.js?t=" + Date.now();   // cache-bust; base=static/ (clab graph serves static-dir under /static/)
     s.onload = function(){
       /* nx_live_poll (2026-10-08): nothing changed since the last load -> no redraw (no idle flicker; picker + poll never double-draw) */
-      var _sig = ""; try { _sig = JSON.stringify(window.LIVE_STATES || {}); } catch (_e) {}
-      if (_sig && _sig === window.__xrayLastStates) { s.remove(); if (cb) cb(true); return; }
-      window.__xrayLastStates = _sig;
+      var _sig = ""; if (!mode) { try { _sig = JSON.stringify(window.LIVE_STATES || {}); } catch (_e) {} }
+      if (mode === "quiet" || (!mode && _sig && _sig === window.__xrayLastStates)) { s.remove(); if (cb) cb(true); return; }
+      if (!mode) window.__xrayLastStates = _sig;
       try{
       var cur = window.__xrayCurNode;
       var st = cur && window.LIVE_STATES && window.LIVE_STATES[cur];
@@ -851,8 +875,8 @@ window.__initNeXtOverview = function (data) {
     }catch(e){ try{ if (window.__xrayCurNode && window.__xrayShowNode) window.__xrayShowNode(window.__xrayCurNode); }catch(_){} } s.remove(); if(cb) cb(true); };
     s.onerror = function(){ s.remove(); if(cb) cb(false); };
     document.head.appendChild(s);
-  };
-  window.addEventListener("message", function(ev){ if (ev && ev.data && ev.data.type === "xray-refresh") window.__xrayLiveRefresh(); });
+  }
+  window.addEventListener("message", function(ev){ if (ev && ev.data && ev.data.type === "xray-refresh") { window.__xrayForceFull = true; window.__xrayLiveRefresh(); } });
   /* nx_live_poll (2026-10-08 v10): a standalone run.sh has no :8610 picker to post "xray-refresh", so the DeepDive
      only changed on reload. Same opt-in as xray-graph.html startLivePoll: only when the collector runs with --watch
      (xray-states.js sets window.LIVE_WATCH) poll every 3 s; __xrayLiveRefresh redraws only when the states changed. */
@@ -875,7 +899,7 @@ window.__initNeXtOverview = function (data) {
       }, 2500);
     }
     if (!window.LIVE_WATCH || window.__xrayLivePollId) return;
-    window.__xrayLivePollId = setInterval(function(){ window.__xrayLiveRefresh(); }, 1000);   /* nx_live_poll_1s (2026-10-09): 3 s -> 1 s (small file, redraw only on change) */
+    window.__xrayLivePollId = setInterval(function(){ if (!document.hidden) window.__xrayLiveRefresh(); }, 1000);   /* nx_states_sig: a hidden tab does not poll */   /* nx_live_poll_1s (2026-10-09): 3 s -> 1 s (small file, redraw only on change) */
   }
   // Default this drop-in to the "signature" skin (same default as xray-graph.html): honors a stored
   // user choice, otherwise applies signature without persisting. The "containerlab" preset stays

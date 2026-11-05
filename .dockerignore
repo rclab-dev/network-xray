@@ -9,5 +9,7 @@ package-lock.json
 # internal / non-published files and the output of a local run (see .gitignore)
 **/_*
 xray-states.js
+xray-states.sig.js
+xray-states*.tmp
 problem.json
 .xray.lock

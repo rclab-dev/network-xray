@@ -13,6 +13,8 @@ unified-derisk.html
 unified-showcase.html
 # xray.sh / collector output for the lab you are running (rewritten every run) - not part of the repo
 /xray-states.js
+/xray-states.sig.js
+/xray-states*.tmp
 /problem.json
 /.xray.lock/
 # containerlab's per-lab working folders and local backups

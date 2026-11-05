@@ -173,8 +173,9 @@ html = html.replace(
   "(function(){var _sb=function(){window.xrayCore.setBgpTable(function(st){return (st && st.bgp_routes)||[];});};_sb();try{requestAnimationFrame(function(){requestAnimationFrame(_sb);});}catch(e){}[120,400,900].forEach(function(d){setTimeout(_sb,d);});})();"
 );
 // auto-follow ON/OFF: gate the state-poll setInterval on a global flag (default ON)
-html = html.replace(/setInterval\(function\(\)\s*\{(\s*var s = document\.createElement\('script'\);\s*s\.src = base \+ 'xray-states\.js)/,
-  "setInterval(function(){ if(window.__xrayAutoFollow===false)return;$1");
+var _afRe = /setInterval\(function\(\)\s*\{(\s*if \(document\.hidden\) return;)/;   // nx_states_sig (v1.1.8): the poll starts with the hidden-tab check
+if (!_afRe.test(html)) { console.error('gen_compose_bundle.js: the state-poll setInterval in xray-graph.html was not found (auto-follow gate)'); process.exit(1); }
+html = html.replace(_afRe, "setInterval(function(){ if(window.__xrayAutoFollow===false)return;$1");
 // on a state change, also FULL-re-render the open node so the BGP table (rendered on open) follows too
 // (applyState alone updates the RE panel/arrow but not the BGP-table detail panel)
 html = html.replace(/window\.xrayCore\.applyState\(st\);\s*window\._xrayArrowFollow\(st\);/,

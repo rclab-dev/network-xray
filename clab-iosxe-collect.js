@@ -757,7 +757,7 @@ function sshCollect(host) {
     var r = _cp.spawnSync('ssh', ['-tt', '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'LogLevel=ERROR',
       '-o', 'ConnectTimeout=15', '-o', 'PreferredAuthentications=keyboard-interactive,password', '-o', 'PubkeyAuthentication=no',
       '-o', 'KexAlgorithms=+diffie-hellman-group14-sha1', '-o', 'HostKeyAlgorithms=+ssh-rsa', '-o', 'Ciphers=+aes128-cbc,aes256-cbc',
-      user + '@' + host], { input: script, encoding: 'utf8', timeout: 60000,
+      user + '@' + host], { input: script, encoding: 'utf8', timeout: parseInt(process.env.NX_IOS_SSH_MS, 10) > 0 ? parseInt(process.env.NX_IOS_SSH_MS, 10) : 60000,   /* nx_ios_ssh_ms: 20 s under clab-xray-collect.js (its 25 s per-node limit), 60 s by hand */
       env: Object.assign({}, process.env, { SSH_ASKPASS: ap, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || ':0', NX_IOS_ASKPASS_VALUE: pass }) });
     if (r.error && r.error.code === 'ETIMEDOUT') { process.stderr.write('NX_UNREAD timeout\n'); _exit(124); }
     var out = splitByPrompt(r.stdout || '');

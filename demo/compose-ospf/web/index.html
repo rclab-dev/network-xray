@@ -348,16 +348,22 @@ window.__xrayGraphBoot = function () {
     if (!window.LIVE_WATCH) return;
     var POLL_MS = 3000;
     window.__xrayLastStates = JSON.stringify(window.LIVE_STATES || {});
-    setInterval(function(){ if(window.__xrayAutoFollow===false)return;
+    /* nx_states_sig (v1.1.8): a poll first reads the small xray-states.sig.js and loads the whole xray-states.js only
+       when the collector wrote it again (run / gen moved): a quiet poll downloads a few hundred bytes and stringifies
+       nothing. The open router is redrawn only when some router's state changed (sig.nodes), as before. No sig file
+       (an older collector) -> the whole file every poll, compared as before. A hidden tab does not poll. */
+    var sigOk = null, sigKey = '', sigNodes = '';
+    function loadStates(mode){   // mode: '' = compare as before, 'redraw' = a router changed, 'quiet' = only the problem / validate part
       var s = document.createElement('script');
       s.src = base + 'xray-states.js?t=' + (+new Date());
       s.onload = function(){
         try {
-          var cur = JSON.stringify(window.LIVE_STATES || {});
-          if (cur !== window.__xrayLastStates) {
-            window.__xrayLastStates = cur;
+          var cur = mode ? '' : JSON.stringify(window.LIVE_STATES || {});
+          if (mode === 'redraw' || (!mode && cur !== window.__xrayLastStates)) {
+            if (!mode) window.__xrayLastStates = cur;
             var n = window.__xrayCurNode, st = n && window.LIVE_STATES && window.LIVE_STATES[n];
-            if (st && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
+            // nx_synthetic_badge: an open example (synthesized) view that now has collected state is rebuilt, not patched
+            if (st && !document.body.classList.contains('nx-synthetic') && window.xrayCore && typeof window.xrayCore.applyState === 'function') {
               try { window.xrayCore.applyState(st); window._xrayArrowFollow(st); if(window.__xrayShowNode)window.__xrayShowNode(n); } catch (e) { if (window.__xrayShowNode) window.__xrayShowNode(n); }
             } else if (n && window.__xrayShowNode) { window.__xrayShowNode(n); }
           }
@@ -366,6 +372,25 @@ window.__xrayGraphBoot = function () {
       };
       s.onerror = function(){ s.remove(); };
       document.head.appendChild(s);
+    }
+    setInterval(function(){ if(window.__xrayAutoFollow===false)return;
+      if (document.hidden) return;
+      if (sigOk === false) { loadStates(''); return; }
+      var g = document.createElement('script');
+      g.src = base + 'xray-states.sig.js?t=' + (+new Date());
+      g.onload = function(){
+        g.remove();
+        var L = window.LIVE_SIG;
+        if (!L || L.gen == null) { sigOk = false; loadStates(''); return; }
+        sigOk = true;
+        var k = L.run + ':' + L.gen, nd = JSON.stringify(L.nodes || {});
+        if (k === sigKey) return;
+        var mode = nd !== sigNodes ? 'redraw' : 'quiet';
+        sigKey = k; sigNodes = nd;
+        loadStates(mode);
+      };
+      g.onerror = function(){ g.remove(); sigOk = false; loadStates(''); };
+      document.head.appendChild(g);
     }, POLL_MS);
   }
   // This drop-in defaults to the "signature" skin (X-Ray's built-in look: link #00e5ff / chrome accent

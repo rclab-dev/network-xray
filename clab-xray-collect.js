@@ -60,6 +60,9 @@ function shown(s) { return JSON.stringify(String(s).slice(0, 80)); }   // log th
    runs longer than CHILD_MS is killed (timeout). A router that timed out keeps its last good state marked stale
    (nx_unread: 'timeout', nx_stale_since) and is asked again only after RETRY_MS, so the other routers keep updating. */
 var CHILD_MS = 25000, RETRY_MS = 10000;
+/* nx_ios_ssh_ms (v1.1.8): an IOS child gives up its SSH 5 s before it would be killed, so it can say "timeout" itself.
+   Only under this collector: clab-iosxe-collect.js run by hand keeps its own 60 s. */
+if (!process.env.NX_IOS_SSH_MS) process.env.NX_IOS_SSH_MS = String(CHILD_MS - 5000);
 /* nx_ios_interval (2026-10-27): an IOS node is read over SSH (a login + 7 shows each time) - not every second like FRR's docker exec.
    Between reads it keeps its last good state; FRR / SR Linux nodes are not affected. NX_IOS_INTERVAL=<seconds> to change. */
 var IOS_MS = Math.max(2, parseInt(process.env.NX_IOS_INTERVAL || '10', 10) || 10) * 1000, iosNextAt = {};
@@ -426,17 +429,54 @@ function validateRound(cb) {
     cb(changed || tierChanged);
   });
 }
-function writeStates(states, live) {
+/* nx_states_json (v1.1.8): the states as one JSON text, built from one JSON text per router, so the watch loop can
+   tell which routers changed without a second JSON.stringify. Same bytes as JSON.stringify(states) (same key order). */
+function statesJson(states) {
+  var parts = {}, out = [];
+  Object.keys(states).forEach(function (k) {
+    var v = JSON.stringify(states[k]);
+    if (v === undefined) return;   // as JSON.stringify skips it
+    parts[k] = v; out.push(JSON.stringify(k) + ':' + v);
+  });
+  return { json: '{' + out.join(',') + '}', parts: parts };
+}
+/* nx_states_sig (v1.1.8): xray-states.sig.js = a few hundred bytes the page reads instead of the whole state file.
+   run = this collector's start (a restarted collector never repeats a run + gen pair), gen = +1 on every write of
+   xray-states.js, nodes[n] = +1 when that router's state changed, extra = +1 when the problem / validate / tier
+   part changed. The page reads xray-states.js only when run or gen moved. */
+var SIG_DEST = path.join(outDir, 'xray-states.sig.js'), sigRun = Date.now(), sigGen = 0, sigNodes = {}, sigExtra = 0,
+  sigLastParts = {}, sigLastExtra = null, renameWarned = false;
+// write next to the target and rename over it, so a reader never sees a half-written file. Where rename is refused
+// (a file held open on some mounts) the file is written in place and that is said once: the page may then read a
+// half-written file for one poll (a script error: the last good state stays shown), never a stale one.
+function writeAtomic(file, body) {
+  var tmp = file + '.' + process.pid + '.tmp';
+  try { fs.writeFileSync(tmp, body); fs.renameSync(tmp, file); return; }
+  catch (e) {
+    try { fs.unlinkSync(tmp); } catch (e2) {}
+    if (!renameWarned) { renameWarned = true; console.error('!! could not replace ' + file + ' by rename (' + (e.code || e.message) + '): writing it in place'); }
+    fs.writeFileSync(file, body);
+  }
+}
+function writeStates(states, live, sj) {   // sj: statesJson(states), when the caller already has it
   lastStates = states; lastLive = live;
+  if (!sj) sj = statesJson(states);
   var prob = readProblem();
   var xp = null;
   if (prob && prob.focus) (xp = xp || {}).focus = prob.focus;
   if (prob && prob.check) { (xp = xp || {}).check = prob.check; if (prob.format) xp.format = prob.format; }   /* format: the evaluator skips an unknown version; check_note_* is README-only: not passed */
-  fs.writeFileSync(dest, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\n' +
-    (live ? 'window.LIVE_WATCH = true;\n' : '') +
+  var extra = (live ? 'window.LIVE_WATCH = true;\n' : '') +
     (xp ? 'window.XRAY_PROBLEM = ' + JSON.stringify(xp) + ';\n' : '') +
     (valRes ? 'window.XRAY_VALIDATE = ' + JSON.stringify(valRes) + ';\n' : '') +
-    (tierRes ? 'window.XRAY_TIERS = ' + JSON.stringify(tierRes) + ';\n' : ''));   /* nx_problem_check + nx_netlab_validate (2026-10-06): focus + check (Solved) */
+    (tierRes ? 'window.XRAY_TIERS = ' + JSON.stringify(tierRes) + ';\n' : '');   /* nx_problem_check + nx_netlab_validate (2026-10-06): focus + check (Solved) */
+  writeAtomic(dest, 'window.LIVE_STATES = ' + sj.json + ';\n' + extra);
+  sigGen++;
+  Object.keys(sj.parts).forEach(function (n) { if (sj.parts[n] !== sigLastParts[n]) sigNodes[n] = (sigNodes[n] || 0) + 1; });
+  Object.keys(sigNodes).forEach(function (n) { if (!(n in sj.parts)) delete sigNodes[n]; });
+  sigLastParts = sj.parts;
+  if (extra !== sigLastExtra) { sigExtra++; sigLastExtra = extra; }
+  // after the state file: a page that sees this gen finds at least this state
+  writeAtomic(SIG_DEST, 'window.LIVE_SIG = ' + JSON.stringify({ run: sigRun, gen: sigGen, nodes: sigNodes, extra: sigExtra }) + ';\n');
 }
 
 console.log('lab=' + lab + ' proto=' + proto + ' nodes=' + nodes.join(',') + (watch ? ' (watch ' + (intervalMs / 1000) + 's)' : ''));
@@ -480,11 +520,11 @@ if (watch) {
   var last = '';
   var tick = function () {
     var r = collectAll();
-    var json = JSON.stringify(r.states);
+    var sj = statesJson(r.states), json = sj.json;
     if (!r.ok && !r.kept && !r.unread && last) { setTimeout(tick, intervalMs); return; }   /* nx_unread: a router marked unreadable is news too */   /* nothing collected and nothing kept: keep the page as it is */
     if (json !== last) {   // only rewrite when something changed (no churn on idle)
       last = json;
-      writeStates(r.states, true);
+      writeStates(r.states, true, sj);
       var sum = _summary(r.states), what = [];
       if (lastSum) Object.keys(sum).forEach(function (n) { var a = lastSum[n] || {}, b = sum[n]; ['bgp', 'ospf', 'ifs', 'routes'].forEach(function (k) { if (String(a[k]) !== String(b[k])) what.push(n + ' ' + k + (k === 'routes' ? ' ' + a[k] + '->' + b[k] : '')); }); });
       if (!lastSum || what.length || r.ok < nodes.length) console.log('[' + new Date().toISOString() + '] updated xray-states.js (' + r.ok + '/' + nodes.length + ')' + (what.length ? ' - ' + what.join(', ') : ''));
