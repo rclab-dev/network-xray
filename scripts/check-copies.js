@@ -28,7 +28,7 @@ var WEB_COPIES = ['xray-core.js', 'xray-api.js', 'clab-xray-bridge.js', 'xray-sk
 // copied verbatim from the repo root into <bundle>/collector/ (gen_compose_bundle.js step 8)
 var COLLECTOR_COPIES = ['clab-collect.js', 'clab-xray-collect.js'];
 // written with fixed content into every bundle (no lab-specific text) -> same in all bundles
-var BUNDLE_CONSTANT = ['collector/Dockerfile', 'server/Dockerfile', 'server/server.js', 'web/xray-states.js'];
+var BUNDLE_CONSTANT = ['collector/Dockerfile', 'server/Dockerfile', 'web/xray-states.js'];
 
 /* Intended exceptions: copies (or near-copies) that are NOT expected to be identical. One line each. */
 var EXCEPTIONS = [
@@ -47,6 +47,8 @@ var EXCEPTIONS = [
 var groups = [];
 WEB_COPIES.forEach(function (f) { groups.push({ name: f, paths: [f].concat(BUNDLES.map(function (b) { return b + '/web/' + f; })) }); });
 COLLECTOR_COPIES.forEach(function (f) { groups.push({ name: f, paths: [f].concat(BUNDLES.map(function (b) { return b + '/collector/' + f; })) }); });
+// scripts/compose-server.js -> <bundle>/server/server.js (gen_compose_bundle.js step 9)
+groups.push({ name: 'scripts/compose-server.js', paths: ['scripts/compose-server.js'].concat(BUNDLES.map(function (b) { return b + '/server/server.js'; })) });
 var db = groups.filter(function (g) { return g.name === 'decision-bracket.html'; })[0];
 db.paths.push('demo/decision-bracket.html');   // GitHub Pages gallery copy of the root page
 BUNDLE_CONSTANT.forEach(function (f) { groups.push({ name: f + ' (bundle)', paths: BUNDLES.map(function (b) { return b + '/' + f; }) }); });
