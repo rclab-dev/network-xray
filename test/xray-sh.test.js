@@ -340,3 +340,126 @@ test('xray.sh: bad --bind / --interval values are refused before deploy', { skip
     assert.deepStrictEqual(r.calls, [], cases[i][0].join(' '));
   }
 });
+
+// --check: fakes that answer docker info / docker image inspect / containerlab version / sudo -n
+function checkFakes(env, o) {
+  o = o || {};
+  var w = function (n, body) { fs.writeFileSync(path.join(env.bin, n), '#!' + BASH + '\n' + LOGLINE + body, { mode: 0o755 }); };
+  w('docker',
+    'case "$1" in\n' +
+    '  info) [ "${NX_ROOT:-}" = 1 ] || [ "' + (o.docker || 'ok') + '" = ok ] ;;\n' +
+    '  image) for i in ' + (o.images || []).join(' ') + '; do [ "$3" = "$i" ] && exit 0; done; exit 1 ;;\n' +
+    'esac\n');
+  w('sudo', '[ "$1" = -n ] && shift\n' + (o.sudoPw ? 'exit 1\n' : '') + 'NX_ROOT=1 exec "$@"\n');
+  w('containerlab', '[ "$1" = version ] && printf "  ____\\n    version: 0.62.2\\n     commit: abc\\n"\nexit 0\n');
+  if (o.node) w('node', '[ "$1" = -e ] && { echo ' + o.node + '; exit 0; }\nexit 0\n');
+  if (o.noClab) fs.unlinkSync(path.join(env.bin, 'containerlab'));
+}
+function writeIolLab(dir, image) {
+  fs.mkdirSync(dir, { recursive: true });
+  var yml = path.join(dir, 'lab.clab.yml');
+  fs.writeFileSync(yml, 'name: iol-lab\ntopology:\n  kinds:\n    cisco_iol:\n      image: ' + image +
+    '\n  nodes:\n    r1: { kind: cisco_iol, startup-config: r1.cfg }\n    r2: { kind: cisco_iol, image: "my/iol:2" }\n');
+  return yml;
+}
+// only reads: no deploy, no graph, no collector, no lock, no problem.json link
+function assertNothingStarted(env, r) {
+  r.calls.forEach(function (c) {
+    assert.ok(['docker', 'sudo', 'containerlab'].indexOf(c[0]) >= 0 || (c[0] === 'node' && c[1] === '-e'), 'unexpected call: ' + c.join(' '));
+    assert.ok(c[0] !== 'containerlab' || c[1] === 'version', 'containerlab ' + c[1]);
+    assert.ok(c[0] !== 'docker' || c[1] === 'info' || (c[1] === 'image' && c[2] === 'inspect'), 'docker ' + c[1]);
+  });
+  assert.ok(!fs.existsSync(path.join(env.here, '.xray.lock')), 'no lock');
+  assert.ok(!fs.existsSync(path.join(env.here, 'problem.json')) && !isLink(path.join(env.here, 'problem.json')), 'no problem.json link');
+}
+
+test('xray.sh --check: all OK exits 0 and starts nothing', { skip: SKIP }, async function () {
+  var env = setup();
+  checkFakes(env);
+  var port = await freePort();
+  var r = await run(env, 'xray.sh', ['--check', 'examples/q21-bgp-lp/q21.clab.yml', String(port)]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^OK {4}docker: reachable \(no sudo needed\)$/m);
+  assert.match(r.stdout, /^OK {4}containerlab: 0\.62\.2$/m);
+  assert.match(r.stdout, new RegExp('^OK {4}node: ' + process.versions.node.replace(/\./g, '\\.') + '$', 'm'));
+  assert.match(r.stdout, new RegExp('^OK {4}port ' + port + ': free on 0\\.0\\.0\\.0$', 'm'));
+  assert.match(r.stdout, /^OK {4}topology: .*q21\.clab\.yml \(lab 'q21-bgp-lp'\)$/m);
+  assert.doesNotMatch(r.stdout, /FAIL|IOL/);
+  assert.match(r.stdout, /all checks passed/);
+  assertNothingStarted(env, r);
+  assert.deepStrictEqual(calls(r, 'sudo'), []);
+});
+
+test('xray.sh --check: docker only with sudo, old node, no containerlab -> one FAIL line each, exit 1', { skip: SKIP }, async function () {
+  var env = setup();
+  checkFakes(env, { docker: 'fail', node: '16.20.2', noClab: true });
+  var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort()), '--check']);
+  assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /^FAIL {2}docker: works only with sudo - .*usermod -aG docker/m);
+  // a containerlab installed on this machine is still found on PATH after the fake is removed
+  var realClab = !!which('containerlab');
+  if (!realClab) assert.match(r.stdout, /^FAIL {2}containerlab: not found - https:\/\/containerlab\.dev\/install\/$/m);
+  assert.match(r.stdout, /^FAIL {2}node: 16\.20\.2 is too old - install Node\.js 18 or newer$/m);
+  assert.match(r.stdout, new RegExp('^' + (realClab ? 2 : 3) + ' problem\\(s\\)', 'm'));
+  assertNothingStarted(env, r);
+  assert.deepStrictEqual(calls(r, 'sudo'), [['-n', 'docker', 'info']]);
+});
+
+test('xray.sh --check: docker unreachable, sudo asking for a password, or SUDO= set', { skip: SKIP }, async function () {
+  var env = setup();
+  checkFakes(env, { docker: 'fail', sudoPw: true });
+  var r = await run(env, 'xray.sh', ['--check', 'examples/q21-bgp-lp/q21.clab.yml', String(await freePort())]);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.stdout, /^FAIL {2}docker: not reachable without sudo, and sudo asks for a password - run 'sudo -v'/m);
+  fs.rmSync(env.log, { force: true });
+  r = await run(env, 'xray.sh', ['--check', 'examples/q21-bgp-lp/q21.clab.yml', String(await freePort())], { env: { SUDO: '' } });
+  assert.strictEqual(r.code, 1);
+  assert.match(r.stdout, /^FAIL {2}docker: not reachable - start it/m);
+  assert.deepStrictEqual(calls(r, 'sudo'), [], 'no sudo with SUDO=');
+  assertNothingStarted(env, r);
+});
+
+test('xray.sh --check: a port in use, a bad port, a missing topology and a lab name that is not plain', { skip: SKIP || (!which('timeout') && 'needs timeout') }, async function () {
+  var env = setup();
+  checkFakes(env);
+  var srv = net.createServer(function (c) { c.destroy(); });
+  await new Promise(function (res) { srv.listen(0, '127.0.0.1', res); });
+  var port = srv.address().port;
+  try {
+    var r = await run(env, 'xray.sh', ['--check', 'examples/q21-bgp-lp/q21.clab.yml', String(port)]);
+    assert.strictEqual(r.code, 1);
+    assert.match(r.stdout, new RegExp('^FAIL {2}port ' + port + ': already in use .* e\\.g\\. ' + (port + 1), 'm'));
+    assert.match(r.stdout, /^1 problem\(s\)/m);
+  } finally { srv.close(); }
+  r = await run(env, 'xray.sh', ['--check', 'no/such.clab.yml', '99999']);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.stdout, /^FAIL {2}port: must be a number from 1 to 65535: 99999$/m);
+  assert.match(r.stdout, /^FAIL {2}topology: not found or not readable: no\/such\.clab\.yml$/m);
+  var dir = path.join(env.dir, 'bad');
+  writeLab(dir, 'a;id');
+  r = await run(env, 'xray.sh', ['--check', path.join(dir, 'lab.clab.yml'), String(await freePort())]);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.stdout, /^FAIL {2}topology: the lab name in .* is not a plain name \(letters, digits, _ \. -\)/m);
+  assertNothingStarted(env, r);
+});
+
+test('xray.sh --check: cisco_iol images named in the topology must exist locally', { skip: SKIP }, async function () {
+  var env = setup();
+  checkFakes(env, { images: ['vrnetlab/cisco_iol:17.18.02'] });
+  var yml = writeIolLab(path.join(env.dir, 'iol'), 'vrnetlab/cisco_iol:17.18.02');
+  var r = await run(env, 'xray.sh', ['--check', yml, String(await freePort())]);
+  assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /^OK {4}IOL image vrnetlab\/cisco_iol:17\.18\.02: present$/m);
+  assert.match(r.stdout, /^FAIL {2}IOL image my\/iol:2: not found locally - build it with vrnetlab/m);
+  assertNothingStarted(env, r);
+
+  checkFakes(env, { images: ['vrnetlab/cisco_iol:17.18.02', 'my/iol:2'] });
+  r = await run(env, 'xray.sh', ['--check', yml, String(await freePort())]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+
+  // the shipped IOL examples: the kinds: image is found
+  fs.rmSync(env.log, { force: true });
+  r = await run(env, 'xray.sh', ['--check', path.join(ROOT, 'examples', 'q5-ospf-iol', 'q5.clab.yml'), String(await freePort())]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.deepStrictEqual(calls(r, 'docker').filter(function (c) { return c[0] === 'image'; }), [['image', 'inspect', 'vrnetlab/cisco_iol:17.18.02']]);
+});

@@ -10,6 +10,8 @@
 #   --bind <address>      address the graph page listens on. default: 0.0.0.0 (all addresses, as before -
 #                         a lab on a server / VM is opened from your PC); --bind 127.0.0.1 = this machine only
 #   --interval <seconds>  how often the collector reads the routers (whole seconds). default: 1
+#   --check               only check what this run needs (docker, containerlab, node, port, topology,
+#                         IOL image) and say what to fix; nothing is started or changed. exit 0 = ready
 #   The options may come before, between or after lab / port / template.
 #
 # Examples:  ./xray.sh examples/q13-bgp-static/q13.clab.yml
@@ -22,9 +24,10 @@
 set -euo pipefail
 unset CDPATH   # a CDPATH from the environment would make the cd below print a path or pick another folder
 HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
-BIND=0.0.0.0; BIND_SET=""; INTERVAL=1; POS=()
+BIND=0.0.0.0; BIND_SET=""; INTERVAL=1; CHECK=""; POS=()
 while [ $# -gt 0 ]; do
   case "$1" in
+    --check) CHECK=1; shift ;;
     --bind|--interval)
       [ $# -ge 2 ] || { echo "$1 needs a value (see the top of xray.sh)"; exit 1; }
       if [ "$1" = --bind ]; then BIND="$2"; BIND_SET=1; else INTERVAL="$2"; fi; shift 2 ;;
@@ -46,6 +49,85 @@ PORT="${2:-8080}"
 TEMPLATE="${3:-xray-graph-nextui.html}"
 case "$TEMPLATE" in /*) ;; *) TEMPLATE="$HERE/$TEMPLATE" ;; esac
 SUDO="${SUDO-sudo}"
+
+# --check: one line per item, OK or FAIL + what to do. Nothing is deployed, started or written
+# (the --bind probe below only opens and closes the port, like the check before deploy).
+if [ -n "$CHECK" ]; then
+  _fails=0
+  ok() { echo "OK    $*"; }
+  bad() { echo "FAIL  $*"; _fails=$((_fails + 1)); }
+  _t() { if command -v timeout >/dev/null 2>&1; then timeout 10 "$@"; else "$@"; fi; }
+  DOCKER=""
+  if ! command -v docker >/dev/null 2>&1; then
+    bad "docker: not found - https://docs.docker.com/engine/install/"
+  elif _t docker info >/dev/null 2>&1; then
+    DOCKER=docker; ok "docker: reachable (no sudo needed)"
+  elif [ -n "$SUDO" ] && _t $SUDO -n docker info >/dev/null 2>&1; then
+    DOCKER="$SUDO -n docker"
+    bad "docker: works only with $SUDO - the collector runs docker without it: sudo usermod -aG docker \$USER, then log in again"
+  elif [ -n "$SUDO" ] && ! _t $SUDO -n true >/dev/null 2>&1; then
+    bad "docker: not reachable without $SUDO, and $SUDO asks for a password - run '$SUDO -v', then ./xray.sh --check again"
+  else
+    bad "docker: not reachable - start it (sudo systemctl start docker) or check: docker info"
+  fi
+  if command -v containerlab >/dev/null 2>&1; then
+    _cv="$(CLAB_VERSION_CHECK=disable _t containerlab version 2>/dev/null | sed -n 's/^[[:space:]]*version:[[:space:]]*//p' | head -1)"
+    ok "containerlab: ${_cv:-found (version unknown)}"
+  else
+    bad "containerlab: not found - https://containerlab.dev/install/"
+  fi
+  if ! command -v node >/dev/null 2>&1; then
+    bad "node: not found - install Node.js 18 or newer (https://nodejs.org/)"
+  else
+    _nv="$(node -e 'console.log(process.versions.node)' 2>/dev/null || true)"
+    case "${_nv%%.*}" in
+      ''|*[!0-9]*) bad "node: could not read its version - check: node --version" ;;
+      *) if [ "${_nv%%.*}" -ge 18 ]; then ok "node: $_nv"; else bad "node: $_nv is too old - install Node.js 18 or newer"; fi ;;
+    esac
+  fi
+  _p="$PORT"; case "$_p" in ''|*[!0-9]*) _p=x ;; esac
+  if [ "$_p" = x ] || [ ${#_p} -gt 5 ] || [ "$((10#$_p))" -lt 1 ] || [ "$((10#$_p))" -gt 65535 ]; then
+    bad "port: must be a number from 1 to 65535: $PORT"
+  else
+    _p=$((10#$_p))
+    if timeout 2 bash -c 'exec 3<>"/dev/tcp/127.0.0.1/$1"' _ "$_p" 2>/dev/null; then
+      bad "port $_p: already in use (another graph is running there?) - add a port, e.g. $((_p + 1)), or stop the other one"
+    elif command -v node >/dev/null 2>&1 && ! _berr="$(node -e 'var s=require("net").createServer();s.on("error",function(e){console.log(e.code||e.message);process.exit(1)});s.listen(+process.argv[2],process.argv[1],function(){s.close()})' "$BIND" "$_p" 2>&1)"; then
+      bad "port $_p: the graph cannot listen on ${BIND_HP}:${_p} (${_berr:-error})"
+    else
+      ok "port $_p: free on ${BIND_HP}"
+    fi
+  fi
+  [ -f "$TEMPLATE" ] && [ -r "$TEMPLATE" ] && ok "template: $TEMPLATE" || bad "template: not found or not readable: $TEMPLATE"
+  if [ ! -f "$YML" ] || [ ! -r "$YML" ]; then
+    bad "topology: not found or not readable: $YML"
+  else
+    _ln="$(sed -n 's/^name:[[:space:]]*//p' "$YML" | head -1)"
+    case "$_ln" in
+      '') bad "topology: could not read 'name:' from $YML - add a line such as  name: mylab" ;;
+      [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) bad "topology: the lab name in $YML is not a plain name (letters, digits, _ . -) - rename it" ;;
+      *) ok "topology: $YML (lab '$_ln')" ;;
+    esac
+    if grep -qsE "kind:[[:space:]]*cisco_iol" "$YML"; then
+      # the image under kinds: cisco_iol: and any image: on a cisco_iol node line
+      _imgs="$( { awk '/^[[:space:]]*cisco_iol:[[:space:]]*$/{k=1;next} k&&/^[[:space:]]*image:/{sub(/^[[:space:]]*image:[[:space:]]*/,"");print;k=0;next} k&&/^[[:space:]]*[A-Za-z0-9_-]+:/{k=0}' "$YML"
+                  sed -n 's/.*kind:[[:space:]]*cisco_iol[^}]*image:[[:space:]]*\([^,} ]*\).*/\1/p' "$YML"; } | tr -d "\"'" | sort -u)"
+      if [ -z "$_imgs" ]; then
+        bad "IOL image: the topology has cisco_iol nodes but no image: line for them - add one under kinds: cisco_iol:"
+      else
+        for _img in $_imgs; do
+          if [ -z "$DOCKER" ]; then bad "IOL image $_img: cannot check (docker not reachable)"
+          elif _t $DOCKER image inspect "$_img" >/dev/null 2>&1; then ok "IOL image $_img: present"
+          else bad "IOL image $_img: not found locally - build it with vrnetlab (cisco_iol) or change the image line in $YML"; fi
+        done
+      fi
+    fi
+  fi
+  if [ "$_fails" -eq 0 ]; then echo "all checks passed - ready to run ./xray.sh"; exit 0; fi
+  echo "$_fails problem(s) - fix the FAIL lines above, then run ./xray.sh --check again"
+  exit 1
+fi
+
 command -v containerlab >/dev/null 2>&1 || { echo "containerlab not found - https://containerlab.dev/install/"; exit 1; }
 command -v node >/dev/null 2>&1 || { echo "node.js not found (needed to collect router state)"; exit 1; }
 [ -f "$YML" ] || { echo "topology not found: $YML"; exit 1; }
