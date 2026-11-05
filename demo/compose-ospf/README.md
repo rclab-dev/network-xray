@@ -4,7 +4,7 @@
 docker compose up --build
 ```
 
-Open **http://localhost:8080** and click any node to look inside the router (adjacencies, LSDB/BGP table, best-path decision).
+Open **http://localhost:8080** (the page listens on this machine only; to open it from another machine, change the port to `"8080:8080"` in `compose.yml` — the page has no login) and click any node to look inside the router (adjacencies, LSDB/BGP table, best-path decision).
 
 ## Edit the config, watch it follow
 Edit a router's config file on your host — e.g. `r1/frr.conf` — then reload it:

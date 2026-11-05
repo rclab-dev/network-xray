@@ -130,7 +130,7 @@ var compose = [
   '  graph:',
   '    build: ./server',
   '    depends_on: [collector]',
-  '    ports: ["8080:8080"]',
+  '    ports: ["127.0.0.1:8080:8080"]   # this machine only; "8080:8080" opens it to other machines (no login)',
   '    volumes: [./web:/web]',
   'networks:',
   netDefs,
