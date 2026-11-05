@@ -1,0 +1,17 @@
+name: nx-bp
+# Capture lab for test/fixtures/bestpath-frr-real: r1 (AS65001) is the router whose table is read; r2 (AS65002) and
+# r3 (AS65003) are eBGP peers, r4 (AS65001) an iBGP peer; r2, r3 and r4 all originate 203.0.113.0/24. See capture.sh.
+topology:
+  defaults:
+    kind: linux
+    image: ${FRR_IMAGE:=frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce}
+    exec: ["sh -c 'ip route del default 2>/dev/null || true'"]
+  nodes:
+    r1: { binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf, r1/vtysh.conf:/etc/frr/vtysh.conf] }
+    r2: { binds: [r2/daemons:/etc/frr/daemons, r2/frr.conf:/etc/frr/frr.conf, r2/vtysh.conf:/etc/frr/vtysh.conf] }
+    r3: { binds: [r3/daemons:/etc/frr/daemons, r3/frr.conf:/etc/frr/frr.conf, r3/vtysh.conf:/etc/frr/vtysh.conf] }
+    r4: { binds: [r4/daemons:/etc/frr/daemons, r4/frr.conf:/etc/frr/frr.conf, r4/vtysh.conf:/etc/frr/vtysh.conf] }
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]
+    - endpoints: ["r1:eth2", "r3:eth1"]
+    - endpoints: ["r1:eth3", "r4:eth1"]

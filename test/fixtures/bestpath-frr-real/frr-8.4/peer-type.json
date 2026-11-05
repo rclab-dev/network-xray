@@ -1,0 +1,57 @@
+{
+  "vrfId": 0,
+  "vrfName": "default",
+  "tableVersion": 11,
+  "routerId": "1.1.1.1",
+  "defaultLocPrf": 100,
+  "localAS": 65001,
+  "routes": {
+    "203.0.113.0/24": [
+      {
+        "valid": true,
+        "pathFrom": "internal",
+        "prefix": "203.0.113.0",
+        "prefixLen": 24,
+        "network": "203.0.113.0/24",
+        "version": 11,
+        "metric": 0,
+        "locPrf": 100,
+        "weight": 0,
+        "peerId": "10.12.0.20",
+        "path": "65009",
+        "origin": "IGP",
+        "nexthops": [
+          {
+            "ip": "10.12.0.20",
+            "hostname": "r4",
+            "afi": "ipv4",
+            "used": true
+          }
+        ]
+      },
+      {
+        "valid": true,
+        "bestpath": true,
+        "selectionReason": "Peer Type",
+        "pathFrom": "external",
+        "prefix": "203.0.113.0",
+        "prefixLen": 24,
+        "network": "203.0.113.0/24",
+        "version": 11,
+        "metric": 0,
+        "weight": 0,
+        "peerId": "10.10.0.20",
+        "path": "65002",
+        "origin": "IGP",
+        "nexthops": [
+          {
+            "ip": "10.10.0.20",
+            "hostname": "r2",
+            "afi": "ipv4",
+            "used": true
+          }
+        ]
+      }
+    ]
+  }
+}
