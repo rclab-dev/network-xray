@@ -48,6 +48,7 @@ unchanged.
 | `index-bgp.html` | the same kind of replay for a BGP lab (`frame*-bgp.json`, `topo-bgp.json`) |
 | `index-bgp-lp.html` | a replay of a BGP LocalPref lab (r2 LocPref 50 → 200 against r3 at 100); its recorded frames are inside the page |
 | `frame{A..D}.json` / `topo.json` | the captured frames and topology `index.html` replays |
+| `replay-bar.js` | the RECORDED REPLAY bar shared by the replay pages: autoplay, ◀ / pause / ▶ buttons, clickable frame dots, ← / → / Space keys, and the next-step link shown after the last frame |
 | `build-replay.js` | regenerates `index.html` (OSPF only) from the OSS template + captured `frame*.json` + `topo.json`. It reads the template from this folder, so copy it in first: `cp ../xray-graph.html . && node build-replay.js` |
 | `compose-ospf/` / `compose-bgp-lp/` | live labs with plain `docker compose` (no containerlab) — see the README in each |
 
