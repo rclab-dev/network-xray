@@ -50,7 +50,7 @@ function _nxClassify(e) {
   return null;
 }
 function _vtyExec(bin, args, maxBuf) {
-  try { return cp.execFileSync(bin, args, { encoding: 'utf8', maxBuffer: maxBuf, timeout: NX_EXEC_MS, stdio: ['ignore', 'pipe', 'pipe'] }); }
+  try { return cp.execFileSync(bin, args, { encoding: 'utf8', maxBuffer: maxBuf, timeout: NX_EXEC_MS, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'pipe'] }); }
   catch (e) { var c = _nxClassify(e); throw c || e; }
 }
 function _vtyBase(container){ return _VTY_SOCK ? ['vtysh', ['--vty_socket', _VTY_SOCK + '/' + container]] : ['docker', ['exec', container, 'vtysh']]; }

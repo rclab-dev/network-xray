@@ -470,7 +470,7 @@ if (fromDir) {
     if (nxUnread) return null;   /* nx_unread: once the router did not answer / is not there, stop asking this round */
     try {
       var o = cp.execFileSync('docker', ['exec', container, 'sr_cli', 'info from state ' + p + ' | as json'],
-        { encoding: 'utf8', maxBuffer: 1024 * 1024 * 32, timeout: 8000, stdio: ['ignore', 'pipe', 'pipe'] });
+        { encoding: 'utf8', maxBuffer: 1024 * 1024 * 32, timeout: 8000, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'pipe'] });
       return JSON.parse(o);
     } catch (e) {
       /* nx_unread (2026-10-17): the same 3 reasons as the FRR collector (docker's own messages only) */
