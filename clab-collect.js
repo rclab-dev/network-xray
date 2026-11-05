@@ -1275,7 +1275,10 @@ function selfTestOspf6Vrf() {
   _assert(sd2.full_count === 1, 'dual-stack: v3 router-id differs from v2 -> still ONE peer (matched by the clab peer node)');
 
   console.log('self-test: nx_vrf_all_fallback - an old FRR that cannot answer `vrf all` keeps the plain reading');
-  var _origJ = _vtyshJson, _asked = [];
+  var _origJ = _vtyshJson, _asked = [], _origVaFile = _vaFile;
+  // Exercise the on-disk cache without sharing marks with another test run or a live collector.
+  var _vaTestDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'xray-vrfall-selftest-'));
+  _vaFile = function () { return path.join(_vaTestDir, 'cache.json'); };
   _vtyshJson = function (c, cmd) { _asked.push(cmd);
     if (/vrf all/.test(cmd)) return null;                                     /* old FRR: text / several objects -> null */
     if (cmd === 'show interface') return { eth1: { operationalStatus: 'up', ipAddresses: [{ address: '10.1.0.1/30' }] } };
@@ -1291,7 +1294,8 @@ function selfTestOspf6Vrf() {
     _assert(_fo && !Object.keys(_fo).length && !_vaNo(_ct + 'b', 'show ip ospf neighbor'), 'fallback: {} (OSPF not up yet) is understood - not remembered as unsupported');
   } finally {
     _vtyshJson = _origJ;
-    try { var _vm = _vaRead(); Object.keys(_vm).forEach(function (k) { if (k.indexOf('selftest-') === 0) delete _vm[k]; }); fs.writeFileSync(_vaFile(), JSON.stringify(_vm)); } catch (e) {}   /* leave no test marks */
+    _vaFile = _origVaFile;
+    fs.rmSync(_vaTestDir, { recursive: true, force: true });
   }
   _assert(_bgpPairOk([{ 'default': { ipv4Unicast: { peers: {} } } }, { routerId: '1.1.1.1', routes: {} }]) === true, 'bgp pair: vrf-all summary + table = ok');
   _assert(_bgpPairOk([{ routerId: '1.1.1.1', routes: {} }, null]) === false, 'bgp pair: table in the summary place -> plain pair');

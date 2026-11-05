@@ -50,8 +50,12 @@ var FAKES = {
     'echo $$ > "$NX_LOG.nodepid"\n' +
     '[ -n "$NX_GRAPH_BLOCK" ] && exec "$NX_REAL_SLEEP" 30 >/dev/null 2>&1\n' +
     'exit 0\n',
-  // sleep: return at once (xray.sh waits 8 s for the first collection)
-  sleep: 'exit 0\n'
+  // Replace the 8 s collection delay with readiness, so graph/shutdown cannot race the collector log.
+  sleep: 'for ((i=0; i<1000; i++)); do\n' +
+    '  [ -s "$NX_LOG.nodepid" ] && exit 0\n' +
+    '  "$NX_REAL_SLEEP" 0.01\n' +
+    'done\n' +
+    'echo "fake collector did not start" >&2\nexit 1\n'
 };
 
 function setup() {
@@ -75,6 +79,7 @@ function setup() {
 
 function run(env, script, args, extra) {
   extra = extra || {};
+  fs.rmSync(env.log + '.nodepid', { force: true });
   var e = Object.assign({}, process.env, {
     PATH: env.bin + path.delimiter + process.env.PATH,
     NX_LOG: env.log, NX_PJ: path.join(env.here, 'problem.json'), NX_REAL_SLEEP: REAL_SLEEP, NX_REAL_NODE: process.execPath

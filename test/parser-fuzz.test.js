@@ -20,6 +20,7 @@ var os = require('os');
 var path = require('path');
 var vm = require('vm');
 var assert = require('node:assert');
+var performance = require('node:perf_hooks').performance;
 
 var ROOT = path.join(__dirname, '..');
 var SEED = parseInt(process.env.FUZZ_SEED || '20261102', 10) >>> 0;
@@ -265,7 +266,7 @@ var FRR_TBL = ['BGP table version is 2, local router ID is 10.59.0.10, vrf id 0'
   'Displayed 1 routes and 2 total paths'].join('\n');
 function readDir(dir, ext) {
   var m = {};
-  fs.readdirSync(dir).filter(function (f) { return f.slice(-ext.length) === ext; })
+  fs.readdirSync(dir).filter(function (f) { return f.slice(-ext.length) === ext; }).sort()
     .forEach(function (f) { m[f] = fs.readFileSync(path.join(dir, f), 'utf8'); });
   return m;
 }
@@ -397,9 +398,9 @@ if (!wt.isMainThread && wt.workerData && wt.workerData.fuzzTarget) {
       var what = name + ' case ' + i + ' (' + mut + ', FUZZ_SEED=' + seed + ')';
       wt.parentPort.postMessage({ type: 'case', what: what });
       var timed = function (fn, f) {
-        var t0 = Date.now(), out;
+        var t0 = performance.now(), out;
         try { out = f(); } catch (e) { throw new Error(fn + ' threw: ' + (e && e.stack || e)); }
-        var ms = Date.now() - t0;
+        var ms = performance.now() - t0;
         if (ms > slowest.ms) slowest = { ms: ms, what: what + ' ' + fn };
         if (ms > SLOW_MS) throw new Error(fn + ' took ' + ms + ' ms');
         return out;

@@ -251,8 +251,10 @@ test('very long interface and peer names', function () {
   assert.strictEqual(st[longPeer + '_has_full'], true);
   assert.strictEqual(st.peer_node, longPeer);
   // --from-dir: the long path maps to a filename the OS rejects -> read as "no data", never a throw
-  var none = build(srl.dirFetch(os.tmpdir()), 'ospf', adj);
-  assert.strictEqual(none.full_count, 0);
+  withDir({}, function (dir) {
+    var none = build(srl.dirFetch(dir), 'ospf', adj);
+    assert.strictEqual(none.full_count, 0);
+  });
 });
 
 test('helpers: junk in, no throw', function () {
