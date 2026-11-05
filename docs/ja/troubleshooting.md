@@ -135,12 +135,20 @@ error: unable to create file test/fixtures/...: Filename too long
 <a id="docker-socket-permission"></a>
 ## Docker のソケットの権限
 
-**出る文。** Docker 自身のエラーです。例:
+<!-- nx-docker-check-docs-w2-20261105 -->
+**出る文。** `xray.sh` は何かをデプロイする前に Docker を確かめ、止まります:
 
 ```
-permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock ...
+cannot reach Docker: permission denied on /var/run/docker.sock - stopped, nothing was deployed.
+  add your user to the docker group: sudo usermod -aG docker "$USER", then log in again (that group is root-equivalent: lab machines only).
 ```
 
+(ソケットがそもそも無い時は `cannot reach Docker: no Docker socket at <path>` と出ます。Docker を起動します。)
+コンテナ (`docker run`) も同じように `cannot talk to Docker: permission denied on <socket> - ...` で止まります。
+root で動かす (`--user` を付けない) か、出てくる `--group-add` を付けます。
+
+collector を自分で動かす時は、代わりに Docker 自身のエラーが出ます
+(`permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock ...`)。
 その後 collector はルータごとに `  r1 COLLECT FAILED: ...` のような行を出し、画面ではルータが灰色になり
 `Could not be read (see the network-xray log).` と出ます。
 Cisco IOL のノードでは代わりに `  r1 not ready yet (IOL is booting, SSH not up yet) - retrying` が出続けます。

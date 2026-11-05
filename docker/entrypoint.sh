@@ -35,7 +35,23 @@ done
 
 SRC=/opt/network-xray; WORK=/tmp/network-xray
 [ -f "$TOPO" ] || { echo "topology not found: $TOPO (mount the lab directory: -v \"\$(pwd)\":/lab:ro)" >&2; exit 1; }
-docker info >/dev/null 2>&1 || { echo "cannot talk to Docker: mount the socket (-v /var/run/docker.sock:/var/run/docker.sock)" >&2; exit 1; }
+_dto=""; command -v timeout >/dev/null 2>&1 && _dto="timeout 10"   # nx-docker-check-w2-20261105: a docker info that hangs must not hang the start
+if ! DERR="$($_dto docker info 2>&1 >/dev/null)"; then
+  # say which case it is: no socket, a path that is not a socket, or no permission on it
+  SOCK=/var/run/docker.sock; case "${DOCKER_HOST-}" in unix://*) SOCK="${DOCKER_HOST#unix://}" ;; ?*) SOCK="" ;; esac
+  case "$DERR" in *"socket at unix://"*) SOCK="${DERR#*socket at unix://}"; SOCK="${SOCK%%[: ]*}" ;; esac
+  SNOTE="the socket is root-equivalent on the host: lab machines only"
+  if [ -n "$SOCK" ] && [ ! -e "$SOCK" ]; then
+    echo "cannot talk to Docker: $SOCK is missing - mount the socket (-v /var/run/docker.sock:/var/run/docker.sock); $SNOTE" >&2
+  elif [ -n "$SOCK" ] && [ ! -S "$SOCK" ]; then
+    echo "cannot talk to Docker: $SOCK is not a socket (is Docker running on the host?) - mount the socket (-v /var/run/docker.sock:/var/run/docker.sock); $SNOTE" >&2
+  elif [ -n "$SOCK" ] && { [ ! -r "$SOCK" ] || [ ! -w "$SOCK" ] || case "$DERR" in *[Pp]ermission\ denied*) true ;; *) false ;; esac; }; then
+    echo "cannot talk to Docker: permission denied on $SOCK - run the container as root (no --user) or add --group-add $(stat -c %g "$SOCK" 2>/dev/null || echo '<socket group id>') (with SELinux: --security-opt label=disable); $SNOTE" >&2
+  else
+    echo "cannot talk to Docker: mount the socket (-v /var/run/docker.sock:/var/run/docker.sock)" >&2
+  fi
+  exit 1
+fi
 
 # a writable copy of the viewer: the collector writes xray-states.js next to the page
 rm -rf "$WORK"; mkdir -p "$WORK"; cp -a "$SRC"/. "$WORK"/

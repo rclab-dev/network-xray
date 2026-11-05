@@ -196,6 +196,22 @@ if ! _berr="$(node -e 'var s=require("net").createServer();s.on("error",function
   esac
   exit 1
 fi
+# the FRR wait and the collector run `docker` as this user: stop before deploy when its socket is missing or not
+# usable (other Docker errors, and a docker info that does not answer in 10 s, are left to the steps below, as before)
+_dto=""; command -v timeout >/dev/null 2>&1 && _dto="timeout 10"   # nx-docker-check-w2-20261105
+if command -v docker >/dev/null 2>&1 && ! _derr="$($_dto docker info 2>&1 >/dev/null)"; then
+  _sock=/var/run/docker.sock; case "${DOCKER_HOST-}" in unix://*) _sock="${DOCKER_HOST#unix://}" ;; ?*) _sock="" ;; esac
+  case "$_derr" in *"socket at unix://"*) _sock="${_derr#*socket at unix://}"; _sock="${_sock%%[: ]*}" ;; esac
+  if [ -n "$_sock" ] && [ ! -S "$_sock" ]; then
+    echo "cannot reach Docker: no Docker socket at $_sock - stopped, nothing was deployed."
+    echo "  start it (e.g. sudo systemctl start docker), then run ./xray.sh again."
+    exit 1
+  elif [ -n "$_sock" ] && { [ ! -r "$_sock" ] || [ ! -w "$_sock" ] || case "$_derr" in *[Pp]ermission\ denied*) true ;; *) false ;; esac; }; then
+    echo "cannot reach Docker: permission denied on $_sock - stopped, nothing was deployed."
+    echo "  add your user to the docker group: sudo usermod -aG docker \"\$USER\", then log in again (that group is root-equivalent: lab machines only)."
+    exit 1
+  fi
+fi
 
 # is the lab named in the topology already running? (its containers carry the containerlab=<name> label)
 RUNNING=""

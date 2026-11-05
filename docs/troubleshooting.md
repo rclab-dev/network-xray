@@ -128,12 +128,20 @@ error: unable to create file test/fixtures/...: Filename too long
 
 ## Docker socket permission
 
-**What you see.** Docker's own error, for example:
+<!-- nx-docker-check-docs-w2-20261105 -->
+**What you see.** `xray.sh` checks Docker before it deploys anything and stops:
 
 ```
-permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock ...
+cannot reach Docker: permission denied on /var/run/docker.sock - stopped, nothing was deployed.
+  add your user to the docker group: sudo usermod -aG docker "$USER", then log in again (that group is root-equivalent: lab machines only).
 ```
 
+(With no socket at all it says `cannot reach Docker: no Docker socket at <path>` instead: start Docker.)
+The container (`docker run`) stops the same way with `cannot talk to Docker: permission denied on <socket> - ...`:
+run it as root (no `--user`) or add the `--group-add` it names.
+
+If you run the collector yourself, Docker's own error shows instead
+(`permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock ...`).
 The collector then prints a line like `  r1 COLLECT FAILED: ...` for each router, and the page shows the
 routers in grey with `Could not be read (see the network-xray log).`
 Cisco IOL nodes instead keep showing `  r1 not ready yet (IOL is booting, SSH not up yet) - retrying`,

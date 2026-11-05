@@ -45,8 +45,10 @@ var FAKES = {
     'esac\n' +
     'exit 0\n',
   // docker ps: no containers (the lab is not running, the FRR wait loop has nothing to do);
-  // NX_DOCKER_PS=<names> lists those containers, as for a lab that is already running
-  docker: LOGLINE + '[ "$1" = ps ] && [ -n "$NX_DOCKER_PS" ] && echo "$NX_DOCKER_PS"\n' + 'exit 0\n',
+  // NX_DOCKER_PS=<names> lists those containers, as for a lab that is already running;
+  // docker info fails with $NX_DOCKER_ERR when set
+  docker: LOGLINE + '[ "$1" = info ] && [ -n "$NX_DOCKER_ERR" ] && { echo "$NX_DOCKER_ERR" >&2; exit 1; }\n' +
+    '[ "$1" = ps ] && [ -n "$NX_DOCKER_PS" ] && echo "$NX_DOCKER_PS"\n' + 'exit 0\n',
   // node (the collector, started in the background); `node -e` (the --bind check) runs the real node
   node:
     '[ "$1" = -e ] && exec "$NX_REAL_NODE" "$@"\n' +
@@ -152,7 +154,8 @@ test('xray.sh: default lab and port deploy q21, start the collector and serve th
   assert.strictEqual(r.code, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /==> deploying lab 'q21-bgp-lp' \(bgp\) \.\.\./);
   assert.deepStrictEqual(calls(r, 'sudo'), [['containerlab', 'deploy', '-t', yml, '--reconfigure']]);
-  assert.deepStrictEqual(calls(r, 'docker')[0], ['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']);
+  assert.deepStrictEqual(calls(r, 'docker')[0], ['info']);   // Docker is checked before deploy
+  assert.deepStrictEqual(calls(r, 'docker')[1], ['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']);
   assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
     ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '0.0.0.0:8080']);
@@ -542,8 +545,8 @@ test('xray.sh: --attach collects from and graphs a running lab without deploying
   assert.doesNotMatch(r.stdout, /deploying lab|warning/);
   assert.deepStrictEqual(calls(r, 'sudo'), [], 'no deploy');
   assert.ok(!calls(r, 'containerlab').some(function (c) { return c[0] === 'deploy'; }), 'no deploy');
-  assert.deepStrictEqual(calls(r, 'docker'), [['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']],
-    'only the running check: no FRR wait / restart');
+  assert.deepStrictEqual(calls(r, 'docker'), [['info'], ['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']],
+    'only the Docker check and the running check: no FRR wait / restart');
   assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
     ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '0.0.0.0:' + port]);
@@ -555,7 +558,7 @@ test('xray.sh: --attach when the lab is not running stops with a short message',
   var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort()), '--attach']);
   assert.strictEqual(r.code, 1, r.stdout + r.stderr);
   assert.match(r.stdout, /lab 'q21-bgp-lp' is not running - start it first, or run xray\.sh without --attach to deploy it\./);
-  assert.deepStrictEqual(r.calls.map(function (c) { return c[0]; }), ['docker'], 'only docker ps: nothing deployed or started');
+  assert.deepStrictEqual(r.calls.map(function (c) { return c.slice(0, 2).join(' '); }), ['docker info', 'docker ps'], 'only docker info / docker ps: nothing deployed or started');
   assert.ok(!fs.existsSync(path.join(env.here, '.xray.lock')), 'no lock left');
   assert.ok(!isLink(path.join(env.here, 'problem.json')), 'no problem.json link');
 });
@@ -595,4 +598,93 @@ test('xray.sh: the graph serves only the page files (not .git, examples/ or the 
   assert.strictEqual(served[1], path.join(env.here, 'xray-states.js'), 'xray-states.js links to the file the collector writes');
   assert.ok(!fs.existsSync(dir), 'the served folder is removed when xray.sh stops');
   assert.ok(fs.existsSync(path.join(env.here, '.git', 'config')) && fs.existsSync(path.join(env.here, 'xray-core.js')), 'removing the folder of links leaves the checkout alone');
+});
+
+// a real unix socket file (nothing needs to answer on it: the fake docker decides what `docker info` says)
+function fakeSocket(dir) {
+  var sock = path.join(dir, 'docker.sock');
+  var srv = net.createServer(function (c) { c.destroy(); });
+  return new Promise(function (resolve) { srv.listen(sock, function () { resolve({ path: sock, srv: srv }); }); });
+}
+function noDeploy(r) {
+  assert.deepStrictEqual(calls(r, 'sudo'), [], 'nothing deployed');
+  assert.deepStrictEqual(calls(r, 'containerlab'), [], 'nothing deployed');
+  assert.deepStrictEqual(calls(r, 'node'), [], 'no collector');
+}
+
+test('xray.sh: no Docker socket (missing, or a path that is not a socket) stops before deploy with one line', { skip: SKIP }, async function () {
+  var env = setup();
+  var gone = path.join(env.dir, 'no-such.sock');
+  var dir = path.join(env.dir, 'a-dir.sock'); fs.mkdirSync(dir);
+  var cases = [gone, dir];
+  for (var i = 0; i < cases.length; i++) {
+    var port = await freePort();
+    var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port)], { env: {
+      DOCKER_HOST: 'unix://' + cases[i],
+      NX_DOCKER_ERR: 'Cannot connect to the Docker daemon at unix://' + cases[i] + '. Is the docker daemon running?' } });
+    assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+    var lines = r.stdout.split('\n').filter(function (l) { return /Docker/.test(l); });
+    assert.strictEqual(lines.length, 1, r.stdout);
+    assert.strictEqual(lines[0], 'cannot reach Docker: no Docker socket at ' + cases[i] + ' - stopped, nothing was deployed.');
+    assert.ok(r.stdout.includes(lines[0] + '\n  start it (e.g. sudo systemctl start docker), then run ./xray.sh again.'), r.stdout);
+    noDeploy(r);
+    assert.ok(!fs.existsSync(path.join(env.here, '.xray.lock')), 'no lock left');
+  }
+});
+
+test('xray.sh: permission denied on the Docker socket says sudo / docker group (with the security note)', { skip: SKIP }, async function () {
+  var env = setup();
+  var s = await fakeSocket(env.dir);
+  try {
+    var port = await freePort();
+    // the socket from Docker's own error is used (DOCKER_HOST not set)
+    var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port)], { env: {
+      DOCKER_HOST: '',
+      NX_DOCKER_ERR: 'permission denied while trying to connect to the Docker daemon socket at unix://' + s.path + ': Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.47/info": dial unix ' + s.path + ': connect: permission denied' } });
+    assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+    assert.ok(r.stdout.includes('cannot reach Docker: permission denied on ' + s.path + ' - stopped, nothing was deployed.\n'), r.stdout);
+    assert.ok(r.stdout.includes('  add your user to the docker group: sudo usermod -aG docker "$USER", then log in again (that group is root-equivalent: lab machines only).'), r.stdout);
+    assert.doesNotMatch(r.stdout, /sudo \.\/xray\.sh/);
+    noDeploy(r);
+  } finally { s.srv.close(); }
+});
+
+test('xray.sh: a Docker socket this user cannot open is reported as permission denied', { skip: SKIP || (process.getuid() === 0 && 'root can open any socket') }, async function () {
+  var env = setup();
+  var s = await fakeSocket(env.dir);
+  try {
+    fs.chmodSync(s.path, 0);
+    var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort())], { env: {
+      DOCKER_HOST: 'unix://' + s.path, NX_DOCKER_ERR: 'error during connect' } });
+    assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+    assert.ok(r.stdout.includes('cannot reach Docker: permission denied on ' + s.path), r.stdout);
+    noDeploy(r);
+  } finally { s.srv.close(); }
+});
+
+test('xray.sh: a docker info that does not answer is cut at 10 s and the run goes on, as before', { skip: SKIP || (!fs.existsSync('/usr/bin/timeout') && !fs.existsSync('/bin/timeout') && 'no timeout command') }, async function () {
+  var env = setup();
+  var s = await fakeSocket(env.dir);
+  try {
+    fs.writeFileSync(path.join(env.bin, 'docker'), '#!' + BASH + '\n' + LOGLINE + '[ "$1" = info ] && exec "$NX_REAL_SLEEP" 30\nexit 0\n', { mode: 0o755 });
+    var t0 = Date.now();
+    var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(await freePort())], { env: { DOCKER_HOST: 'unix://' + s.path } });
+    assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+    assert.ok(Date.now() - t0 < 25000, 'cut at about 10 s');
+    assert.doesNotMatch(r.stdout, /cannot reach Docker/);
+    assert.strictEqual(calls(r, 'sudo').length, 1, 'deployed');
+  } finally { s.srv.close(); }
+});
+
+test('xray.sh: other Docker errors (socket present and usable) do not stop the run, as before', { skip: SKIP }, async function () {
+  var env = setup();
+  var s = await fakeSocket(env.dir);
+  try {
+    var port = await freePort();
+    var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port)], { env: {
+      DOCKER_HOST: 'unix://' + s.path, NX_DOCKER_ERR: 'Error response from daemon: something else' } });
+    assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+    assert.doesNotMatch(r.stdout, /cannot reach Docker/);
+    assert.strictEqual(calls(r, 'sudo').length, 1, 'deployed');
+  } finally { s.srv.close(); }
 });
