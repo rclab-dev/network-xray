@@ -58,8 +58,8 @@
                         },
                         {
                           "type": "router-lsa-transit-network",
-                          "link-id": "192.168.1.1",
-                          "link-data": "192.168.1.2"
+                          "link-id": "192.0.2.1",
+                          "link-data": "192.0.2.2"
                         }
                       ]
                     }
@@ -73,7 +73,7 @@
                 "lsa": [
                   {
                     "advertising-router": "2.2.2.2",
-                    "link-state-id": "192.168.1.1"
+                    "link-state-id": "192.0.2.1"
                   }
                 ]
               }

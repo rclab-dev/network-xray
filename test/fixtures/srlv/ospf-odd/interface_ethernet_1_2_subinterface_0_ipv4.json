@@ -3,7 +3,7 @@
   "allow-directed-broadcast": false,
   "address": [
     {
-      "ip-prefix": "192.168.1.1/24",
+      "ip-prefix": "192.0.2.1/24",
       "origin": "static",
       "status": "preferred"
     }

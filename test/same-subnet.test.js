@@ -24,15 +24,15 @@ test('_sameSubnet: prefix length is honored', () => {
   assert.strictEqual(C._sameSubnet('10.1.2.0/30', '10.1.2.5'), false);
   assert.strictEqual(C._sameSubnet('172.20.20.0/24', '172.20.20.9'), true);
   assert.strictEqual(C._sameSubnet('0.0.0.0/0', '8.8.8.8'), true);
-  assert.strictEqual(C._sameSubnet('192.168.1.0', '192.168.1.7'), true);   // no length -> first 3 octets
+  assert.strictEqual(C._sameSubnet('198.51.100.0', '198.51.100.7'), true);   // no length -> first 3 octets
   assert.strictEqual(C._sameSubnet('', '1.2.3.4'), false);
 });
 
 test('_sameSubnet: same answers as the previous implementation', () => {
-  const P = ['172.20.20.0/24', '10.0.0.0/8', '0.0.0.0/0', '1.2.3.4/32', '10.1.2.0/30', '192.168.1.0', 'fe80::/64',
+  const P = ['172.20.20.0/24', '10.0.0.0/8', '0.0.0.0/0', '1.2.3.4/32', '10.1.2.0/30', '198.51.100.0', 'fe80::/64',
     '1..2.3/24', '256.1.1.1/24', ' 1.2.3.4/24', '0x1.2.3.4/16', '1e2.0.0.0/8', '1.2.3/24', '1.2.3.4.5/24', '10.1.2.0/abc',
     '10.1.2.0/33', '10.1.2.0/-1', '', null, undefined, 5, 'a.b.c.d/24', '-0.1.2.3/8', '1.2.3.4.'];
-  const I = ['172.20.20.5', '10.1.2.1', '10.1.2.5', '1.2.3.4', '192.168.1.7', 'fe80::1', '0.0.0.0', '255.255.255.255',
+  const I = ['172.20.20.5', '10.1.2.1', '10.1.2.5', '1.2.3.4', '198.51.100.7', 'fe80::1', '0.0.0.0', '255.255.255.255',
     '1..2.3', ' 1.2.3.4', '0x1.2.3.4', '1.2.3', '10.1.2.3/30', 'abc', '', null, undefined, '-0.1.2.3', '1.2.3.4.5'];
   for (const p of P) for (const i of I) assert.deepStrictEqual(outcome(C._sameSubnet, p, i), outcome(reference, p, i), JSON.stringify([p, i]));
   for (let k = 0; k < 20000; k++) {

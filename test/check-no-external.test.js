@@ -76,7 +76,7 @@ test('markdown links are not restricted, markdown loads are', function () {
 });
 
 test('a private address or a .local name is another machine on the LAN, not this one', function () {
-  ['fetch("http://10.1.2.3/x")', 'fetch("http://192.168.1.50:8080/s")', 'new WebSocket("ws://172.20.0.5/s")', 'fetch("http://nas.local/x")']
+  ['fetch("http://10.1.2.3/x")', 'fetch("http://172.16.5.50:8080/s")', 'new WebSocket("ws://172.20.0.5/s")', 'fetch("http://nas.local/x")']
     .forEach(function (t) { assert.ok(scan('a.js', t).length > 0, t); });
   assert.deepStrictEqual(scan('a.js', 'fetch("http://127.0.0.1:8080/x"); fetch("http://[::1]/x"); fetch("http://lab.localhost/x")'), []);
 });
