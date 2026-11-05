@@ -91,7 +91,7 @@ if [ -n "$CHECK" ]; then
     bad "docker: not reachable - start it (sudo systemctl start docker) or check: docker info"
   fi
   if command -v containerlab >/dev/null 2>&1; then
-    _cv="$(CLAB_VERSION_CHECK=disable _t containerlab version 2>/dev/null | sed -n 's/^[[:space:]]*version:[[:space:]]*//p' | head -1)"
+    _cv="$(CLAB_VERSION_CHECK=disable _t containerlab version 2>/dev/null | sed -n 's/^[[:space:]]*version:[[:space:]]*//p' | head -1)" || _cv=""   # a failing version must not end the check (set -e)
     ok "containerlab: ${_cv:-found (version unknown)}"
   else
     bad "containerlab: not found - https://containerlab.dev/install/"
@@ -129,9 +129,17 @@ if [ -n "$CHECK" ]; then
       *) ok "topology: $YML (lab '$_ln')" ;;
     esac
     if grep -qsE "kind:[[:space:]]*cisco_iol" "$YML"; then
-      # the image under kinds: cisco_iol: and any image: on a cisco_iol node line
+      # the image under kinds: cisco_iol:, any image: on a cisco_iol node line, and image: inside a
+      # cisco_iol node written over several lines (kind: and image: under the node name)
       _imgs="$( { awk '/^[[:space:]]*cisco_iol:[[:space:]]*$/{k=1;next} k&&/^[[:space:]]*image:/{sub(/^[[:space:]]*image:[[:space:]]*/,"");print;k=0;next} k&&/^[[:space:]]*[A-Za-z0-9_-]+:/{k=0}' "$YML"
-                  sed -n 's/.*kind:[[:space:]]*cisco_iol[^}]*image:[[:space:]]*\([^,} ]*\).*/\1/p' "$YML"; } | tr -d "\"'" | sort -u)"
+                  sed -n 's/.*kind:[[:space:]]*cisco_iol[^}]*image:[[:space:]]*\([^,} ]*\).*/\1/p' "$YML"
+                  awk 'function ind(s){match(s,/^ */);return RLENGTH}
+                       function pop(i){while(d>0&&H[d]>=i){if(K[d]&&M[d]!="")print M[d];d--}}
+                       /^[[:space:]]*(#|$)/{next}
+                       /^[[:space:]]*[A-Za-z0-9_.-]+:[[:space:]]*$/{i=ind($0);pop(i);d++;H[d]=i;K[d]=0;M[d]="";next}
+                       /^[[:space:]]*kind:/{pop(ind($0));if(d>0&&$0~/kind:[[:space:]]*["\047]?cisco_iol["\047]?[[:space:]]*$/)K[d]=1;next}
+                       /^[[:space:]]*image:/{pop(ind($0));if(d>0){v=$0;sub(/^[[:space:]]*image:[[:space:]]*/,"",v);M[d]=v};next}
+                       END{pop(0)}' "$YML"; } | tr -d "\"'" | sort -u)"
       if [ -z "$_imgs" ]; then
         bad "IOL image: the topology has cisco_iol nodes but no image: line for them - add one under kinds: cisco_iol:"
       else

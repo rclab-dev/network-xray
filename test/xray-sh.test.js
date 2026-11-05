@@ -406,6 +406,17 @@ test('xray.sh --check: docker only with sudo, old node, no containerlab -> one F
   assert.deepStrictEqual(calls(r, 'sudo'), [['-n', 'docker', 'info']]);
 });
 
+test('xray.sh --check: a failing containerlab version still runs every check', { skip: SKIP }, async function () {
+  var env = setup();
+  checkFakes(env);
+  fs.writeFileSync(path.join(env.bin, 'containerlab'), '#!' + BASH + '\n' + LOGLINE + 'exit 1\n', { mode: 0o755 });
+  var r = await run(env, 'xray.sh', ['--check', 'examples/q21-bgp-lp/q21.clab.yml', String(await freePort())]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^OK {4}containerlab: found \(version unknown\)$/m);
+  assert.match(r.stdout, /^OK {4}topology: /m);
+  assert.match(r.stdout, /all checks passed/);
+});
+
 test('xray.sh --check: docker unreachable, sudo asking for a password, or SUDO= set', { skip: SKIP }, async function () {
   var env = setup();
   checkFakes(env, { docker: 'fail', sudoPw: true });
@@ -456,6 +467,19 @@ test('xray.sh --check: cisco_iol images named in the topology must exist locally
 
   checkFakes(env, { images: ['vrnetlab/cisco_iol:17.18.02', 'my/iol:2'] });
   r = await run(env, 'xray.sh', ['--check', yml, String(await freePort())]);
+  assert.strictEqual(r.code, 0, r.stdout + r.stderr);
+
+  // a node with its own image written over several lines (kind: on one line, image: on the next)
+  var dir2 = path.join(env.dir, 'iol2'); fs.mkdirSync(dir2, { recursive: true });
+  var yml2 = path.join(dir2, 'lab.clab.yml');
+  fs.writeFileSync(yml2, 'name: iol-lab2\ntopology:\n  kinds:\n    cisco_iol:\n      image: vrnetlab/cisco_iol:17.18.02\n  nodes:\n' +
+    '    r1:\n      kind: cisco_iol\n    r2:\n      kind: cisco_iol\n      image: other/iol:3\n');
+  checkFakes(env, { images: ['vrnetlab/cisco_iol:17.18.02'] });
+  r = await run(env, 'xray.sh', ['--check', yml2, String(await freePort())]);
+  assert.strictEqual(r.code, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /^FAIL {2}IOL image other\/iol:3: not found locally/m);
+  checkFakes(env, { images: ['vrnetlab/cisco_iol:17.18.02', 'other/iol:3'] });
+  r = await run(env, 'xray.sh', ['--check', yml2, String(await freePort())]);
   assert.strictEqual(r.code, 0, r.stdout + r.stderr);
 
   // the shipped IOL examples: the kinds: image is found
