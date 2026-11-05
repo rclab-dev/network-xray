@@ -6,6 +6,7 @@
 メッセージはツールが出すそのままの英語で載せています。`<...>` は自分の値に読み替えてください。
 「network-xray のログ」は、`xray.sh` (または collector) を動かしている端末のことです。`docker run` / netlab のコンテナでは
 `docker logs <コンテナ>` です。
+Windows では、先に [Windows (WSL2) で動かす](windows-wsl2.md) を見てください。
 
 - [画面が開かない](#the-page-does-not-open)
 - [ポートがもう使われている](#port-already-in-use)

@@ -6,6 +6,7 @@ Problems that `xray.sh` and the collector (`clab-xray-collect.js`) detect, and w
 Messages are shown as the tools print them; `<...>` stands for your own value.
 "The network-xray log" means the terminal that runs `xray.sh` (or the collector), or `docker logs <container>` for the
 `docker run` / netlab container.
+On Windows, see [Running on Windows (WSL2)](windows-wsl2.md) first.
 
 - [The page does not open](#the-page-does-not-open)
 - [Port already in use](#port-already-in-use)
