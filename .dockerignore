@@ -4,4 +4,10 @@
 **/*.bak*
 # lab work dirs made by containerlab deploy (examples/<lab>/clab-<name>/) - NOT the clab-*.js tools at the top
 examples/*/clab-*
-demo/**/node_modules
+**/node_modules
+package-lock.json
+# internal / non-published files and the output of a local run (see .gitignore)
+**/_*
+xray-states.js
+problem.json
+.xray.lock

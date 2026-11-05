@@ -6,6 +6,7 @@
 #     ghcr.io/rclab-dev/network-xray:1 --topo /lab/clab.yml
 #
 # The container is given the Docker socket, which is root-equivalent on the host: run it only on a lab machine.
+# It only writes under /tmp, so it also runs with --read-only --tmpfs /tmp.
 # node:24-alpine, pinned (multi-arch index digest); bump the digest together with the tag
 FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53
 
@@ -17,12 +18,15 @@ ARG CLAB_SHA256_ARM64=f04ac8c1f2f6a04c344585cb6a36177c446fce18cb6073b4a0dbd517f3
 
 # npm / npx / corepack / yarn are removed at the end of this step: network-xray only runs node at run time,
 # and their bundled dependencies are what an image scanner reports for the Node layer.
-RUN apk add --no-cache bash docker-cli curl ca-certificates tini coreutils openssh-client \
+# curl is only needed for the download and is removed again in the same step.
+RUN apk add --no-cache bash docker-cli ca-certificates tini coreutils openssh-client \
+ && apk add --no-cache --virtual .fetch-deps curl \
  && case "${TARGETARCH}" in amd64) sum="${CLAB_SHA256_AMD64}" ;; arm64) sum="${CLAB_SHA256_ARM64}" ;; *) echo "unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; esac \
  && curl -fsSL -o /tmp/containerlab.tar.gz "https://github.com/srl-labs/containerlab/releases/download/v${CLAB_VERSION}/containerlab_${CLAB_VERSION}_linux_${TARGETARCH}.tar.gz" \
  && echo "${sum}  /tmp/containerlab.tar.gz" | sha256sum -c - \
  && tar -xz -C /usr/local/bin -f /tmp/containerlab.tar.gz containerlab \
  && rm -f /tmp/containerlab.tar.gz \
+ && apk del --no-cache .fetch-deps \
  && containerlab version >/dev/null \
  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-* \
  && node --version >/dev/null
@@ -30,10 +34,14 @@ RUN apk add --no-cache bash docker-cli curl ca-certificates tini coreutils opens
 COPY . /opt/network-xray
 RUN install -m 0755 /opt/network-xray/docker/entrypoint.sh /usr/local/bin/network-xray
 
-LABEL org.opencontainers.image.source="https://github.com/rclab-dev/network-xray" \
+LABEL org.opencontainers.image.title="network-xray" \
+      org.opencontainers.image.url="https://github.com/rclab-dev/network-xray" \
+      org.opencontainers.image.source="https://github.com/rclab-dev/network-xray" \
       org.opencontainers.image.description="Browser view of a containerlab / netlab lab's control plane (OSPF/BGP neighbors, routes, why a best path won)" \
       org.opencontainers.image.licenses="MIT"
 
 EXPOSE 8600
+# the graph server answers on the --port given to the entrypoint (default 8600); it starts after up to 2 min of waiting for the lab
+HEALTHCHECK --interval=30s --timeout=5s --start-period=150s --retries=3 CMD ["node", "/opt/network-xray/docker/healthcheck.js"]
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/network-xray"]
 CMD ["--topo", "/lab/clab.yml"]
