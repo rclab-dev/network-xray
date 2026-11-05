@@ -99,19 +99,27 @@
   var I18N = {
     en: {
       subtitle: '(containerlab × X-Ray DeepDive)',
+      node_open: 'Open DeepDive for {name}',   // aria-label of an overview node ({name} = node name)
       intro: 'The topology view = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.',
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
     ja: {
       subtitle: '(containerlab × X-Ray DeepDive)',
+      node_open: '{name} の DeepDive を開く',
       intro: '全体図はあなたの containerlab トポロジ（サイズ自由）。<b>ノードをクリック</b>すると、その<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。全体図は普通のトポロジ図で、X-Ray がノードごとの DeepDive を足します。',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
   };
   function pickLang(){ try { var s = localStorage.getItem('nx-lang'); if (s && I18N[s]) return s; } catch(e){} return 'en'; }
+  /* aria-label from the table: the key is in [data-i18n-aria], {name} is filled from the element's data-aria-name */
+  function nxFill(t, name){ return String(t).split('{name}').join(name == null ? '' : String(name)); }
+  function ariaLabel(el, d){ var k = el.getAttribute('data-i18n-aria'), t = d[k] != null ? d[k] : I18N.en[k];
+    if (t != null) el.setAttribute('aria-label', nxFill(t, el.getAttribute('data-aria-name'))); }
+  window.__nxAria = function(el){ ariaLabel(el, I18N[pickLang()] || I18N.en); };
   function apply(lang){
     var d = I18N[lang] || I18N.en;
     document.querySelectorAll('[data-i18n]').forEach(function(el){ var k = el.getAttribute('data-i18n'); if (d[k] != null) el.innerHTML = d[k]; });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function(el){ ariaLabel(el, d); });
     document.documentElement.setAttribute('lang', lang);
     var btn = document.getElementById('lang-toggle'); if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
     try { localStorage.setItem('nx-lang', lang); } catch(e){}
@@ -300,7 +308,8 @@ window.__xrayGraphBoot = function () {
     b.onclick=function(){ showNode(n); };
     /* nx_a11y: overview nodes work from the keyboard (Tab to a node, Enter or Space opens its DeepDive; Esc closes it) */
     b.tabIndex=0; b.setAttribute('role','button'); b.setAttribute('aria-pressed','false');
-    b.setAttribute('aria-label', 'Open DeepDive for '+n+(KIND[n]?' ('+KIND[n]+')':''));
+    var _an=n+(KIND[n]?' ('+KIND[n]+')':''); b.setAttribute('data-i18n-aria','node_open'); b.setAttribute('data-aria-name',_an);
+    if (window.__nxAria) window.__nxAria(b); else b.setAttribute('aria-label', 'Open DeepDive for '+_an);
     b.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); showNode(n); } };
     ov.appendChild(b);
   });

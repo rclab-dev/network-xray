@@ -6,7 +6,7 @@
  *
  * Three mechanisms are checked:
  *  1. Page toggle tables (xray-graph.html, xray-graph-nextui.html, decision-bracket.html):
- *     `var I18N = { en: {...}, ja: {...} }`, read through [data-i18n] elements or `T.<key>`.
+ *     `var I18N = { en: {...}, ja: {...} }`, read through [data-i18n] elements (and the aria-label of [data-i18n-aria] elements) or `T.<key>`.
  *     Error: a used key with no English or no Japanese entry, a key present in one language only,
  *     or placeholders ({name}, %s, ${x}) that differ between the two.
  *  2. The engine dictionary (xray-i18n.js): window.xrayI18n maps the engine's Japanese UI text to English;
@@ -109,7 +109,7 @@ PAGES.forEach(function (f) {
   var en = table.en || {}, ja = table.ja || {};
   var used = {}, m;
   // keys read by [data-i18n] elements, or as T.<key> where the page does `var T = I18N[LANG]`
-  var uses = [[/data-i18n="([^"]+)"/g, 'data-i18n="%"']];
+  var uses = [[/data-i18n(?:-aria)?(?:="|["']\s*,\s*["'])([^"']+)["']/g, 'data-i18n="%"']];   // also [data-i18n-aria] and setAttribute('data-i18n-aria', 'key')
   if (/\bvar\s+T\s*=\s*I18N\[/.test(src)) uses.push([/\bT\.([A-Za-z_$][\w$]*)/g, 'T.%']);
   uses.forEach(function (u) {
     var re = u[0];

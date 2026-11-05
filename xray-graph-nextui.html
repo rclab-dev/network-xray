@@ -207,6 +207,7 @@
       topo_label: 'ContainerLab Topology',
       horizontal: 'Horizontal',
       vertical: 'Vertical',
+      node_open: 'Open DeepDive for {name}',   // aria-label of an overview node ({name} = node name)
       hint: '▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
@@ -216,6 +217,7 @@
       topo_label: 'ContainerLab Topology',   // NeXt UI part: stays English in JA too
       horizontal: 'Horizontal',
       vertical: 'Vertical',
+      node_open: '{name} の DeepDive を開く',
       hint: '▲ 全体図（NeXt UI） &nbsp;·&nbsp; <b>ノードをクリック</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
@@ -224,11 +226,17 @@
     try { var s = localStorage.getItem('nx-lang'); if (s && I18N[s]) return s; } catch(e){}
     return 'en';   // English default for OSS reach
   }
+  /* aria-label from the table: the key is in [data-i18n-aria], {name} is filled from the element's data-aria-name */
+  function nxFill(t, name){ return String(t).split('{name}').join(name == null ? '' : String(name)); }
+  function ariaLabel(el, d){ var k = el.getAttribute('data-i18n-aria'), t = d[k] != null ? d[k] : I18N.en[k];
+    if (t != null) el.setAttribute('aria-label', nxFill(t, el.getAttribute('data-aria-name'))); }
+  window.__nxAria = function(el){ ariaLabel(el, I18N[pickLang()] || I18N.en); };
   function apply(lang){
     var d = I18N[lang] || I18N.en;
     document.querySelectorAll('[data-i18n]').forEach(function(el){
       var k = el.getAttribute('data-i18n'); if (d[k] != null) el.innerHTML = d[k];
     });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function(el){ ariaLabel(el, d); });
     document.documentElement.setAttribute('lang', lang);
     var btn = document.getElementById('lang-toggle');
     if (btn) btn.textContent = (lang === 'en') ? '日本語' : 'English';
@@ -654,21 +662,38 @@ window.__initNeXtOverview = function (data) {
       if (g.__nxKey) return; g.__nxKey = true;
       var nm = g.getAttribute('data-id');
       g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button');
-      g.setAttribute('aria-label', nxNodeLabel(nm));
+      g.setAttribute('data-i18n-aria', 'node_open'); g.setAttribute('data-aria-name', nm);
+      if (window.__nxAria) window.__nxAria(g); else g.setAttribute('aria-label', 'Open DeepDive for ' + nm);
     });
   }
-  function nxNodeLabel(nm){ var l = 'en'; try { l = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
-    return l === 'ja' ? nm + ' の DeepDive を開く' : 'Open DeepDive for ' + nm; }
+  /* how far to shift the drawing so rect r sits inside box b with margin m (0 when it already does;
+     a rect larger than the box is centred) */
+  function nxPanDelta(r, b, m){ m = m || 0;
+    function ax(lo, hi, blo, bhi){
+      if (hi - lo > bhi - blo - 2 * m) return (blo + bhi) / 2 - (lo + hi) / 2;
+      if (lo < blo + m) return blo + m - lo;
+      if (hi > bhi - m) return bhi - m - hi;
+      return 0;
+    }
+    return { dx: ax(r.left, r.right, b.left, b.right), dy: ax(r.top, r.bottom, b.top, b.bottom) };
+  }
   (function(){ var host = document.getElementById('clab-topology'); if (!host) return;
-    /* a focused SVG node is scrolled into view inside the overflow:hidden frame, which hid the Horizontal / Vertical
-       bar: put the frame back (it never scrolls on purpose) and keep the label in the page language */
+    var frame = host.closest ? host.closest('.ov-frame') : null;
+    /* the frame and the drawing never scroll on purpose: a focus scroll would push the Horizontal / Vertical bar
+       out of the overflow:hidden frame, so it is undone; the drawing is panned instead to show the focused node */
+    (frame || host).addEventListener('scroll', function(e){ var t = e.target;
+      if (t && t.nodeType === 1 && (t.scrollTop || t.scrollLeft)) { t.scrollTop = 0; t.scrollLeft = 0; } }, true);
     host.addEventListener('focusin', function(e){
       var g = e.target && e.target.closest ? e.target.closest('g.node[data-id]') : null; if (!g) return;
-      g.setAttribute('aria-label', nxNodeLabel(g.getAttribute('data-id')));
       for (var el = g.parentNode; el && el.nodeType === 1; el = el.parentNode) {
         if (el.scrollTop || el.scrollLeft) { el.scrollTop = 0; el.scrollLeft = 0; }
-        if (el.classList && el.classList.contains('ov-frame')) break;
+        if (el === frame) break;
       }
+      try { for (var k = 0; k < 3; k++) {   /* the drawing may be zoomed: measure again after each step */
+        var d = nxPanDelta(g.getBoundingClientRect(), host.getBoundingClientRect(), 8);
+        if (Math.abs(d.dx) < 1 && Math.abs(d.dy) < 1) break;
+        (data.nodes || []).forEach(function(n){ var nd = topo.getNode(n.name); if (nd && typeof nd.move === 'function') nd.move(d.dx, d.dy); });
+      } } catch (e2) {}
     });
     host.addEventListener('keydown', function(e){
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -739,6 +764,7 @@ window.__initNeXtOverview = function (data) {
   var hb=document.getElementById('h-btn'), vb=document.getElementById('v-btn');
   if(hb) hb.onclick=function(){ window.__nxLayout('horizontal'); };
   if(vb) vb.onclick=function(){ window.__nxLayout('vertical'); };
+  if (window.XRAY_TIERS) setCur((window.__nxTierDir || 'vertical')==='horizontal'?'h-btn':'v-btn');
   window.onresize = function(){ try{ topo.adaptToContainer(); }catch(e){} };
 
   var app = new nx.ui.Application();
