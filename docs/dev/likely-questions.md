@@ -51,9 +51,9 @@ Nokia SR OS (`nokia_sros`) also ends up unread, but by a different route: its ki
 
 The comment at `isIos` in `clab-xray-collect.js` says the other Cisco kinds "come when checked".
 
-Versions actually tried (README "Tested with"): FRR 8.4 and 10.7.1, SR Linux 26.3.3 (and 26.7.2 as the device under test in netlab's BGP tests), IOL 17.18.02, containerlab 0.81/0.82, netlab 26.10, Node 18. The test evidence is narrower:
+Versions actually tried (README "Tested with"): FRR 8.4 and 10.7.1, SR Linux 26.3.3 (and 26.7.2 as the device under test in netlab's BGP tests), IOL 17.18.02, containerlab 0.81/0.82, netlab 26.10, Node 18 and 24. The test evidence is narrower:
 
-- **FRR:** `test/frr-json-versions.test.js` uses hand-made fixtures shaped after FRR 8.4 / 9.1.3 / 10.7.1 source, not captures. Real captures exist for FRR 8.4.
+- **FRR:** real captures of the BGP best-path output from FRR 8.4 and 10.7 (`test/fixtures/bestpath-frr-real/`) and the example labs on FRR 8.4. `test/frr-json-versions.test.js` still uses hand-made fixtures shaped after FRR 8.4 / 9.1.3 / 10.7.1 source.
 - **SR Linux:** the stored capture is from v24 (`fixtures/srl-collect-sample/`).
 - **IOL:** real captures are in `test/fixtures/iosxe-*`.
 
@@ -167,7 +167,7 @@ It depends on the part of the answer:
 - **Why it won:** usually **inferred**. network-xray compares the attributes it collected: Weight, Local Pref, AS-path length, Origin, then MED, which it compares only between paths from the same neighbor AS (`XRAY_BGP_CRITERIA` in `xray-core.js`). The router doesn't report that chain.
 - **When the comparison can't decide** (a tie, or MED skipped), the panel shows FRR's own `selectionReason` instead, labelled "(FRR)" (`xrayBgpFrrReason` / `xrayBgpReasonHtml` in `xray-core.js`). FRR's "first path received" is ignored. If nothing decides, the panel says so ("no single decider", or Older Path per RFC 5004).
 - **IOL:** prints no reason, so `clab-iosxe-collect.js` derives one from the printed columns in IOS order. That reason is inferred, even though the panel may label it "(FRR)" (see Q15).
-- **IGP metric, router-ID, cluster list:** network-xray doesn't compare these, so a path decided by one of them shows FRR's reason (FRR) or no single decider.
+- **eBGP over iBGP, IGP metric, router-ID, cluster list:** network-xray doesn't compare these, so a path decided by one of them shows FRR's reason (FRR) or no single decider.
 - **`xray-query.js why` labels each answer:**
   - `reason_source: "device"`: the router said so.
   - `reason_source: "comparison"`: inferred from the collected attributes.
@@ -183,4 +183,4 @@ It depends on the part of the answer:
 
 ## 16. Did you use AI to write this?
 
-Yes, heavily — for most of the code, tests and docs. The parts I own are the networking decisions: what each OSPF / BGP state means, which device output is authoritative, and when the page should say "unknown" instead of guessing. Those were checked against real FRR, Nokia SR Linux and Cisco IOL routers in containerlab, and the suite has 600+ tests. Where the "why" comes from the router (FRR's own best-path reason) and where it is inferred by network-xray (Cisco IOS-XE, which does not print a reason) is stated in the page and the docs (see 14). Some test fixtures are hand-written rather than captured from devices; replacing them with real captures is ongoing.
+Yes, heavily — for most of the code, tests and docs. The parts I own are the networking decisions: what each OSPF / BGP state means, which device output is authoritative, and when the page should say "unknown" instead of guessing. Live runs: FRR 8.4 and 10.7.1, Nokia SR Linux 26.3.3 and Cisco IOL 17.18.02, in containerlab and netlab. The stored test data is narrower (see 3). Where the "why" comes from the router (FRR's own best-path reason) and where it is inferred by network-xray (Cisco IOS-XE, which does not print a reason) is stated in the page and the docs (see 14). Some test fixtures are hand-written rather than captured from devices; replacing them with real captures is ongoing.

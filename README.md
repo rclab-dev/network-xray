@@ -49,7 +49,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 ## When to use
 
 - **Use it when** you run **FRR**, **Nokia SR Linux** or **Cisco IOS-XE (IOL)** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 on all three; on FRR, OSPFv3 and VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
-- **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux / Cisco IOL (they appear in the topology, but are not read).
+- **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux / Cisco IOL (they appear in the topology, but are not read). Not read yet, even on those three: the IPv6 BGP table, IS-IS, EVPN, and VRFs on IOL.
 - **What it reads** (read-only commands; the collector changes nothing. Only `xray.sh` / `run.sh`, right after deploying, restart FRR in a router whose FRR did not come up — see Troubleshooting):
   - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp vrf all json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command; the configuration is read only to see which protocols are configured, the BGP AS number and the configured static routes, and its text is not saved in the state or sent to the page); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. On a router with VRFs, the Routing table and the BGP Table show one VRF at a time: use the VRF buttons above them to switch (the management VRF `mgmt` gets no button). The IPv6 BGP table is not read.
   - netlab `validate:` tests are judged like `netlab validate` does: the per-prefix form (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
@@ -66,7 +66,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 | SR Linux | 26.3.3 (read directly, containerlab) · 26.7.2 (as the device under test in netlab's BGP tests, judged from its FRR neighbors) |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`, image built with vrnetlab) |
 | netlab | 26.10 |
-| Node.js | 18 (for `xray.sh` / the collector without the image) |
+| Node.js | 18 and 24 (for `xray.sh` / the collector without the image; the tests run on both, and CI and the image use 24) |
 
 <a id="maintenance-policy"></a>
 Issues with the raw output attached are welcome and fixes are made here; pull requests are not merged.
@@ -93,7 +93,7 @@ It is **descriptive**, not a simulator: it draws the state your feed reports. An
 **Nokia SR Linux** and **Cisco IOS-XE (IOL)** are implemented today (a mixed lab renders uniformly);
 Arista and others would need a small adapter of the same kind.
 
-**Status:** network-xray supports containerlab with FRR, SR Linux and Cisco IOL (IOS-XE).
+**Status:** network-xray supports containerlab and netlab with FRR, SR Linux and Cisco IOL (IOS-XE).
 
 **Not a config verifier.** network-xray reads **live state** (`show` / JSON = the state the device reports) to show *why* a
 router decided as it did — it is **not** a config checker. For pre-deployment simulation from config
@@ -120,7 +120,7 @@ router at the forwarding decision (the deepdive).
 different Local Preference. Open r1: the BGP table shows both candidates and a **Best-Path
 Decision** panel that explains *why* the winner won (LocPref) — then change the LocPref on the running
 lab and the best path flips **in place, no reload** (in the GIF below, recorded on the q21 example: via r3 at 100 ⇄ via r2 at 150). X-Ray re-reads the
-real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path FRR itself marked best** (`bestpath`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
+real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path FRR itself marked best** (`bestpath`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. The later steps (eBGP over iBGP, IGP cost to the next hop, router ID, cluster list) are not compared, and MED only between paths from the same neighbor AS. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
 version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
 ![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
@@ -259,7 +259,7 @@ For a message you see in the terminal or on the page and what to do about it, se
 | My fix is gone after restarting the lab | A fix lives only inside the running containers. Redeploying the lab (`./xray.sh`, `containerlab deploy`) starts again from the broken config — and restarting only FRR inside a router can bring the original config back too, even after `write memory`. |
 | A lab advertises a BGP default route (e.g. netlab), but `0.0.0.0/0` is not selected | In labs where the management interface brings its own default route, that route may beat the BGP-learned default. X-Ray infers the path from the routing table the router reports; management routes may be hidden by `--exclude-mgmt`. |
 
-**Coming from Cisco IOS?** The routers are FRR. Common differences:
+**Coming from Cisco IOS?** The example labs are FRR (Cisco IOL versions: `q5-ospf-iol`, `q15-bgp-ospf-static-iol`, `q21-bgp-lp-iol`). Common differences on FRR:
 
 | Cisco IOS | FRR |
 |---|---|
@@ -542,7 +542,7 @@ Two ways to feed it:
    **`bgp-paste.html`** (paste `show bgp summary` + `show ip bgp`); large meshes and other
    vendors aren't auto-parsed yet.
 2. **Feed `state` directly (any vendor)** — build the documented `config`/`state` objects and call
-   `view.applyState(state)`. This is how you support **Cisco IOS / Arista / Juniper**: write a small
+   `view.applyState(state)`. This is how you support **Arista, Juniper or Cisco kinds other than `cisco_iol`**: write a small
    adapter from your OS's `show` output to the shapes in
    **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** (which includes a FRR ↔ Cisco IOS `show`-command
    mapping table and the two optional seams). **`frr-parse.js` is the worked adapter template** —
@@ -735,7 +735,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 ## いつ使うか
 
 - **使う時:** containerlab や netlab で **FRR**・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (OSPFv2 は 3 つとも。FRR は OSPFv3 と VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
-- **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux / Cisco IOL 以外の機器 (全体図には出るが、中は読まない)。
+- **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux / Cisco IOL 以外の機器 (全体図には出るが、中は読まない)。この 3 つでもまだ読まない物: IPv6 の BGP の表・IS-IS・EVPN・IOL の VRF。
 - **読み取る情報** (読み取り専用コマンドのみ。collector は何も変更しません。`xray.sh` / `run.sh` だけは、deploy の直後に FRR が立ち上がらなかったルータの FRR を立て直します = トラブルシューティングを参照):
   - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp vrf all json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp vrf all summary json`、`show ip ospf vrf all neighbor json`、`show ip ospf vrf all interface json`、`show ip route vrf all json`、`show interface json`、`show running-config` (`vrf all` に JSON で応答しない FRR では、通常のコマンドで読み取ります。設定は、どのプロトコルが設定されているか・BGP の AS 番号・設定した静的経路を見るためだけに読み、設定の文そのものは state に残さず、画面にも送らない)。`router ospf6` のあるルータは OSPFv3 も: `show ipv6 ospf6 vrf all neighbor json`、`show ipv6 ospf6 vrf all interface json`、`show ipv6 route vrf all json`。VRF のあるルータでは、経路表と BGP の表を 1 つの VRF ずつ出す (上の VRF のボタンで切り替え。管理用の VRF `mgmt` にはボタンを出さない)。IPv6 の BGP の表は読まない。
   - netlab の `validate:` の検査は `netlab validate` と同じ読み方: 宛先ごとの形 (`show bgp ipv4 unicast <宛先> json`) で、勝った経路は `bestpath.overall`。
@@ -751,7 +751,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 | SR Linux | 26.3.3 (containerlab で直接収集)・26.7.2 (netlab の BGP テスト対象、隣の FRR から判定) |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`、vrnetlab で構築したイメージ) |
 | netlab | 26.10 |
-| Node.js | 18 (`xray.sh` / イメージを使わない collector) |
+| Node.js | 18 と 24 (`xray.sh` / イメージを使わない collector。試験は両方で流し、CI とイメージは 24) |
 
 <a id="maintenance-policy-ja"></a>
 生の出力を添えた issue を歓迎します。修正はここで行い、Pull Request はマージしません。
@@ -777,7 +777,7 @@ FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に�
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念です。
 FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みで (混ざったラボも同じように描けます)、Arista などは同じ種類の小さなアダプタが要ります。
 
-**現状:** containerlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。
+**現状:** containerlab と netlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。
 
 **コンフィグ検証ツールではありません。** network-xray は**生きた状態**(`show` / JSON = 機器が報告する状態)を読み、
 ルータが *なぜ* そう判断したかを示します — コンフィグ(意図)からの事前シミュレーションには **Batfish** を。
@@ -798,7 +798,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みで (混�
 
 ## 見る
 
-**BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** 2 つの上流が `8.8.8.0/24` を違う Local Preference で広告します。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常に FRR 自身が best にした経路 (`bestpath`) です。** 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
+**BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** 2 つの上流が `8.8.8.0/24` を違う Local Preference で広告します。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常に FRR 自身が best にした経路 (`bestpath`) です。** 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。その後の段 (iBGP より eBGP・next hop までの IGP のコスト・router ID・cluster list) は比べません。MED は同じ隣の AS から来た経路の間だけで比べます。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
 ![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
 
@@ -927,7 +927,7 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 | ラボを立て直したら直しが消えた | 直しは動いているコンテナの中だけに残る。ラボを立て直す(`./xray.sh`・`containerlab deploy`)と壊れた初期の設定から始まる。ルータの中で FRR だけを立て直しても、`write memory` の後でも初期の設定に戻ることがある。 |
 | BGP で既定経路を流すラボ(netlab など)で `0.0.0.0/0` が選ばれない | 管理インターフェースが独自の既定経路を持つラボでは、それが BGP で学習した既定経路より優先される場合があります。X-Ray はルータが報告する経路表からパスを推定します。`--exclude-mgmt` で管理用の経路が非表示になる場合もあります。 |
 
-**Cisco IOS に慣れている人へ:** ルータは FRR です。よくある違い:
+**Cisco IOS に慣れている人へ:** 例題のルータは FRR です (Cisco IOL 版: `q5-ospf-iol`・`q15-bgp-ospf-static-iol`・`q21-bgp-lp-iol`)。FRR でよくある違い:
 
 | Cisco IOS | FRR |
 |---|---|
@@ -1145,7 +1145,7 @@ node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exc
    **すべてブラウザ内で動き、config はアップロードされません。** 現在の対応範囲:
    **FRR・OSPF・小規模トポロジ**。BGP は **`bgp-paste.html`** (`show bgp summary` + `show ip bgp` を貼る)。大規模メッシュ・他ベンダーはまだ自動解析しません。
 2. **`state` を直接渡す(任意ベンダー)** — ドキュメント化された `config`/`state` を作って
-   `view.applyState(state)` を呼ぶ。**Cisco IOS / Arista / Juniper** はこの方法:自分の OS の
+   `view.applyState(state)` を呼ぶ。**Arista・Juniper・`cisco_iol` 以外の Cisco の kind** はこの方法:自分の OS の
    `show` 出力を **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** の形(FRR ↔ Cisco IOS の `show`
    コマンド対応表と、2つの任意シーム付き)に変換する小さなアダプタを書く。
    **`frr-parse.js` がそのアダプタの雛形**なので、コピーして正規表現を自分のベンダー用に差し替える。
