@@ -166,16 +166,16 @@ It depends on the part of the answer:
 - **Which path won:** always reported by the router: the `>` mark or `best: true` in the router's own output (`xray-api.js`, `xray-core.js`).
 - **Why it won:** usually **inferred**. network-xray compares the attributes it collected: Weight, Local Pref, AS-path length, Origin, then MED, which it compares only between paths from the same neighbor AS (`XRAY_BGP_CRITERIA` in `xray-core.js`). The router doesn't report that chain.
 - **When the comparison can't decide** (a tie, or MED skipped), the panel shows FRR's own `selectionReason` instead, labelled "(FRR)" (`xrayBgpFrrReason` / `xrayBgpReasonHtml` in `xray-core.js`). FRR's "first path received" is ignored. If nothing decides, the panel says so ("no single decider", or Older Path per RFC 5004).
-- **IOL:** prints no reason, so `clab-iosxe-collect.js` derives one from the printed columns in IOS order. That reason is inferred, even though the panel may label it "(FRR)" (see Q15).
-- **eBGP over iBGP, IGP metric, router-ID, cluster list:** network-xray doesn't compare these, so a path decided by one of them shows FRR's reason (FRR) or no single decider.
+- **IOL:** prints no reason, so `clab-iosxe-collect.js` derives one from the printed columns in IOS order. That reason is inferred, and the panel says so ("inferred by network-xray from the IOS-XE table"), not "(FRR)". With a single path the collector writes FRR's wording "First path received" (nothing was compared).
+- **eBGP over iBGP, IGP metric, router-ID, cluster list:** network-xray doesn't compare these, so a path decided by one of them shows FRR's reason (FRR), on IOS-XE the collector's inferred reason, or no single decider.
 - **`xray-query.js why` labels each answer:**
   - `reason_source: "device"`: the router said so.
   - `reason_source: "comparison"`: inferred from the collected attributes.
   - `null`: neither source decided.
+  - For a saved IOS-XE state, `reason_source` says the reason was derived by the collector from the printed columns.
 
 ## 15. What is known to be wrong or missing?
 
-- **Reported-vs-inferred label:** the "(FRR)" label in `xrayBgpReasonHtml` (`xray-core.js`) doesn't check the node's NOS. A reason that the IOL collector derived (for example "Peer Type", eBGP over iBGP) would be labelled "(FRR)", as if a router reported it. This comes from reading the code; no test renders that case. `xray-query.js` gets this right (`reason_source` for `ios-xe`).
 - **SR OS nodes:** `nokia_sros` matches the SR Linux kind pattern (`isSrl` in `clab-xray-collect.js`) and would be sent to the SR Linux collector, which would fail, leaving the node unread. This is inferred from the regex, not run.
 - **No coverage:** IPv6 BGP, IS-IS, VRFs on IOL, and Cisco kinds other than `cisco_iol`.
 - **Container image prefix:** the image supports only the default `clab` container-name prefix (`docker/entrypoint.sh`).

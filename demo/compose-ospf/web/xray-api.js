@@ -166,7 +166,9 @@
     //   (bgp_routes[].reason), name it instead of the generic tie-break rule. 'First path received' is not a decider.
     var _frB = dec.best || {}, _fr = (typeof _frB.reason === 'string' ? _frB.reason : (typeof _frB.sel_reason === 'string' ? _frB.sel_reason : '')).replace(/[<>&"']/g, '').trim();
     if (_fr && !/^(first path received|nothing to select)$/i.test(_fr)) {
-      var _frBy = /^nothing left to compare$/i.test(_fr) ? 'no step decided (FRR: <b>' + _fr + '</b>)' : 'best path by <b>' + _fr + '</b> (FRR)';
+      /* nx_ios_reason_label: IOS-XE prints no reason; the collector infers one from the printed columns -> say so, not "(FRR)" */
+      var _frBy = _bgpIsIos() ? 'best path by <b>' + _fr + '</b> (inferred by network-xray from the IOS-XE table; IOS-XE does not report a reason)'
+        : /^nothing left to compare$/i.test(_fr) ? 'no step decided (FRR: <b>' + _fr + '</b>)' : 'best path by <b>' + _fr + '</b> (FRR)';
       if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>MED not compared</b> (different neighbor AS) — ' + _frBy + '</div>' + ch;
       if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — ' + _frBy + '</div>' + ch;
       return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → ' + _frBy + '</div>' + ch;

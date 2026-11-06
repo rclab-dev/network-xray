@@ -168,3 +168,21 @@ test('xray-api.js: an IOS-XE node gets no FRR legend step from a reason', functi
   try { assert.strictEqual(api._bgpFrrReasonStep({ best: { reason: 'Older Path' } }), ''); }
   finally { api._lastState = null; }
 });
+
+// IOS-XE prints no reason: the IOS-XE collector infers one from the printed columns (e.g. "Peer Type", eBGP over iBGP).
+// On an IOS-XE node the views must say it is inferred, not label it "(FRR)" as if the router had reported it.
+test('IOS-XE node: an inferred reason is labelled as network-xray\'s inference, not "(FRR)" (xray-core.js and xray-api.js)', function () {
+  var rows = rowsWith('older-path', 'Peer Type');
+  var dec = core.xrayBgpDecision(rows), key = core._xrayBgpKey(rows[0]);
+  core.window._lastXrayState = { nos: 'ios-xe' };
+  api._lastState = { nos: 'ios-xe' };
+  try {
+    var c = text(core.xrayBgpReasonHtml(key, dec, rows)), a = text(api._bgpReason(key, dec));
+    [c, a].forEach(function (t) {
+      assert.ok(t.indexOf('best path by Peer Type (inferred by network-xray from the IOS-XE table; IOS-XE does not report a reason)') >= 0, t);
+      assert.ok(t.indexOf('(FRR)') < 0, t);
+    });
+  } finally { delete core.window._lastXrayState; api._lastState = null; }
+  // an FRR node keeps FRR's own label
+  assert.ok(text(core.xrayBgpReasonHtml(key, dec, rows)).indexOf('best path by Peer Type (FRR)') >= 0);
+});

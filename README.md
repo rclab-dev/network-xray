@@ -596,9 +596,13 @@ says which). When the data has no reason, `reason` is `null` with a `note` — i
   "node": "r1", "prefix": "8.8.8.0/24", "paths": 1,
   "best": { "next_hop": "2.2.2.2", "as_path": "65002", "status": "*>", "local_pref": 100, "origin": "IGP", "best": true },
   "reason": "First path received",
+  "reason_source": "bgp_routes[].reason (IOS-XE: derived by the collector from the printed columns)",
   "candidates": [ "…every path for the prefix…" ]
 }
 ```
+
+This example is an IOS-XE capture with one path: IOS prints no reason, and the collector writes FRR's wording "First path
+received" because there was nothing to compare. It is not a reason the router reported.
 
 If the prefix is in more than one VRF, add the VRF name as a fifth argument (`why <dir> r1 10.0.0.0/24 red`).
 Add `--format table` to print a plain-text table instead of JSON (`--color` adds colors in a terminal).
@@ -1190,9 +1194,11 @@ node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
   "node": "r1", "prefix": "8.8.8.0/24", "paths": 1,
   "best": { "next_hop": "2.2.2.2", "as_path": "65002", "status": "*>", "local_pref": 100, "origin": "IGP", "best": true },
   "reason": "First path received",
+  "reason_source": "bgp_routes[].reason (IOS-XE: derived by the collector from the printed columns)",
   "candidates": [ "…every path for the prefix…" ]
 }
 ```
+この例は経路が 1 本の IOS-XE の取り込み: IOS は理由を出さず、比べる相手が無いので collector が FRR の言い方「First path received」を書いている (ルータが報告した理由ではない)。
 宛先が複数の VRF にある時は 5 つ目の引数に VRF 名 (`why <dir> r1 10.0.0.0/24 red`)。`--format table` で JSON の代わりに表 (`--color` で端末に色)。ファイルが無い・ノードや宛先が不明・引数の数が違う時は `{"error": "..."}` を出して終了コード 2。
 
 ### MCP サーバ (stdio)

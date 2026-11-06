@@ -12222,7 +12222,10 @@ function xrayBgpReasonHtml(p, dec, grp) {
   }
   var _fr = xrayBgpFrrReason(dec, grp);   /* nx_frr_reason_small */
   if (_fr) {
-    var _frBy = /^nothing left to compare$/i.test(_fr) ? "no step decided (FRR: <b>" + _fr + "</b>)" : "best path by <b>" + _fr + "</b> (FRR)";
+    /* nx_ios_reason_label: IOS-XE prints no reason; clab-iosxe-collect.js infers one from the printed columns -> say so, not "(FRR)" */
+    var _iosR = typeof window !== "undefined" && window._lastXrayState && /^ios/i.test(String(window._lastXrayState.nos || ""));
+    var _frBy = _iosR ? "best path by <b>" + _fr + "</b> (inferred by network-xray from the IOS-XE table; IOS-XE does not report a reason)"
+      : /^nothing left to compare$/i.test(_fr) ? "no step decided (FRR: <b>" + _fr + "</b>)" : "best path by <b>" + _fr + "</b> (FRR)";
     if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — " + _frBy + "</div>" + chainHtml;
     if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all visible attributes equal — " + _frBy + "</div>" + chainHtml;
     return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → " + _frBy + "</div>" + chainHtml;
