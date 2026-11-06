@@ -255,7 +255,8 @@ Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in a
   `show` commands (the same reader as IOL in containerlab) every 10 s (`--interval`). Other nodes are drawn but not read.
 - **Your consoles stay yours:** nothing is typed on the CML consoles. Use them exactly as you would without network-xray. One SSH session per router
   stays open, so the router logs the login (`%SEC_LOGIN-5-LOGIN_SUCCESS` ...) once when cml-xray starts, not every round.
-- **Read only:** it sends `show` commands and API GETs. It never configures a router or changes the lab.
+- **Read only:** it sends `show` commands and API GETs. It never configures a router. It changes the lab only to put your public key into nx-jump
+  (above, while it still says `<your public key>`), and with `--sync-layout` a node you move.
 - **Passwords** are taken from the environment only (never from the command line) and handed to ssh through a short-lived askpass helper.
 - **Certificates:** by default the CML certificate is checked. Point `CML_CA_FILE` at CML's certificate, or pass `--insecure` to skip the check
   (fine on your own PC's network; not over the internet).
@@ -294,6 +295,8 @@ a lab with 4 routers and the jump host fits; with more, leave a host out or use 
    rc-service sshd restart
    echo "NX-JUMP ip=$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1)" > /dev/ttyS0      # ttyS0: the line CML keeps in the console log
    ```
+   You can leave `<your public key>` as it is: when `NX_JUMP_KEY` is set and its `.pub` is next to it, cml-xray puts that line in
+   (if nx-jump already runs, cml-xray stops, wipes and starts nx-jump only — about 30 s; the routers keep running). A key you put in yourself is never touched.
    Don't use `192.168.255.0/24` for the management network: CML's NAT connector uses it.
 3. On each router (in its configuration in the lab), a management port in its own VRF — the management routes then stay out of the lab's routing table:
    ```
@@ -1016,7 +1019,8 @@ node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML 
   (containerlab の IOL と同じ読み取り・既定は 10 秒ごと = `--interval`)。ほかのノードは描くだけです。
 - **コンソールはあなたの物のまま:** CML のコンソールには何も打ちません。network-xray が無い時と同じに使えます。ルータ 1 台に SSH を 1 本
   つないだままにするので、ルータのログインのログ (`%SEC_LOGIN-5-LOGIN_SUCCESS` …) は cml-xray の起動の時に 1 回だけ出ます (毎回ではありません)。
-- **読むだけ:** 送るのは `show` と API の GET だけ。ルータの設定もラボも変えません。
+- **読むだけ:** 送るのは `show` と API の GET だけ。ルータの設定は変えません。ラボを変えるのは、nx-jump にあなたの公開鍵を入れる時 (下の
+  `<あなたの公開鍵>` のままの時だけ) と、`--sync-layout` で動かしたノードの位置だけです。
 - **パスワード**は環境変数からだけ読み (コマンドの引数には出しません)、ssh へは一時的な askpass で渡します。
 - **証明書:** 既定では CML の証明書を確かめます。`CML_CA_FILE` に CML の証明書を指すか、`--insecure` で確かめを外します
   (自分の家の網の中なら可・インターネット越しには使わない)。
@@ -1055,6 +1059,8 @@ node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML 
    rc-service sshd restart
    echo "NX-JUMP ip=$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1)" > /dev/ttyS0      # ttyS0 = CML がコンソールのログに残す行
    ```
+   `<あなたの公開鍵>` はそのままでも構いません: `NX_JUMP_KEY` を設定し、その隣に `.pub` があれば cml-xray がその 1 行を入れます
+   (nx-jump が既に動いていれば、cml-xray が nx-jump だけを止めて・Wipe して・起動し直します。約 30 秒・ルータは動いたまま)。自分で入れた鍵には触りません。
    管理の網に `192.168.255.0/24` は使わないでください (CML の NAT の口が使います)。
 3. 各ルータ (ラボの中の設定) に、別の VRF に入れた管理の口を — 管理の経路がラボの経路表に混ざりません:
    ```

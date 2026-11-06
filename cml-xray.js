@@ -37,7 +37,9 @@
  *   NX_IOS_USER / NX_IOS_PASSWORD (the routers, default admin / admin as in the examples); NX_JUMP_USER (the jump host, default
  *   nx = the user the README's jump host script makes) and NX_JUMP_KEY (its private key file; else your ssh agent / ~/.ssh keys). The jump host takes a key only:
  *   cml-xray never sends it a password.
- * Read only: the tool sends `show` commands and API GETs; it never configures a router or changes the lab.
+ * Read only: the tool sends `show` commands and API GETs; it never configures a router. It changes the lab in one case only: while
+ *   nx-jump's configuration still says '<your public key>', that is replaced with NX_JUMP_KEY's .pub (nx-jump is restarted if it
+ *   runs). With --sync-layout, also a moved node's x / y.
  */
 'use strict';
 var fs = require('fs'), path = require('path'), http = require('http'), https = require('https');
@@ -122,12 +124,17 @@ function apiClient(host, user, pass, ca, insecure) {
       return r.body;
     });
   }
-  function patch(p, body) {   /* nx_cml_sync: the only write - a node's x / y */
+  function patch(p, body) {   /* nx_cml_sync: a node's x / y; nx_cml_jumpkey: nx-jump's configuration */
     var go = function () { return req('PATCH', p, body); };
     return (token ? Promise.resolve() : login()).then(go).then(function (r) { if (r.status === 401) return login().then(go); return r; })
       .then(function (r) { if (r.status < 200 || r.status >= 300) throw new Error('CML PATCH ' + p + ' -> HTTP ' + r.status); return r.body; });
   }
-  return { get: get, patch: patch };
+  function put(p) {   /* nx_cml_jumpkey: stop / wipe / start nx-jump */
+    var go = function () { return req('PUT', p); };
+    return (token ? Promise.resolve() : login()).then(go).then(function (r) { if (r.status === 401) return login().then(go); return r; })
+      .then(function (r) { if (r.status < 200 || r.status >= 300) throw new Error('CML PUT ' + p + ' -> HTTP ' + r.status); return r.body; });
+  }
+  return { get: get, patch: patch, put: put };
 }
 
 // ---- the lab: find it by title, read its topology -----------------------------------------------------------------
@@ -329,6 +336,39 @@ function pauseBar(via) {
 }
 var MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject', '.webm': 'video/webm' };
+/* nx_cml_jumpkey (2026-11-06, tried on CML 2.10): a lab made from the README (or the RouteCrushLab lab files) has
+   '<your public key>' in nx-jump's configuration until you paste yours. When NX_JUMP_KEY is set and its .pub is next to it,
+   cml-xray puts that one line in for you - only while the placeholder is still there (a key you put in yourself is never touched).
+   CML takes a new configuration only from a wiped node (BOOTED / STOPPED -> HTTP 400), so a started nx-jump is stopped, wiped,
+   given the key and started again: about 30 s, the routers keep running. The .pub must be one public key line (it goes into a
+   shell line in single quotes). */
+var PUBKEY_RE = /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com) [A-Za-z0-9+\/]+={0,3}( [^'"`$\\\r\n]{0,200})?$/;
+function fillJumpKey(api, lab, jumpId, keyFile, o) {
+  o = o || {};
+  var wait = o.pollMs == null ? 2000 : o.pollMs, PH = '<your public key>', PHS = [PH, '<あなたの公開鍵>'], log = o.log || console.log, warn = o.warn || console.error;
+  var base = '/labs/' + encodeURIComponent(lab.id) + '/nodes/' + encodeURIComponent(jumpId);
+  var cfgText = function (n) { var c = n && n.configuration; return Array.isArray(c) ? c.map(function (x) { return x && x.content || ''; }).join('\n') : String(c || ''); };
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+  var until = function (want, tries) {
+    return api.get(base).then(function (n) { if (want.indexOf(n.state) >= 0) return n; if (tries <= 0) throw new Error('nx-jump did not reach ' + want.join(' / ') + ' (it is ' + n.state + ')'); return sleep(wait).then(function () { return until(want, tries - 1); }); });
+  };
+  return api.get(base).then(function (n) {
+    var ph = PHS.filter(function (p) { return cfgText(n).indexOf(p) >= 0; })[0];   // the README's script says one or the other (EN / JA)
+    if (!ph) return 'has a key';
+    if (!keyFile) { warn('!! nx-jump still has ' + PH + ' in its configuration: put your public key there (README "CML2"), or set NX_JUMP_KEY=<private key file> with its .pub next to it and cml-xray puts it in'); return 'no key file'; }
+    var pub; try { pub = fs.readFileSync(keyFile + '.pub', 'utf8').trim(); } catch (e) { warn('!! nx-jump still has ' + PH + ', and there is no ' + keyFile + '.pub to put in - paste your public key into nx-jump\'s configuration'); return 'no .pub'; }
+    if (!PUBKEY_RE.test(pub)) { warn('!! ' + keyFile + '.pub is not one public key line - nx-jump left as it is'); return 'bad .pub'; }
+    var c = n.configuration, body = { configuration: Array.isArray(c) ? c.map(function (x) { return Object.assign({}, x, { content: String(x && x.content || '').split(ph).join(pub) }); }) : String(c || '').split(ph).join(pub) };
+    if (n.state === 'DEFINED_ON_CORE') return api.patch(base, body).then(function () { log('nx-jump: put your public key (' + keyFile + '.pub) into its configuration'); return 'put'; });
+    var was = n.state;
+    log('nx-jump: it still has ' + PH + ' - putting your public key (' + keyFile + '.pub) in and restarting nx-jump only (about 30 s; the routers keep running)');
+    return (was === 'STOPPED' ? Promise.resolve() : api.put(base + '/state/stop')).then(function () { return until(['STOPPED', 'DEFINED_ON_CORE'], 30); })
+      .then(function () { return api.put(base + '/wipe_disks'); }).then(function () { return until(['DEFINED_ON_CORE'], 30); })
+      .then(function () { return api.patch(base, body); })
+      .then(function () { return was === 'STOPPED' ? null : api.put(base + '/state/start'); })
+      .then(function () { log('nx-jump: key in' + (was === 'STOPPED' ? ' (it stays stopped as it was)' : ', started again')); return 'restarted'; });
+  }).catch(function (e) { warn('!! nx-jump: could not put your key in (' + e.message + ') - paste it into nx-jump\'s configuration by hand'); return 'error'; });
+}
 /* nx_cml_problem (2026-11-06): the lab's problem.json, as next to a containerlab topology: the page shows its band (title, text,
    the RouteCrushLab button) from /static/problem.json, and focus + check go into xray-states.js (window.XRAY_PROBLEM) for
    "✓ Solved". --problem <file>, else "<lab title>.problem.json" in the current folder. None = the page as before. */
@@ -953,6 +993,36 @@ function selfTest() {
       A(/"x":120/.test(fs.readFileSync(path.join(od, 'xray-states.js'), 'utf8')), 'lock: a place changed in CML is written at once (no wait for the next round)');
     } finally { console.log = _l; try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} }
   })();
+  asyncTests = asyncTests.then(function () {   // nx_cml_jumpkey: a fake CML that answers as CML 2.10 did on 11-06 (config only when wiped)
+    var kd = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-k-')), kf = path.join(kd, 'id'), PUB = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGb1example0key0000000000000000000000000000 me@pc';
+    fs.writeFileSync(kf, 'x'); fs.writeFileSync(kf + '.pub', PUB + '\n');
+    var fake = function (state, cfg) {
+      var n = { state: state, configuration: [{ name: 'node.cfg', content: cfg }] }, calls = [];
+      return { n: n, calls: calls, get: function () { return Promise.resolve(JSON.parse(JSON.stringify(n))); },
+        patch: function (p, b) { calls.push('patch'); if (n.state !== 'DEFINED_ON_CORE') return Promise.reject(new Error('CML PATCH -> HTTP 400')); n.configuration = b.configuration; return Promise.resolve(); },
+        put: function (p) { var w = /\/(stop|start|wipe_disks)$/.exec(p)[1]; calls.push(w); n.state = { stop: 'STOPPED', start: 'BOOTED', wipe_disks: 'DEFINED_ON_CORE' }[w]; return Promise.resolve(); } };
+    };
+    var q = { log: function () {}, warn: function () {}, pollMs: 1 }, L = { id: 'l' }, CFG = "echo '<your public key>' > /home/nx/.ssh/authorized_keys";
+    var f1 = fake('DEFINED_ON_CORE', CFG), f2 = fake('BOOTED', CFG), f3 = fake('BOOTED', "echo '" + PUB + "' > x"), f4 = fake('STOPPED', CFG);
+    return fillJumpKey(f1, L, 'j', kf, q).then(function (r) {
+      A(r === 'put' && f1.calls.join() === 'patch' && f1.n.configuration[0].content.indexOf(PUB) > 0 && f1.n.configuration[0].content.indexOf('<your public key>') < 0, 'jumpkey: not started -> the key is put in, nothing restarted');
+      return fillJumpKey(f2, L, 'j', kf, q);
+    }).then(function (r) {
+      A(r === 'restarted' && f2.calls.join() === 'stop,wipe_disks,patch,start' && f2.n.state === 'BOOTED' && f2.n.configuration[0].content.indexOf(PUB) > 0, 'jumpkey: running -> stop, wipe, key, start (' + f2.calls.join() + ')');
+      return fillJumpKey(f3, L, 'j', kf, q);
+    }).then(function (r) {
+      A(r === 'has a key' && !f3.calls.length, 'jumpkey: a key already there is never touched');
+      return fillJumpKey(f4, L, 'j', kf, q);
+    }).then(function (r) {
+      A(r === 'restarted' && f4.calls.join() === 'wipe_disks,patch' && f4.n.state === 'DEFINED_ON_CORE', 'jumpkey: stopped -> wiped and given the key, left stopped (' + f4.calls.join() + ')');
+      fs.writeFileSync(kf + '.pub', "ssh-ed25519 AAAA' ; reboot ; echo '\n");
+      var f5 = fake('DEFINED_ON_CORE', CFG);
+      return fillJumpKey(f5, L, 'j', kf, q).then(function (r5) { A(r5 === 'bad .pub' && !f5.calls.length, 'jumpkey: a .pub that is not one key line is not put in a shell line'); });
+    }).then(function () {
+      var f6 = fake('BOOTED', CFG);
+      return fillJumpKey(f6, L, 'j', '', q).then(function (r6) { A(r6 === 'no key file' && !f6.calls.length, 'jumpkey: no NX_JUMP_KEY -> nothing changed, only the hint'); });
+    }).then(function () { try { fs.rmSync(kd, { recursive: true, force: true }); } catch (e) {} });
+  });
   var so = sshOpts('k', false).join(' ');
   A(/ServerAliveInterval=5/.test(so) && /ServerAliveCountMax=2/.test(so), 'ssh: keepalive - a stopped router ends its ssh in about 10 s');
   asyncTests = asyncTests.then(function () {   // nx_cml_stopped: stop on an ssh that has ended, twice -> nothing thrown, no 'error' event that ends the program
@@ -1060,9 +1130,10 @@ else if (require.main === module) {
     if (process.stdin.isTTY) { process.stdin.on('data', function (d) { if (String(d).indexOf('\u0003') >= 0) bye(); }); process.stdin.resume(); }   // raw-mode Ctrl+C
     process.on('exit', function () { ap.cleanup(); });   // also when the process is ended another way (the helper holds no secret, but it is not left behind)
     console.log('reading ' + ios.join(', ') + (opt.console ? ' over the CML console' : ' over SSH on the management network') + ' every ' + opt.interval + ' s (show commands only)');
-    col.loop();
+    var jid = !opt.console && !opt.jump && view.mgmt && view.mgmt.jumpId;   /* nx_cml_jumpkey: the key first, then the first read (the jump host's address comes after its restart) */
+    (jid ? fillJumpKey(api, lab, jid, process.env.NX_JUMP_KEY || '') : Promise.resolve()).then(function () { col.loop(); });
   }).catch(function (e) { console.error('!! ' + e.message); process.exit(1); });
 }
 
 module.exports = { KIND: KIND, IOS_DEFS: IOS_DEFS, toClabData: toClabData, renderPage: renderPage,
-  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress, loadProblem: loadProblem };   /* nx_cml_ssh */   /* nx_cml_problem */
+  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress, loadProblem: loadProblem, fillJumpKey: fillJumpKey };   /* nx_cml_ssh */   /* nx_cml_problem */
