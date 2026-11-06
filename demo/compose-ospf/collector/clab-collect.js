@@ -43,6 +43,8 @@ var NX_EXEC_MS = 8000;
 function _nxErr(why, msg) { var e = new Error(msg || why); e.nxUnread = why; return e; }
 function _nxClassify(e) {
   if (e && e.code === 'ETIMEDOUT') return _nxErr('timeout', 'no answer in ' + (NX_EXEC_MS / 1000) + ' s');
+  /* nx_unread_toolarge: an answer over the read limit is not an empty answer (it made every peer Down) */
+  if (e && e.code === 'ENOBUFS') return _nxErr('toolarge', 'the answer is larger than the read limit');
   var t = String((e && e.stderr) || '') + ' ' + String((e && e.stdout) || '') + ' ' + String((e && e.message) || '');   /* docker prints "OCI runtime exec failed" on stdout */
   /* only docker's own messages: FRR itself says e.g. "ospfd is not running" when a daemon is off - that is a readable router */
   if (/Error response from daemon:.*(is not running|is paused|is restarting)|No such container/i.test(t)) return _nxErr('stopped', 'the container is not running');

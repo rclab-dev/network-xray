@@ -27,6 +27,7 @@ var FAKE = [
   '  ignoreterm) trap "" TERM; sleep 30; exit 0 ;;',
   '  partial) printf \'{"eth1": {"operationalStatus": "up", "ipAdd\'; exit 0 ;;',
   '  fail) echo "something went wrong" >&2; exit 1 ;;',
+  '  huge) head -c 34000000 /dev/zero | tr "\\0" x; exit 0 ;;',
   'esac',
   'if [ "$(basename "$0")" = ssh ]; then',
   '  if [ "$mode" = sshpartial ]; then printf "r1#show ip interface brief\\nInterface IP-Address OK? Method Status Protocol\\nEthernet0/1 10.0.0.1 YES manual up up\\n"; exit 0; fi',
@@ -108,6 +109,18 @@ test.describe('collector timeouts', { concurrency: true, skip: !POSIX }, functio
     assert.strictEqual(r.code, 0, r.stderr);
     assert.ok(sb.calls('r2') >= 1, 'r2 was asked after r1 timed out');
     assert.deepStrictEqual(JSON.parse(r.stdout.trim().split('\n').pop()), ['eth1'], 'r2 state read: ' + r.stdout.slice(0, 120));
+  });
+
+  test.it('an answer over the read limit is a router that could not be read (toolarge), not an empty router', async function () {
+    var sb = sandbox(); sb.set('clab-l-r1', 'huge');
+    try {
+      var a = await run(sb, [CLAB, '--lab', 'l', '--node', 'r1', '--adj', 'eth1:r2', '--out', path.join(sb.dir, 'a.json')]);
+      assert.strictEqual(a.code, 3, 'clab-collect: ' + a.stderr); assert.match(a.stderr, /NX_UNREAD toolarge/);
+      assert.ok(!fs.existsSync(path.join(sb.dir, 'a.json')), 'no state (no Down peers) written');
+      var s = await run(sb, [SRL, '--lab', 'l', '--node', 'r1', '--adj', 'ethernet-1/1:r2', '--out', path.join(sb.dir, 's.json')]);
+      assert.strictEqual(s.code, 3, 'srl: ' + s.stderr); assert.match(s.stderr, /NX_UNREAD toolarge/);
+      assert.ok(!fs.existsSync(path.join(sb.dir, 's.json')), 'srl: no state written');
+    } finally { sb.done(); }
   });
 
   test.it('a router that answers with half an output or exits non-zero is still a router that answered (no hang, not marked)', async function () {

@@ -469,7 +469,8 @@ var SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/, SAFE_IF = /^[A-Za-z0-9][A-Z
 arg('--adj', '').split(',').filter(Boolean).forEach(function (p) {
   var i = p.indexOf(':'); if (i <= 0) return;
   if (!SAFE_IF.test(p.slice(0, i)) || !SAFE_NAME.test(p.slice(i + 1))) { console.error('!! --adj: left out ' + JSON.stringify(p.slice(0, 80)) + ' (not a plain name)'); return; }
-  adj[p.slice(0, i)] = p.slice(i + 1);
+  var _ifk = p.slice(0, i); if (/^ethernet-\d+\/\d+$/.test(_ifk)) _ifk += '.0';   /* nx_srl_adj_sub0: the routed subinterface, as srlIface() in clab-xray-collect.js */
+  adj[_ifk] = p.slice(i + 1);
 });
 if ((lab && !SAFE_NAME.test(lab)) || (node && !SAFE_NAME.test(node))) { console.error('!! --lab / --node must be plain names (letters, digits, _ . -)'); process.exit(2); }
 
@@ -492,6 +493,7 @@ if (fromDir) {
       /* nx_unread (2026-10-17): the same 3 reasons as the FRR collector (docker's own messages only) */
       var t = String((e && e.stderr) || '') + ' ' + String((e && e.stdout) || '') + ' ' + String((e && e.message) || '');   /* docker prints "OCI runtime exec failed" on stdout */
       if (e && e.code === 'ETIMEDOUT') nxUnread = ['timeout', 'no answer in 8 s'];
+      else if (e && e.code === 'ENOBUFS') nxUnread = ['toolarge', 'the answer is larger than the read limit'];   /* nx_unread_toolarge */
       else if (/Error response from daemon:.*(is not running|is paused|is restarting)|No such container/i.test(t)) nxUnread = ['stopped', 'the container is not running'];
       else if (/OCI runtime exec failed.*sr_cli|exec: "sr_cli": executable file not found/i.test(t)) nxUnread = ['device', 'no sr_cli in this container'];
       return null;
