@@ -48,8 +48,8 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 ## When to use
 
-- **Use it when** you run **FRR**, **Nokia SR Linux** or **Cisco IOS-XE (IOL)** routers in **containerlab** or **netlab** and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 on all three; on FRR, OSPFv3 and VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
-- **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux / Cisco IOL (they appear in the topology, but are not read). Not read yet, even on those three: the IPv6 BGP table, IS-IS, EVPN, and VRFs on IOL.
+- **Use it when** you run **FRR**, **Nokia SR Linux** or **Cisco IOS-XE (IOL)** routers in **containerlab** or **netlab** (or IOS routers in a **Cisco CML2** lab, with `cml-xray.js`) and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 on all three; on FRR, OSPFv3 and VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
+- **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux / Cisco IOL, or in CML the IOS node types listed in the CML section (they appear in the topology, but are not read). Not read yet, even on those three: the IPv6 BGP table, IS-IS, EVPN, and VRFs on IOL.
 - **What it reads** (read-only commands; the collector changes nothing. Only `xray.sh` / `run.sh`, right after deploying, restart FRR in a router whose FRR did not come up — see Troubleshooting):
   - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp vrf all json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command; the configuration is read only to see which protocols are configured, the BGP AS number and the configured static routes, and its text is not saved in the state or sent to the page); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. On a router with VRFs, the Routing table and the BGP Table show one VRF at a time: use the VRF buttons above them to switch (the management VRF `mgmt` gets no button). The IPv6 BGP table is not read.
   - netlab `validate:` tests are judged like `netlab validate` does: the per-prefix form (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
@@ -93,7 +93,7 @@ It is **descriptive**, not a simulator: it draws the state your feed reports. An
 **Nokia SR Linux** and **Cisco IOS-XE (IOL)** are implemented today (a mixed lab renders uniformly);
 Arista and others would need a small adapter of the same kind.
 
-**Status:** network-xray supports containerlab and netlab with FRR, SR Linux and Cisco IOL (IOS-XE).
+**Status:** network-xray supports containerlab and netlab with FRR, SR Linux and Cisco IOL (IOS-XE), and Cisco CML2 labs with `cml-xray.js`.
 
 **Not a config verifier.** network-xray reads **live state** (`show` / JSON = the state the device reports) to show *why* a
 router decided as it did — it is **not** a config checker. For pre-deployment simulation from config
@@ -641,7 +641,7 @@ Two ways to feed it:
    **`bgp-paste.html`** (paste `show bgp summary` + `show ip bgp`); large meshes and other
    vendors aren't auto-parsed yet.
 2. **Feed `state` directly (any vendor)** — build the documented `config`/`state` objects and call
-   `view.applyState(state)`. This is how you support **Arista, Juniper or Cisco kinds other than `cisco_iol`**: write a small
+   `view.applyState(state)`. This is how you support **Arista, Juniper or Cisco kinds other than `cisco_iol` in containerlab**: write a small
    adapter from your OS's `show` output to the shapes in
    **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** (which includes a FRR ↔ Cisco IOS `show`-command
    mapping table and the two optional seams). **`frr-parse.js` is the worked adapter template** —
@@ -837,8 +837,8 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 ## いつ使うか
 
-- **使う時:** containerlab や netlab で **FRR**・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (OSPFv2 は 3 つとも。FRR は OSPFv3 と VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
-- **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux / Cisco IOL 以外の機器 (全体図には出るが、中は読まない)。この 3 つでもまだ読まない物: IPv6 の BGP の表・IS-IS・EVPN・IOL の VRF。
+- **使う時:** containerlab や netlab (Cisco CML2 のラボの IOS のルータなら `cml-xray.js`) で **FRR**・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (OSPFv2 は 3 つとも。FRR は OSPFv3 と VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
+- **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux / Cisco IOL (CML では CML の節に書いた IOS のノード) 以外の機器 (全体図には出るが、中は読まない)。この 3 つでもまだ読まない物: IPv6 の BGP の表・IS-IS・EVPN・IOL の VRF。
 - **読み取る情報** (読み取り専用コマンドのみ。collector は何も変更しません。`xray.sh` / `run.sh` だけは、deploy の直後に FRR が立ち上がらなかったルータの FRR を立て直します = トラブルシューティングを参照):
   - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp vrf all json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp vrf all summary json`、`show ip ospf vrf all neighbor json`、`show ip ospf vrf all interface json`、`show ip route vrf all json`、`show interface json`、`show running-config` (`vrf all` に JSON で応答しない FRR では、通常のコマンドで読み取ります。設定は、どのプロトコルが設定されているか・BGP の AS 番号・設定した静的経路を見るためだけに読み、設定の文そのものは state に残さず、画面にも送らない)。`router ospf6` のあるルータは OSPFv3 も: `show ipv6 ospf6 vrf all neighbor json`、`show ipv6 ospf6 vrf all interface json`、`show ipv6 route vrf all json`。VRF のあるルータでは、経路表と BGP の表を 1 つの VRF ずつ出す (上の VRF のボタンで切り替え。管理用の VRF `mgmt` にはボタンを出さない)。IPv6 の BGP の表は読まない。
   - netlab の `validate:` の検査は `netlab validate` と同じ読み方: 宛先ごとの形 (`show bgp ipv4 unicast <宛先> json`) で、勝った経路は `bestpath.overall`。
@@ -880,7 +880,7 @@ FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に�
 しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念です。
 FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みで (混ざったラボも同じように描けます)、Arista などは同じ種類の小さなアダプタが要ります。
 
-**現状:** containerlab と netlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。
+**現状:** containerlab と netlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。Cisco CML2 のラボは `cml-xray.js` で読みます。
 
 **コンフィグ検証ツールではありません。** network-xray は**生きた状態**(`show` / JSON = 機器が報告する状態)を読み、
 ルータが *なぜ* そう判断したかを示します — コンフィグ(意図)からの事前シミュレーションには **Batfish** を。
@@ -1347,7 +1347,7 @@ node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exc
    **すべてブラウザ内で動き、config はアップロードされません。** 現在の対応範囲:
    **FRR・OSPF・小規模トポロジ**。BGP は **`bgp-paste.html`** (`show bgp summary` + `show ip bgp` を貼る)。大規模メッシュ・他ベンダーはまだ自動解析しません。
 2. **`state` を直接渡す(任意ベンダー)** — ドキュメント化された `config`/`state` を作って
-   `view.applyState(state)` を呼ぶ。**Arista・Juniper・`cisco_iol` 以外の Cisco の kind** はこの方法:自分の OS の
+   `view.applyState(state)` を呼ぶ。**Arista・Juniper・containerlab の `cisco_iol` 以外の Cisco の kind** はこの方法:自分の OS の
    `show` 出力を **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** の形(FRR ↔ Cisco IOS の `show`
    コマンド対応表と、2つの任意シーム付き)に変換する小さなアダプタを書く。
    **`frr-parse.js` がそのアダプタの雛形**なので、コピーして正規表現を自分のベンダー用に差し替える。
