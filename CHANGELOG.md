@@ -2,6 +2,13 @@
 
 User-visible changes in each release, newest first. Dates are the release tag dates.
 
+## v1.2.0 — 2026-11-08
+
+- Cisco CML2 labs (CML-Free works): `node cml-xray.js --lab "<the lab's title>"` reads the lab's nodes and links from the CML REST API and the IOS nodes over SSH on the lab's management network (through a jump host that takes a key only), and serves the same graph and DeepDive page. Read only: `show` commands and API GETs; nothing is typed on the CML consoles unless you pass `--console`.
+- The CML page: node positions come from the CML lab, a Pause button, routers that stop answering turn grey with a note, and the problem band with "✓ Solved".
+- CML's own certificate: `--save-cert <file>` saves the certificate CML shows and prints its fingerprint, and `CML_CA_FILE=<file>` then accepts that one certificate only; `--insecure` skips the check.
+- README: a Cisco CML2 section (en / ja), with how to add a management network and a jump host to a lab. Tried on CML 2.10 with IOL 17.18.
+
 ## v1.1.9 — 2026-11-07
 
 - OSPF on the page: the neighbor-state text and the OSPF process circle use the same colors as the line (Init / 2-Way orange, ExStart to Loading and Full green), and a link to a single neighbor is drawn in the same four styles as the others.
