@@ -21,7 +21,7 @@
     {
       "name": "converged - back to Full",
       "run": "none",
-      "wait": 0
+      "wait": 50
     }
   ]
 }

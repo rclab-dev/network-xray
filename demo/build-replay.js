@@ -34,12 +34,16 @@ var CTA = { href: '../index.html', text: 'Next: explore the other demos →' };
 var LABELS = [
   'steady — all OSPF adjacencies Full',
   'r2 eth1 down — r1 isolated (neighbor Down, route lost)',
-  'r1 recovering — OSPF re-forming (2-Way/DROther)',
+  'r2 eth1 back up — re-forming: r2 already hears r1 (Init), r1 has no neighbor yet',
   'converged — back to Full'
 ];
 
 // 1) fill the Go-template placeholders with the real captured topology + name
 html = shell.fill(html, NAME, topo);
+// the page lives in demo/ and loads the published engine from the gallery one level up (demo/README.md):
+// the template looks under static/ (containerlab graph) and next to itself (GitHub Pages) - point the first one at ../
+if (html.split("loadSeq('static/'").length !== 2) throw new Error("xray-graph.html: expected one loadSeq('static/' in the loader");
+html = html.replace("loadSeq('static/'", "loadSeq('../'");
 
 // 2) inject the replay driver right before </body>. It runs synchronously at parse
 //    time (after the loader kicks off async dep-loading), seeds window.LIVE_STATES
