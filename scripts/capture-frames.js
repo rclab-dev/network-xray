@@ -36,7 +36,8 @@ var ME = 'capture-frames.js';
 var SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/;
 var PROTOS = ['ospf', 'bgp', 'static'];
 var COLLECTOR_SCRIPTS = ['clab-collect.js', 'clab-srl-collect.js', 'clab-iosxe-collect.js'];
-var IGNORE_KEYS = ['nx_stale_since'];   // changes on every read while a router is stale; not part of the state
+var IGNORE_KEYS = ['nx_stale_since', 'up_down'];   // change on every read, not part of the state: a router's stale time /
+                                                    // a BGP session's up / down timer (bgp_neighbors[].up_down "00:02:09")
 
 var USAGE = 'usage: node scripts/capture-frames.js <topo.clab.yml> <steps.json> <out-dir> [options]\n' +
   '  record one replay frame (frameN.json) per step from a running lab, plus captions.json\n' +

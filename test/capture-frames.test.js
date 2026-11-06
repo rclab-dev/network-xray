@@ -33,7 +33,7 @@ var FAKE_COLLECT = [
   "var k = {}; try { k = JSON.parse(fs.readFileSync(d + '/k.json', 'utf8')); } catch (e) {}",
   "k.reads = (k.reads || 0) + 1; if (k.n !== n) { k.n = n; k.since = 0; } k.since++;",
   "fs.writeFileSync(d + '/k.json', JSON.stringify(k));",
-  "var st = { r1: { applied: n, nx_stale_since: Date.now() }, r2: { applied: n } };",
+  "var st = { r1: { applied: n, nx_stale_since: Date.now(), bgp_neighbors: [{ ip: '10.0.0.2', state: 'Established', up_down: String(k.reads) }] }, r2: { applied: n } };",   // up_down: a BGP session timer, new on every read
   "if (mode === 'flap' || (mode === 'slow' && k.since <= 3)) st.r1.noise = k.reads;",
   "fs.writeFileSync(a[1] + '/xray-states.js', 'window.LIVE_STATES = ' + JSON.stringify(st) + ';\\nwindow.LIVE_WATCH = true;\\n');"
 ].join('\n');
