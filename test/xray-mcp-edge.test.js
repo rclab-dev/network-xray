@@ -268,10 +268,11 @@ test('a FIFO or a device as path is an error, and the server keeps answering', {
     line(4, 'tools/call', { name: 'lab_state', arguments: { path: '/dev/null' } }),
     line(5, 'ping', {})
   ], 15000);
-  assert.match(JSON.parse(s.byId[1].result.content[0].text).error, /not a regular file/);
+  assert.strictEqual(JSON.parse(s.byId[1].result.content[0].text).error, 'not a network-xray state file', 'a FIFO: the fixed message, no path');
   assert.deepStrictEqual(s.byId[2].result.structuredContent.routers.map(function (r) { return r.name; }), ['r2'], 'the FIFO state file is skipped');
   assert.strictEqual(s.byId[3].result.structuredContent.routers[0].counts.routes, 0, 'the FIFO show file is skipped');
   assert.strictEqual(s.byId[4].result.isError, true);
+  assert.strictEqual(JSON.parse(s.byId[4].result.content[0].text).error, 'not a network-xray state file', 'a device: the fixed message, no path');
   assert.deepStrictEqual(s.byId[5].result, {});
 });
 

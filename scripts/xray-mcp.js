@@ -162,12 +162,13 @@ function str(args, k, required) {
   return v;
 }
 
-// A file that does not hold network-xray state gets one fixed message that says nothing about its contents (the JSON
-// parser's own message can quote the start of the file). Paths are read as xray-query.js reads them (any name).
+// A file that does not hold network-xray state - or is not a regular file at all (a device, a FIFO) - gets one fixed
+// message that says nothing about its contents or its path (the JSON parser's own message can quote the start of the
+// file). Paths are read as xray-query.js reads them (any name); a path that is not there still says "not found".
 var NOT_STATE = 'not a network-xray state file';
 function loadStates(p) {
   try { return query.loadStates(p); } catch (e) {
-    if (/^(not valid JSON|no node state found)/.test((e && e.message) || '')) throw new Error(NOT_STATE);
+    if (/^(not valid JSON|no node state found|not a regular file or a directory)/.test((e && e.message) || '')) throw new Error(NOT_STATE);
     throw e;
   }
 }
