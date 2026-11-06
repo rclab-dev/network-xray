@@ -296,7 +296,7 @@ a lab with 4 routers and the jump host fits; with more, leave a host out or use 
    echo "NX-JUMP ip=$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1)" > /dev/ttyS0      # ttyS0: the line CML keeps in the console log
    ```
    You can leave `<your public key>` as it is: when `NX_JUMP_KEY` is set and its `.pub` is next to it, cml-xray puts that line in
-   (if nx-jump already runs, cml-xray stops, wipes and starts nx-jump only — about 30 s; the routers keep running). A key you put in yourself is never touched.
+   (if nx-jump already runs, cml-xray stops, wipes and starts nx-jump only — about 30 s; the routers keep running; the graph says so meanwhile). A key you put in yourself is never touched.
    Don't use `192.168.255.0/24` for the management network: CML's NAT connector uses it.
 3. On each router (in its configuration in the lab), a management port in its own VRF — the management routes then stay out of the lab's routing table:
    ```
@@ -1060,7 +1060,7 @@ node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML 
    echo "NX-JUMP ip=$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1)" > /dev/ttyS0      # ttyS0 = CML がコンソールのログに残す行
    ```
    `<あなたの公開鍵>` はそのままでも構いません: `NX_JUMP_KEY` を設定し、その隣に `.pub` があれば cml-xray がその 1 行を入れます
-   (nx-jump が既に動いていれば、cml-xray が nx-jump だけを止めて・Wipe して・起動し直します。約 30 秒・ルータは動いたまま)。自分で入れた鍵には触りません。
+   (nx-jump が既に動いていれば、cml-xray が nx-jump だけを止めて・Wipe して・起動し直します。約 30 秒・ルータは動いたまま・その間は図にもそう出ます)。自分で入れた鍵には触りません。
    管理の網に `192.168.255.0/24` は使わないでください (CML の NAT の口が使います)。
 3. 各ルータ (ラボの中の設定) に、別の VRF に入れた管理の口を — 管理の経路がラボの経路表に混ざりません:
    ```

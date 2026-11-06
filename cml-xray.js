@@ -275,6 +275,30 @@ var LOCK_JS = '<script>(function(){var W=' + JSON.stringify(LOCK_WORDS).replace(
   'var d=document.createElement("span");d.id="nx-cml-lock";d.style.cssText="font-size:12px;color:#64748b;text-align:right;max-width:62%;line-height:1.4";' +
   'var bar=document.querySelector(".ov-bar");if(bar)bar.appendChild(d);else{d.style.cssText+=";position:fixed;left:8px;bottom:8px";document.body.appendChild(d);}' +
   'var put=function(){var L="en";try{L=localStorage.getItem("nx-lang")||"en";}catch(e){}var s=W[L==="ja"?"ja":"en"];if(d.textContent!==s)d.textContent=s;};put();setInterval(put,1000);},200);})();</script>';
+/* nx_cml_jumpkey (2026-11-06): while cml-xray puts your key into nx-jump (XRAY_CML.jump from xray-states.js), the graph says so in its
+   middle (the same place as Paused); it goes when a router has been read. A problem (no key file / no .pub / ...) stays with its reason. */
+var JUMP_WORDS = {
+  en: { putting: ['🔑 Putting your public key into the jump host (nx-jump) and restarting it…', 'About 30 s. The routers keep running; they are read once nx-jump is up.'],
+    nokey: ['🔑 nx-jump has no key yet', 'Its configuration still says <your public key>. Set NX_JUMP_KEY=<private key file> (with its .pub next to it) and start cml-xray again, or paste your public key into nx-jump in CML.'],
+    nopub: ['🔑 nx-jump has no key yet', 'There is no .pub next to NX_JUMP_KEY. Put it there and start cml-xray again, or paste your public key into nx-jump in CML.'],
+    badpub: ['🔑 nx-jump has no key yet', 'The .pub next to NX_JUMP_KEY is not one public key line. nx-jump was left as it is.'],
+    stopped: ['🔑 Your key is in nx-jump', 'nx-jump is stopped: start it in CML, and the routers are read once it is up.'],
+    error: ['🔑 Your key could not be put into nx-jump', 'Paste your public key into nx-jump in CML. Reason: '] },
+  ja: { putting: ['🔑 踏み台 (nx-jump) にあなたの公開鍵を入れて、立て直しています…', '30 秒ほど。ルータは動いたままです。nx-jump が立ち上がったら読み始めます。'],
+    nokey: ['🔑 踏み台 (nx-jump) にまだ鍵がありません', '設定が <your public key> のままです。NX_JUMP_KEY=<秘密鍵のファイル> (隣に .pub) を設定して cml-xray を起動し直すか、CML で nx-jump に公開鍵を貼ってください。'],
+    nopub: ['🔑 踏み台 (nx-jump) にまだ鍵がありません', 'NX_JUMP_KEY の隣に .pub がありません。置いて cml-xray を起動し直すか、CML で nx-jump に公開鍵を貼ってください。'],
+    badpub: ['🔑 踏み台 (nx-jump) にまだ鍵がありません', 'NX_JUMP_KEY の隣の .pub が公開鍵の 1 行ではありません。nx-jump はそのままにしました。'],
+    stopped: ['🔑 踏み台 (nx-jump) に鍵を入れました', 'nx-jump は止まっています。CML で起動すると、立ち上がった後にルータを読みます。'],
+    error: ['🔑 踏み台 (nx-jump) に鍵を入れられませんでした', 'CML で nx-jump に公開鍵を貼ってください。理由: '] }
+};
+var JUMP_JS = '<script>(function(){var W=' + JSON.stringify(JUMP_WORDS).replace(/</g, '\\u003c') + ',box=null;' +
+  'var L=function(){try{return (localStorage.getItem("nx-lang")||"en")==="ja"?"ja":"en";}catch(e){return "en";}};' +
+  'var el=function(){if(box)return box;var fr=document.querySelector(".ov-frame");if(!fr)return null;if(getComputedStyle(fr).position==="static")fr.style.position="relative";' +
+  'box=document.createElement("div");box.id="nx-cml-jump";box.style.cssText="position:absolute;left:0;right:0;bottom:0;top:46px;display:none;align-items:center;justify-content:flex-start;padding-top:26px;flex-direction:column;background:rgba(15,19,24,.12);pointer-events:none;z-index:6;text-align:center";' +
+  'box.innerHTML="<div style=\\"font:700 24px sans-serif;color:#fff;background:rgba(15,19,24,.88);border-radius:12px 12px 0 0;padding:10px 28px 4px;max-width:88%\\"></div><div style=\\"font:14px sans-serif;color:#eceff1;background:rgba(15,19,24,.88);border-radius:0 0 12px 12px;padding:2px 28px 12px;max-width:88%\\"></div>";fr.appendChild(box);return box;};' +
+  'var show=function(){var j=window.XRAY_CML&&window.XRAY_CML.jump,b=el();if(!b)return;if(!j||!W.en[j.state]){b.style.display="none";return;}' +
+  'var w=W[L()][j.state];b.style.display="flex";b.children[0].textContent=w[0];b.children[1].textContent=w[1]+(j.state==="error"?String(j.msg||""):"");};' +
+  'show();setInterval(show,500);})();</script>';
 var SAMPLE_WORDS_JS ='<script>(function(){var t=setInterval(function(){var B=window.clabXray&&window.clabXray.SYNTHETIC_BADGE;if(!B)return;clearInterval(t);' +
   'var W=' + JSON.stringify(SAMPLE_BODY).replace(/</g, '\\u003c') + ';Object.keys(W).forEach(function(l){if(B[l])B[l].body=W[l];});' +
   'if(document.body.classList.contains("nx-synthetic")&&window.clabXray.markSynthetic)window.clabXray.markSynthetic(true);},100);})();</script>';
@@ -292,7 +316,7 @@ function renderPage(name, data, pos) {
     'if(now!==last&&window.XRAY_POS&&window.__nxApplyXrayPos&&!window.__nxDragging){last=now;try{window.__nxApplyXrayPos();}catch(e){}}},1000);})();</script></body>');
   html = html.replace('</body>', SAMPLE_WORDS_JS + '</body>');   /* nx_cml_ssh: the "Sample view" badge in CML words */
   if (renderPage.pauseBar) html = html.replace('</body>', pauseBar(renderPage.pauseVia) + '</body>');   /* nx_cml_share */
-  html = html.replace('</body>', LOCK_JS + '</body>');   /* nx_cml_lock */
+  html = html.replace('</body>', LOCK_JS + JUMP_JS + '</body>');   /* nx_cml_lock */   /* nx_cml_jumpkey */
   return html.split('{{ .Name }}').join(esc(name));
 }
 /* nx_cml_share: "Reading ... [Pause]" - top right; the state follows window.XRAY_CML from xray-states.js */
@@ -334,6 +358,7 @@ var MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript
 var PUBKEY_RE = /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com) [A-Za-z0-9+\/]+={0,3}( [^'"`$\\\r\n]{0,200})?$/;
 function fillJumpKey(api, lab, jumpId, keyFile, o) {
   o = o || {};
+  var step = o.onStep || function () {};   // nx_cml_jumpkey: what the page says meanwhile (putting / nokey / nopub / badpub / stopped / error)
   var wait = o.pollMs == null ? 2000 : o.pollMs, PH = '<your public key>', PHS = [PH, '<あなたの公開鍵>'], log = o.log || console.log, warn = o.warn || console.error;
   var base = '/labs/' + encodeURIComponent(lab.id) + '/nodes/' + encodeURIComponent(jumpId);
   var cfgText = function (n) { var c = n && n.configuration; return Array.isArray(c) ? c.map(function (x) { return x && x.content || ''; }).join('\n') : String(c || ''); };
@@ -344,19 +369,20 @@ function fillJumpKey(api, lab, jumpId, keyFile, o) {
   return api.get(base).then(function (n) {
     var ph = PHS.filter(function (p) { return cfgText(n).indexOf(p) >= 0; })[0];   // the README's script says one or the other (EN / JA)
     if (!ph) return 'has a key';
-    if (!keyFile) { warn('!! nx-jump still has ' + PH + ' in its configuration: put your public key there (README "CML2"), or set NX_JUMP_KEY=<private key file> with its .pub next to it and cml-xray puts it in'); return 'no key file'; }
-    var pub; try { pub = fs.readFileSync(keyFile + '.pub', 'utf8').trim(); } catch (e) { warn('!! nx-jump still has ' + PH + ', and there is no ' + keyFile + '.pub to put in - paste your public key into nx-jump\'s configuration'); return 'no .pub'; }
-    if (!PUBKEY_RE.test(pub)) { warn('!! ' + keyFile + '.pub is not one public key line - nx-jump left as it is'); return 'bad .pub'; }
+    if (!keyFile) { warn('!! nx-jump still has ' + PH + ' in its configuration: put your public key there (README "CML2"), or set NX_JUMP_KEY=<private key file> with its .pub next to it and cml-xray puts it in'); step('nokey'); return 'no key file'; }
+    var pub; try { pub = fs.readFileSync(keyFile + '.pub', 'utf8').trim(); } catch (e) { warn('!! nx-jump still has ' + PH + ', and there is no ' + keyFile + '.pub to put in - paste your public key into nx-jump\'s configuration'); step('nopub'); return 'no .pub'; }
+    if (!PUBKEY_RE.test(pub)) { warn('!! ' + keyFile + '.pub is not one public key line - nx-jump left as it is'); step('badpub'); return 'bad .pub'; }
     var c = n.configuration, body = { configuration: Array.isArray(c) ? c.map(function (x) { return Object.assign({}, x, { content: String(x && x.content || '').split(ph).join(pub) }); }) : String(c || '').split(ph).join(pub) };
     if (n.state === 'DEFINED_ON_CORE') return api.patch(base, body).then(function () { log('nx-jump: put your public key (' + keyFile + '.pub) into its configuration'); return 'put'; });
     var was = n.state;
     log('nx-jump: it still has ' + PH + ' - putting your public key (' + keyFile + '.pub) in and restarting nx-jump only (about 30 s; the routers keep running)');
+    step('putting');
     return (was === 'STOPPED' ? Promise.resolve() : api.put(base + '/state/stop')).then(function () { return until(['STOPPED', 'DEFINED_ON_CORE'], 30); })
       .then(function () { return api.put(base + '/wipe_disks'); }).then(function () { return until(['DEFINED_ON_CORE'], 30); })
       .then(function () { return api.patch(base, body); })
       .then(function () { return was === 'STOPPED' ? null : api.put(base + '/state/start'); })
-      .then(function () { log('nx-jump: key in' + (was === 'STOPPED' ? ' (it stays stopped as it was)' : ', started again')); return 'restarted'; });
-  }).catch(function (e) { warn('!! nx-jump: could not put your key in (' + e.message + ') - paste it into nx-jump\'s configuration by hand'); return 'error'; });
+      .then(function () { log('nx-jump: key in' + (was === 'STOPPED' ? ' (it stays stopped as it was)' : ', started again')); if (was === 'STOPPED') step('stopped'); return 'restarted'; });
+  }).catch(function (e) { warn('!! nx-jump: could not put your key in (' + e.message + ') - paste it into nx-jump\'s configuration by hand'); step('error', e.message); return 'error'; });
 }
 /* nx_cml_problem (2026-11-06): the lab's problem.json, as next to a containerlab topology: the page shows its band (title, text,
    the RouteCrushLab button) from /static/problem.json, and focus + check go into xray-states.js (window.XRAY_PROBLEM) for
@@ -769,8 +795,15 @@ Collector.prototype.round = function () {
       if (self.paused && states[n] && !states[n].nx_unread) states[n] = Object.assign({}, states[n], { nx_unread: 'paused', nx_stale_since: self.lastAt[n] });   /* nx_cml_pause: paused while this round was reading - written as paused, not as read */
     });
     crossNodeHellos(states, self.view().adj, proto);
+    if (self.jumpNote && Object.keys(got).length) self.jumpNote = null;   /* nx_cml_jumpkey: a router read = the jump host works - the note goes */
     self.write(states, proto, nodes);
   });
+};
+/* nx_cml_jumpkey (2026-11-06): what the page shows while nx-jump gets your key (putting / nokey / nopub / badpub / stopped / error +
+   msg). Written at once; before the first round the file has no router states yet (the page shows the routers as not read). */
+Collector.prototype.setJumpNote = function (state, msg) {
+  this.jumpNote = state ? { state: state, msg: String(msg || '').slice(0, 200) } : null;
+  if (this.lastW) this.write(this.lastW.states, this.lastW.proto, this.lastW.nodes); else this.write({}, 'ospf', []);
 };
 /* nx_cml_lock: the page file - written after every round, and when the places change in CML (posMoved, from the topology read
    every POS_EVERY_S s) so a node moved in CML moves on the graph without waiting for the next round of show commands */
@@ -778,16 +811,16 @@ Collector.prototype.write = function (states, proto, nodes) {
   var self = this;
   this.lastW = { states: states, proto: proto, nodes: nodes };
   var _pos = self.view().pos || null;   /* nx_cml_follow */   /* nx_cml_ssh: self (this is not the collector inside the callback) */
-  var body = JSON.stringify(states) + (self.paused ? '|p' : '') + JSON.stringify(_pos);
+  var body = JSON.stringify(states) + (self.paused ? '|p' : '') + JSON.stringify(_pos) + JSON.stringify(self.jumpNote || null);
   if (body !== self.written) {
     self.written = body;
     var dest = path.join(path.resolve(self.cfg.out), 'xray-states.js'), tmp = dest + '.tmp';
-    fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused }) + ';\n' +
+    fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused, jump: self.jumpNote || null }) + ';\n' +
       (_pos ? 'window.XRAY_POS = ' + JSON.stringify(_pos) + '; window.LIVE_POS = window.XRAY_POS;\n' : '') +
       (self.cfg.problem ? 'window.XRAY_PROBLEM = ' + JSON.stringify(self.cfg.problem) + ';\n' : ''));   /* nx_cml_share */   /* nx_cml_follow */   /* nx_cml_problem: focus + check, as clab-xray-collect.js */
     fs.renameSync(tmp, dest);
     var line = 'state ' + nodes.map(function (n) { var s = states[n]; return n + (s.nx_unread ? '(' + s.nx_unread + ')' : ':' + (s.bgp_neighbors || []).filter(function (b) { return /establ/i.test(b.state); }).length + 'bgp/' + (s.ospf_neighbors || []).filter(function (o) { return o.full; }).length + 'ospf/' + (s.routing_table || []).length + 'rt'); }).join(' ') + ' (' + proto + ')';
-    if (line !== self.logged) { self.logged = line; console.log('[' + new Date().toISOString() + '] ' + line); }   // the page file follows every change; the log only when the summary changes
+    if (nodes.length && line !== self.logged) { self.logged = line; console.log('[' + new Date().toISOString() + '] ' + line); }   // the page file follows every change; the log only when the summary changes
   }
 };
 /* nx_cml_pause (2026-11-06): Pause / Resume are written to the page at once (not with the next round): paused = each router's last
@@ -997,8 +1030,22 @@ function selfTest() {
       var f5 = fake('DEFINED_ON_CORE', CFG);
       return fillJumpKey(f5, L, 'j', kf, q).then(function (r5) { A(r5 === 'bad .pub' && !f5.calls.length, 'jumpkey: a .pub that is not one key line is not put in a shell line'); });
     }).then(function () {
-      var f6 = fake('BOOTED', CFG);
-      return fillJumpKey(f6, L, 'j', '', q).then(function (r6) { A(r6 === 'no key file' && !f6.calls.length, 'jumpkey: no NX_JUMP_KEY -> nothing changed, only the hint'); });
+      var f6 = fake('BOOTED', CFG), st6 = [];
+      return fillJumpKey(f6, L, 'j', '', Object.assign({ onStep: function (s) { st6.push(s); } }, q)).then(function (r6) { A(r6 === 'no key file' && !f6.calls.length && st6.join() === 'nokey', 'jumpkey: no NX_JUMP_KEY -> nothing changed, the hint (and "nokey" for the page)'); });
+    }).then(function () {   // the page is told: putting while nx-jump is restarted
+      fs.writeFileSync(kf + '.pub', PUB + '\n');
+      var f7 = fake('BOOTED', CFG), st7 = [];
+      return fillJumpKey(f7, L, 'j', kf, Object.assign({ onStep: function (s) { st7.push(s + ':' + f7.calls.length); } }, q)).then(function () { A(st7.join() === 'putting:0', 'jumpkey: "putting" goes to the page before nx-jump is stopped (' + st7.join() + ')'); });
+    }).then(function () {   // the note in xray-states.js: at once, and gone when a router has been read
+      var od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-jn-')), _l = console.log; console.log = function () {};
+      var c = new Collector(function () { return { pos: null, adj: {}, defs: { r1: 'iol-xe' } }; }, 'L', { out: od });
+      var rd = function () { return JSON.parse(/XRAY_CML = (.*);\n/.exec(fs.readFileSync(path.join(od, 'xray-states.js'), 'utf8'))[1]); };
+      c.setJumpNote('putting');
+      var a = rd();
+      c.readNode = function () { return Promise.resolve({ texts: {}, adjStr: '' }); };
+      return c.round().then(function () { console.log = _l; var b = rd();
+        A(a.jump && a.jump.state === 'putting' && b.jump === null, 'jumpkey: the page note is written at once and goes after a router is read');
+        try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} }, function (e) { console.log = _l; A(false, 'jumpkey note: ' + e.message); });
     }).then(function () { try { fs.rmSync(kd, { recursive: true, force: true }); } catch (e) {} });
   });
   var so = sshOpts('k', false).join(' ');
@@ -1098,7 +1145,7 @@ else if (require.main === module) {
     process.on('exit', function () { ap.cleanup(); });   // also when the process is ended another way (the helper holds no secret, but it is not left behind)
     console.log('reading ' + ios.join(', ') + (opt.console ? ' over the CML console' : ' over SSH on the management network') + ' every ' + opt.interval + ' s (show commands only)');
     var jid = !opt.console && !opt.jump && view.mgmt && view.mgmt.jumpId;   /* nx_cml_jumpkey: the key first, then the first read (the jump host's address comes after its restart) */
-    (jid ? fillJumpKey(api, lab, jid, process.env.NX_JUMP_KEY || '') : Promise.resolve()).then(function () { col.loop(); });
+    (jid ? fillJumpKey(api, lab, jid, process.env.NX_JUMP_KEY || '', { onStep: function (s, m) { col.setJumpNote(s, m); } }) : Promise.resolve()).then(function () { col.loop(); });
   }).catch(function (e) { console.error('!! ' + e.message); process.exit(1); });
 }
 
