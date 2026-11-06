@@ -12,7 +12,7 @@ var ROOT = path.join(__dirname, '..');
 var BASH = ['/bin/bash', '/usr/bin/bash'].filter(function (p) { return fs.existsSync(p); })[0] || '';
 
 var NODE_ENTRIES = [
-  'bgp-parse.js', 'clab-collect.js', 'clab-iosxe-collect.js', 'clab-srl-collect.js', 'clab-to-xray.js',
+  'bgp-parse.js', 'clab-collect.js', 'clab-iosxe-collect.js', 'cml-xray.js', 'clab-srl-collect.js', 'clab-to-xray.js',
   'clab-xray-collect.js', 'frr-collect.js', 'netlab-validate.js', 'topojson-to-xray.js',
   'scripts/capture-frames.js', 'scripts/check-copies.js', 'scripts/check-examples.js', 'scripts/check-i18n.js', 'scripts/gen_compose_bundle.js',
   'scripts/hello-kf-selftest.js', 'scripts/nbr-own-list-selftest.js', 'scripts/ospf-state-word-selftest.js',

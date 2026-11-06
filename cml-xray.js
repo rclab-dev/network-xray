@@ -19,7 +19,9 @@
  *   --port <n>             page port (default 8710); --listen <addr> (default 127.0.0.1 = this PC only)
  *   --out <dir>            where xray-states.js is written (default ./cml-view)
  *   --interval <s>         seconds between reads of one node (default 10, at least 5)
- *   --insecure             do not check CML's TLS certificate (CML ships a self-signed one). Better: CML_CA_FILE=<cert file>
+ *   --save-cert <file>     save the certificate CML shows to this PC (nothing else is sent), print its fingerprint, and exit; then
+ *                          CML_CA_FILE=<file> accepts that certificate only (CML's own is issued for "cml-controller" by CML's own CA)
+ *   --insecure             do not check CML's TLS certificate at all (better: --save-cert once, then CML_CA_FILE)
  *   --once                 read the topology, print it, and exit (no page)
  *   --enable-env <VAR>     when `enable` asks for a password: the environment variable that holds it (no enable password: nothing to pass)
  *   --proto ospf|bgp       which protocol the view is about (default: bgp when a router runs BGP, else ospf)
@@ -30,6 +32,7 @@
  *   --console              read over the CML console instead (the old way: show commands appear on the console you use;
  *                          the tool waits while someone types and has a Pause button) - only when you ask for it
  *   --quiet-wait <s>       --console only: after anything you type on the console, wait this long before reading (default 60)
+ *   -h, --help             this help
  *   --problem <file>       the lab's problem.json (network-xray-lab/0): the problem band above the graph and "✓ Solved" when its
  *                          check passes (default: "<lab title>.problem.json" in the current folder, when there is one)
  * Environment: CML_HOST, CML_USER, CML_PASSWORD (never on the command line), CML_CA_FILE (optional);
@@ -45,6 +48,7 @@ var fs = require('fs'), path = require('path'), http = require('http'), https = 
 
 // ---- options ------------------------------------------------------------------------------------------------
 var argv = process.argv.slice(2), opt = { port: 8710, listen: '127.0.0.1', out: './cml-view', interval: 10 };
+if (require.main === module && (argv.indexOf('-h') >= 0 || argv.indexOf('--help') >= 0)) usage(0);   // --help wins over everything else
 for (var i = 0; require.main === module && i < argv.length; i++) {   // options only when run, not when required
   var a = argv[i];
   if (a === '--lab') opt.lab = argv[++i];
@@ -63,13 +67,17 @@ for (var i = 0; require.main === module && i < argv.length; i++) {   // options 
   else if (a === '--jump') opt.jump = argv[++i];   /* nx_cml_ssh */
   else if (a === '--mgmt') opt.mgmt = argv[++i];   /* nx_cml_ssh */
   else if (a === '--problem') opt.problem = argv[++i];   /* nx_cml_problem */
+  else if (a === '--save-cert') opt.saveCert = argv[++i];   /* nx_cml_pin */
   else if (a === '--self-test') opt.selfTest = true;
   else if (a === '-h' || a === '--help') { usage(0); }
-  else { console.error('!! unknown option ' + JSON.stringify(a)); usage(2); }
+  else { console.error('unknown option: ' + a); console.error("Try 'node cml-xray.js --help'"); process.exit(2); }   // the CLI rule of the other tools (v1.1.7)
 }
-function usage(code) {
-  console.error('usage: CML_HOST=<host> CML_USER=<user> CML_PASSWORD=<password> node cml-xray.js --lab "<lab title>" [--port 8710] [--listen 127.0.0.1] [--out ./cml-view] [--interval 10] [--insecure] [--once]');
-  process.exit(code);
+function usage(code) {   // the option list = this file's own header (one place to keep it)
+  var head = fs.readFileSync(__filename, 'utf8'), a = head.indexOf(' * Options:'), b = head.indexOf(' */', a);
+  var text = 'usage: CML_HOST=<host> CML_USER=<user> CML_PASSWORD=<password> node cml-xray.js --lab "<lab title>" [options]\n' +
+    (a > 0 && b > a ? head.slice(a, b).split('\n').map(function (l) { return l.replace(/^ \* ?/, ''); }).join('\n') : '') + '\n';
+  if (code === 0) { process.stdout.write(text); process.exit(0); }
+  process.stderr.write(text); process.exit(code);
 }
 
 // ---- CML node definitions -> the node kinds the page knows (one table: also for writing CML lab files later) ----------
@@ -84,8 +92,35 @@ var IOS_DEFS = ['iol-xe', 'ioll2-xe', 'iosv', 'iosvl2', 'csr1000v', 'cat8000v'];
 var SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/, SAFE_IF = /^[A-Za-z0-9][A-Za-z0-9_.\/-]{0,62}$/;
 
 // ---- CML REST API (GET only + authenticate) ---------------------------------------------------------------------------
+/* nx_cml_pin (2026-11-06, tried on CML 2.10): CML's certificate is issued by CML's own CA for the name "cml-controller", and CML
+   does not send that CA - so a normal check fails even with CML_CA_FILE, and fails on the name when CML is reached by address.
+   CML_CA_FILE may therefore hold the certificate CML shows (save it from the browser): that exact certificate is accepted (pinned,
+   by its SHA-256 fingerprint), anything else is refused before a byte (or the password) is sent. A real CA in CML_CA_FILE works
+   as before (a normal check, name included). */
+function certPins(ca) {
+  var crypto = require('crypto');
+  return (String(ca || '').match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) || []).map(function (p) {
+    try { return new crypto.X509Certificate(p).fingerprint256; } catch (e) { return null; } }).filter(Boolean);
+}
+function pinnedAgent(ca, pins, host, onCert) {
+  var tls = require('tls'), agent = new https.Agent({ keepAlive: true });
+  agent.createConnection = function (o, cb) {   // the socket goes to the request only after the check (nothing is written before)
+    var done = false, fin = function (e, s) { if (done) return; done = true; cb(e, s); };
+    var s = tls.connect(Object.assign({}, o, { ca: ca, rejectUnauthorized: false, servername: o.servername || (/^[\d.]+$|:/.test(host) ? undefined : host) }));
+    s.once('secureConnect', function () {
+      var c = s.getPeerCertificate(), byCa = s.authorized && !tls.checkServerIdentity(host, c), byPin = pins.indexOf(c.fingerprint256) >= 0;
+      if (onCert) { onCert(c); s.destroy(); return fin(new Error('saved')); }   // --save-cert: look only, send nothing
+      if (byCa || byPin) return fin(null, s);
+      var by = c.issuer ? (c.issuer.O || c.issuer.CN || '') : '';
+      s.destroy(); fin(new Error('the CML certificate is not the one in CML_CA_FILE (it is ' + String(c.fingerprint256 || '').slice(0, 23) + '..., issued by "' + by + '") - if that is right, save it with --save-cert <file>; else do not go on'));
+    });
+    s.once('error', function (e) { fin(e); });
+  };
+  return agent;
+}
 function apiClient(host, user, pass, ca, insecure) {
-  var agent = new https.Agent({ ca: ca || undefined, rejectUnauthorized: !insecure, keepAlive: true });
+  var pins = !insecure && ca ? certPins(ca) : [];
+  var agent = pins.length ? pinnedAgent(ca, pins, host) : new https.Agent({ ca: ca || undefined, rejectUnauthorized: !insecure, keepAlive: true });
   var token = null;
   function req(method, p, body) {
     return new Promise(function (res, rej) {
@@ -98,7 +133,7 @@ function apiClient(host, user, pass, ca, insecure) {
         x.on('end', function () { var j; try { j = JSON.parse(s); } catch (e) { j = s; } res({ status: x.statusCode, body: j }); });
       });
       r.on('error', function (e) {
-        if (/self[- ]signed|unable to verify|certificate/i.test(e.message)) e.message += ' - CML uses its own certificate: set CML_CA_FILE=<its certificate> or pass --insecure';
+        if (/self[- ]signed|unable to verify|certificate/i.test(e.message) && !/CML_CA_FILE/.test(e.message)) e.message += ' - CML uses its own certificate: run node cml-xray.js --save-cert cml.pem once, then set CML_CA_FILE=cml.pem (or pass --insecure on a network you trust)';
         rej(e);
       });
       r.on('timeout', function () { r.destroy(new Error('CML did not answer in 30 s (' + host + ')')); });
@@ -344,7 +379,7 @@ function pauseBar(via) {
   'document.getElementById("nx-cml-btn").textContent=want!==null?W.btn[l][want?2:3]:W.btn[l][p?1:0];' +
   'var b=bigEl();if(b){b.style.display=p?"flex":"none";b.children[0].textContent=W.big[l][0];b.children[1].textContent=W.big[l][1];}};' +
   'document.getElementById("nx-cml-btn").onclick=function(){var p=want!==null?want:!!(window.XRAY_CML&&window.XRAY_CML.paused);want=!p;wantAt=Date.now();show();' +
-  'fetch(p?"/api/resume":"/api/pause",{method:"POST"}).catch(function(){want=null;show();});};' +
+  'fetch(p?"/api/resume":"/api/pause",{method:"POST",headers:{"X-NX-CML":"1"}}).catch(function(){want=null;show();});};' +
   'show();setInterval(show,500);})();</script>';
 }
 var MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
@@ -398,12 +433,23 @@ function loadProblem(file, title) {
   if (pj.check) { (xp = xp || {}).check = pj.check; if (pj.format) xp.format = pj.format; }
   return { file: f, text: text, xp: xp, check: !!pj.check };
 }
+/* nx_cml_serve (2026-11-06): the page server answers only for this machine's names / addresses (a page from another site that
+   points its own name at 127.0.0.1 gets 403) and serves only the files the page loads - never other files in the tool's folder. */
+function hostAllowed(host, port) {
+  var h = String(host || '').toLowerCase(), m = /^(\[[0-9a-f:.]+\]|[^:]+)(?::(\d+))?$/.exec(h);
+  if (!m || (m[2] && +m[2] !== +port)) return false;
+  return m[1] === 'localhost' || /^\d{1,3}(\.\d{1,3}){3}$/.test(m[1]) || /^\[[0-9a-f:.]+\]$/.test(m[1]);   // a name other than localhost = no
+}
+var STATIC_OK = /^(?:[A-Za-z0-9_-]+(?:[.-][A-Za-z0-9_]+)*\.js|skin\.html|css\/[A-Za-z0-9_-]+\.css|fonts\/[A-Za-z0-9_-]+\.(?:woff2?|ttf|eot|svg)|js\/next\.js)$/;
+function staticAllowed(rel) { return STATIC_OK.test(String(rel).split(path.sep).join('/')); }
 function serve(getView) {
   var outDir = path.resolve(opt.out);
   var srv = http.createServer(function (q, r) {
-    var u = decodeURIComponent(String(q.url || '/').split('?')[0]);
     var send = function (code, type, body) { r.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); r.end(body); };
+    if (!hostAllowed(q.headers.host, opt.port)) return send(403, 'text/plain', 'open the page by this machine\'s address (localhost / an IP address)');   /* nx_cml_serve */
+    var u; try { u = decodeURIComponent(String(q.url || '/').split('?')[0]); } catch (e) { return send(400, 'text/plain', 'bad address'); }   // a malformed %-escape must not end the program
     if (q.method === 'POST' && (u === '/api/pause' || u === '/api/resume') && serve.control) {   /* nx_cml_share: the [Pause] button (local page only) */
+      if (q.headers['x-nx-cml'] !== '1') return send(403, 'text/plain', 'from the page only');   /* nx_cml_serve: a page from another site cannot add this header without asking first (CORS) */
       serve.control(u === '/api/pause'); return send(200, 'application/json', JSON.stringify({ paused: u === '/api/pause' }));
     }
     if (q.method !== 'GET' && q.method !== 'HEAD') return send(405, 'text/plain', 'read only');
@@ -417,6 +463,7 @@ function serve(getView) {
     var rel = path.normalize(m[1]);
     if (rel.split(path.sep).indexOf('..') >= 0 || path.isAbsolute(rel)) return send(404, 'text/plain', 'not found');
     if (rel === 'problem.json') return serve.problem ? send(200, 'application/json; charset=utf-8', serve.problem) : send(404, 'text/plain', 'not found');   /* nx_cml_problem */
+    if (rel !== 'xray-states.js' && !staticAllowed(rel)) return send(404, 'text/plain', 'not found');   /* nx_cml_serve: the page's own files only */
     var f = rel === 'xray-states.js' ? path.join(outDir, rel) : path.join(HERE, rel);   // states from --out, the rest from the tool's folder
     fs.readFile(f, function (err, buf) {
       if (err) return send(404, 'text/plain', 'not found');
@@ -428,6 +475,7 @@ function serve(getView) {
     var shownHost = opt.listen === '0.0.0.0' ? '<this-pc-address>' : opt.listen;
     console.log('==> open http://' + shownHost + ':' + opt.port + '/');
   });
+  return srv;   // nx_cml_serve: the self-test closes it
 }
 
 // ---- router state over the CML console server (G2) -----------------------------------------------------------------
@@ -1048,6 +1096,34 @@ function selfTest() {
         try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} }, function (e) { console.log = _l; A(false, 'jumpkey note: ' + e.message); });
     }).then(function () { try { fs.rmSync(kd, { recursive: true, force: true }); } catch (e) {} });
   });
+  asyncTests = asyncTests.then(function () {   // nx_cml_serve: the page server, over real HTTP on this machine
+    var keepO = { port: opt.port, listen: opt.listen, out: opt.out }, od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-s-')), _l = console.log, _e = console.error;
+    opt.port = 20000 + Math.floor(Math.random() * 20000); opt.listen = '127.0.0.1'; opt.out = od; console.log = function () {};
+    serve.control = function () {};
+    var srv = serve(function () { return { name: 'lab', data: { nodes: [], links: [] }, pos: null }; });
+    var get = function (p, host, method, hd) {
+      return new Promise(function (res) {
+        var q = http.request({ host: '127.0.0.1', port: opt.port, path: p, method: method || 'GET', headers: Object.assign({ Host: host || ('127.0.0.1:' + opt.port) }, hd || {}) }, function (x) { x.resume(); x.on('end', function () { res(x.statusCode); }); });
+        q.on('error', function () { res(0); }); q.end();
+      });
+    };
+    var cases = [['/static/xray-core.js', null, 200], ['/static/css/next.css', null, 200], ['/static/README.md', null, 404], ['/static/.git/config', null, 404],
+      ['/static/cml-xray.js.bak', null, 404], ['/static/package.json', null, 404], ['/static/../README.md', null, 404], ['/static/%E0%A4%A', null, 400],
+      ['/static/xray-core.js', 'evil.example:' + 0, 403], ['/', 'rebind.example', 403], ['/static/xray-core.js', 'localhost:PORT', 200]];
+    return new Promise(function (r0) { srv.on('listening', r0); if (srv.listening) r0(); }).then(function () {
+      return Promise.all(cases.map(function (c) { return get(c[0], c[1] && c[1].replace('PORT', opt.port)).then(function (s) { return s === c[2] ? null : c[0] + ' (Host ' + c[1] + ') -> ' + s + ' not ' + c[2]; }); }));
+    }).then(function (bad1) {
+      return Promise.all([get('/api/pause', null, 'POST'), get('/api/pause', null, 'POST', { 'X-NX-CML': '1' })]).then(function (p) {
+        console.log = _l; console.error = _e;
+        var bad = bad1.filter(Boolean);
+        A(!bad.length, 'serve: the page\'s own files only, this machine\'s names only, no crash on a bad address' + (bad.length ? ' - ' + bad.join('; ') : ''));
+        A(p[0] === 403 && p[1] === 200, 'serve: Pause needs the page\'s header (' + p.join(' / ') + ')');
+      });
+    }).then(function () { srv.close(); serve.control = null; Object.assign(opt, keepO); try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} },
+      function (e) { console.log = _l; console.error = _e; srv.close(); Object.assign(opt, keepO); A(false, 'serve: ' + e.message); });
+  });
+  A(!hostAllowed('evil.example:8710', 8710) && hostAllowed('192.0.2.5:8710', 8710) && hostAllowed('[::1]:8710', 8710) && !hostAllowed('127.0.0.1:9', 8710), 'serve: names other than localhost are refused (DNS rebinding); addresses on our port are fine');
+  A(!staticAllowed('id') && !staticAllowed('id.pub') && !staticAllowed('.git/config') && !staticAllowed('x.pem') && staticAllowed('js/next.js') && staticAllowed('fonts/next-font.woff'), 'serve: key-like files and dot files are not served');
   var so = sshOpts('k', false).join(' ');
   A(/ServerAliveInterval=5/.test(so) && /ServerAliveCountMax=2/.test(so), 'ssh: keepalive - a stopped router ends its ssh in about 10 s');
   asyncTests = asyncTests.then(function () {   // nx_cml_stopped: stop on an ssh that has ended, twice -> nothing thrown, no 'error' event that ends the program
@@ -1087,6 +1163,22 @@ function selfTest() {
 if (require.main === module && argv.indexOf('--self-test') >= 0) selfTest();
 else if (require.main === module) {
   var host = process.env.CML_HOST, user = process.env.CML_USER, pass = process.env.CML_PASSWORD;
+  if (opt.saveCert) {   /* nx_cml_pin: what this PC sees (a security product that looks into HTTPS shows its own - that is the one to keep) */
+    if (!host) { console.error('!! set CML_HOST'); process.exit(2); }
+    var sa = pinnedAgent(null, [], host, function (c) {
+      var pem = '-----BEGIN CERTIFICATE-----\n' + c.raw.toString('base64').match(/.{1,64}/g).join('\n') + '\n-----END CERTIFICATE-----\n';
+      try { fs.writeFileSync(opt.saveCert, pem); } catch (e) { console.error('!! --save-cert: ' + e.message); process.exit(2); }
+      var who = function (o) { return o ? [o.CN, o.O].filter(Boolean).join(', ') : '?'; };
+      console.log('saved the certificate CML (' + host + ') shows to this PC: ' + opt.saveCert);
+      console.log('  SHA-256 ' + c.fingerprint256 + '\n  for     ' + who(c.subject) + '\n  by      ' + who(c.issuer));
+      console.log('Use it: CML_CA_FILE=' + opt.saveCert + ' (no --insecure). If "by" is not CML (Cisco) or a security product you run, do not use it.');
+      process.exit(0);
+    });
+    var sq = https.request({ host: host, port: 443, path: '/', method: 'GET', agent: sa }, function () {});
+    sq.on('error', function (e) { if (e.message !== 'saved') { console.error('!! ' + host + ': ' + e.message); process.exit(1); } });
+    sq.end();
+  }
+  else {
   if (!host || !user || !pass) { console.error('!! set CML_HOST, CML_USER and CML_PASSWORD in the environment (the password is never taken from the command line)'); process.exit(2); }
   if (!opt.lab && !opt.labId) { console.error('!! --lab "<the CML lab title>" is required'); usage(2); }
   var ca = null;
@@ -1147,7 +1239,8 @@ else if (require.main === module) {
     var jid = !opt.console && !opt.jump && view.mgmt && view.mgmt.jumpId;   /* nx_cml_jumpkey: the key first, then the first read (the jump host's address comes after its restart) */
     (jid ? fillJumpKey(api, lab, jid, process.env.NX_JUMP_KEY || '', { onStep: function (s, m) { col.setJumpNote(s, m); } }) : Promise.resolve()).then(function () { col.loop(); });
   }).catch(function (e) { console.error('!! ' + e.message); process.exit(1); });
+  }   // nx_cml_pin: not --save-cert
 }
 
 module.exports = { KIND: KIND, IOS_DEFS: IOS_DEFS, toClabData: toClabData, renderPage: renderPage,
-  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress, loadProblem: loadProblem, fillJumpKey: fillJumpKey };   /* nx_cml_ssh */   /* nx_cml_problem */
+  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress, loadProblem: loadProblem, fillJumpKey: fillJumpKey, hostAllowed: hostAllowed, staticAllowed: staticAllowed };   /* nx_cml_ssh */   /* nx_cml_problem */

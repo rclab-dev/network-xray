@@ -246,7 +246,9 @@ Already have a lab in **Cisco Modeling Labs** (CML2, including the free CML-Free
 git clone https://github.com/rclab-dev/network-xray.git && cd network-xray
 export CML_HOST=<your CML address> CML_USER=<your CML user> CML_PASSWORD=<its password>
 export NX_IOS_USER=admin NX_IOS_PASSWORD=<the routers' password>          # default admin / admin
-node cml-xray.js --lab "<the lab's title in CML>" --insecure     # CML ships a self-signed certificate (see below)
+node cml-xray.js --save-cert cml.pem          # once: saves the certificate CML shows and prints its fingerprint
+export CML_CA_FILE=cml.pem                    # from now on only that certificate is accepted
+node cml-xray.js --lab "<the lab's title in CML>"
 ```
 Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in as the routers finish booting.
 
@@ -258,9 +260,12 @@ Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in a
 - **Read only:** it sends `show` commands and API GETs. It never configures a router. It changes the lab only to put your public key into nx-jump
   (above, while it still says `<your public key>`).
 - **Passwords** are taken from the environment only (never from the command line) and handed to ssh through a short-lived askpass helper.
-- **Certificates:** by default the CML certificate is checked. Point `CML_CA_FILE` at CML's certificate, or pass `--insecure` to skip the check
-  (fine on your own PC's network; not over the internet).
-- Port / address: `--port 8710`, `--listen 127.0.0.1` (this PC only; `0.0.0.0` to open it from another machine).
+- **Certificates:** CML's certificate is issued by CML itself for the name `cml-controller`, so a normal check fails. `--save-cert <file>` saves the
+  certificate CML shows (nothing else is sent; compare the fingerprint with CML if you can), and `CML_CA_FILE=<file>` then accepts that one
+  certificate only (a real CA in `CML_CA_FILE` is checked as usual). `--insecure` skips the check (only on a network you trust). Some security
+  software looks into HTTPS and shows its own certificate: cml-xray then says who issued what it sees; use `--insecure` there, or let it pass CML.
+- Port / address: `--port 8710`, `--listen 127.0.0.1` (this PC only; `0.0.0.0` to open it from another machine — by its IP address: the page
+  answers to `localhost` and IP addresses only, and serves only its own files).
 
 ### Add a management network to a CML lab
 
@@ -319,7 +324,9 @@ a lab with 4 routers and the jump host fits; with more, leave a host out or use 
   its configuration (or `--mgmt r1=<address>,r2=<address>`). The jump host: `NX_JUMP_USER` (default `nx`, the user the script above makes) and your key —
   `NX_JUMP_KEY=<private key file>`, or your ssh agent / `~/.ssh` keys (on Windows the key file must be readable by you only, or ssh will not use it: `icacls <file> /inheritance:r /grant:r "%USERNAME%:F"`). cml-xray never sends the jump host a password.
 - **Security:** the jump host is the only thing on your LAN, and it takes a key only; the routers are reached only through it (not from your LAN).
-  Stop the lab when you are done. The routers' SSH keys are not remembered (they change every time the lab is wiped).
+  Stop the lab when you are done. The SSH host keys of the jump host and the routers are **not checked** (they change every time the lab is
+  wiped): someone on your LAN who poses as the jump host could see the routers' login. Use it on a LAN you trust, and give the lab's routers a
+  password used nowhere else.
 - **No management network?** The routers are drawn, greyed, with a note; their state is not read. Or read them over the console with **`--console`**:
   the tool then types its `show` commands on the CML consoles (you see them there; it waits while you type and has a Pause button). Off by default.
 - **Node positions come from your CML lab.** On the graph you can't drag a node (click it for DeepDive, zoom and move the whole view as usual), and the Horizontal / Vertical buttons are not shown.
@@ -1010,7 +1017,9 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 git clone https://github.com/rclab-dev/network-xray.git && cd network-xray
 export CML_HOST=<CML のアドレス> CML_USER=<CML のユーザ> CML_PASSWORD=<そのパスワード>
 export NX_IOS_USER=admin NX_IOS_PASSWORD=<ルータのパスワード>          # 既定は admin / admin
-node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML の証明書は自己署名 (下を参照)
+node cml-xray.js --save-cert cml.pem          # 1 回だけ: CML が見せる証明書を保存し、指紋を出す
+export CML_CA_FILE=cml.pem                    # 以後はその証明書だけを受け入れる
+node cml-xray.js --lab "<CML でのラボのタイトル>"
 ```
 **http://127.0.0.1:8710/** を開きます。先に CML でラボを start してください。ルータが起動し終わると図が埋まっていきます。
 
@@ -1022,9 +1031,13 @@ node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML 
 - **読むだけ:** 送るのは `show` と API の GET だけ。ルータの設定は変えません。ラボを変えるのは、nx-jump にあなたの公開鍵を入れる時だけです
   (下の `<あなたの公開鍵>` のままの時だけ)。
 - **パスワード**は環境変数からだけ読み (コマンドの引数には出しません)、ssh へは一時的な askpass で渡します。
-- **証明書:** 既定では CML の証明書を確かめます。`CML_CA_FILE` に CML の証明書を指すか、`--insecure` で確かめを外します
-  (自分の家の網の中なら可・インターネット越しには使わない)。
-- ポート / アドレス: `--port 8710`・`--listen 127.0.0.1` (この PC だけ。ほかの機械から開くなら `0.0.0.0`)。
+- **証明書:** CML の証明書は CML 自身が `cml-controller` という名前で出した物なので、ふつうの確かめは通りません。`--save-cert <ファイル>` で
+  CML が見せる証明書を保存し (ほかには何も送りません・できれば指紋を CML の物と見比べる)、`CML_CA_FILE=<ファイル>` にするとその 1 枚だけを
+  受け入れます (本物の CA を `CML_CA_FILE` に入れた時はふつうに確かめます)。`--insecure` は確かめを外します (信頼できる網の中だけで)。
+  HTTPS の中を見るセキュリティの道具が入っていると、その道具の証明書が見えます: cml-xray は見えた証明書の発行者を出すので、その時は
+  `--insecure` にするか、道具に CML を通してもらってください。
+- ポート / アドレス: `--port 8710`・`--listen 127.0.0.1` (この PC だけ。ほかの機械から開くなら `0.0.0.0` にして IP アドレスで開く: 頁は
+  `localhost` と IP アドレスにだけ答え、頁のファイルしか返しません)。
 
 ### CML のラボに管理の網を足す
 
@@ -1083,7 +1096,8 @@ node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML 
   (または `--mgmt r1=<アドレス>,r2=<アドレス>`)。踏み台: `NX_JUMP_USER` (既定は `nx` = 上の手順で作るユーザ) とあなたの鍵 —
   `NX_JUMP_KEY=<秘密鍵のファイル>`、または ssh agent / `~/.ssh` の鍵 (Windows では鍵のファイルを自分だけが読める様に。でないと ssh が使いません: `icacls <ファイル> /inheritance:r /grant:r "%USERNAME%:F"`)。cml-xray は踏み台にパスワードを送りません。
 - **安全:** 家の LAN に出るのは踏み台だけで、鍵でしか入れません。ルータへは踏み台を通ってだけ届きます (家の LAN から直には届きません)。
-  使い終わったらラボを止めてください。ルータの SSH の鍵は覚えません (ラボを wipe するたびに変わるため)。
+  使い終わったらラボを止めてください。踏み台とルータの SSH の鍵は**確かめません** (ラボを wipe するたびに変わるため): 同じ LAN の誰かが
+  踏み台になりすますと、ルータへのログインを見られえます。信頼できる LAN で使い、ラボのルータには他で使っていないパスワードを。
 - **管理の網が無い時:** ルータは灰色で注記付きで描き、状態は読みません。コンソールで読む **`--console`** もあります:
   その時は道具が CML のコンソールに `show` を打ちます (その画面に流れます・打っている間は待ち・一時停止のボタンあり)。既定ではしません。
 - **ノードの位置は CML のラボの通り:** 図ではノードを引っ張って動かせません (押して DeepDive・拡大縮小・全体をずらす はいつもどおり)。Horizontal / Vertical のボタンも出しません。
