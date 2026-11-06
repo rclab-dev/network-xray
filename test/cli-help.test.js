@@ -16,7 +16,8 @@ var NODE_ENTRIES = [
   'clab-xray-collect.js', 'frr-collect.js', 'netlab-validate.js', 'topojson-to-xray.js',
   'scripts/capture-frames.js', 'scripts/check-copies.js', 'scripts/check-examples.js', 'scripts/check-i18n.js', 'scripts/gen_compose_bundle.js',
   'scripts/hello-kf-selftest.js', 'scripts/nbr-own-list-selftest.js', 'scripts/ospf-state-word-selftest.js',
-  'scripts/scale-bench.js', 'scripts/validate-states.js', 'scripts/xray-mcp.js', 'scripts/xray-query.js'
+  'scripts/scale-bench.js', 'scripts/validate-states.js', 'scripts/xray-mcp.js', 'scripts/xray-query.js',
+  'demo/build-replay.js', 'demo/build-replay-bgp.js'
 ];
 var SHELL_ENTRIES = ['xray.sh', 'demo.sh', 'docker/entrypoint.sh'];
 

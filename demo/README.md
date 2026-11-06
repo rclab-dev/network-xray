@@ -46,11 +46,35 @@ unchanged.
 |---|---|
 | `index.html` | the standalone replay page (real frames + topology baked in) |
 | `index-bgp.html` | the same kind of replay for a BGP lab (`frame*-bgp.json`, `topo-bgp.json`) |
-| `index-bgp-lp.html` | a replay of a BGP LocalPref lab (r2 LocPref 50 → 200 against r3 at 100); its recorded frames are inside the page |
+| `index-bgp-lp.html` | a replay of a BGP LocalPref lab (r2 LocPref 50 → 200 against r3 at 100), generated from `bgp-lp/` by `build-replay-bgp.js` |
+| `bgp-lp/` | the sources of `index-bgp-lp.html`: `page.html.tmpl` (the page template), `topo.json`, the captured `frame{A..D}.json` and `replay.json` (each frame's label, caption and dwell time, plus the next-step link) |
 | `frame{A..D}.json` / `topo.json` | the captured frames and topology `index.html` replays |
 | `replay-bar.js` | the RECORDED REPLAY bar shared by the replay pages: autoplay, ◀ / pause / ▶ buttons, clickable frame dots, ← / → / Space keys, and the next-step link shown after the last frame |
-| `build-replay.js` | regenerates `index.html` (OSPF only) from the OSS template + captured `frame*.json` + `topo.json`. It reads the template from this folder, so copy it in first: `cp ../xray-graph.html . && node build-replay.js` |
+| `build-replay.js` | regenerates `index.html` (OSPF) from the OSS template + captured `frame*.json` + `topo.json`. It reads the template from this folder, so copy it in first: `cp ../xray-graph.html . && node build-replay.js` |
+| `build-replay-bgp.js` | regenerates `index-bgp-lp.html` from `bgp-lp/` — see [Rebuilding the BGP LocalPref page](#rebuilding-the-bgp-localpref-page) |
+| `replay-shell.js` | the replay bar markup both builders put into a page |
 | `compose-ospf/` / `compose-bgp-lp/` | live labs with plain `docker compose` (no containerlab) — see the README in each |
+
+## Rebuilding the BGP LocalPref page
+
+`index-bgp-lp.html` is generated; edit its sources in `bgp-lp/`, not the page. From the repo root:
+
+```sh
+node demo/build-replay-bgp.js                 # reads demo/bgp-lp/replay.json, writes demo/index-bgp-lp.html
+node --test test/demo-replay-bgp-build.test.js
+```
+
+- **New capture:** replace `bgp-lp/frame{A..D}.json` (one collector state per file, keyed by router) and,
+  if the lab changed, `bgp-lp/topo.json`.
+- **Captions, labels, timing, link:** edit `bgp-lp/replay.json`. Each entry in `frames` names its frame
+  file, the bar `label`, the `caption` shown under the bar, and its `dwell` time in ms; `cta` is the link
+  shown after the last frame. Add or remove entries to change the number of frames.
+- **Page text and layout:** edit `bgp-lp/page.html.tmpl`. `{{ .Name }}` and `{{ .Data }}` are filled in
+  with `name` and the topology, like in `xray-graph.html`. The replay bar goes in right before `</body>`.
+
+The test rebuilds the page in memory and fails if the committed page, or the frames in it, differ from
+what the sources build — so commit the rebuilt page together with its sources. A second config can be
+passed as an argument (`node demo/build-replay-bgp.js path/to/replay.json`); its paths are relative to it.
 
 The rendering engine (`xray-core.js` / `xray-api.js` / `clab-xray-bridge.js`) is **not duplicated here** —
 this page loads it from the gallery one level up (`../`), so the demo always runs the published engine. License: MIT (see the

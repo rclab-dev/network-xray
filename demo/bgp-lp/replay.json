@@ -1,0 +1,37 @@
+{
+  "name": "xray-bgp-lp",
+  "template": "page.html.tmpl",
+  "topology": "topo.json",
+  "output": "../index-bgp-lp.html",
+  "focus": "r1",
+  "frames": [
+    {
+      "file": "frameA.json",
+      "label": "fault — fast ISP r2 knocked to LP 50, so slow r3 (LP 100) wins",
+      "caption": "8.8.8.0/24 heard from both ISPs — r2 (fast) was set to LP 50, so the slow ISP r3 (LP 100) wins. Why the slow one?",
+      "dwell": 3400
+    },
+    {
+      "file": "frameB.json",
+      "label": "fix — set LocPref 200 on r2: the fast ISP now wins (200 > 100)",
+      "caption": "Raise LocPref to 200 on r2 — the fast ISP is best again (200 > 100)",
+      "dwell": 3200
+    },
+    {
+      "file": "frameC.json",
+      "label": "eth1 (r1–r2) down — only r3 remains",
+      "caption": "r1–r2 link down — 8.8.8.0/24 now has only one path, via r3",
+      "dwell": 2600
+    },
+    {
+      "file": "frameD.json",
+      "label": "restored — LP 200 decides again: r2 (fast) wins",
+      "caption": "Restored — LP 200 > 100 decides again: fast ISP r2 wins",
+      "dwell": 3000
+    }
+  ],
+  "cta": {
+    "href": "https://routecrushlab.com/lab/tl/q21?try=guest&lang=en&ref=network-xray&utm_source=network-xray&utm_medium=oss_embed&utm_campaign=funnel_back&utm_content=demo_q21",
+    "text": "Next: try it hands-on — Q21 on RouteCrushLab →"
+  }
+}
