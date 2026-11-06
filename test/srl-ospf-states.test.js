@@ -24,7 +24,9 @@ var ORDER = JSON.parse(/var _ord = (\[[^\]]*\]);/.exec(CORE)[1]);
 var engine = (function () {
   var m = /function _xrayOspfNbrWord[\s\S]*?\nfunction _xrayOspfNbrColor\(st, role\) \{[\s\S]*?\n\}\n/.exec(CORE);
   assert.ok(m, 'xray-core.js: neighbor word / color helpers found');
-  var ctx = {}; vm.runInNewContext(m[0] + '\nthis.word = _xrayOspfNbrWord; this.ok = _xrayOspfNbrOk; this.color = _xrayOspfNbrColor;', ctx);
+  var b = /function _xrayOspfStateWord\(st\) \{[\s\S]*?\n\}\n\nfunction _xrayOspfBucket\(fsm\) \{[\s\S]*?\n\}\n/.exec(CORE);
+  assert.ok(b, 'xray-core.js: the state bucket (tunnel line) helpers found');
+  var ctx = {}; vm.runInNewContext(m[0] + b[0] + '\nthis.word = _xrayOspfNbrWord; this.ok = _xrayOspfNbrOk; this.color = _xrayOspfNbrColor; this.bucket = _xrayOspfBucket;', ctx);
   return ctx;
 })();
 var GREEN = '#39ff14', RED = '#ff4444', ORANGE = '#ff8c00';
@@ -82,9 +84,9 @@ var CASES = [
   ['full', 'Full', true, GREEN],
   ['two-way', '2-Way', false, ORANGE],
   ['init', 'Init', false, ORANGE],
-  ['exstart', 'ExStart', false, ORANGE],
-  ['exchange', 'Exchange', false, ORANGE],
-  ['loading', 'Loading', false, ORANGE],
+  ['exstart', 'ExStart', false, GREEN],
+  ['exchange', 'Exchange', false, GREEN],
+  ['loading', 'Loading', false, GREEN],
   ['down', 'Down', false, RED]
 ];
 CASES.forEach(function (c) {
@@ -217,8 +219,10 @@ test('empty output: no area / empty object / null -> no OSPF, None, Down row', f
   });
 });
 
-test('engine: 2-Way between DROthers is a normal state and is green only with that role', function () {
+test('engine: 2-Way between DROthers is a normal state (no "(n/m Full)" tail), but its word stays orange like its line', function () {
   var st = one('two-way');
   assert.strictEqual(engine.ok(st.r2_neighbor_state, 'DROther'), true);
   assert.strictEqual(engine.ok(st.r2_neighbor_state, ''), false);
+  assert.strictEqual(engine.color(st.r2_neighbor_state, 'DROther'), ORANGE);
+  assert.strictEqual(engine.color(st.r2_neighbor_state, ''), ORANGE);
 });

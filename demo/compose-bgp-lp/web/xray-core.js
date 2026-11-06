@@ -361,7 +361,8 @@ function xrayEvaluateState(s) {
     state.helloIn = !!s.peer_sending_hello;
     state.helloOut = !!s.ospf_active_on_interface;
     var nsLower = ns.toLowerCase();
-    if (!state.helloOut) {
+    /* nx_ospf_single_line_states: a neighbor in Init or later = OSPF runs here even without the collector's flag */
+    if (!state.helloOut && _xrayOspfBucket(ns) === "none" && !_xrayOspfFull(s)) {
       state.ospfPhase = "inactive";
     } else if (_xrayOspfFull(s)) {  /* nx_ospf_full_helper */
       state.ospfPhase = "full";
@@ -372,7 +373,10 @@ function xrayEvaluateState(s) {
     }
     var _otb = _xrayOspfBucket(ns);
     if (_otb === "none" && _xrayOspfFull(s)) _otb = "full";  /* nx_ospf_full_helper: tunnel bucket from real OSPF full */
-    state.ospfTunBucket = state.helloOut ? _otb : "none";
+    /* nx_ospf_single_line_states (2026-11-06): a neighbor in Init or later means OSPF runs on that interface, even when the
+       collector's ospf_active_on_interface is false (clab-xray-bridge / clab-srl-collect set it only with a Full neighbor) ->
+       the single-link line shows Init / 2-Way / ExStart like the two-link tunnels instead of a bare line. */
+    state.ospfTunBucket = (state.helloOut || _otb !== "none") ? _otb : "none";
     state.lsdbSyncing = nsLower === "exchange" || nsLower === "loading";
     state.ospfFull = state.helloIn && state.helloOut && _xrayOspfFull(s);  /* nx_ospf_full_helper */
     var _hp = _xrayOssHelloPair(s);   /* nx_hello_iface_first */
@@ -670,13 +674,14 @@ function xrayApplyHierarchy(state) {
         protoInner.style.boxShadow = "0 0 10px var(--xto-ospf,#39ff14)";
         protoInner.style.animation = "";
         protoLbl.style.color = "var(--xto-ospf,#39ff14)";
-      } else if (state.helloOut) {
-        protoCore.style.borderColor = "var(--xto-idle,#ff8c00)";
-        protoCore.style.boxShadow = "0 0 15px rgba(var(--xto-idle-rgb,255,140,0),0.4)";
-        protoInner.style.background = "var(--xto-idle,#ff8c00)";
-        protoInner.style.boxShadow = "0 0 8px var(--xto-idle,#ff8c00)";
-        protoInner.style.animation = "xrayEnergyPulse 1s ease-in-out infinite alternate";
-        protoLbl.style.color = "var(--xto-idle,#ff8c00)";
+      } else if (_xrayOspfCoreLook(state)) {   /* nx_ospf_core_state: process circle = line color; Init / 2-Way orange, ExStart..Loading green, pulsing */
+        var _bl = _xrayOspfCoreLook(state);
+        protoCore.style.borderColor = "var(" + _bl.v + "," + _bl.color + ")";
+        protoCore.style.boxShadow = "0 0 15px rgba(var(" + _bl.v + "-rgb," + _bl.rgb + "),0.4)";
+        protoInner.style.background = "var(" + _bl.v + "," + _bl.color + ")";
+        protoInner.style.boxShadow = "0 0 8px var(" + _bl.v + "," + _bl.color + ")";
+        protoInner.style.animation = _bl.pulse ? "xrayEnergyPulse 1s ease-in-out infinite alternate" : "";
+        protoLbl.style.color = "var(" + _bl.v + "," + _bl.color + ")";
       } else {
         protoCore.style.borderColor = "var(--xto-down,#555)";
         protoCore.style.boxShadow = "none";
@@ -2783,11 +2788,27 @@ function _xrayOspfHeadWord(s, legacyAssume) { var k = _xrayOspfHeadKind(s, legac
 function _xrayOspfHeadColor(w) { return w === "Running" ? "#39ff14" : "#ff8c00"; }
 function _xrayOspfNbrWord(st) { return !st ? "?" : (st === "None" ? "Down" : st); }
 /* 2-Way is the normal resting state between two DROthers. The collector's role is the PEER's role; if we were DR/BDR we would be
-   Full with everyone, so a DROther peer stuck at 2-Way means we are DROther too = normal (green). point-to-point has no DROther -> orange. */
+   Full with everyone, so a DROther peer stuck at 2-Way means we are DROther too = normal (no "(n/m Full)" tail on the summary line).
+   point-to-point has no DROther. The word's color does not depend on this: see _XRAY_OSPF_BUCKET_COLOR. */
 function _xrayOspfNbrOk(st, role) { return st === "Full" || (st === "2-Way" && /^DROther$/i.test(role || "")); }
+/* nx_ospf_word_color_is_line_color (2026-11-06): one color table for an OSPF neighbor state, keyed by _xrayOspfBucket = the same
+   bucket that picks the DeepDive tunnel line (.de-side-ospf-<bucket>). The word takes the color of its line: Init / 2-Way orange,
+   ExStart / Exchange / Loading / Full green; Down / None red. 2-Way between DROthers is orange too (its line is orange). */
+var _XRAY_OSPF_BUCKET_COLOR = { full: "#39ff14", exchange: "#39ff14", "2way": "#ff8c00", init: "#ff8c00" };
+/* nx_ospf_core_state (2026-11-06): the OSPF process circle (double ring in the cylinder) uses the same table as the line. Full = steady green; Init / 2-Way orange and
+   ExStart / Exchange / Loading green, pulsing (still forming); no neighbor (Down / None) = grey (null), also while Hello is sent.
+   The bucket is the router's main neighbor (state.ospfTunBucket), as for the single-link line; a two-link router is green when
+   any neighbor is Full (state.ospfFull), its two tunnels show each link. */
+function _xrayOspfCoreLook(state) {
+  var b = state && state.ospfFull ? "full" : (state && state.ospfTunBucket) || "none";
+  var c = _XRAY_OSPF_BUCKET_COLOR[b];
+  if (!c) return null;
+  var g = c === "#39ff14";
+  return { bucket: b, color: c, v: g ? "--xto-ospf" : "--xto-idle", rgb: g ? "57,255,20" : "255,140,0", pulse: b !== "full" };
+}
 function _xrayOspfNbrColor(st, role) {
-  if (_xrayOspfNbrOk(st, role)) return "#39ff14";
-  return (st === "Down" || st === "None" || st === "?") ? "#ff4444" : "#ff8c00";
+  if (st === "Down" || st === "None" || st === "?") return "#ff4444";
+  return _XRAY_OSPF_BUCKET_COLOR[_xrayOspfBucket(st)] || "#ff8c00";
 }
 /* nx_if_tag (2026-10-19, network-xray): the OSPF area / VRF of an interface and the OSPFv3 / VRF of a neighbor, shown only when the
    collector gives them (clab-collect.js nx_ospf_area / nx_vrf_all / nx_ospf6). States without these fields show nothing new. */
@@ -2848,7 +2869,7 @@ function _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume) {
   });
   var _txt;
   if (L.length === 1) _txt = _xrayOspfNbrSpan(_worst, _worstRole);
-  else if (_ok === L.length) _txt = '<span style="color:#39ff14">' + _escapeHtml(_worst) + "</span>";
+  else if (_ok === L.length) _txt = _xrayOspfNbrSpan(_worst, _worstRole);   /* nx_ospf_word_color_is_line_color */
   else _txt = _xrayOspfNbrSpan(_worst, _worstRole) + ' <span style="color:#aef5b0">(' + _full + "/" + L.length + " Full)</span>";
   lines.push({ text: "> Neighbor: " + _txt });
 }
