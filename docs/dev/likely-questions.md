@@ -130,7 +130,7 @@ Anyone who can reach the port. There is no authentication of any kind.
 - `test/collector-polling.test.js` checks that one slow router doesn't hold back the others.
 
 **Parsing:**
-- `scripts/scale-bench.js` times parse+merge on synthetic FRR ring+chord labs: roughly 4 ms for 10 routers, 120-190 ms for 50-100, and about 0.8 s for 200 (13.5 MB of state). This is one sample run on Node 22; times depend on the machine.
+- `scripts/scale-bench.js` times parse+merge on synthetic FRR ring+chord labs: about 6 ms for 10 routers, 75 ms for 50, 240 ms for 100 and 1 s for 200 (13.5 MB of state). This is one run on Node 24 on one core of an older desktop PC (the same run as the README); times depend on the machine.
 - That figure excludes `docker exec` cost and browser rendering. At 1 s polling, a few hundred routers means a few hundred `docker exec` calls per second, so raise `--interval` for big labs.
 - `test/scale-bench.test.js` checks correctness only (10 routers), not timing.
 - No real lab larger than the example labs has been reported.
