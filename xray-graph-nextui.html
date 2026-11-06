@@ -394,16 +394,10 @@ window.__xrayGraphBoot = function () {
         device: _uja ? 'この機器は network-xray では中を読みません (読むのは FRR・SR Linux・Cisco IOS-XE)。図にだけ出しています。' : 'network-xray does not read inside this device (it reads FRR, SR Linux and Cisco IOS-XE). It is drawn in the topology only.',
         stopped: _uja ? 'コンテナが止まっています。中は読めません。' : 'The container is not running: nothing to read.',
         timeout: _uja ? '応答がありません。' : 'No answer.',
-        error: _uja ? '読めませんでした (network-xray のログを見てください)。' : 'Could not be read (see the network-xray log).',
-        busy: (_ust.nx_busy === 'config mode'
-          ? (_uja ? '誰かがコンソールで設定中です (config モード)。終わるまで読むのを待っています (cml-xray は何も送りません)。' : 'Someone is configuring this router on its console (config mode). Reading waits until they finish (cml-xray sends nothing).')
-          : (_uja ? '誰かがこのルータのコンソールを使っています。静かになってから読みます (cml-xray は何も送りません)。' : 'Someone is using this router\'s console. It is read again once the console has been quiet (cml-xray sends nothing).')),   /* nx_cml_share */   /* nx_cml_share2 */
-        paused: _uja ? '読むのを一時停止しています (cml-xray)。' : 'Reading is paused (cml-xray).',
-        nomgmt: _uja ? 'このルータには管理の網 (SSH で届く口) が無いので、状態は読みません。図にだけ出しています。足し方は README の「CML のラボに管理の網を足す」を見てください (コンソールで読む --console もあります)。' : 'This router has no management network (no way to reach it over SSH), so its state is not read. It is drawn in the topology only. See "Add a management network to a CML lab" in the README (or read over the console with --console).'   /* nx_cml_ssh */
+        error: _uja ? '読めませんでした (network-xray のログを見てください)。' : 'Could not be read (see the network-xray log).'
       })[_ust.nx_unread] || '';
-      _ustale = (_ust.nx_unread === 'timeout' || _ust.nx_unread === 'busy' || _ust.nx_unread === 'paused') && _ust.success !== false;   /* nx_cml_share: busy / paused show the last good state */
-      var _uat = (function (t) { try { var d = new Date(t); return isNaN(d) ? (t || '?') : d.toLocaleTimeString(); } catch (e) { return t || '?'; } })(_ust.nx_stale_since);   /* nx_cml_share2: the local time */
-      if (_ustale) _umsg += _uja ? ' 下は最後に読めた時 (' + _uat + ') の情報です。' : ' Below is its last good state (' + _uat + '), which may be out of date.';
+      _ustale = _ust.nx_unread === 'timeout' && _ust.success !== false;
+      if (_ustale) _umsg += _uja ? ' 下は最後に読めた時 (' + (_ust.nx_stale_since || '?') + ') の古い情報です。' : ' Below is its last good state (' + (_ust.nx_stale_since || '?') + '), which may be out of date.';
       _unote = document.createElement('div'); _unote.className = 'nx-unread'; _unote.textContent = nodeId + ': ' + _umsg;
       if (!_ustale) { box.appendChild(_unote); var _ude = document.querySelector('.xray-deep-engine'); if (_ude) _ude.style.display = 'none'; return; }
     }
@@ -541,18 +535,14 @@ window.__initNeXtOverview = function (data) {
     } catch (e) {}
   };
   /* nx_unread: nodes whose state is marked nx_unread are drawn grey; when they can be read again they get their colour back */
-  /* nx_unread_colour (2026-11-02): the grey stays as an inline fill on the icon when the node had no colour of its own - remove it */
-  function __nxClearGrey(name) { try { document.querySelectorAll('#clab-topology g.node').forEach(function (g) { var lb = g.querySelector('text.node-label'); if (!lb || (lb.textContent || '').trim() !== name) return;   /* the icon font glyph is in g's text too */
-    g.querySelectorAll('*').forEach(function (e) { if (e.style && /144, *164, *174|90a4ae/i.test(e.style.fill || '')) e.style.fill = ''; var fa = e.getAttribute && e.getAttribute('fill'); if (fa && /144, *164, *174|90a4ae/i.test(fa)) e.removeAttribute('fill'); }); }); } catch (e) {} }
   window.__nxUnreadMarks = function () {
     try {
       var S = window.LIVE_STATES || {}, back = false;
       topo.eachNode(function (n) {
         var nm = nameOf(n); if (!nm || typeof n.color !== 'function') return;
-        var un = !!(S[nm] && S[nm].nx_unread && !(S[nm].nx_unread === 'paused' && window.XRAY_CML && window.XRAY_CML.keepColour));   /* nx_cml_pause: cml-xray can keep a paused node's colour */
+        var un = !!(S[nm] && S[nm].nx_unread);
         if (un && !n.__nxuGrey) { n.__nxuOrig = n.color(); n.__nxuGrey = true; n.color('#90a4ae'); }
         else if (!un && n.__nxuGrey) { n.__nxuGrey = false; n.color(n.__nxuOrig); back = true; }
-        if (!un) { __nxClearGrey(nm); setTimeout(function () { __nxClearGrey(nm); }, 300); }   /* nx_unread_colour: a readable node never keeps this grey (NeXt re-applies the fill just after color() - clear again a moment later) */
       });
       if (back && window.XRAY_VALIDATE && !window.__nxUnreadInValidate) { window.__nxUnreadInValidate = true; try { window.__nxValidateMarks(window.XRAY_VALIDATE); } finally { window.__nxUnreadInValidate = false; } }
     } catch (e) {}
@@ -573,12 +563,6 @@ window.__initNeXtOverview = function (data) {
       /* nx_netlab_tiers (2026-10-15): a netlab lab -> rows from its groups (window.XRAY_TIERS: 0 = top = ISP / spine,
          last = bottom = customer / leaf), opened like Vertical with the top row on top; Horizontal = rows left -> right.
          Labs without XRAY_TIERS (examples/, plain containerlab) keep the rules below. */
-      /* nx_cml_xy (2026-11-02): places given by the lab itself (cml-xray.js: the CML canvas, already scaled to this box) - used only
-         when every node has one. Labs without XRAY_POS (containerlab, netlab) are unchanged. */
-      var _XP=window.XRAY_POS;
-      if(_XP && names.length && names.every(function(n){return _XP[n] && isFinite(_XP[n].x) && isFinite(_XP[n].y);})){
-        names.forEach(function(n){POS[n]=[+_XP[n].x,+_XP[n].y];}); return {names:names,POS:POS};
-      }
       var _T=window.XRAY_TIERS;
       if(_T && names.length && names.every(function(n){return _T[n]!==undefined;})){
         var _rows={}; names.forEach(function(n){(_rows[_T[n]]=_rows[_T[n]]||[]).push(n);});
@@ -649,9 +633,7 @@ window.__initNeXtOverview = function (data) {
         /* rows: top above, bottom below, middle rows to the right (links go up and down there); Horizontal: outer columns outside, middle below */
         n.labelAngle(hz ? (r===0 ? 180 : r===last ? 0 : 90) : (r===0 ? 270 : r===last ? 90 : 0)); if (typeof n.calcLabelPosition==='function') n.calcLabelPosition(true); });
     }catch(e){} };
-    /* nx_cml_follow: places that come from the lab (XRAY_POS, cml-xray.js) can change while the page is open - put the nodes there again */
-    window.__nxApplyXrayPos = function(){ _reposition(); _center(); if (window.__xrayPushLayout) try { window.__xrayPushLayout(); } catch (e) {} };
-    function _done(){ _reposition(); if (!window.XRAY_POS) _restore();   /* nx_cml_follow: CML's layout wins over an old one kept in the browser */ if (window.__nxTierLabels) window.__nxTierLabels(); nxKeyNodes();
+    function _done(){ _reposition(); _restore(); if (window.__nxTierLabels) window.__nxTierLabels(); nxKeyNodes();
       if (window.XRAY_TIERS) { activeLayout = window.__nxTierDir || 'vertical'; setCur(activeLayout==='horizontal'?'h-btn':'v-btn'); }
       setTimeout(function(){ _center();
         if(window.__xrayPushLayout) try{window.__xrayPushLayout();}catch(e){}
@@ -753,7 +735,7 @@ window.__initNeXtOverview = function (data) {
       if(on) el.style.setProperty('transition','none','important'); else el.style.removeProperty('transition');
     });
   }
-  function setDragging(on){ window.__nxDragging = !!on;   /* nx_cml_follow */
+  function setDragging(on){
     if(on){ if(_dragClrT){ clearTimeout(_dragClrT); _dragClrT=null; } freezeDeepDive(true); }
     else { if(_dragClrT) clearTimeout(_dragClrT);
       _dragClrT=setTimeout(function(){ freezeDeepDive(false); _dragClrT=null; }, 80); }
@@ -762,7 +744,7 @@ window.__initNeXtOverview = function (data) {
   var _lastLive=0;
   function onDragLive(){ var now=(window.performance&&performance.now)?performance.now():0;
     if(now && now-_lastLive<60) return; _lastLive=now; pushLayout(); freezeDeepDive(true); }
-  function onDragDone(){ pushLayout(); freezeDeepDive(true); setDragging(false); if (window.__nxSavePos) window.__nxSavePos(); if (window.__nxOnDragDone) try { window.__nxOnDragDone(); } catch (e) {} }   /* nx_cml_follow: the write-back hook */   /* nx_netlab_tiers: remember */
+  function onDragDone(){ pushLayout(); freezeDeepDive(true); setDragging(false); if (window.__nxSavePos) window.__nxSavePos(); }   /* nx_netlab_tiers: remember */
   ['dragNodeStart','dragStageStart','dragGroupStart'].forEach(function(ev){ try{ topo.on(ev, function(){ setDragging(true); }); }catch(e){} });
   ['dragNode','dragStage','dragGroup'].forEach(function(ev){ try{ topo.on(ev, onDragLive); }catch(e){} });
   ['dragNodeEnd','dragStageEnd','dragGroupEnd'].forEach(function(ev){ try{ topo.on(ev, onDragDone); }catch(e){} });

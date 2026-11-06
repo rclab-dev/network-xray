@@ -31,7 +31,6 @@
  *                          the tool waits while someone types and has a Pause button) - only when you ask for it
  *   --quiet-wait <s>       --console only: after anything you type on the console, wait this long before reading (default 60)
  *   --sync-layout          moving a node on the graph moves it in the CML lab too (writes only the node's x / y; off by default)
- *   --pause-colour keep|grey  while paused, the routers keep their colour (keep) or are drawn grey as when not read (grey, default)
  *   --problem <file>       the lab's problem.json (network-xray-lab/0): the problem band above the graph and "✓ Solved" when its
  *                          check passes (default: "<lab title>.problem.json" in the current folder, when there is one)
  * Environment: CML_HOST, CML_USER, CML_PASSWORD (never on the command line), CML_CA_FILE (optional);
@@ -64,7 +63,6 @@ for (var i = 0; require.main === module && i < argv.length; i++) {   // options 
   else if (a === '--jump') opt.jump = argv[++i];   /* nx_cml_ssh */
   else if (a === '--mgmt') opt.mgmt = argv[++i];   /* nx_cml_ssh */
   else if (a === '--problem') opt.problem = argv[++i];   /* nx_cml_problem */
-  else if (a === '--pause-colour') opt.pauseColour = argv[++i];   /* nx_cml_pause: keep | grey (default grey) */
   else if (a === '--self-test') opt.selfTest = true;
   else if (a === '-h' || a === '--help') { usage(0); }
   else { console.error('!! unknown option ' + JSON.stringify(a)); usage(2); }
@@ -761,7 +759,7 @@ Collector.prototype.write = function (states, proto, nodes) {
   if (body !== self.written) {
     self.written = body;
     var dest = path.join(path.resolve(self.cfg.out), 'xray-states.js'), tmp = dest + '.tmp';
-    fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused, keepColour: !!self.cfg.pauseKeepColour }) + ';\n' +
+    fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused }) + ';\n' +
       (_pos ? 'window.XRAY_POS = ' + JSON.stringify(_pos) + '; window.LIVE_POS = window.XRAY_POS;\n' : '') +
       (self.cfg.problem ? 'window.XRAY_PROBLEM = ' + JSON.stringify(self.cfg.problem) + ';\n' : ''));   /* nx_cml_share */   /* nx_cml_follow */   /* nx_cml_problem: focus + check, as clab-xray-collect.js */
     fs.renameSync(tmp, dest);
@@ -931,13 +929,13 @@ function selfTest() {
   A(/ルータを読んでいます \(SSH\)/.test(pgP) && pgP.indexOf('nx-cml-paused') > 0 && /⏸ 一時停止中/.test(pgP) && pgP.indexOf('Reading from the CML consoles') < 0, 'pause: SSH words, and a big "Paused" over the graph');
   (function () {   // nx_cml_pause: Pause / Resume reach the page file at once
     var od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-pz-')), v = { pos: null, adj: {} }, _l = console.log; console.log = function () {};
-    var c = new Collector(function () { return v; }, 'L', { out: od, pauseKeepColour: true });
+    var c = new Collector(function () { return v; }, 'L', { out: od });
     var rd = function () { var x = fs.readFileSync(path.join(od, 'xray-states.js'), 'utf8'); return { st: JSON.parse(/LIVE_STATES = (.*);\n/.exec(x)[1]), cml: JSON.parse(/XRAY_CML = (.*);\n/.exec(x)[1]) }; };
     try {
       c.last.r1 = { target_node: 'r1', routing_table: [] }; c.lastAt.r1 = '2026-11-06T07:00:00.000Z';
       c.write({ r1: c.last.r1, r2: { target_node: 'r2', nx_unread: 'nomgmt' } }, 'ospf', ['r1', 'r2']);
       c.setPaused(true); var a = rd();
-      A(a.cml.paused === true && a.cml.keepColour === true && a.st.r1.nx_unread === 'paused' && a.st.r1.nx_stale_since === '2026-11-06T07:00:00.000Z' && a.st.r2.nx_unread === 'nomgmt', 'pause: written at once - paused mark with the time; a not-read router stays not read');
+      A(a.cml.paused === true && a.st.r1.nx_unread === 'paused' && a.st.r1.nx_stale_since === '2026-11-06T07:00:00.000Z' && a.st.r2.nx_unread === 'nomgmt', 'pause: written at once - paused mark with the time; a not-read router stays not read');
       c.setPaused(false); var b = rd();
       A(b.cml.paused === false && !b.st.r1.nx_unread && b.st.r2.nx_unread === 'nomgmt', 'pause: resume written at once - the mark goes');
     } finally { console.log = _l; try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} }
@@ -1021,7 +1019,7 @@ else if (require.main === module) {
     setInterval(function () { refresh().catch(function (e) { console.error('!! topology: ' + e.message); }); }, POS_EVERY_S * 1000);   // nx_cml_follow: CML's layout within seconds (nodes / links added: on the next page load)
     if (opt.noState || !ios.length) return;
     if (opt.proto && !/^(ospf|bgp)$/.test(opt.proto)) { console.error('!! --proto ospf or bgp'); process.exit(2); }
-    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out, problem: prob ? prob.xp : null, pauseKeepColour: opt.pauseColour === 'keep' };
+    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out, problem: prob ? prob.xp : null };
     if (!opt.console) {   /* nx_cml_ssh: the default - SSH on the management network; the consoles are left alone */
       var s = sshPlanner(api, lab, function () { return view; }, opt);
       if (!s) process.exit(2);
