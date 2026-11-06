@@ -20,6 +20,8 @@
  *
  * `path` is anything xray-query.js accepts: a state_<node>.json, a directory of them, an xray-states.js,
  * or a directory of saved FRR `show ... json` files. Relative paths are resolved from the server's working directory.
+ * A file that does not hold network-xray state is refused with "not a network-xray state file" (the error never
+ * quotes the file).
  *
  * It only reads the given path. It never runs commands on routers, never writes files, opens no network sockets.
  *
@@ -160,26 +162,36 @@ function str(args, k, required) {
   return v;
 }
 
+// A file that does not hold network-xray state gets one fixed message that says nothing about its contents (the JSON
+// parser's own message can quote the start of the file). Paths are read as xray-query.js reads them (any name).
+var NOT_STATE = 'not a network-xray state file';
+function loadStates(p) {
+  try { return query.loadStates(p); } catch (e) {
+    if (/^(not valid JSON|no node state found)/.test((e && e.message) || '')) throw new Error(NOT_STATE);
+    throw e;
+  }
+}
+
 function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = args || {};
-  if (name === 'lab_state') return query.summarize(query.loadStates(str(args, 'path', true)));
+  if (name === 'lab_state') return query.summarize(loadStates(str(args, 'path', true)));
   if (name === 'why_best_path') {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);
-    return query.why(query.loadStates(p), node, prefix, str(args, 'vrf', false));
+    return query.why(loadStates(p), node, prefix, str(args, 'vrf', false));
   }
-  if (name === 'list_routers') return query.listRouters(query.loadStates(str(args, 'path', true)));
+  if (name === 'list_routers') return query.listRouters(loadStates(str(args, 'path', true)));
   if (name === 'ospf_neighbors' || name === 'bgp_neighbors') {
     var p2 = str(args, 'path', true), router = str(args, 'router', false);
-    return (name === 'ospf_neighbors' ? query.ospfNeighbors : query.bgpNeighbors)(query.loadStates(p2), router);
+    return (name === 'ospf_neighbors' ? query.ospfNeighbors : query.bgpNeighbors)(loadStates(p2), router);
   }
   if (name === 'route_lookup') {
     var p3 = str(args, 'path', true), r = str(args, 'router', true), dst = str(args, 'destination', true);
-    return query.routeLookup(query.loadStates(p3), r, dst, str(args, 'vrf', false));
+    return query.routeLookup(loadStates(p3), r, dst, str(args, 'vrf', false));
   }
   if (name === 'why_path') {
     var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);
-    return query.whyPath(query.loadStates(p4), rt, pfx, str(args, 'vrf', false));
+    return query.whyPath(loadStates(p4), rt, pfx, str(args, 'vrf', false));
   }
   return null;
 }

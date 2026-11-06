@@ -150,20 +150,20 @@ test('missing, empty and non-state files are clear errors', function () {
     if (t === 'why_path') { delete args.node; delete args.destination; }
     assert.match(toolError(t, args), /^not found: /, t);
   });
-  assert.match(toolError('lab_state', { path: tmpFile('empty.json', '') }), /not valid JSON/);
-  assert.match(toolError('lab_state', { path: tmpFile('ws.json', ' \n\t\n') }), /not valid JSON/);
-  assert.match(toolError('lab_state', { path: tmpFile('trunc.json', '{"target_node":"r1","interfaces":{') }), /not valid JSON/);
-  assert.match(toolError('lab_state', { path: tmpFile('obj.json', '{}') }), /no node state found/);
-  assert.match(toolError('lab_state', { path: tmpFile('arr.json', '[]') }), /no node state found/);
-  assert.match(toolError('lab_state', { path: tmpFile('null.json', 'null') }), /no node state found/);
-  assert.match(toolError('lab_state', { path: tmpFile('num.json', '42') }), /no node state found/);
-  assert.match(toolError('lab_state', { path: tmpFile('xs.js', 'window.LIVE_STATES = {};\n') }), /no node state found/);
-  assert.match(toolError('lab_state', { path: tmpFile('xs-bad.js', 'window.LIVE_STATES = {oops;\n') }), /not valid JSON/);
+  assert.match(toolError('lab_state', { path: tmpFile('empty.json', '') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('ws.json', ' \n\t\n') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('trunc.json', '{"target_node":"r1","interfaces":{') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('obj.json', '{}') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('arr.json', '[]') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('null.json', 'null') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('num.json', '42') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('xs.js', 'window.LIVE_STATES = {};\n') }), /^not a network-xray state file$/);
+  assert.match(toolError('lab_state', { path: tmpFile('xs-bad.js', 'window.LIVE_STATES = {oops;\n') }), /^not a network-xray state file$/);
   assert.match(toolError('list_routers', { path: tmpDir('empty-dir') }), /no state files/);
   // a directory with only an empty state_<node>.json
   var d = tmpDir('dir-empty-state');
   fs.writeFileSync(path.join(d, 'state_r1.json'), '');
-  assert.match(toolError('list_routers', { path: d }), /not valid JSON/);
+  assert.match(toolError('list_routers', { path: d }), /^not a network-xray state file$/);
 });
 
 test('a state from an older collector (only target_node) gives empty results, not errors', function () {
@@ -188,7 +188,7 @@ test('a state file that changes or disappears between calls is read afresh each 
   fs.writeFileSync(f, JSON.stringify({ target_node: 'r1', routing_table: [] }));
   assert.strictEqual(toolOk('route_lookup', { path: d, router: 'r1', destination: '10.1.2.3' }).route, null);
   fs.writeFileSync(f, '');   // a collector caught half-way through a write
-  assert.match(toolError('route_lookup', { path: d, router: 'r1', destination: '10.1.2.3' }), /not valid JSON/);
+  assert.match(toolError('route_lookup', { path: d, router: 'r1', destination: '10.1.2.3' }), /^not a network-xray state file$/);
   fs.unlinkSync(f);
   assert.match(toolError('route_lookup', { path: d, router: 'r1', destination: '10.1.2.3' }), /no state files/);
   fs.rmSync(d, { recursive: true });
