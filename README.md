@@ -238,6 +238,89 @@ can mix FRR, SR Linux and IOL. Example labs: `examples/q5-ospf-iol`, `examples/q
   A shut-down OSPF interface is drawn red, and the OSPF heading counts only the interfaces that are up.
 - Only `cisco_iol` has been tried on a real lab; other IOS-XE kinds (`cisco_c8000v`, `cisco_csr1000v`, `cisco_cat9kv`) are not read yet.
 
+## Cisco CML2 (CML-Free works)
+
+Already have a lab in **Cisco Modeling Labs** (CML2, including the free CML-Free)? Open it in network-xray — no containerlab, no docker:
+
+```bash
+git clone https://github.com/rclab-dev/network-xray.git && cd network-xray
+export CML_HOST=<your CML address> CML_USER=<your CML user> CML_PASSWORD=<its password>
+export NX_IOS_USER=admin NX_IOS_PASSWORD=<the routers' password>          # default admin / admin
+node cml-xray.js --lab "<the lab's title in CML>" --insecure     # CML ships a self-signed certificate (see below)
+```
+Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in as the routers finish booting.
+
+- **What it does:** reads the lab's nodes and links from the CML REST API and serves the same graph + DeepDive page as for containerlab.
+  The IOS nodes (`iol-xe`, `ioll2-xe`, `iosv`, `csr1000v`, `cat8000v`) are read over **SSH on the lab's management network** with read-only
+  `show` commands (the same reader as IOL in containerlab) every 10 s (`--interval`). Other nodes are drawn but not read.
+- **Your consoles stay yours:** nothing is typed on the CML consoles. Use them exactly as you would without network-xray. One SSH session per router
+  stays open, so the router logs the login (`%SEC_LOGIN-5-LOGIN_SUCCESS` ...) once when cml-xray starts, not every round.
+- **Read only:** it sends `show` commands and API GETs. It never configures a router or changes the lab.
+- **Passwords** are taken from the environment only (never from the command line) and handed to ssh through a short-lived askpass helper.
+- **Certificates:** by default the CML certificate is checked. Point `CML_CA_FILE` at CML's certificate, or pass `--insecure` to skip the check
+  (fine on your own PC's network; not over the internet).
+- Port / address: `--port 8710`, `--listen 127.0.0.1` (this PC only; `0.0.0.0` to open it from another machine).
+
+### Add a management network to a CML lab
+
+The routers are reached through one small **jump host** — the only thing in the lab that is on your network:
+
+```
+your PC (cml-xray) ── your LAN ── [External Connector: System Bridge] ── nx-jump (Alpine) ── [nx-mgmt: unmanaged switch]
+                                                                          r1 Ethernet0/0 (172.31.255.11) ─┤
+                                                                          r2 Ethernet0/0 (172.31.255.12) ─┤ ...
+```
+**CML-Free runs at most 5 nodes at a time.** Count the jump host as one of them (the switch and the External Connector are not counted):
+a lab with 4 routers and the jump host fits; with more, leave a host out or use a router's loopback in its place.
+1. Add an **unmanaged switch** (label `nx-mgmt`) and connect every router's **Ethernet0/0** to it (the lab's own links start at Ethernet0/1, as in containerlab).
+2. Add an **Alpine** node labelled **`nx-jump`**: one port to `nx-mgmt` (address `172.31.255.254/24`), one port to an **External Connector** set to **System Bridge**
+   (it gets an address on your LAN by DHCP). It must run sshd that takes **your public key only** (`PasswordAuthentication no`, no root password,
+   no default password left), and print `NX-JUMP ip=<its LAN address>` on its console once it has one —
+   cml-xray reads that line from the console log (nothing is typed there). Or skip that and pass `--jump <user>@<its address>`.
+   CML's Alpine comes with the user `cisco` / password `cisco` and sshd on — **as it is, it would let anyone on your LAN in with a password**.
+   Its configuration in CML (a shell script it runs as root at boot) can close that, open the jump, and print the line:
+   ```sh
+   hostname nx-jump
+   ip link set dev eth1 up; ip address add 172.31.255.254/24 dev eth1
+   udhcpc -i eth0 -q -n -t 10 || true
+   sed -i -E 's/^#?(PasswordAuthentication|KbdInteractiveAuthentication).*/\1 no/' /etc/ssh/sshd_config
+   grep -q '^PasswordAuthentication no' /etc/ssh/sshd_config || echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config
+   sed -i -E 's/^#?AllowTcpForwarding.*/AllowTcpForwarding yes/' /etc/ssh/sshd_config      # the jump needs it; Alpine has it off
+   grep -q '^AllowTcpForwarding yes' /etc/ssh/sshd_config || echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config
+   id nx >/dev/null 2>&1 || adduser -D nx      # made here: CML adds its own user (cisco) only after this script
+   for u in root nx; do echo "$u:*" | chpasswd -e; done      # no password at all ("*", so a key still works)
+   mkdir -p /home/nx/.ssh && echo '<your public key>' > /home/nx/.ssh/authorized_keys
+   chown -R nx /home/nx/.ssh && chmod 700 /home/nx/.ssh && chmod 600 /home/nx/.ssh/authorized_keys
+   rc-service sshd restart
+   echo "NX-JUMP ip=$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1)" > /dev/ttyS0      # ttyS0: the line CML keeps in the console log
+   ```
+   Don't use `192.168.255.0/24` for the management network: CML's NAT connector uses it.
+3. On each router (in its configuration in the lab), a management port in its own VRF — the management routes then stay out of the lab's routing table:
+   ```
+   vrf definition MGMT
+    address-family ipv4
+   interface Ethernet0/0
+    vrf forwarding MGMT
+    ip address 172.31.255.11 255.255.255.0
+    no shutdown
+   ip domain name lab.local
+   crypto key generate rsa modulus 3072
+   ip ssh version 2
+   username admin privilege 15 secret admin
+   line vty 0 4
+    login local
+    transport input ssh
+   ```
+   The user must have **privilege 15** (cml-xray does not type `enable` over SSH).
+- cml-xray finds the rest itself: the jump host, its switch and its External Connector are not drawn, and each router's management address is taken from
+  its configuration (or `--mgmt r1=<address>,r2=<address>`). The jump host: `NX_JUMP_USER` (default `nx`, the user the script above makes) and your key —
+  `NX_JUMP_KEY=<private key file>`, or your ssh agent / `~/.ssh` keys (on Windows the key file must be readable by you only, or ssh will not use it: `icacls <file> /inheritance:r /grant:r "%USERNAME%:F"`). cml-xray never sends the jump host a password.
+- **Security:** the jump host is the only thing on your LAN, and it takes a key only; the routers are reached only through it (not from your LAN).
+  Stop the lab when you are done. The routers' SSH keys are not remembered (they change every time the lab is wiped).
+- **No management network?** The routers are drawn, greyed, with a note; their state is not read. Or read them over the console with **`--console`**:
+  the tool then types its `show` commands on the CML consoles (you see them there; it waits while you type and has a Pause button). Off by default.
+- Tried on CML 2.10 with IOL 17.18 (`iol-xe`). The other IOS node types use the same `show` commands but have not been tried yet.
+
 ## FAQ / Troubleshooting
 
 New to network-xray? Start with the [FAQ](docs/faq.md): what it reads, what it never does, how it differs from other tools, and security.
@@ -909,6 +992,89 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
 - **取得・解析できない場合** (`--More--` で出力が途切れた・そのイメージが対応していないコマンド・出力が空・どのパーサーでも解析できない行) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
 - **FRR と違って見える所:** IOS の `show ip route` は選ばれた経路だけを出すので、経路表に「候補」の行は出ません。shutdown した OSPF の IF は赤で描き、OSPF の見出しは up の IF だけを数えます。
 - 実際のラボで試したのは `cisco_iol` だけです。ほかの IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) はまだ読みません。
+
+## Cisco CML2 (CML-Free でも)
+
+**Cisco Modeling Labs** (CML2・無料の CML-Free も) にラボがあるなら、そのまま network-xray で開けます (containerlab も docker も要りません):
+
+```bash
+git clone https://github.com/rclab-dev/network-xray.git && cd network-xray
+export CML_HOST=<CML のアドレス> CML_USER=<CML のユーザ> CML_PASSWORD=<そのパスワード>
+export NX_IOS_USER=admin NX_IOS_PASSWORD=<ルータのパスワード>          # 既定は admin / admin
+node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML の証明書は自己署名 (下を参照)
+```
+**http://127.0.0.1:8710/** を開きます。先に CML でラボを start してください。ルータが起動し終わると図が埋まっていきます。
+
+- **何をするか:** CML の REST API からラボのノードと線を読み、containerlab の時と同じ図 + DeepDive のページを配ります。
+  IOS のノード (`iol-xe`・`ioll2-xe`・`iosv`・`csr1000v`・`cat8000v`) は **ラボの管理の網を通った SSH** で、読むだけの `show` を打って読みます
+  (containerlab の IOL と同じ読み取り・既定は 10 秒ごと = `--interval`)。ほかのノードは描くだけです。
+- **コンソールはあなたの物のまま:** CML のコンソールには何も打ちません。network-xray が無い時と同じに使えます。ルータ 1 台に SSH を 1 本
+  つないだままにするので、ルータのログインのログ (`%SEC_LOGIN-5-LOGIN_SUCCESS` …) は cml-xray の起動の時に 1 回だけ出ます (毎回ではありません)。
+- **読むだけ:** 送るのは `show` と API の GET だけ。ルータの設定もラボも変えません。
+- **パスワード**は環境変数からだけ読み (コマンドの引数には出しません)、ssh へは一時的な askpass で渡します。
+- **証明書:** 既定では CML の証明書を確かめます。`CML_CA_FILE` に CML の証明書を指すか、`--insecure` で確かめを外します
+  (自分の家の網の中なら可・インターネット越しには使わない)。
+- ポート / アドレス: `--port 8710`・`--listen 127.0.0.1` (この PC だけ。ほかの機械から開くなら `0.0.0.0`)。
+
+### CML のラボに管理の網を足す
+
+ルータへは小さな **踏み台** 1 台を通って入ります。あなたの網に出るのは、ラボの中でこの踏み台だけです:
+
+```
+あなたの PC (cml-xray) ── 家の LAN ── [External Connector: System Bridge] ── nx-jump (Alpine) ── [nx-mgmt: unmanaged switch]
+                                                                          r1 Ethernet0/0 (172.31.255.11) ─┤
+                                                                          r2 Ethernet0/0 (172.31.255.12) ─┤ ...
+```
+**CML-Free で同時に動かせるのは 5 台まで**です。踏み台も 1 台に数えてください (switch と External Connector は数えません):
+ルータ 4 台 + 踏み台なら入ります。それより多い時はホストを外すか、ルータの Loopback で代えます。
+1. **unmanaged switch** (ラベル `nx-mgmt`) を置き、全部のルータの **Ethernet0/0** をつなぎます (ラボの本来の線は containerlab と同じく Ethernet0/1 から)。
+2. **Alpine** のノードをラベル **`nx-jump`** で置きます: 口の 1 つを `nx-mgmt` に (アドレス `172.31.255.254/24`)、もう 1 つを **System Bridge** にした
+   **External Connector** に (家の LAN から DHCP でアドレスを取ります)。sshd は **あなたの公開鍵だけ**で入れる様にし (`PasswordAuthentication no`・root のパスワード無し・
+   既定のパスワードを残さない)、アドレスが付いたらコンソールに `NX-JUMP ip=<LAN のアドレス>` と 1 行出します
+   (cml-xray はこの行をコンソールのログから読みます・そこには何も打ちません)。この行を出さない時は `--jump <ユーザ>@<そのアドレス>` を渡します。
+   CML の Alpine は既定でユーザ `cisco` / パスワード `cisco`・sshd が動いています — **そのままだと家の LAN の誰でもパスワードで入れます**。
+   CML でのその設定 (起動の時に root で走るシェルの手順) で閉じ、踏み台として通れる様にし、行を出します:
+   ```sh
+   hostname nx-jump
+   ip link set dev eth1 up; ip address add 172.31.255.254/24 dev eth1
+   udhcpc -i eth0 -q -n -t 10 || true
+   sed -i -E 's/^#?(PasswordAuthentication|KbdInteractiveAuthentication).*/\1 no/' /etc/ssh/sshd_config
+   grep -q '^PasswordAuthentication no' /etc/ssh/sshd_config || echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config
+   sed -i -E 's/^#?AllowTcpForwarding.*/AllowTcpForwarding yes/' /etc/ssh/sshd_config      # 踏み台に要る (Alpine は既定で off)
+   grep -q '^AllowTcpForwarding yes' /etc/ssh/sshd_config || echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config
+   id nx >/dev/null 2>&1 || adduser -D nx      # ここで作る (CML のユーザ cisco はこの手順の後に作られる)
+   for u in root nx; do echo "$u:*" | chpasswd -e; done      # パスワードを無しに ("*" = 鍵では入れる)
+   mkdir -p /home/nx/.ssh && echo '<あなたの公開鍵>' > /home/nx/.ssh/authorized_keys
+   chown -R nx /home/nx/.ssh && chmod 700 /home/nx/.ssh && chmod 600 /home/nx/.ssh/authorized_keys
+   rc-service sshd restart
+   echo "NX-JUMP ip=$(ip -4 -o addr show dev eth0 | awk '{print $4}' | cut -d/ -f1)" > /dev/ttyS0      # ttyS0 = CML がコンソールのログに残す行
+   ```
+   管理の網に `192.168.255.0/24` は使わないでください (CML の NAT の口が使います)。
+3. 各ルータ (ラボの中の設定) に、別の VRF に入れた管理の口を — 管理の経路がラボの経路表に混ざりません:
+   ```
+   vrf definition MGMT
+    address-family ipv4
+   interface Ethernet0/0
+    vrf forwarding MGMT
+    ip address 172.31.255.11 255.255.255.0
+    no shutdown
+   ip domain name lab.local
+   crypto key generate rsa modulus 3072
+   ip ssh version 2
+   username admin privilege 15 secret admin
+   line vty 0 4
+    login local
+    transport input ssh
+   ```
+   ユーザは **privilege 15** にします (cml-xray は SSH では `enable` を打ちません)。
+- 残りは cml-xray が自分で見つけます: 踏み台・その switch・その External Connector は図に描かず、各ルータの管理のアドレスはその設定から読みます
+  (または `--mgmt r1=<アドレス>,r2=<アドレス>`)。踏み台: `NX_JUMP_USER` (既定は `nx` = 上の手順で作るユーザ) とあなたの鍵 —
+  `NX_JUMP_KEY=<秘密鍵のファイル>`、または ssh agent / `~/.ssh` の鍵 (Windows では鍵のファイルを自分だけが読める様に。でないと ssh が使いません: `icacls <ファイル> /inheritance:r /grant:r "%USERNAME%:F"`)。cml-xray は踏み台にパスワードを送りません。
+- **安全:** 家の LAN に出るのは踏み台だけで、鍵でしか入れません。ルータへは踏み台を通ってだけ届きます (家の LAN から直には届きません)。
+  使い終わったらラボを止めてください。ルータの SSH の鍵は覚えません (ラボを wipe するたびに変わるため)。
+- **管理の網が無い時:** ルータは灰色で注記付きで描き、状態は読みません。コンソールで読む **`--console`** もあります:
+  その時は道具が CML のコンソールに `show` を打ちます (その画面に流れます・打っている間は待ち・一時停止のボタンあり)。既定ではしません。
+- 試したのは CML 2.10 + IOL 17.18 (`iol-xe`) です。ほかの IOS のノードの種類も同じ `show` を使いますが、まだ試していません。
 
 ## よくある質問 / 困ったとき
 
