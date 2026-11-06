@@ -30,7 +30,6 @@
  *   --console              read over the CML console instead (the old way: show commands appear on the console you use;
  *                          the tool waits while someone types and has a Pause button) - only when you ask for it
  *   --quiet-wait <s>       --console only: after anything you type on the console, wait this long before reading (default 60)
- *   --sync-layout          moving a node on the graph moves it in the CML lab too (writes only the node's x / y; off by default)
  *   --problem <file>       the lab's problem.json (network-xray-lab/0): the problem band above the graph and "✓ Solved" when its
  *                          check passes (default: "<lab title>.problem.json" in the current folder, when there is one)
  * Environment: CML_HOST, CML_USER, CML_PASSWORD (never on the command line), CML_CA_FILE (optional);
@@ -39,7 +38,7 @@
  *   cml-xray never sends it a password.
  * Read only: the tool sends `show` commands and API GETs; it never configures a router. It changes the lab in one case only: while
  *   nx-jump's configuration still says '<your public key>', that is replaced with NX_JUMP_KEY's .pub (nx-jump is restarted if it
- *   runs). With --sync-layout, also a moved node's x / y.
+ *   runs).
  */
 'use strict';
 var fs = require('fs'), path = require('path'), http = require('http'), https = require('https');
@@ -60,7 +59,6 @@ for (var i = 0; require.main === module && i < argv.length; i++) {   // options 
   else if (a === '--proto') opt.proto = argv[++i];
   else if (a === '--no-state') opt.noState = true;
   else if (a === '--quiet-wait') opt.quietWait = Math.max(0, parseInt(argv[++i], 10));   /* nx_cml_share */
-  else if (a === '--sync-layout') opt.syncLayout = true;   /* nx_cml_sync */
   else if (a === '--console') opt.console = true;   /* nx_cml_ssh: the console way only when asked for */
   else if (a === '--jump') opt.jump = argv[++i];   /* nx_cml_ssh */
   else if (a === '--mgmt') opt.mgmt = argv[++i];   /* nx_cml_ssh */
@@ -124,7 +122,7 @@ function apiClient(host, user, pass, ca, insecure) {
       return r.body;
     });
   }
-  function patch(p, body) {   /* nx_cml_sync: a node's x / y; nx_cml_jumpkey: nx-jump's configuration */
+  function patch(p, body) {   /* nx_cml_jumpkey: nx-jump's configuration (the only write) */
     var go = function () { return req('PATCH', p, body); };
     return (token ? Promise.resolve() : login()).then(go).then(function (r) { if (r.status === 401) return login().then(go); return r; })
       .then(function (r) { if (r.status < 200 || r.status >= 300) throw new Error('CML PATCH ' + p + ' -> HTTP ' + r.status); return r.body; });
@@ -246,11 +244,8 @@ function canvasPos(nodes) {
   var sc = Math.min(dx ? (W - 2 * MX) / dx : Infinity, dy ? (H - 2 * MY) / dy : Infinity);
   var ox = (W - dx * sc) / 2, oy = (H - dy * sc) / 2, pos = {};
   nodes.forEach(function (n) { pos[n.label] = { x: Math.round(ox + (n.x - x0) * sc), y: Math.round(oy + (n.y - y0) * sc) }; });
-  Object.defineProperty(pos, '_map', { value: { x0: x0, y0: y0, sc: sc, ox: ox, oy: oy }, enumerable: false });   /* nx_cml_sync: to go back to the CML canvas */
   return pos;
 }
-/* nx_cml_sync: a page place -> the CML canvas (whole numbers) */
-function toCanvas(map, x, y) { return { x: Math.round((x - map.ox) / map.sc + map.x0), y: Math.round((y - map.oy) / map.sc + map.y0) }; }
 
 // ---- the page: xray-graph-nextui.html as containerlab graph would render it, with CML wording -------------------------
 var HERE = __dirname, TEMPLATE = path.join(HERE, 'xray-graph-nextui.html');
@@ -270,8 +265,8 @@ var SAMPLE_BODY = {
 };
 /* nx_cml_lock (2026-11-06): the places come from the CML lab, so the nodes cannot be dragged on this page (click for DeepDive, zoom
    and moving the whole view stay) and the Horizontal / Vertical buttons are hidden (they re-arrange the nodes - not as in CML).
-   One line in the graph's top bar, where the buttons were, says so (EN / JA, follows the page language). --sync-layout keeps
-   dragging and the buttons (it writes the place to CML). */
+   One line in the graph's top bar, where the buttons were, says so (EN / JA, follows the page language). Nothing is written
+   back to CML (the places are CML's). */
 var POS_EVERY_S = 5;   // the CML topology (places) is read again every 5 s and written to the page at once
 var LOCK_WORDS = { en: 'Node positions come from your CML lab and can' + "'" + 't be moved here. Move a node in CML and the graph follows.',
   ja: 'ノードの位置は CML のラボの通りで、ここでは動かせません。CML で動かすと図も動きます。' };   // no seconds: it follows in 1 - 3 s in practice (11-06)
@@ -297,16 +292,9 @@ function renderPage(name, data, pos) {
     'if(now!==last&&window.XRAY_POS&&window.__nxApplyXrayPos&&!window.__nxDragging){last=now;try{window.__nxApplyXrayPos();}catch(e){}}},1000);})();</script></body>');
   html = html.replace('</body>', SAMPLE_WORDS_JS + '</body>');   /* nx_cml_ssh: the "Sample view" badge in CML words */
   if (renderPage.pauseBar) html = html.replace('</body>', pauseBar(renderPage.pauseVia) + '</body>');   /* nx_cml_share */
-  if (renderPage.syncLayout) html = html.replace('</body>', SYNC_JS + '</body>');   /* nx_cml_sync */
-  else html = html.replace('</body>', LOCK_JS + '</body>');   /* nx_cml_lock */
+  html = html.replace('</body>', LOCK_JS + '</body>');   /* nx_cml_lock */
   return html.split('{{ .Name }}').join(esc(name));
 }
-/* nx_cml_sync: the page's centring moves every node by the same amount, so (page place - XRAY_POS) is the same for every node until one is
-   dragged. That shift is learned while it is the same for all; after a drag, the nodes that are off by more than 2 are the moved ones. */
-var SYNC_JS = '<script>(function(){var shift=null;var cur=function(){var o={};try{(window.__nxTopoNames?window.__nxTopoNames():Object.keys(window.XRAY_POS||{})).forEach(function(n){var nd=window.__nxTopo&&window.__nxTopo.getNode(n);if(nd&&nd.position){var c=nd.position();o[n]=[c.x,c.y];}});}catch(e){}return o;};' +
-  'setInterval(function(){if(window.__nxDragging||!window.XRAY_POS)return;var P=window.XRAY_POS,o=cur(),d=null,same=true;Object.keys(o).forEach(function(n){if(!P[n])return;var v=[o[n][0]-P[n].x,o[n][1]-P[n].y];if(!d)d=v;else if(Math.abs(v[0]-d[0])>2||Math.abs(v[1]-d[1])>2)same=false;});if(d&&same)shift=d;},500);' +
-  'window.__nxOnDragDone=function(){if(!shift||!window.XRAY_POS)return;var P=window.XRAY_POS,o=cur();Object.keys(o).forEach(function(n){if(!P[n])return;var x=o[n][0]-shift[0],y=o[n][1]-shift[1];if(Math.abs(x-P[n].x)>2||Math.abs(y-P[n].y)>2){' +
-  'fetch("/api/pos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({node:n,x:x,y:y})}).then(function(r){return r.json();}).then(function(j){if(j.error&&window.console)console.warn("CML layout:",j.error);});}});};})();</script>';
 /* nx_cml_share: "Reading ... [Pause]" - top right; the state follows window.XRAY_CML from xray-states.js */
 /* nx_cml_pause (2026-11-06): after a click the bar keeps what was asked for until xray-states.js says the same (it used to flip
    back for a moment); while paused, the graph gets a big "Paused" in its middle (the nodes stay clickable for DeepDive).
@@ -389,12 +377,6 @@ function serve(getView) {
   var srv = http.createServer(function (q, r) {
     var u = decodeURIComponent(String(q.url || '/').split('?')[0]);
     var send = function (code, type, body) { r.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); r.end(body); };
-    if (q.method === 'POST' && u === '/api/pos' && serve.place) {   /* nx_cml_sync (local page, --sync-layout only) */
-      var b = ''; q.on('data', function (d) { b += d; if (b.length > 20000) q.destroy(); });
-      q.on('end', function () { var j; try { j = JSON.parse(b); } catch (e) { return send(400, 'text/plain', 'bad json'); }
-        serve.place(j).then(function (r) { send(200, 'application/json', JSON.stringify(r)); }, function (e) { send(502, 'application/json', JSON.stringify({ error: e.message })); }); });
-      return;
-    }
     if (q.method === 'POST' && (u === '/api/pause' || u === '/api/resume') && serve.control) {   /* nx_cml_share: the [Pause] button (local page only) */
       serve.control(u === '/api/pause'); return send(200, 'application/json', JSON.stringify({ paused: u === '/api/pause' }));
     }
@@ -885,11 +867,6 @@ function selfTest() {
   C0.buf = 'x\nr1>'; A(C0.whyNot(60000, 1e13) === 'not in enable mode', 'share: user mode (someone left enable) -> skip');
   C0.buf = 'x\nr1#'; C0.lastForeign = 1e13 - 30000; A(C0.whyNot(60000, 1e13) === 'in use', 'share: someone typed 30 s ago -> wait');
   A(!foreignChunk('*Nov  2 02:41:07.123: %OSPF-5-ADJCHG: Process 1, Nbr 2.2.2.2 on Ethernet0/1 from LOADING to FULL\n') && foreignChunk('conf t\n') && foreignChunk('r1(config)#'), 'share: router log lines are not a person, typing is');
-  /* nx_cml_sync */
-  var rt = toClabData({ nodes: [nd('a', 'r1', 'iol-xe', 0, []), nd('b', 'r2', 'iol-xe', -200, []), nd('c', 'r3', 'iol-xe', 200, [])].map(function (n, i) { n.y = [-150, 100, 100][i]; return n; }), links: [] }).pos;
-  A(['r1', 'r2', 'r3'].every(function (k, i) { var c = toCanvas(rt._map, rt[k].x, rt[k].y); return c.x === [0, -200, 200][i] && c.y === [-150, 100, 100][i]; }), 'sync: page place -> CML canvas gives the same x / y back (no drift)');
-  var mv = toCanvas(rt._map, rt.r2.x + 48, rt.r2.y - 24);
-  A(mv.x === -200 + Math.round(48 / rt._map.sc) && mv.y === 100 - Math.round(24 / rt._map.sc), 'sync: a drag is scaled back to the canvas: ' + JSON.stringify(mv));
   var R = iosReader();
   A(typeof R.run === 'function' && typeof R.splitByPrompt === 'function' && R.CMDS.length >= 7, 'the IOS reader is usable from here');
   var sp = R.splitByPrompt('r1#show ip route\nCodes: L - local\nr1#show ip bgp summary\n%BGP-5-ADJCHANGE: neighbor 10.0.0.2 Up\nBGP router identifier 1.1.1.1, local AS number 65001\nr1#');
@@ -983,8 +960,6 @@ function selfTest() {
       A(b.cml.paused === false && !b.st.r1.nx_unread && b.st.r2.nx_unread === 'nomgmt', 'pause: resume written at once - the mark goes');
     } finally { console.log = _l; try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} }
   })();
-  renderPage.syncLayout = true; var pgS = renderPage('lab', { nodes: [], links: [] }, null); renderPage.syncLayout = false;
-  A(pgS.indexOf('nodeDraggable(false)') < 0, 'lock: --sync-layout keeps dragging (it writes the place to CML)');
   (function () {   // nx_cml_lock: a node moved in CML -> the page file at once, without a round
     var od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-w-')), v = { pos: { r1: { x: 0, y: 0 } }, adj: {} }, _l = console.log; console.log = function () {};
     var c = new Collector(function () { return v; }, 'L', { out: od });
@@ -1109,17 +1084,6 @@ else if (require.main === module) {
     onPos = function () { col.posMoved(); };   /* nx_cml_lock */
     if (cfgC.ssh) ios.forEach(function (n) { cfgC.ssh.plan(n).then(function (p) { if (p.ip) console.log('   ' + n + ': SSH ' + cfgC.ssh.user + '@' + p.ip + (opt.jump ? ' via ' + opt.jump : ' via nx-jump')); }); });   /* nx_cml_ssh: the not-read ones are said by the first round */
     if (/^(127\.|::1$|localhost$)/.test(opt.listen)) { serve.control = function (on) { col.setPaused(on); console.log(on ? 'paused: nothing is sent to the routers' : 'resumed'); };   /* nx_cml_pause: written at once */ renderPage.pauseBar = true; renderPage.pauseVia = opt.console ? 'console' : 'ssh'; }   /* nx_cml_share: local page only */
-    if (opt.syncLayout && /^(127\.|::1$|localhost$)/.test(opt.listen)) {   /* nx_cml_sync: write back a moved node's x / y (local page only) */
-      renderPage.syncLayout = true;
-      serve.place = function (j) {
-        var v = view, id = v && v.ids && v.ids[j && j.node], map = v && v.pos && v.pos._map;
-        if (!id || !map || !isFinite(j.x) || !isFinite(j.y)) return Promise.reject(new Error('unknown node or no layout'));
-        var c = toCanvas(map, +j.x, +j.y);
-        return api.patch('/labs/' + encodeURIComponent(lab.id) + '/nodes/' + encodeURIComponent(id), { x: c.x, y: c.y }).then(function () {
-          console.log('layout: ' + j.node + ' -> CML x ' + c.x + ', y ' + c.y); return refresh().then(function () { return { node: j.node, x: c.x, y: c.y }; }); });
-      };
-      console.log('--sync-layout: moving a node on the graph writes its x / y to the CML lab (nothing else)');
-    } else if (opt.syncLayout) console.error('!! --sync-layout works only when the page is served to this PC (--listen 127.0.0.1)');
     /* nx_cml_stop: every way of ending stops the ssh children, removes the askpass helper and exits (a second Ctrl+C: at once) */
     var stopping = false;
     var bye = function () {

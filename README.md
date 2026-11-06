@@ -256,7 +256,7 @@ Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in a
 - **Your consoles stay yours:** nothing is typed on the CML consoles. Use them exactly as you would without network-xray. One SSH session per router
   stays open, so the router logs the login (`%SEC_LOGIN-5-LOGIN_SUCCESS` ...) once when cml-xray starts, not every round.
 - **Read only:** it sends `show` commands and API GETs. It never configures a router. It changes the lab only to put your public key into nx-jump
-  (above, while it still says `<your public key>`), and with `--sync-layout` a node you move.
+  (above, while it still says `<your public key>`).
 - **Passwords** are taken from the environment only (never from the command line) and handed to ssh through a short-lived askpass helper.
 - **Certificates:** by default the CML certificate is checked. Point `CML_CA_FILE` at CML's certificate, or pass `--insecure` to skip the check
   (fine on your own PC's network; not over the internet).
@@ -1019,8 +1019,8 @@ node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML 
   (containerlab の IOL と同じ読み取り・既定は 10 秒ごと = `--interval`)。ほかのノードは描くだけです。
 - **コンソールはあなたの物のまま:** CML のコンソールには何も打ちません。network-xray が無い時と同じに使えます。ルータ 1 台に SSH を 1 本
   つないだままにするので、ルータのログインのログ (`%SEC_LOGIN-5-LOGIN_SUCCESS` …) は cml-xray の起動の時に 1 回だけ出ます (毎回ではありません)。
-- **読むだけ:** 送るのは `show` と API の GET だけ。ルータの設定は変えません。ラボを変えるのは、nx-jump にあなたの公開鍵を入れる時 (下の
-  `<あなたの公開鍵>` のままの時だけ) と、`--sync-layout` で動かしたノードの位置だけです。
+- **読むだけ:** 送るのは `show` と API の GET だけ。ルータの設定は変えません。ラボを変えるのは、nx-jump にあなたの公開鍵を入れる時だけです
+  (下の `<あなたの公開鍵>` のままの時だけ)。
 - **パスワード**は環境変数からだけ読み (コマンドの引数には出しません)、ssh へは一時的な askpass で渡します。
 - **証明書:** 既定では CML の証明書を確かめます。`CML_CA_FILE` に CML の証明書を指すか、`--insecure` で確かめを外します
   (自分の家の網の中なら可・インターネット越しには使わない)。
