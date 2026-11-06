@@ -266,10 +266,10 @@ var SAMPLE_BODY = {
 var POS_EVERY_S = 5;   // the CML topology (places) is read again every 5 s and written to the page at once
 var LOCK_JS = '<script>(function(){var t=setInterval(function(){var tp=window.__nxTopo;if(!tp||typeof tp.nodeDraggable!=="function")return;clearInterval(t);tp.nodeDraggable(false);' +
   'var L="en";try{L=localStorage.getItem("nx-lang")||"en";}catch(e){}var d=document.createElement("div");d.id="nx-cml-lock";' +
-  'd.style.cssText="position:fixed;left:8px;bottom:8px;z-index:9997;background:rgba(15,19,24,.85);color:#90a4ae;border:1px solid #37474f;border-radius:6px;padding:3px 8px;font:12px sans-serif";' +
+  'd.className="hint";d.style.cssText="margin:6px 0 0;color:#90a4ae;font-size:12px";' +   /* under the graph, above the "click a node" hint (a fixed corner box covered the DeepDive) */
   'd.textContent=L==="ja"?"ノードの位置は CML のラボの通りで、ここでは動かせません。CML で動かすと約 ' + (POS_EVERY_S + 1) + ' 秒で図も動きます。":' +
   '"Node positions come from your CML lab and can\'t be moved here. Move a node in CML and the graph follows within about ' + (POS_EVERY_S + 1) + ' s.";' +
-  'document.body.appendChild(d);},200);})();</script>';
+  'var fr=document.querySelector(".ov-frame");if(fr)fr.insertAdjacentElement("afterend",d);else document.body.appendChild(d);},200);})();</script>';
 var SAMPLE_WORDS_JS ='<script>(function(){var t=setInterval(function(){var B=window.clabXray&&window.clabXray.SYNTHETIC_BADGE;if(!B)return;clearInterval(t);' +
   'var W=' + JSON.stringify(SAMPLE_BODY).replace(/</g, '\\u003c') + ';Object.keys(W).forEach(function(l){if(B[l])B[l].body=W[l];});' +
   'if(document.body.classList.contains("nx-synthetic")&&window.clabXray.markSynthetic)window.clabXray.markSynthetic(true);},100);})();</script>';
