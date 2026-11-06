@@ -384,8 +384,9 @@ Console.prototype.start = function () {
   this.child.stderr.on('data', function (d) { self.err = (self.err + d.toString()).slice(-400); });
   this.child.on('exit', function () { self.alive = false; self.host = null; });
   this.child.on('error', function (e) { self.alive = false; self.err = e.message; });
+  [this.child.stdin, this.child.stdout, this.child.stderr].forEach(function (p) { if (p) p.on('error', function () {}); });   /* nx_cml_stopped */
 };
-Console.prototype.send = function (line) { try { this.child.stdin.write(line + '\r'); } catch (e) {} };
+Console.prototype.send = function (line) { try { var w = this.child && this.child.stdin; if (w && w.writable) w.write(line + '\r'); } catch (e) {} };   /* nx_cml_stopped: not to an ended line */
 Console.prototype.waitFor = function (re, from, ms) {
   var self = this, t0 = Date.now();
   return new Promise(function (res) {
@@ -434,7 +435,7 @@ Console.prototype.login = function (labTitle) {
 Console.prototype.cmd = function (command) {
   var self = this, at = this.buf.length, was = this.own;
   this.own = true; this.send(command);
-  return this.waitFor(new RegExp('\\n' + this.host + '#\\s*$'), at, 30000).then(function (m) {
+  return this.waitFor(new RegExp('\\n' + this.host + '#\\s*$'), at, this.cmdWaitMs || 30000).then(function (m) {
     self.own = was;
     if (!m) { self.host = null; throw new Error('no prompt after "' + command + '"'); }   // exec-timeout / someone else on the line -> log in again next round
     return self.buf.slice(at, at + m.index + m[0].length);
@@ -465,7 +466,8 @@ function sshAskpass() {
     try { fs.readdirSync(dir).forEach(function (x) { try { fs.unlinkSync(path.join(dir, x)); } catch (e) {} }); } catch (e) {}
     try { fs.rmdirSync(dir); } catch (e) {} } };
 }
-function sshOpts(known, q) { return ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=' + (q ? '"' + sshPath(known) + '"' : sshPath(known)), '-o', 'LogLevel=ERROR', '-o', 'ConnectTimeout=15']; }
+function sshOpts(known, q) { return ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=' + (q ? '"' + sshPath(known) + '"' : sshPath(known)), '-o', 'LogLevel=ERROR', '-o', 'ConnectTimeout=15',
+  '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2']; }   // a router (or the jump host) that is stopped: ssh ends in about 10 s instead of waiting
 function sshArgs(ip, jump, s) {
   /* the hop to the jump host: a key only (BatchMode = no password prompt, no askpass) */
   var known = s.known || (process.platform === 'win32' ? 'NUL' : '/dev/null');
@@ -548,7 +550,7 @@ function mgmtVrfAddress(cfg) {
    would put three or four log lines on the router's console each round (IOS logs SSH2_SESSION / LOGIN_SUCCESS / SSH2_CLOSE by
    default - seen on CML 2.10 + IOL 17.18): with one session they appear once, when it starts. The commands are sent one by one,
    each waiting for the prompt (the Console code). A vty does not get the router's log lines (no terminal monitor). */
-function SshLine(n, ip, jump, s) { this.node = n; this.ip = ip; this.jump = jump; this.s = s; this.buf = ''; this.host = null; this.alive = false; this.child = null; this.err = ''; this.own = true; }
+function SshLine(n, ip, jump, s) { this.node = n; this.ip = ip; this.jump = jump; this.s = s; this.buf = ''; this.host = null; this.alive = false; this.child = null; this.err = ''; this.own = true; this.cmdWaitMs = 15000; }   /* nx_cml_stopped: a show waits 15 s (the console line keeps 30 s) */
 SshLine.prototype.waitFor = Console.prototype.waitFor;
 SshLine.prototype.send = Console.prototype.send;
 SshLine.prototype.cmd = Console.prototype.cmd;
@@ -570,13 +572,16 @@ SshLine.prototype.start = function () {
   this.alive = true; s.kids.add(ch);
   ch.stdout.on('data', function (d) { self.buf += d.toString().replace(/\r/g, '').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ''); if (self.buf.length > 400000) self.buf = self.buf.slice(-200000); });
   ch.stderr.on('data', function (d) { self.err = (self.err + d.toString()).slice(-600); });
+  /* nx_cml_stopped: a stopped router ends the ssh; a write to it after that is an 'error' event, which without a handler
+     ends the whole program (seen 11-06: r1 stopped in CML -> write after end -> the page on 8710 was gone) */
+  [ch.stdin, ch.stdout, ch.stderr].forEach(function (p) { if (p) p.on('error', function () {}); });
   ch.on('exit', function (code) { s.kids.delete(ch); if (self.child !== ch) return; self.alive = false; self.host = null; self.code = code; });
   ch.on('error', function (e) { self.alive = false; self.err = e.message; self.noSsh = e.code === 'ENOENT'; s.kids.delete(ch); });
 };
 SshLine.prototype.login = function () {
   var self = this, s = this.s, where = s.user + '@' + this.ip + ' via ' + this.jump.host;
   this.start();
-  return this.waitFor(/(?:^|\n)([A-Za-z0-9._-]+)([>#])\s*$/, 0, 40000).then(function (m) {
+  return this.waitFor(/(?:^|\n)([A-Za-z0-9._-]+)([>#])\s*$/, 0, 20000).then(function (m) {
     var why = self.err.trim() ? ': ' + self.err.trim().split('\n').pop() : '';
     if (!m) {
       var quiet = !self.buf.trim(); self.stop();
@@ -592,7 +597,12 @@ SshLine.prototype.login = function () {
     if (m[2] === '>') { self.stop(); var pe = new Error('the user ' + s.user + ' logs in at ">" - it needs privilege 15 (username ' + s.user + ' privilege 15 ...)'); pe.fatal = true; throw pe; }
   }).then(function () { return self.cmd('terminal length 0'); }).then(function () { return self.cmd('terminal width 0'); });   // this SSH line only: nothing to put back
 };
-SshLine.prototype.stop = function () { var ch = this.child; try { if (ch) ch.stdin.end('exit\r'); } catch (e) {} try { if (ch) ch.kill(); } catch (e) {} this.alive = false; this.host = null; };
+SshLine.prototype.stop = function () {   /* nx_cml_stopped: safe to call twice, and on an ssh that has already ended */
+  var ch = this.child;
+  try { if (ch && ch.exitCode == null && ch.stdin && ch.stdin.writable) ch.stdin.end('exit\r'); } catch (e) {}
+  try { if (ch && ch.exitCode == null) ch.kill(); } catch (e) {}
+  this.alive = false; this.host = null;
+};
 
 function Collector(view, labTitle, cfg) {
   this.view = view; this.lab = labTitle; this.cfg = cfg; this.cons = {}; this.last = {}; this.lastAt = {}; this.fail = {}; this.fatal = {}; this.written = '';
@@ -641,10 +651,20 @@ Collector.prototype.readNodeConsole = function (n) {
     return { texts: texts, adjStr: adjStr };
   });
 };
+/* nx_cml_stopped: one router that does not answer must not hold the others - each read has a limit (SSH: 20 s), after which
+   the router is drawn as not answering (grey, its last state marked old) and its line is opened again next round */
+Collector.prototype.readCapped = function (n) {
+  var self = this, ms = this.cfg.ssh ? (this.cfg.readCapMs || 20000) : 0;
+  if (!ms) return this.readNode(n);
+  return new Promise(function (res, rej) {
+    var done = false, t = setTimeout(function () { if (done) return; done = true; if (self.cons[n]) self.cons[n].stop(); rej(new Error('no answer in ' + Math.round(ms / 1000) + ' s')); }, ms);
+    self.readNode(n).then(function (r) { if (done) return; done = true; clearTimeout(t); res(r); }, function (e) { if (done) return; done = true; clearTimeout(t); rej(e); });
+  });
+};
 Collector.prototype.round = function () {
   var self = this, R = iosReader(), nodes = this.nodes(), got = {}, busy = {}, nomgmt = {};
   return Promise.all((this.paused ? [] : this.toRead()).map(function (n) {   /* nx_cml_share: paused = nothing is sent */
-    return self.readNode(n).then(function (r) { got[n] = r; }, function (e) {
+    return self.readCapped(n).then(function (r) { got[n] = r; }, function (e) {
       if (e.nomgmt) { nomgmt[n] = true; if ((self.nomgmtMsg || {})[n] !== e.message) { console.log('   ' + n + ': not read - ' + e.message); (self.nomgmtMsg = self.nomgmtMsg || {})[n] = e.message; } return; }   /* nx_cml_ssh: drawn, not read */
       if (e.busy) { busy[n] = e.message; if (self.busyMsg !== n + e.message) { console.log('   ' + n + ': ' + (e.message === 'config mode' ? 'someone is configuring it (config mode) - waiting, nothing is sent' : 'not read now (' + e.message + ') - waiting, nothing is sent')); self.busyMsg = n + e.message; } return; }   /* nx_cml_share: not a failure, keep the line */   /* nx_cml_share2 */
       var msg = e.message;
@@ -808,6 +828,27 @@ function selfTest() {
     }, function (e) { console.log = _log; A(false, 'ssh: round ' + e.message); });
   });
   A(SSH_SPAWN.windowsHide === true && SSH_SPAWN.detached === false, 'ssh: started hidden and not detached (Windows: no console window per router, for the ProxyCommand hop too)');
+  var so = sshOpts('k', false).join(' ');
+  A(/ServerAliveInterval=5/.test(so) && /ServerAliveCountMax=2/.test(so), 'ssh: keepalive - a stopped router ends its ssh in about 10 s');
+  asyncTests = asyncTests.then(function () {   // nx_cml_stopped: stop on an ssh that has ended, twice -> nothing thrown, no 'error' event that ends the program
+    var ln = new SshLine('r1', '10.0.0.1', { user: 'nx', host: 'j' }, { kids: new Set() });
+    var ch = ln.child = cp.spawn(process.execPath, ['-e', ''], { stdio: ['pipe', 'pipe', 'pipe'] });
+    [ch.stdin, ch.stdout, ch.stderr].forEach(function (p) { p.on('error', function () {}); });
+    return new Promise(function (res) { ch.on('exit', function () { setTimeout(res, 50); }); }).then(function () {
+      var threw = false; try { ln.stop(); ln.stop(); } catch (e) { threw = true; }
+      return new Promise(function (res) { setTimeout(res, 200); }).then(function () { A(!threw && !ln.alive, 'ssh: stop on an ended ssh, twice - safe'); });
+    });
+  });
+  asyncTests = asyncTests.then(function () {   // nx_cml_stopped: a router that never answers is given up after the limit; the others are not held
+    var c = new Collector(function () { return { adj: {} }; }, 'lab', { ssh: true, readCapMs: 300 }), stopped = 0, t0 = Date.now();
+    c.cons.r1 = { stop: function () { stopped++; } };
+    c.readNode = function (n) { return n === 'r1' ? new Promise(function () {}) : Promise.resolve({ texts: {}, adjStr: '' }); };
+    var r2 = c.readCapped('r2');
+    return c.readCapped('r1').then(function () { A(false, 'ssh: a router that never answers -> an error'); }, function (e) {
+      A(/no answer in/.test(e.message) && stopped === 1 && Date.now() - t0 < 2000, 'ssh: a router that never answers -> "' + e.message + '" and its line closed');
+      return r2.then(function (r) { A(r && r.adjStr === '', 'ssh: the other router is read meanwhile'); });
+    });
+  });
   var pg = renderPage('lab', { nodes: [], links: [] }, null);
   A(pg.indexOf('SYNTHETIC_BADGE') > 0 && pg.indexOf('cml-xray has not read this node (yet)') > 0 && pg.indexOf('./xray.sh') < pg.indexOf('SYNTHETIC_BADGE'), 'ssh: the "Sample view" badge says what cml-xray does, not ./xray.sh');
   asyncTests = asyncTests.then(function () {   // no ssh on this machine -> a fatal "install an OpenSSH client", not "still booting"
