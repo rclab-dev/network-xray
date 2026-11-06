@@ -1,0 +1,12 @@
+# The same three FRR routers as demo/compose-ospf (r1 - r2 - r3, OSPF area 0, the same addresses), as a containerlab
+# lab: the links use eth1 / eth2 because eth0 is containerlab's management port. It is here only to record the OSPF
+# replay frames (demo/capture/xray-ospf.steps.json, node scripts/capture-frames.js) - not one of the examples.
+name: xray-ospf
+topology:
+  nodes:
+    r1: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r1/daemons:/etc/frr/daemons, r1/frr.conf:/etc/frr/frr.conf] }
+    r2: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r2/daemons:/etc/frr/daemons, r2/frr.conf:/etc/frr/frr.conf] }
+    r3: { kind: linux, image: frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce, binds: [r3/daemons:/etc/frr/daemons, r3/frr.conf:/etc/frr/frr.conf] }
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]
+    - endpoints: ["r2:eth2", "r3:eth1"]

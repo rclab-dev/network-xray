@@ -22,6 +22,8 @@
 //     "steps": [ { "name": "steady", "run": "none" },
 //                { "name": "r1 eth1 down", "node": "r1", "run": "ip link set eth1 down", "wait": 3 } ] }
 //   wait = seconds to wait after the command before the first read (default: --min-wait)
+//   settle = this step's --settle (e.g. 1 = keep the first read: a state that lasts only a few seconds, such as an
+//            OSPF adjacency that is coming back; the caption should then say "the first read", not a settled state)
 'use strict';
 var fs = require('fs');
 var os = require('os');
@@ -103,12 +105,13 @@ function readSteps(file, nodes) {
   steps.forEach(function (s, i) {
     var where = 'steps file ' + file + ', step ' + (i + 1) + ': ';
     if (!s || typeof s !== 'object') die(where + 'must be an object');
-    Object.keys(s).forEach(function (k) { if (['name', 'node', 'run', 'wait'].indexOf(k) < 0) die(where + 'unknown key "' + k + '"'); });
+    Object.keys(s).forEach(function (k) { if (['name', 'node', 'run', 'wait', 'settle'].indexOf(k) < 0) die(where + 'unknown key "' + k + '"'); });
     if (typeof s.name !== 'string' || !s.name.trim()) die(where + 'needs a "name"');
     if (seen[s.name]) die(where + 'the name "' + s.name + '" is used twice');
     seen[s.name] = true;
     if (typeof s.run !== 'string' || !s.run.trim()) die(where + '"run" must be a command or "none"');
     if (s.wait != null && !(typeof s.wait === 'number' && s.wait >= 0)) die(where + '"wait" must be a number of seconds');
+    if (s.settle != null && !(Number.isInteger(s.settle) && s.settle >= 1)) die(where + '"settle" must be a whole number (1 or more)');
     if (s.run === 'none') { if (s.node != null) die(where + '"node" is given but "run" is "none"'); return; }
     if (typeof s.node !== 'string' || !s.node) die(where + 'a command needs a "node"');
     if (nodes.indexOf(s.node) < 0) die(where + 'node "' + s.node + '" is not in the topology (' + nodes.join(', ') + ')');
@@ -184,7 +187,7 @@ async function readLab(o, topo, work, proto, deadline) {
 }
 
 // read until the same state comes back o.settle times in a row; {states, settled, reads} or {error}
-async function waitSettled(o, topo, work, proto) {
+async function waitSettled(o, topo, work, proto, settle) {
   var t0 = Date.now(), last = null, lastKey = '', same = 0, reads = 0, lastErr = '';
   for (;;) {
     var r = await readLab(o, topo, work, proto, t0 + o.timeout * 1000);
@@ -194,7 +197,7 @@ async function waitSettled(o, topo, work, proto) {
       var k = stateKey(r.states);
       if (last && k === lastKey && !hasTimeout(r.states)) same++; else same = hasTimeout(r.states) ? 0 : 1;
       last = r.states; lastKey = k;
-      if (same >= o.settle) return { states: last, settled: true, reads: reads };
+      if (same >= (settle || o.settle)) return { states: last, settled: true, reads: reads };
     }
     if (Date.now() - t0 + o.interval * 1000 > o.timeout * 1000) {
       return last ? { states: last, settled: false, reads: reads } : { error: lastErr || 'no read' };
@@ -248,7 +251,7 @@ async function main() {
         var wait = st.wait != null ? st.wait : o.minWait;
         if (wait > 0) await sleep(wait * 1000);
       } else log('[' + (i + 1) + '/' + s.steps.length + '] ' + st.name + ' (no command)');
-      var w = await waitSettled(o, topo, work, proto);
+      var w = await waitSettled(o, topo, work, proto, st.settle);
       if (w.error) { log('!! cannot read the lab: ' + w.error + ' - stopping, no further step is run'); code = 1; break; }
       fs.writeFileSync(outFiles[i], JSON.stringify(w.states) + '\n');
       captions.push({ frame: name, name: st.name, settled: w.settled });

@@ -1,0 +1,27 @@
+{
+  "proto": "ospf",
+  "steps": [
+    {
+      "name": "steady - all OSPF adjacencies Full",
+      "run": "none"
+    },
+    {
+      "name": "r2 eth1 down - r1 isolated (no neighbor, routes to 2.2.2.2 / 3.3.3.3 lost)",
+      "node": "r2",
+      "run": "ip link set eth1 down",
+      "wait": 3
+    },
+    {
+      "name": "r2 eth1 up - r1 re-forming OSPF (the first read after the link came back)",
+      "node": "r2",
+      "run": "ip link set eth1 up",
+      "wait": 1,
+      "settle": 1
+    },
+    {
+      "name": "converged - back to Full",
+      "run": "none",
+      "wait": 0
+    }
+  ]
+}

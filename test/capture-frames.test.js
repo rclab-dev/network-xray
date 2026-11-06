@@ -128,6 +128,14 @@ test('--timeout also bounds a collector that gives no answer', { skip: SH }, fun
   assert.match(r.stdout + r.stderr, /collector gave no answer within \d+s/);
 });
 
+test('a step with "settle": 1 keeps its first read (a state that lasts only a few seconds)', { skip: SH }, function () {
+  var d = setup({ proto: 'bgp', steps: [{ name: 'quick', node: 'r1', run: 'true', settle: 1 }, { name: 'later', run: 'none' }] });
+  var r = capture(d, ['--settle', '3', '--timeout', '15'], { FAKE_MODE: 'slow' });
+  assert.strictEqual(r.code, 0, r.stderr);
+  assert.ok('noise' in frame(d, 1).r1, 'frame1 is the first read, taken while the state still changes');
+  assert.ok(!('noise' in frame(d, 2).r1), 'frame2 waited for --settle 3');
+});
+
 test('a failed command stops the run: later steps are not run', { skip: SH }, function () {
   var d = setup(STEPS);
   var r = capture(d, [], { FAKE_DOCKER_EXIT: '1' });
@@ -189,6 +197,15 @@ test('--dry-run prints the commands and runs nothing', function () {
   assert.deepStrictEqual(lines(path.join(d, 'docker.log')), []);
   assert.deepStrictEqual(lines(path.join(d, 'collect.log')), []);
   assert.ok(!fs.existsSync(path.join(d, 'out')));
+});
+
+test('the xray-ospf recording steps check out against their topology', function () {
+  var out = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-capture-test-'));
+  var r = cp.spawnSync(process.execPath, [SCRIPT, path.join(ROOT, 'demo/capture/xray-ospf/xray-ospf.clab.yml'),
+    path.join(ROOT, 'demo/capture/xray-ospf.steps.json'), path.join(out, 'o'), '--dry-run'], { encoding: 'utf8', env: Object.assign({}, process.env, { PATH: '' }) });
+  assert.strictEqual(r.status, 0, r.stderr);
+  assert.match(r.stderr, /lab=xray-ospf proto=ospf steps=4/);
+  assert.strictEqual((r.stderr.match(/docker exec clab-xray-ospf-r2 sh -c /g) || []).length, 2);
 });
 
 test('the q21-bgp-lp example steps check out against its topology', function () {
