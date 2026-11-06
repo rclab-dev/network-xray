@@ -21,7 +21,8 @@
 //   { "proto": "bgp",
 //     "steps": [ { "name": "steady", "run": "none" },
 //                { "name": "r1 eth1 down", "node": "r1", "run": "ip link set eth1 down", "wait": 3 } ] }
-//   wait = seconds to wait after the command before the first read (default: --min-wait)
+//   wait = seconds to wait before the first read: after the command, or on a "none" step from its start
+//          (default: --min-wait after a command, 0 on a "none" step)
 //   settle = this step's --settle (e.g. 1 = keep the first read: a state that lasts only a few seconds, such as an
 //            OSPF adjacency that is coming back; the caption should then say "the first read", not a settled state)
 'use strict';
@@ -251,7 +252,11 @@ async function main() {
         }
         var wait = st.wait != null ? st.wait : o.minWait;
         if (wait > 0) await sleep(wait * 1000);
-      } else log('[' + (i + 1) + '/' + s.steps.length + '] ' + st.name + ' (no command)');
+      } else {
+        log('[' + (i + 1) + '/' + s.steps.length + '] ' + st.name + ' (no command)');
+        // a step with no command may still wait before its first read (e.g. OSPF's 40 s wait timer before the DR election)
+        if (st.wait > 0) await sleep(st.wait * 1000);
+      }
       var w = await waitSettled(o, topo, work, proto, st.settle);
       if (w.error) { log('!! cannot read the lab: ' + w.error + ' - stopping, no further step is run'); code = 1; break; }
       fs.writeFileSync(outFiles[i], JSON.stringify(w.states) + '\n');

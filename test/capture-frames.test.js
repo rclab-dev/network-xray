@@ -136,6 +136,14 @@ test('a step with "settle": 1 keeps its first read (a state that lasts only a fe
   assert.ok(!('noise' in frame(d, 2).r1), 'frame2 waited for --settle 3');
 });
 
+test('a step with no command still waits its "wait" before the first read', { skip: SH }, function () {
+  var d = setup({ proto: 'bgp', steps: [{ name: 'later', run: 'none', wait: 2 }] });
+  var t0 = Date.now();
+  var r = capture(d);
+  assert.strictEqual(r.code, 0, r.stderr);
+  assert.ok(Date.now() - t0 >= 2000, 'waited ' + (Date.now() - t0) + ' ms');
+});
+
 test('a failed command stops the run: later steps are not run', { skip: SH }, function () {
   var d = setup(STEPS);
   var r = capture(d, [], { FAKE_DOCKER_EXIT: '1' });
