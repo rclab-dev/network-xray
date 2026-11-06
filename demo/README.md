@@ -46,7 +46,7 @@ unchanged.
 |---|---|
 | `index.html` | the standalone replay page (real frames + topology baked in) |
 | `index-bgp.html` | the same kind of replay for a BGP lab (`frame*-bgp.json`, `topo-bgp.json`) |
-| `index-bgp-lp.html` | a replay of a BGP LocalPref lab (r2 LocPref 50 → 200 against r3 at 100), generated from `bgp-lp/` by `build-replay-bgp.js` |
+| `index-bgp-lp.html` | a replay of a BGP LocalPref lab (r2 LocPref 50 → 150 against r3 at 100; recorded from `examples/q21-bgp-lp`), generated from `bgp-lp/` by `build-replay-bgp.js` |
 | `bgp-lp/` | the sources of `index-bgp-lp.html`: `page.html.tmpl` (the page template), `topo.json`, the captured `frame{A..D}.json` and `replay.json` (each frame's label, caption and dwell time, plus the next-step link) |
 | `frame{A..D}.json` / `topo.json` | the captured frames and topology `index.html` replays |
 | `replay-bar.js` | the RECORDED REPLAY bar shared by the replay pages: autoplay, ◀ / pause / ▶ buttons, clickable frame dots, ← / → / Space keys, and the next-step link shown after the last frame |

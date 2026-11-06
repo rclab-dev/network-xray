@@ -13,8 +13,8 @@
     },
     {
       "file": "frameB.json",
-      "label": "fix — set LocPref 200 on r2: the fast ISP now wins (200 > 100)",
-      "caption": "Raise LocPref to 200 on r2 — the fast ISP is best again (200 > 100)",
+      "label": "fix — set LocPref 150 on r2: the fast ISP now wins (150 > 100)",
+      "caption": "Raise LocPref to 150 on r2 — the fast ISP is best again (150 > 100)",
       "dwell": 3200
     },
     {
@@ -25,8 +25,8 @@
     },
     {
       "file": "frameD.json",
-      "label": "restored — LP 200 decides again: r2 (fast) wins",
-      "caption": "Restored — LP 200 > 100 decides again: fast ISP r2 wins",
+      "label": "restored — LP 150 decides again: r2 (fast) wins",
+      "caption": "Restored — LP 150 > 100 decides again: fast ISP r2 wins",
       "dwell": 3000
     }
   ],
