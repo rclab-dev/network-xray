@@ -12,5 +12,8 @@ Some files live in more than one place:
 Each copy should be identical to its root file. After changing one of the root files, copy it into the bundles
 (or regenerate them with `scripts/gen_compose_bundle.js`) in the same commit.
 
-`node scripts/check-copies.js` exits 1 and prints the paths when a copy differs from its root file.
+`node scripts/check-copies.js` exits 1 and prints the paths when a copy differs from its root file (each differing
+copy is named together with the file it differs from). It also exits 1 when a file in `demo/compose-*/` has the name
+or the content of a root file but is not in any checked group and not marked as an exception (`bundleFiles` in
+`EXCEPTIONS`); `test/check-copies.test.js` runs the same check under `node --test`.
 `node scripts/check-copies.js --list` prints every group (with a short hash of each file) and the intended exceptions.
