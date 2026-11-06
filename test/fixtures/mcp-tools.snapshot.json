@@ -1,0 +1,171 @@
+[
+  {
+    "name": "lab_state",
+    "description": "Read a network-xray lab state (read-only) and summarize it: nodes and interfaces, links, OSPF adjacencies, BGP sessions and counts. No router is contacted.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "A state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR show ... json files"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "why_best_path",
+    "description": "For one node and prefix, give the BGP best path and the reason stored in the data (FRR selectionReason, or the IOS-XE collector's derived reason). If the data has no reason, reason is null and a note says so; nothing is guessed. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Same input as lab_state"
+        },
+        "node": {
+          "type": "string",
+          "description": "Node name, e.g. r1"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Prefix, e.g. 8.8.8.0/24 (the length may be omitted when unambiguous)"
+        },
+        "vrf": {
+          "type": "string",
+          "description": "VRF, only needed when the prefix is in several VRFs"
+        }
+      },
+      "required": [
+        "path",
+        "node",
+        "prefix"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_routers",
+    "description": "List the routers in a network-xray lab state and which protocols have state for each (ospf: OSPF neighbors or LSDB in the data; bgp: BGP neighbors or BGP routes), whether a routing table was collected, and row counts. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Same input as lab_state"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "ospf_neighbors",
+    "description": "OSPF neighbors per router as collected: neighbor router ID, address, state (e.g. Full), interface, and DR/BDR role and peer node name when known. All routers, or one with `router`. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Same input as lab_state"
+        },
+        "router": {
+          "type": "string",
+          "description": "Only this router, e.g. r1 (default: all routers)"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "bgp_neighbors",
+    "description": "BGP neighbors per router as collected: peer address, remote AS, iBGP/eBGP, state, established, and prefixes received (null when the data has no count). All routers, or one with `router`. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Same input as lab_state"
+        },
+        "router": {
+          "type": "string",
+          "description": "Only this router, e.g. r1 (default: all routers)"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "route_lookup",
+    "description": "Look up a destination address in one router's collected routing table (installed rows only) by longest prefix match: the matching route, its protocol, next hop and outgoing interface (all next hops for ECMP). next_hop is null for a directly connected route; route is null with a note when nothing matches. This reads the table the collector saved; it does not compute routing. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Same input as lab_state"
+        },
+        "router": {
+          "type": "string",
+          "description": "Router name, e.g. r1"
+        },
+        "destination": {
+          "type": "string",
+          "description": "IPv4 or IPv6 address, e.g. 8.8.8.8 or 2001:db8::1 (no prefix length)"
+        },
+        "vrf": {
+          "type": "string",
+          "description": "VRF of the routing table rows to search (default: the default VRF)"
+        }
+      },
+      "required": [
+        "path",
+        "router",
+        "destination"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "why_path",
+    "description": "Why one router selected its BGP path to a prefix: the selected path, the other candidates with their attributes, the deciding step, and where that reason came from: reason_source \"device\" when the router reported it (FRR selectionReason), \"comparison\" when network-xray inferred it by comparing the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or null with a note when neither says. A bare address is matched to the longest BGP prefix that contains it. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Same input as lab_state"
+        },
+        "router": {
+          "type": "string",
+          "description": "Router name, e.g. r1"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Prefix (e.g. 8.8.8.0/24) or an address inside it (e.g. 8.8.8.8)"
+        },
+        "vrf": {
+          "type": "string",
+          "description": "VRF, only needed when the prefix is in several VRFs"
+        }
+      },
+      "required": [
+        "path",
+        "router",
+        "prefix"
+      ],
+      "additionalProperties": false
+    }
+  }
+]
