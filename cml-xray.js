@@ -967,6 +967,8 @@ function selfTest() {
   A(pgL.indexOf('nodeDraggable(false)') > 0 && pgL.indexOf("be moved here. Move a node in CML") > 0 && /CML で動かすと図も動きます。/.test(pgL) && !/約 \d+ 秒/.test(pgL), 'lock: a CML page cannot drag nodes, and says so (EN / JA, no seconds)');
   A(pgL.indexOf('["h-btn","v-btn"]') > 0 && pgL.indexOf('.ov-bar') > 0, 'lock: the Horizontal / Vertical buttons are hidden; the line sits in the graph\'s top bar');
   renderPage.pauseBar = true; renderPage.pauseVia = 'ssh'; var pgP = renderPage('lab', { nodes: [], links: [] }, null); renderPage.pauseBar = false;
+  // the page's own notes for a router cml-xray does not read now (paused / busy / not on the management network) - lost once by a revert (11-06)
+  A(/paused: _uja \? '読むのを一時停止しています \(cml-xray\)。'/.test(pgP) && /nx_unread === 'busy'/.test(pgP) && /nomgmt: _uja/.test(pgP), 'page: the paused / busy / no-management notes are in the page');
   A(/ルータを読んでいます \(SSH\)/.test(pgP) && pgP.indexOf('nx-cml-paused') > 0 && /⏸ 一時停止中/.test(pgP) && pgP.indexOf('Reading from the CML consoles') < 0, 'pause: SSH words, and a big "Paused" over the graph');
   (function () {   // nx_cml_pause: Pause / Resume reach the page file at once
     var od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-pz-')), v = { pos: null, adj: {} }, _l = console.log; console.log = function () {};
