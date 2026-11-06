@@ -273,8 +273,8 @@ var SAMPLE_BODY = {
    One line in the graph's top bar, where the buttons were, says so (EN / JA, follows the page language). --sync-layout keeps
    dragging and the buttons (it writes the place to CML). */
 var POS_EVERY_S = 5;   // the CML topology (places) is read again every 5 s and written to the page at once
-var LOCK_WORDS = { en: 'Node positions come from your CML lab and can' + "'" + 't be moved here. Move a node in CML and the graph follows within about ' + (POS_EVERY_S + 1) + ' s.',
-  ja: 'ノードの位置は CML のラボの通りで、ここでは動かせません。CML で動かすと約 ' + (POS_EVERY_S + 1) + ' 秒で図も動きます。' };
+var LOCK_WORDS = { en: 'Node positions come from your CML lab and can' + "'" + 't be moved here. Move a node in CML and the graph follows.',
+  ja: 'ノードの位置は CML のラボの通りで、ここでは動かせません。CML で動かすと図も動きます。' };   // no seconds: it follows in 1 - 3 s in practice (11-06)
 var LOCK_JS = '<script>(function(){var W=' + JSON.stringify(LOCK_WORDS).replace(/</g, '\\u003c') + ';var t=setInterval(function(){var tp=window.__nxTopo;if(!tp||typeof tp.nodeDraggable!=="function")return;clearInterval(t);tp.nodeDraggable(false);' +
   '["h-btn","v-btn"].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display="none";});' +
   'var d=document.createElement("span");d.id="nx-cml-lock";d.style.cssText="font-size:12px;color:#64748b;text-align:right;max-width:62%;line-height:1.4";' +
@@ -319,9 +319,10 @@ var PAUSE_WORDS = {
 };
 function pauseBar(via) {
   var W = { bar: PAUSE_WORDS[via === 'console' ? 'console' : 'ssh'], btn: PAUSE_WORDS.btn, big: PAUSE_WORDS.big };
-  return '<div id="nx-cml-bar" style="position:fixed;top:8px;left:8px;z-index:9998;background:#0f1318;color:#cfd8dc;border:1px solid #37474f;border-radius:6px;padding:4px 8px;font:12px sans-serif">' +
+  return '<div id="nx-cml-bar" style="background:#0f1318;color:#cfd8dc;border:1px solid #37474f;border-radius:6px;padding:4px 8px;font:12px sans-serif">' +
   '<span id="nx-cml-txt"></span> <button id="nx-cml-btn" style="margin-left:6px"></button></div>' +
-  '<script>(function(){var W=' + JSON.stringify(W).replace(/</g, '\\u003c') + ',want=null,wantAt=0;' +
+  '<script>(function(){var bar=document.getElementById("nx-cml-bar"),tb=document.querySelector(".topbar");if(tb)tb.insertBefore(bar,tb.firstChild);else bar.style.cssText+=";position:fixed;top:8px;right:8px;z-index:9998";' +   /* top right, just left of the language button (a fixed box covered it) */
+  'var W=' + JSON.stringify(W).replace(/</g, '\\u003c') + ',want=null,wantAt=0;' +
   'var L=function(){try{return (localStorage.getItem("nx-lang")||"en")==="ja"?"ja":"en";}catch(e){return "en";}};' +
   'var big=null;var bigEl=function(){if(big)return big;var fr=document.querySelector(".ov-frame");if(!fr)return null;if(getComputedStyle(fr).position==="static")fr.style.position="relative";' +
   'big=document.createElement("div");big.id="nx-cml-paused";big.style.cssText="position:absolute;left:0;right:0;bottom:0;top:46px;display:none;align-items:center;justify-content:flex-start;padding-top:26px;flex-direction:column;background:rgba(15,19,24,.12);pointer-events:none;z-index:5;text-align:center";' +
@@ -963,7 +964,7 @@ function selfTest() {
     } finally { process.chdir(keep); console.error = _e; try { fs.rmSync(d, { recursive: true, force: true }); } catch (e) {} }
   })();
   var pgL = renderPage('lab', { nodes: [], links: [] }, null);
-  A(pgL.indexOf('nodeDraggable(false)') > 0 && pgL.indexOf("be moved here. Move a node in CML") > 0 && /約 \d+ 秒/.test(pgL), 'lock: a CML page cannot drag nodes, and says so (EN / JA, with the seconds)');
+  A(pgL.indexOf('nodeDraggable(false)') > 0 && pgL.indexOf("be moved here. Move a node in CML") > 0 && /CML で動かすと図も動きます。/.test(pgL) && !/約 \d+ 秒/.test(pgL), 'lock: a CML page cannot drag nodes, and says so (EN / JA, no seconds)');
   A(pgL.indexOf('["h-btn","v-btn"]') > 0 && pgL.indexOf('.ov-bar') > 0, 'lock: the Horizontal / Vertical buttons are hidden; the line sits in the graph\'s top bar');
   renderPage.pauseBar = true; renderPage.pauseVia = 'ssh'; var pgP = renderPage('lab', { nodes: [], links: [] }, null); renderPage.pauseBar = false;
   A(/ルータを読んでいます \(SSH\)/.test(pgP) && pgP.indexOf('nx-cml-paused') > 0 && /⏸ 一時停止中/.test(pgP) && pgP.indexOf('Reading from the CML consoles') < 0, 'pause: SSH words, and a big "Paused" over the graph');
