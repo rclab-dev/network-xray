@@ -263,7 +263,7 @@ Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in a
 - **Certificates:** CML's certificate is issued by CML itself for the name `cml-controller`, so a normal check fails. `--save-cert <file>` saves the
   certificate CML shows (nothing else is sent; compare the fingerprint with CML if you can), and `CML_CA_FILE=<file>` then accepts that one
   certificate only (a real CA in `CML_CA_FILE` is checked as usual). `--insecure` skips the check (only on a network you trust). Some security
-  software looks into HTTPS and shows its own certificate: cml-xray then says who issued what it sees; use `--insecure` there, or let it pass CML.
+  software looks into HTTPS and shows its own certificate: cml-xray then says who issued what it sees. Let that software pass CML; use `--insecure` only as the last way.
 - Port / address: `--port 8710`, `--listen 127.0.0.1` (this PC only; `0.0.0.0` to open it from another machine — by its IP address: the page
   answers to `localhost` and IP addresses only, and serves only its own files).
 
@@ -1034,8 +1034,8 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
 - **証明書:** CML の証明書は CML 自身が `cml-controller` という名前で出した物なので、ふつうの確かめは通りません。`--save-cert <ファイル>` で
   CML が見せる証明書を保存し (ほかには何も送りません・できれば指紋を CML の物と見比べる)、`CML_CA_FILE=<ファイル>` にするとその 1 枚だけを
   受け入れます (本物の CA を `CML_CA_FILE` に入れた時はふつうに確かめます)。`--insecure` は確かめを外します (信頼できる網の中だけで)。
-  HTTPS の中を見るセキュリティの道具が入っていると、その道具の証明書が見えます: cml-xray は見えた証明書の発行者を出すので、その時は
-  `--insecure` にするか、道具に CML を通してもらってください。
+  HTTPS の中を見るセキュリティの道具が入っていると、その道具の証明書が見えます: cml-xray は見えた証明書の発行者を出します。その時は
+  道具に CML を通してもらってください (`--insecure` は最後の手)。
 - ポート / アドレス: `--port 8710`・`--listen 127.0.0.1` (この PC だけ。ほかの機械から開くなら `0.0.0.0` にして IP アドレスで開く: 頁は
   `localhost` と IP アドレスにだけ答え、頁のファイルしか返しません)。
 
