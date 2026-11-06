@@ -688,3 +688,50 @@ test('xray.sh: other Docker errors (socket present and usable) do not stop the r
     assert.strictEqual(calls(r, 'sudo').length, 1, 'deployed');
   } finally { s.srv.close(); }
 });
+
+// Usage snapshot: xray.sh --help and the messages for the common failures, compared with
+// test/snapshots/xray-sh-messages.txt so a wording change is never made by accident.
+// A wording change on purpose: run  NX_UPDATE_SNAPSHOT=1 node --test test/xray-sh.test.js  (from the repo
+// root), check the snapshot diff with  git diff test/snapshots/  and commit it with the change to xray.sh.
+// Port numbers and the temporary folder change every run: they are written as <PORT>, <PORT+1> and <HERE>.
+var SNAPSHOT = path.join(__dirname, 'snapshots', 'xray-sh-messages.txt');
+test('xray.sh: --help and the common failure messages match the snapshot', { skip: SKIP || (!which('timeout') && 'needs timeout') }, async function () {
+  var env = setup();
+  var parts = [];
+  function add(name, r, port, keep) {
+    var out = r.stdout + r.stderr;
+    if (keep) out = out.split('\n').filter(function (l) { return keep.test(l); }).join('\n') + '\n';
+    if (port) out = out.split(String(port + 1)).join('<PORT+1>').split(String(port)).join('<PORT>');
+    out = out.split(env.here).join('<HERE>');
+    parts.push('## ' + name + ' (exit ' + r.code + ')\n' + out);
+  }
+  add('./xray.sh --help', await run(env, 'xray.sh', ['--help']));
+  add('./xray.sh no/such.clab.yml', await run(env, 'xray.sh', ['no/such.clab.yml']));
+  add('./xray.sh --check no/such.clab.yml <PORT>  (topology line)', await run(env, 'xray.sh', ['--check', 'no/such.clab.yml', String(await freePort())]),
+    null, /topology:/);
+  var srv = net.createServer(function (c) { c.destroy(); });
+  await new Promise(function (res) { srv.listen(0, '127.0.0.1', res); });
+  var port = srv.address().port;
+  try {
+    add('./xray.sh examples/q21-bgp-lp/q21.clab.yml <PORT>  (port in use)', await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port)]), port);
+    checkFakes(env);
+    add('./xray.sh --check examples/q21-bgp-lp/q21.clab.yml <PORT>  (port in use; port line)',
+      await run(env, 'xray.sh', ['--check', 'examples/q21-bgp-lp/q21.clab.yml', String(port)]), port, /port/);
+  } finally { srv.close(); }
+  // docker not reachable: without sudo (SUDO=), with sudo asking for a password, and only with sudo
+  var docker = [['SUDO=', { docker: 'fail' }, { SUDO: '' }], ['sudo asks for a password', { docker: 'fail', sudoPw: true }],
+    ['docker works only with sudo', { docker: 'fail' }]];
+  for (var i = 0; i < docker.length; i++) {
+    checkFakes(env, docker[i][1]);
+    add('./xray.sh --check  (docker not reachable, ' + docker[i][0] + '; docker line)',
+      await run(env, 'xray.sh', ['--check', 'examples/q21-bgp-lp/q21.clab.yml', String(await freePort())], { env: docker[i][2] }), null, /docker:/);
+  }
+  var got = parts.join('\n');
+  if (process.env.NX_UPDATE_SNAPSHOT === '1') {
+    fs.mkdirSync(path.dirname(SNAPSHOT), { recursive: true });
+    fs.writeFileSync(SNAPSHOT, got);
+  }
+  var want = fs.existsSync(SNAPSHOT) ? fs.readFileSync(SNAPSHOT, 'utf8') : '';
+  assert.strictEqual(got, want, 'xray.sh usage or messages differ from ' + path.relative(ROOT, SNAPSHOT) +
+    '. If the change is on purpose: NX_UPDATE_SNAPSHOT=1 node --test test/xray-sh.test.js, then review and commit the snapshot.');
+});

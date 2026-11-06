@@ -1,0 +1,34 @@
+## ./xray.sh --help (exit 0)
+usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] [lab.clab.yml] [port] [template.html]
+  deploy a containerlab lab, keep collecting each router's state and serve the X-Ray graph
+  lab                   default: examples/q21-bgp-lp/q21.clab.yml
+  port                  default: 8080
+  template              default: xray-graph-nextui.html
+  --bind <address>      address the graph listens on (default: 0.0.0.0 = all; 127.0.0.1 = this machine only)
+  --interval <seconds>  how often the collector reads the routers, whole seconds (default: 1)
+  --check               only check what this run needs and say what to fix; nothing is started
+  --attach              do not deploy: graph the lab that is already running (changes made by hand are kept)
+  -h, --help            show this help
+  env: SUDO= (privilege prefix, default sudo), NX_IOS_INTERVAL (Cisco IOS read interval, default 10)
+
+## ./xray.sh no/such.clab.yml (exit 1)
+topology not found: no/such.clab.yml
+
+## ./xray.sh --check no/such.clab.yml <PORT>  (topology line) (exit 1)
+FAIL  topology: not found or not readable: no/such.clab.yml
+
+## ./xray.sh examples/q21-bgp-lp/q21.clab.yml <PORT>  (port in use) (exit 1)
+port <PORT> is already in use (another graph is running there?).
+  add a port:  ./xray.sh examples/q21-bgp-lp/q21.clab.yml <PORT+1>   - or stop the other one.
+
+## ./xray.sh --check examples/q21-bgp-lp/q21.clab.yml <PORT>  (port in use; port line) (exit 1)
+FAIL  port <PORT>: already in use (another graph is running there?) - add a port, e.g. <PORT+1>, or stop the other one
+
+## ./xray.sh --check  (docker not reachable, SUDO=; docker line) (exit 1)
+FAIL  docker: not reachable - start it (sudo systemctl start docker) or check: docker info
+
+## ./xray.sh --check  (docker not reachable, sudo asks for a password; docker line) (exit 1)
+FAIL  docker: not reachable without sudo, and sudo asks for a password - run 'sudo -v', then ./xray.sh --check again
+
+## ./xray.sh --check  (docker not reachable, docker works only with sudo; docker line) (exit 1)
+FAIL  docker: works only with sudo - the collector runs docker without it: sudo usermod -aG docker $USER, then log in again
