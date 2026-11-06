@@ -549,7 +549,7 @@ window.__initNeXtOverview = function (data) {
       var S = window.LIVE_STATES || {}, back = false;
       topo.eachNode(function (n) {
         var nm = nameOf(n); if (!nm || typeof n.color !== 'function') return;
-        var un = !!(S[nm] && S[nm].nx_unread);
+        var un = !!(S[nm] && S[nm].nx_unread && !(S[nm].nx_unread === 'paused' && window.XRAY_CML && window.XRAY_CML.keepColour));   /* nx_cml_pause: cml-xray can keep a paused node's colour */
         if (un && !n.__nxuGrey) { n.__nxuOrig = n.color(); n.__nxuGrey = true; n.color('#90a4ae'); }
         else if (!un && n.__nxuGrey) { n.__nxuGrey = false; n.color(n.__nxuOrig); back = true; }
         if (!un) { __nxClearGrey(nm); setTimeout(function () { __nxClearGrey(nm); }, 300); }   /* nx_unread_colour: a readable node never keeps this grey (NeXt re-applies the fill just after color() - clear again a moment later) */

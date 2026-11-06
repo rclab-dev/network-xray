@@ -31,6 +31,7 @@
  *                          the tool waits while someone types and has a Pause button) - only when you ask for it
  *   --quiet-wait <s>       --console only: after anything you type on the console, wait this long before reading (default 60)
  *   --sync-layout          moving a node on the graph moves it in the CML lab too (writes only the node's x / y; off by default)
+ *   --pause-colour keep|grey  while paused, the routers keep their colour (keep) or are drawn grey as when not read (grey, default)
  *   --problem <file>       the lab's problem.json (network-xray-lab/0): the problem band above the graph and "✓ Solved" when its
  *                          check passes (default: "<lab title>.problem.json" in the current folder, when there is one)
  * Environment: CML_HOST, CML_USER, CML_PASSWORD (never on the command line), CML_CA_FILE (optional);
@@ -63,6 +64,7 @@ for (var i = 0; require.main === module && i < argv.length; i++) {   // options 
   else if (a === '--jump') opt.jump = argv[++i];   /* nx_cml_ssh */
   else if (a === '--mgmt') opt.mgmt = argv[++i];   /* nx_cml_ssh */
   else if (a === '--problem') opt.problem = argv[++i];   /* nx_cml_problem */
+  else if (a === '--pause-colour') opt.pauseColour = argv[++i];   /* nx_cml_pause: keep | grey (default grey) */
   else if (a === '--self-test') opt.selfTest = true;
   else if (a === '-h' || a === '--help') { usage(0); }
   else { console.error('!! unknown option ' + JSON.stringify(a)); usage(2); }
@@ -262,14 +264,17 @@ var SAMPLE_BODY = {
   ja: 'CML のラボから形だけを描いています。色・線・状態は実物ではありません: cml-xray はこのノードを (まだ) 読んでいません。ルータはラボが起動し管理の網がつながると SSH で読みます。ほかのノードは描くだけです。'
 };
 /* nx_cml_lock (2026-11-06): the places come from the CML lab, so the nodes cannot be dragged on this page (click for DeepDive, zoom
-   and moving the whole view stay); one line in the corner says so. --sync-layout keeps dragging (it writes the place to CML). */
+   and moving the whole view stay) and the Horizontal / Vertical buttons are hidden (they re-arrange the nodes - not as in CML).
+   One line in the graph's top bar, where the buttons were, says so (EN / JA, follows the page language). --sync-layout keeps
+   dragging and the buttons (it writes the place to CML). */
 var POS_EVERY_S = 5;   // the CML topology (places) is read again every 5 s and written to the page at once
-var LOCK_JS = '<script>(function(){var t=setInterval(function(){var tp=window.__nxTopo;if(!tp||typeof tp.nodeDraggable!=="function")return;clearInterval(t);tp.nodeDraggable(false);' +
-  'var L="en";try{L=localStorage.getItem("nx-lang")||"en";}catch(e){}var d=document.createElement("div");d.id="nx-cml-lock";' +
-  'd.className="hint";d.style.cssText="margin:6px 0 0;color:#90a4ae;font-size:12px";' +   /* under the graph, above the "click a node" hint (a fixed corner box covered the DeepDive) */
-  'd.textContent=L==="ja"?"ノードの位置は CML のラボの通りで、ここでは動かせません。CML で動かすと約 ' + (POS_EVERY_S + 1) + ' 秒で図も動きます。":' +
-  '"Node positions come from your CML lab and can\'t be moved here. Move a node in CML and the graph follows within about ' + (POS_EVERY_S + 1) + ' s.";' +
-  'var fr=document.querySelector(".ov-frame");if(fr)fr.insertAdjacentElement("afterend",d);else document.body.appendChild(d);},200);})();</script>';
+var LOCK_WORDS = { en: 'Node positions come from your CML lab and can' + "'" + 't be moved here. Move a node in CML and the graph follows within about ' + (POS_EVERY_S + 1) + ' s.',
+  ja: 'ノードの位置は CML のラボの通りで、ここでは動かせません。CML で動かすと約 ' + (POS_EVERY_S + 1) + ' 秒で図も動きます。' };
+var LOCK_JS = '<script>(function(){var W=' + JSON.stringify(LOCK_WORDS).replace(/</g, '\\u003c') + ';var t=setInterval(function(){var tp=window.__nxTopo;if(!tp||typeof tp.nodeDraggable!=="function")return;clearInterval(t);tp.nodeDraggable(false);' +
+  '["h-btn","v-btn"].forEach(function(i){var b=document.getElementById(i);if(b)b.style.display="none";});' +
+  'var d=document.createElement("span");d.id="nx-cml-lock";d.style.cssText="font-size:12px;color:#64748b;text-align:right;max-width:62%;line-height:1.4";' +
+  'var bar=document.querySelector(".ov-bar");if(bar)bar.appendChild(d);else{d.style.cssText+=";position:fixed;left:8px;bottom:8px";document.body.appendChild(d);}' +
+  'var put=function(){var L="en";try{L=localStorage.getItem("nx-lang")||"en";}catch(e){}var s=W[L==="ja"?"ja":"en"];if(d.textContent!==s)d.textContent=s;};put();setInterval(put,1000);},200);})();</script>';
 var SAMPLE_WORDS_JS ='<script>(function(){var t=setInterval(function(){var B=window.clabXray&&window.clabXray.SYNTHETIC_BADGE;if(!B)return;clearInterval(t);' +
   'var W=' + JSON.stringify(SAMPLE_BODY).replace(/</g, '\\u003c') + ';Object.keys(W).forEach(function(l){if(B[l])B[l].body=W[l];});' +
   'if(document.body.classList.contains("nx-synthetic")&&window.clabXray.markSynthetic)window.clabXray.markSynthetic(true);},100);})();</script>';
@@ -286,7 +291,7 @@ function renderPage(name, data, pos) {
   html = html.replace('</body>', '<script>(function(){var last=JSON.stringify(window.XRAY_POS||null);setInterval(function(){var now=JSON.stringify(window.XRAY_POS||null);' +
     'if(now!==last&&window.XRAY_POS&&window.__nxApplyXrayPos&&!window.__nxDragging){last=now;try{window.__nxApplyXrayPos();}catch(e){}}},1000);})();</script></body>');
   html = html.replace('</body>', SAMPLE_WORDS_JS + '</body>');   /* nx_cml_ssh: the "Sample view" badge in CML words */
-  if (renderPage.pauseBar) html = html.replace('</body>', PAUSE_BAR + '</body>');   /* nx_cml_share */
+  if (renderPage.pauseBar) html = html.replace('</body>', pauseBar(renderPage.pauseVia) + '</body>');   /* nx_cml_share */
   if (renderPage.syncLayout) html = html.replace('</body>', SYNC_JS + '</body>');   /* nx_cml_sync */
   else html = html.replace('</body>', LOCK_JS + '</body>');   /* nx_cml_lock */
   return html.split('{{ .Name }}').join(esc(name));
@@ -297,14 +302,33 @@ var SYNC_JS = '<script>(function(){var shift=null;var cur=function(){var o={};tr
   'setInterval(function(){if(window.__nxDragging||!window.XRAY_POS)return;var P=window.XRAY_POS,o=cur(),d=null,same=true;Object.keys(o).forEach(function(n){if(!P[n])return;var v=[o[n][0]-P[n].x,o[n][1]-P[n].y];if(!d)d=v;else if(Math.abs(v[0]-d[0])>2||Math.abs(v[1]-d[1])>2)same=false;});if(d&&same)shift=d;},500);' +
   'window.__nxOnDragDone=function(){if(!shift||!window.XRAY_POS)return;var P=window.XRAY_POS,o=cur();Object.keys(o).forEach(function(n){if(!P[n])return;var x=o[n][0]-shift[0],y=o[n][1]-shift[1];if(Math.abs(x-P[n].x)>2||Math.abs(y-P[n].y)>2){' +
   'fetch("/api/pos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({node:n,x:x,y:y})}).then(function(r){return r.json();}).then(function(j){if(j.error&&window.console)console.warn("CML layout:",j.error);});}});};})();</script>';
-/* nx_cml_share: "Reading from CML every N s [Pause]" - top right; the state follows window.XRAY_CML from xray-states.js */
-var PAUSE_BAR = '<div id="nx-cml-bar" style="position:fixed;top:8px;right:120px;z-index:9998;background:#0f1318;color:#cfd8dc;border:1px solid #37474f;border-radius:6px;padding:4px 8px;font:12px sans-serif">' +
+/* nx_cml_share: "Reading ... [Pause]" - top right; the state follows window.XRAY_CML from xray-states.js */
+/* nx_cml_pause (2026-11-06): after a click the bar keeps what was asked for until xray-states.js says the same (it used to flip
+   back for a moment); while paused, the graph gets a big "Paused" in its middle (the nodes stay clickable for DeepDive).
+   Words for the SSH way (the default) and for --console. */
+var PAUSE_WORDS = {
+  ssh: { en: ['Reading the routers (SSH)', 'Reading paused'], ja: ['ルータを読んでいます (SSH)', '読むのを一時停止中'] },
+  console: { en: ['Reading from the CML consoles', 'Reading from CML: paused'], ja: ['CML のコンソールから読んでいます', 'CML から読むのを一時停止中'] },
+  btn: { en: ['Pause', 'Resume', 'Pausing…', 'Resuming…'], ja: ['一時停止', '再開', '止めています…', '再開しています…'] },
+  big: { en: ['⏸ Paused', 'Nothing is read from the routers. Press Resume to read again.'], ja: ['⏸ 一時停止中', 'ルータを読んでいません。「再開」を押すと読み直します。'] }
+};
+function pauseBar(via) {
+  var W = { bar: PAUSE_WORDS[via === 'console' ? 'console' : 'ssh'], btn: PAUSE_WORDS.btn, big: PAUSE_WORDS.big };
+  return '<div id="nx-cml-bar" style="position:fixed;top:8px;left:8px;z-index:9998;background:#0f1318;color:#cfd8dc;border:1px solid #37474f;border-radius:6px;padding:4px 8px;font:12px sans-serif">' +
   '<span id="nx-cml-txt"></span> <button id="nx-cml-btn" style="margin-left:6px"></button></div>' +
-  '<script>(function(){var ja=function(){try{return (localStorage.getItem("nx-lang")||"en")==="ja";}catch(e){return false;}};' +
-  'var show=function(){var p=!!(window.XRAY_CML&&window.XRAY_CML.paused),j=ja();document.getElementById("nx-cml-txt").textContent=p?(j?"CML から読むのを一時停止中":"Reading from CML: paused"):(j?"CML のコンソールから読んでいます":"Reading from the CML consoles");' +
-  'document.getElementById("nx-cml-btn").textContent=p?(j?"再開":"Resume"):(j?"一時停止":"Pause");};' +
-  'document.getElementById("nx-cml-btn").onclick=function(){var p=!!(window.XRAY_CML&&window.XRAY_CML.paused);fetch(p?"/api/resume":"/api/pause",{method:"POST"}).then(function(r){return r.json();}).then(function(j){window.XRAY_CML={paused:j.paused};show();});};' +
-  'show();setInterval(show,1000);})();</script>';
+  '<script>(function(){var W=' + JSON.stringify(W).replace(/</g, '\\u003c') + ',want=null,wantAt=0;' +
+  'var L=function(){try{return (localStorage.getItem("nx-lang")||"en")==="ja"?"ja":"en";}catch(e){return "en";}};' +
+  'var big=null;var bigEl=function(){if(big)return big;var fr=document.querySelector(".ov-frame");if(!fr)return null;if(getComputedStyle(fr).position==="static")fr.style.position="relative";' +
+  'big=document.createElement("div");big.id="nx-cml-paused";big.style.cssText="position:absolute;left:0;right:0;bottom:0;top:46px;display:none;align-items:center;justify-content:flex-start;padding-top:26px;flex-direction:column;background:rgba(15,19,24,.12);pointer-events:none;z-index:5;text-align:center";' +
+  'big.innerHTML="<div style=\\"font:700 34px sans-serif;color:#fff;background:rgba(15,19,24,.88);border-radius:12px 12px 0 0;padding:10px 28px 4px\\"></div><div style=\\"font:14px sans-serif;color:#eceff1;background:rgba(15,19,24,.88);border-radius:0 0 12px 12px;padding:2px 28px 12px\\"></div>";fr.appendChild(big);return big;};' +
+  'var show=function(){var real=!!(window.XRAY_CML&&window.XRAY_CML.paused);if(want!==null&&(real===want||Date.now()-wantAt>15000))want=null;' +
+  'var p=want!==null?want:real,l=L();document.getElementById("nx-cml-txt").textContent=W.bar[l][p?1:0];' +
+  'document.getElementById("nx-cml-btn").textContent=want!==null?W.btn[l][want?2:3]:W.btn[l][p?1:0];' +
+  'var b=bigEl();if(b){b.style.display=p?"flex":"none";b.children[0].textContent=W.big[l][0];b.children[1].textContent=W.big[l][1];}};' +
+  'document.getElementById("nx-cml-btn").onclick=function(){var p=want!==null?want:!!(window.XRAY_CML&&window.XRAY_CML.paused);want=!p;wantAt=Date.now();show();' +
+  'fetch(p?"/api/resume":"/api/pause",{method:"POST"}).catch(function(){want=null;show();});};' +
+  'show();setInterval(show,500);})();</script>';
+}
 var MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject', '.webm': 'video/webm' };
 /* nx_cml_problem (2026-11-06): the lab's problem.json, as next to a containerlab topology: the page shows its band (title, text,
@@ -721,6 +745,7 @@ Collector.prototype.round = function () {
       if (!states[n]) states[n] = self.last[n] ? Object.assign({}, self.last[n], { nx_unread: _why, nx_stale_since: self.lastAt[n] })
         : { success: _why === 'timeout' ? false : undefined, target_node: n, nx_unread: _why === 'timeout' ? 'error' : _why, interfaces: {} };   /* nx_cml_share2: an IOS node is read - never 'device' */
       if (busy[n] && states[n]) states[n].nx_busy = busy[n];   /* nx_cml_share2: config mode / someone is typing / ... */
+      if (self.paused && states[n] && !states[n].nx_unread) states[n] = Object.assign({}, states[n], { nx_unread: 'paused', nx_stale_since: self.lastAt[n] });   /* nx_cml_pause: paused while this round was reading - written as paused, not as read */
     });
     crossNodeHellos(states, self.view().adj, proto);
     self.write(states, proto, nodes);
@@ -736,13 +761,27 @@ Collector.prototype.write = function (states, proto, nodes) {
   if (body !== self.written) {
     self.written = body;
     var dest = path.join(path.resolve(self.cfg.out), 'xray-states.js'), tmp = dest + '.tmp';
-    fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused }) + ';\n' +
+    fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused, keepColour: !!self.cfg.pauseKeepColour }) + ';\n' +
       (_pos ? 'window.XRAY_POS = ' + JSON.stringify(_pos) + '; window.LIVE_POS = window.XRAY_POS;\n' : '') +
       (self.cfg.problem ? 'window.XRAY_PROBLEM = ' + JSON.stringify(self.cfg.problem) + ';\n' : ''));   /* nx_cml_share */   /* nx_cml_follow */   /* nx_cml_problem: focus + check, as clab-xray-collect.js */
     fs.renameSync(tmp, dest);
     var line = 'state ' + nodes.map(function (n) { var s = states[n]; return n + (s.nx_unread ? '(' + s.nx_unread + ')' : ':' + (s.bgp_neighbors || []).filter(function (b) { return /establ/i.test(b.state); }).length + 'bgp/' + (s.ospf_neighbors || []).filter(function (o) { return o.full; }).length + 'ospf/' + (s.routing_table || []).length + 'rt'); }).join(' ') + ' (' + proto + ')';
     if (line !== self.logged) { self.logged = line; console.log('[' + new Date().toISOString() + '] ' + line); }   // the page file follows every change; the log only when the summary changes
   }
+};
+/* nx_cml_pause (2026-11-06): Pause / Resume are written to the page at once (not with the next round): paused = each router's last
+   state marked paused; resumed = the last states without the mark, until the next round reads again */
+Collector.prototype.setPaused = function (on) {
+  var self = this; this.paused = !!on;
+  if (!this.lastW) return;
+  var st = {};
+  this.lastW.nodes.forEach(function (n) {
+    var s = self.lastW.states[n], base = self.last[n];
+    if (on) st[n] = base && (!s || !s.nx_unread || s.nx_unread === 'paused') ? Object.assign({}, base, { nx_unread: 'paused', nx_stale_since: self.lastAt[n] }) : s;
+    else st[n] = s && s.nx_unread === 'paused' && base ? base : s;
+  });
+  crossNodeHellos(st, self.view().adj, this.lastW.proto);
+  this.write(st, this.lastW.proto, this.lastW.nodes);
 };
 Collector.prototype.posMoved = function () { if (this.lastW) this.write(this.lastW.states, this.lastW.proto, this.lastW.nodes); };
 Collector.prototype.loop = function () {
@@ -887,6 +926,22 @@ function selfTest() {
   })();
   var pgL = renderPage('lab', { nodes: [], links: [] }, null);
   A(pgL.indexOf('nodeDraggable(false)') > 0 && pgL.indexOf("be moved here. Move a node in CML") > 0 && /約 \d+ 秒/.test(pgL), 'lock: a CML page cannot drag nodes, and says so (EN / JA, with the seconds)');
+  A(pgL.indexOf('["h-btn","v-btn"]') > 0 && pgL.indexOf('.ov-bar') > 0, 'lock: the Horizontal / Vertical buttons are hidden; the line sits in the graph\'s top bar');
+  renderPage.pauseBar = true; renderPage.pauseVia = 'ssh'; var pgP = renderPage('lab', { nodes: [], links: [] }, null); renderPage.pauseBar = false;
+  A(/ルータを読んでいます \(SSH\)/.test(pgP) && pgP.indexOf('nx-cml-paused') > 0 && /⏸ 一時停止中/.test(pgP) && pgP.indexOf('Reading from the CML consoles') < 0, 'pause: SSH words, and a big "Paused" over the graph');
+  (function () {   // nx_cml_pause: Pause / Resume reach the page file at once
+    var od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-pz-')), v = { pos: null, adj: {} }, _l = console.log; console.log = function () {};
+    var c = new Collector(function () { return v; }, 'L', { out: od, pauseKeepColour: true });
+    var rd = function () { var x = fs.readFileSync(path.join(od, 'xray-states.js'), 'utf8'); return { st: JSON.parse(/LIVE_STATES = (.*);\n/.exec(x)[1]), cml: JSON.parse(/XRAY_CML = (.*);\n/.exec(x)[1]) }; };
+    try {
+      c.last.r1 = { target_node: 'r1', routing_table: [] }; c.lastAt.r1 = '2026-11-06T07:00:00.000Z';
+      c.write({ r1: c.last.r1, r2: { target_node: 'r2', nx_unread: 'nomgmt' } }, 'ospf', ['r1', 'r2']);
+      c.setPaused(true); var a = rd();
+      A(a.cml.paused === true && a.cml.keepColour === true && a.st.r1.nx_unread === 'paused' && a.st.r1.nx_stale_since === '2026-11-06T07:00:00.000Z' && a.st.r2.nx_unread === 'nomgmt', 'pause: written at once - paused mark with the time; a not-read router stays not read');
+      c.setPaused(false); var b = rd();
+      A(b.cml.paused === false && !b.st.r1.nx_unread && b.st.r2.nx_unread === 'nomgmt', 'pause: resume written at once - the mark goes');
+    } finally { console.log = _l; try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} }
+  })();
   renderPage.syncLayout = true; var pgS = renderPage('lab', { nodes: [], links: [] }, null); renderPage.syncLayout = false;
   A(pgS.indexOf('nodeDraggable(false)') < 0, 'lock: --sync-layout keeps dragging (it writes the place to CML)');
   (function () {   // nx_cml_lock: a node moved in CML -> the page file at once, without a round
@@ -966,7 +1021,7 @@ else if (require.main === module) {
     setInterval(function () { refresh().catch(function (e) { console.error('!! topology: ' + e.message); }); }, POS_EVERY_S * 1000);   // nx_cml_follow: CML's layout within seconds (nodes / links added: on the next page load)
     if (opt.noState || !ios.length) return;
     if (opt.proto && !/^(ospf|bgp)$/.test(opt.proto)) { console.error('!! --proto ospf or bgp'); process.exit(2); }
-    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out, problem: prob ? prob.xp : null };
+    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out, problem: prob ? prob.xp : null, pauseKeepColour: opt.pauseColour === 'keep' };
     if (!opt.console) {   /* nx_cml_ssh: the default - SSH on the management network; the consoles are left alone */
       var s = sshPlanner(api, lab, function () { return view; }, opt);
       if (!s) process.exit(2);
@@ -982,7 +1037,7 @@ else if (require.main === module) {
     var col = new Collector(function () { return view; }, lab.title, cfgC);
     onPos = function () { col.posMoved(); };   /* nx_cml_lock */
     if (cfgC.ssh) ios.forEach(function (n) { cfgC.ssh.plan(n).then(function (p) { if (p.ip) console.log('   ' + n + ': SSH ' + cfgC.ssh.user + '@' + p.ip + (opt.jump ? ' via ' + opt.jump : ' via nx-jump')); }); });   /* nx_cml_ssh: the not-read ones are said by the first round */
-    if (/^(127\.|::1$|localhost$)/.test(opt.listen)) { serve.control = function (on) { col.paused = on; console.log(on ? 'paused: nothing is sent to the routers' : 'resumed'); col.written = ''; }; renderPage.pauseBar = true; }   /* nx_cml_share: local page only */
+    if (/^(127\.|::1$|localhost$)/.test(opt.listen)) { serve.control = function (on) { col.setPaused(on); console.log(on ? 'paused: nothing is sent to the routers' : 'resumed'); };   /* nx_cml_pause: written at once */ renderPage.pauseBar = true; renderPage.pauseVia = opt.console ? 'console' : 'ssh'; }   /* nx_cml_share: local page only */
     if (opt.syncLayout && /^(127\.|::1$|localhost$)/.test(opt.listen)) {   /* nx_cml_sync: write back a moved node's x / y (local page only) */
       renderPage.syncLayout = true;
       serve.place = function (j) {
