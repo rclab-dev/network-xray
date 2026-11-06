@@ -1,0 +1,48 @@
+name: checks
+
+# Tests and repository consistency checks that need no Docker and no network (Node built-ins only).
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020   # v4.4.0
+        with:
+          node-version: '24'   # same major as docker/Dockerfile (node:24-alpine)
+      - name: tests
+        run: node --test
+      - name: parser and collector self-tests
+        run: |
+          node bgp-parse.js
+          node clab-collect.js --self-test
+          node clab-srl-collect.js --self-test
+          node clab-iosxe-collect.js --self-test
+          node frr-collect.js --self-test
+          node scripts/hello-kf-selftest.js
+          node scripts/nbr-own-list-selftest.js
+          node scripts/ospf-state-word-selftest.js
+      - name: copies
+        if: ${{ !cancelled() }}
+        run: node scripts/check-copies.js
+      - name: examples
+        if: ${{ !cancelled() }}
+        run: |
+          node scripts/check-examples.js
+          node scripts/check-example-topologies.js
+          node scripts/check-solved-pairs.js
+      - name: links (offline)
+        if: ${{ !cancelled() }}
+        run: node scripts/check-links.js
+      - name: i18n
+        if: ${{ !cancelled() }}
+        run: node scripts/check-i18n.js
