@@ -16,12 +16,20 @@ With each router's own CLI. There is no agent, SNMP or gNMI.
 
 ## 2. Can it change anything on my routers?
 
-The collectors don't change anything. They only run `show` / `info from state` commands, plus `terminal length/width 0` on IOL. No collector has a code path that enters config mode or saves config.
+The collectors don't change any router configuration. `xray.sh` is more than a collector: it deploys the lab and can restart FRR, and redeploying can lose changes you made by hand. The two are separate:
 
-Two qualifications:
+**The collectors (read-only).** They never enter config mode or save config. What they run:
 
+- **FRR:** fixed `show … json` commands through `vtysh -c` (`clab-collect.js:1110-1125`, run via `_vtyBase` at `clab-collect.js:56`), plus one command that is not JSON: `show running-config` (`clab-collect.js:1141`), read only to see which protocols are configured. `frr-collect.js` builds its list in `assemble` (`frr-collect.js:160`) and refuses a command that isn't plain words (`frr-collect.js:68`).
+- **SR Linux:** `sr_cli 'info from state <path> | as json'` (`clab-srl-collect.js:488`); a path with any character outside a fixed set is refused (`clab-srl-collect.js:485`).
+- **Cisco IOL:** `terminal length 0` and `terminal width 0` (they change only that SSH session's terminal, not the router configuration), the fixed `CMDS` list of `show` commands, then `exit` (`clab-iosxe-collect.js:641`, `clab-iosxe-collect.js:756`).
+- **The container's start script** also reads, to choose the protocol: `show running-config` on FRR and `sr_cli -d 'info from running …'` on SR Linux (`docker/entrypoint.sh:87`, `docker/entrypoint.sh:91`).
 - **No allowlist enforces this.** "Read-only" holds because the command lists are fixed in the source. `test/collector-safety.test.js` tests that node names, hosts and link names can't be read as options or shell, not which commands run.
-- **`xray.sh` is more than a collector:** it runs `containerlab deploy --reconfigure`, and if an FRR container's vtysh doesn't answer it runs `watchfrr.sh restart all` (up to 3 times) (`xray.sh`). That's lab management, not a config write, but it does change running state.
+
+**`xray.sh` (lab management: it changes the lab).**
+
+- **It deploys the lab:** `containerlab deploy --reconfigure` (`xray.sh:263`). On a lab that is already running this recreates the nodes, so configuration you changed by hand is lost (the README warns about this). `--attach` skips the deploy and only reads.
+- **It restarts FRR when zebra doesn't answer:** if an FRR container's `vtysh -c 'show zebra'` gets no answer (`xray.sh:268`), it runs `watchfrr.sh restart all`, up to 3 times (`xray.sh:274-279`). Nodes without `watchfrr.sh` are skipped (`xray.sh:270`).
 
 The config the FRR collector reads is not stored. Only parsed facts (BGP/OSPF configured, static prefix and next hop) leave the collector; `test/collector-config-secrets.test.js` plants passwords and keys in a fake running-config and checks that none reach the output.
 
@@ -84,12 +92,17 @@ Different jobs, and no integration with either.
 
 ## 8. Is the Docker socket mount safe?
 
-Not in the sense of being sandboxed. Access to the Docker socket is root-equivalent on the host.
+You don't have to mount it. Only the container image and the netlab tool mount the socket. These ways don't:
 
-- **The image mounts it** (`-v /var/run/docker.sock:...` in `docker/Dockerfile` usage and `docker/netlab-defaults.yml`) so it can run `docker exec` into the lab containers through the `docker` CLI. It never opens the socket directly.
-- **Your lab directory is mounted read-only** (`/lab:ro`).
+- **Run the collector and the graph by hand** on the host: `node clab-xray-collect.js … --watch` plus `containerlab graph --template … -s 127.0.0.1:8080`, as in the README ("Labs started another way", `README.md:181-188`). The collector still uses `docker exec`, so your user needs Docker access: the same trust as the `docker` group, but no container holds the socket.
+- **Run `xray.sh` on the host** as a user in the `docker` group (same trust, without a container). Without `--attach` it redeploys the lab (Q2).
+- **Use the compose demo** (`demo/compose-ospf/`). It shares FRR vty sockets and needs no Docker socket at all (`demo/compose-ospf/compose.yml:1`; `XRAY_VTY_SOCK_DIR` in `clab-collect.js:37-38`, used at `clab-collect.js:56`).
+
+If you do mount it, it is not sandboxed. Access to the Docker socket is root-equivalent on the host: whoever can use it can run anything as root there. Mount it only on a host where you'd already give that container root, like your own lab machine.
+
+- **Why the image mounts it** (`-v /var/run/docker.sock:...` in the `docker/Dockerfile:5` usage and `docker/netlab-defaults.yml:36`): it runs `docker exec` into the lab containers through the `docker` CLI and stops if `docker info` fails (`docker/entrypoint.sh:39`). It never opens the socket directly.
+- **Your lab directory is mounted read-only** (`/lab:ro`, `docker/netlab-defaults.yml:37`).
 - **Docker has no read-only socket**, so the safeguard is the fixed command lists (Q2), not a technical boundary.
-- **If that's unacceptable,** run `xray.sh` on the host as a user in the `docker` group (same trust, without a container), or use the compose demo (`demo/compose-ospf/`), which shares FRR vty sockets and needs no Docker socket at all.
 
 ## 9. The page has no login. Who can see it?
 
