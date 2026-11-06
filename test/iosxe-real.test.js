@@ -95,12 +95,23 @@ var LAN = [['2.2.2.2', 'Full', 'DR', 'Ethernet0/1'], ['3.3.3.3', 'Full', 'Backup
 var OSPF_CASES = {
   'base':    { r1: [['2.2.2.2', 'Full', 'DR', 'Ethernet0/2']].concat(LAN), r2link: ['1.1.1.1', 'Full', 'Backup'] },
   'exstart': { r1: [['2.2.2.2', 'Exchange', 'Backup', 'Ethernet0/2']].concat(LAN), r2link: ['1.1.1.1', 'ExStart', 'DR'] },
-  'init':    { r1: [['2.2.2.2', 'Init', 'DROther', 'Ethernet0/2']].concat(LAN), r2link: null }
+  'init':    { r1: [['2.2.2.2', 'Init', 'DROther', 'Ethernet0/2']].concat(LAN), r2link: null },
+  'shut':    { r1: LAN.slice(), r2link: null }
 };
 function ospfState(step, node) {
   return ios.run(texts(path.join(OSPF, step, node)), node, 'Ethernet0/1:lan,Ethernet0/2:' + (node === 'r1' ? 'r2' : 'r1'), 'ospf', '');
 }
 function key(n) { return [n.router_id, n.state, n.role, n.iface]; }
+
+// nx_ios_own_down: both ends of Ethernet0/2 shut. IOS's own router-LSA (shut/r1_show_ip_ospf_database_router_self-originate.txt)
+// has 2 links, Loopback0 and Ethernet0/1: an interface in state DOWN adds no link (RFC 2328 12.4.1).
+test('iosxe-real-ospf shut: the shut interface\'s network is not one of r1\'s own LSAs (IOS lists 2 links)', function () {
+  var own = (ospfState('shut', 'r1').lsdb_prefixes || []).filter(function (x) { return x.own; }).map(function (x) { return x.text; }).sort();
+  assert.deepStrictEqual(own, ['1.1.1.1/32', '10.20.0.0/24']);
+  var lsa = fs.readFileSync(path.join(OSPF, 'shut', 'r1_show_ip_ospf_database_router_self-originate.txt'), 'utf8').split('Router Link States')[1];   // the interface brief printed before it lists 10.21.0.1
+  assert.match(lsa, /Number of Links: 2/);
+  assert.ok(!/10\.21\.0\./.test(lsa), 'IOS does not advertise 10.21.0.0/24');
+});
 
 Object.keys(OSPF_CASES).forEach(function (step) {
   test('iosxe-real-ospf ' + step + ': r1 reads every neighbor IOS printed, in FRR\'s spelling', function () {

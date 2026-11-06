@@ -1,0 +1,45 @@
+Loopback0 is up, line protocol is up 
+  Internet Address 2.2.2.2/32, Interface ID 7, Area 0
+  Attached via Network Statement
+  Process ID 1, Router ID 2.2.2.2, Network Type LOOPBACK, Cost: 1
+  Topology-MTID    Cost    Disabled    Shutdown      Topology Name
+        0           1         no          no            Base
+  Loopback interface is treated as a stub Host
+Ethernet0/2 is administratively down, line protocol is down 
+  Internet Address 10.21.0.2/24, Interface ID 4, Area 0
+  Attached via Network Statement
+  Process ID 1, Router ID 2.2.2.2, Network Type BROADCAST, Cost: 10
+  Topology-MTID    Cost    Disabled    Shutdown      Topology Name
+        0           10        no          no            Base
+  Transmit Delay is 1 sec, State DOWN, Priority 1
+  No designated router on this network
+  No backup designated router on this network
+  Timer intervals configured, Hello 2, Dead 8, Wait 8, Retransmit 5
+    oob-resync timeout 40
+Ethernet0/1 is up, line protocol is up 
+  Internet Address 10.20.0.2/24, Interface ID 3, Area 0
+  Attached via Network Statement
+  Process ID 1, Router ID 2.2.2.2, Network Type BROADCAST, Cost: 10
+  Topology-MTID    Cost    Disabled    Shutdown      Topology Name
+        0           10        no          no            Base
+  Transmit Delay is 1 sec, State DR, Priority 100
+  Designated Router (ID) 2.2.2.2, Interface address 10.20.0.2
+  Backup Designated router (ID) 3.3.3.3, Interface address 10.20.0.3
+  Timer intervals configured, Hello 2, Dead 8, Wait 8, Retransmit 5
+    oob-resync timeout 40
+    Hello due in 00:00:00
+  Supports Link-local Signaling (LLS)
+  Cisco NSF helper support enabled
+  IETF NSF helper support enabled
+  Can be protected by per-prefix Loop-Free FastReroute
+  Can be used for per-prefix Loop-Free FastReroute repair paths
+  Not Protected by per-prefix TI-LFA
+  Index 1/1/1, flood queue length 0
+  Next 0x0(0)/0x0(0)/0x0(0)
+  Last flood scan length is 2, maximum is 3
+  Last flood scan time is 0 msec, maximum is 1 msec
+  Neighbor Count is 3, Adjacent neighbor count is 3 
+    Adjacent with neighbor 1.1.1.1
+    Adjacent with neighbor 3.3.3.3  (Backup Designated Router)
+    Adjacent with neighbor 4.4.4.4
+  Suppress hello for 0 neighbor(s)

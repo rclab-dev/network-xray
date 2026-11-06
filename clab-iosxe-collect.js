@@ -517,6 +517,7 @@ function collectFromIosxeText(args, buildState) {
   var ospfOwn = [];
   Object.keys(p.ospfIf).forEach(function (ifn) {
     var d = p.ospfIf[ifn]; if (!d.ospf || !d.ip) return;
+    if (d.up === false) return;   /* nx_ios_own_down: an OSPF interface in state DOWN adds no link to the router-LSA (RFC 2328 12.4.1) */
     var len = d.prefix != null ? d.prefix : 24, mask = len === 0 ? 0 : (0xFFFFFFFF << (32 - len)) >>> 0;
     var n = (ip2n(d.ip) & mask) >>> 0;
     var net = [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.') + '/' + len;
