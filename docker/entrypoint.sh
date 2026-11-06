@@ -61,8 +61,8 @@ rm -rf "$WORK/examples" "$WORK/docker" "$WORK/test" "$WORK/fixtures" "$WORK/demo
 rm -f "$WORK/problem.json"
 [ -f "$(dirname "$TOPO")/problem.json" ] && cp "$(dirname "$TOPO")/problem.json" "$WORK/problem.json"
 # read the topology where it is (netlab's clab.yml points at node_files/... relative to its own directory)
-LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$TOPO" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d '"'"'"'')"   # nx_yaml_inline_comment: drop a trailing "# ..."
-PREFIX="$(sed -n 's/^prefix:[[:space:]]*//p' "$TOPO" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"   # quotes kept: prefix: "" (no prefix) is not the default
+LABNAME="$(sed -n '/^name:[[:space:]]*/{s///p;q;}' "$TOPO" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d '"'"'"'')"   # nx_yaml_inline_comment: drop a trailing "# ..."
+PREFIX="$(sed -n '/^prefix:[[:space:]]*/{s///p;q;}' "$TOPO" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"   # quotes kept: prefix: "" (no prefix) is not the default
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $TOPO" >&2; exit 1; }
 # nx_no_shell (2026-10-17): the lab name becomes part of container names: plain names only (letters, digits, _ . -)
 case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $TOPO is not a plain name (letters, digits, _ . -): not starting" >&2; exit 1 ;; esac

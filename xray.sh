@@ -91,7 +91,7 @@ if [ -n "$CHECK" ]; then
     bad "docker: not reachable - start it (sudo systemctl start docker) or check: docker info"
   fi
   if command -v containerlab >/dev/null 2>&1; then
-    _cv="$(CLAB_VERSION_CHECK=disable _t containerlab version 2>/dev/null | sed -n 's/^[[:space:]]*version:[[:space:]]*//p' | head -1)" || _cv=""   # a failing version must not end the check (set -e)
+    _cv="$(CLAB_VERSION_CHECK=disable _t containerlab version 2>/dev/null | sed -n 's/^[[:space:]]*version:[[:space:]]*//p' | sed -n 1p)" || _cv=""   # a failing version must not end the check (set -e)
     ok "containerlab: ${_cv:-found (version unknown)}"
   else
     bad "containerlab: not found - https://containerlab.dev/install/"
@@ -122,13 +122,13 @@ if [ -n "$CHECK" ]; then
   if [ ! -f "$YML" ] || [ ! -r "$YML" ]; then
     bad "topology: not found or not readable: $YML"
   else
-    _ln="$(sed -n 's/^name:[[:space:]]*//p' "$YML" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d "\"'")"
+    _ln="$(sed -n '/^name:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d "\"'")"
     case "$_ln" in
       '') bad "topology: could not read 'name:' from $YML - add a line such as  name: mylab" ;;
       [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) bad "topology: the lab name in $YML is not a plain name (letters, digits, _ . -) - rename it" ;;
       *) ok "topology: $YML (lab '$_ln')" ;;
     esac
-    _pfx="$(sed -n 's/^prefix:[[:space:]]*//p' "$YML" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"
+    _pfx="$(sed -n '/^prefix:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"
     case "$_pfx" in ''|clab|'"clab"'|"'clab'") ;; *) bad "topology: prefix ($_pfx) is not supported - network-xray finds routers as clab-<lab>-<node>: remove the prefix: line (or use prefix: clab)" ;; esac
     if grep -qsE "kind:[[:space:]]*cisco_iol" "$YML"; then
       # the image under kinds: cisco_iol:, any image: on a cisco_iol node line, and image: inside a
@@ -168,13 +168,13 @@ case "$PORT" in ''|*[!0-9]*) PORT=x ;; esac
   || { echo "port must be a number from 1 to 65535: ${2-}"; exit 1; }
 YML="$(cd -- "$(dirname -- "$YML")" && pwd)/$(basename -- "$YML")"
 LABDIR="$(dirname "$YML")"
-LABNAME="$(sed -n 's/^name:[[:space:]]*//p' "$YML" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d "\"'")"
+LABNAME="$(sed -n '/^name:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//' | tr -d "\"'")"
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $YML"; exit 1; }
 # nx_review_1017 (F-07): the lab name is used in container names and docker filters: plain names only
 case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $YML is not a plain name (letters, digits, _ . -)"; exit 1 ;; esac
 # containerlab_compat: the collectors look for containers named clab-<lab>-<node> (the default prefix 'clab').
 # Another prefix (prefix: "" = no prefix, __lab-name, or any other word) would make every router look stopped: stop here.
-_pfx="$(sed -n 's/^prefix:[[:space:]]*//p' "$YML" | head -1 | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"
+_pfx="$(sed -n '/^prefix:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"
 case "$_pfx" in ''|clab|'"clab"'|"'clab'") ;; *) echo "the topology prefix ($_pfx) in $YML is not supported: network-xray finds routers as clab-<lab>-<node>. Remove the prefix: line (or use prefix: clab)."; exit 1 ;; esac
 
 # nx_port_free_check: the graph port must be free, otherwise `containerlab graph` stops right after "==> open"
@@ -300,9 +300,9 @@ esac
 echo "    Click any router to open its DeepDive. Fix the lab in a router's shell, e.g.:"
 # nx_iol_demo_msgs: the shell by node kind (IOL has no vtysh: ssh with containerlab's cisco_iol default login)
 # nx_cli_msgs: an FRR node is a linux node with an frr image (alpine hosts are linux too and have no vtysh)
-_frrn="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*linux[^}]*image:[^,}]*frr.*/\1/p' "$YML" | head -1)"
-_ioln="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*cisco_iol.*/\1/p' "$YML" | head -1)"
-_srln="$(sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*nokia_srlinux.*/\1/p' "$YML" | head -1)"
+_frrn="$(sed -n '/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*linux[^}]*image:[^,}]*frr.*/{s//\1/p;q;}' "$YML")"
+_ioln="$(sed -n '/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*cisco_iol.*/{s//\1/p;q;}' "$YML")"
+_srln="$(sed -n '/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*nokia_srlinux.*/{s//\1/p;q;}' "$YML")"
 [ -n "$_frrn" ] && echo "      docker exec -it clab-${LABNAME}-${_frrn} vtysh"
 [ -n "$_ioln" ] && echo "      ssh admin@clab-${LABNAME}-${_ioln}   (password: admin)"
 [ -n "$_srln" ] && echo "      docker exec -it clab-${LABNAME}-${_srln} sr_cli"
