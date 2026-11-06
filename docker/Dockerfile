@@ -19,7 +19,8 @@ ARG CLAB_SHA256_ARM64=f04ac8c1f2f6a04c344585cb6a36177c446fce18cb6073b4a0dbd517f3
 # npm / npx / corepack / yarn are removed at the end of this step: network-xray only runs node at run time,
 # and their bundled dependencies are what an image scanner reports for the Node layer.
 # curl is only needed for the download and is removed again in the same step.
-RUN apk add --no-cache bash docker-cli ca-certificates tini coreutils openssh-client \
+# docker-cli: at least the Alpine build with the fixes for CVE-2026-116587 / CVE-2026-116591 (go-jose, klauspost/compress)
+RUN apk add --no-cache bash 'docker-cli>=29.9.3-r0' ca-certificates tini coreutils openssh-client \
  && apk add --no-cache --virtual .fetch-deps curl \
  && case "${TARGETARCH}" in amd64) sum="${CLAB_SHA256_AMD64}" ;; arm64) sum="${CLAB_SHA256_ARM64}" ;; *) echo "unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; esac \
  && curl -fsSL -o /tmp/containerlab.tar.gz "https://github.com/srl-labs/containerlab/releases/download/v${CLAB_VERSION}/containerlab_${CLAB_VERSION}_linux_${TARGETARCH}.tar.gz" \
