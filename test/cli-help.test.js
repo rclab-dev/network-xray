@@ -14,7 +14,7 @@ var BASH = ['/bin/bash', '/usr/bin/bash'].filter(function (p) { return fs.exists
 var NODE_ENTRIES = [
   'bgp-parse.js', 'clab-collect.js', 'clab-iosxe-collect.js', 'clab-srl-collect.js', 'clab-to-xray.js',
   'clab-xray-collect.js', 'frr-collect.js', 'netlab-validate.js', 'topojson-to-xray.js',
-  'scripts/check-copies.js', 'scripts/check-examples.js', 'scripts/check-i18n.js', 'scripts/gen_compose_bundle.js',
+  'scripts/capture-frames.js', 'scripts/check-copies.js', 'scripts/check-examples.js', 'scripts/check-i18n.js', 'scripts/gen_compose_bundle.js',
   'scripts/hello-kf-selftest.js', 'scripts/nbr-own-list-selftest.js', 'scripts/ospf-state-word-selftest.js',
   'scripts/scale-bench.js', 'scripts/validate-states.js', 'scripts/xray-mcp.js', 'scripts/xray-query.js'
 ];

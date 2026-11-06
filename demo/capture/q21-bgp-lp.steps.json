@@ -1,0 +1,27 @@
+{
+  "proto": "bgp",
+  "steps": [
+    {
+      "name": "LocPref 50 - r1 prefers r3 (LocPref 100) for 8.8.8.0/24",
+      "run": "none"
+    },
+    {
+      "name": "LocPref 150 - r2's route wins",
+      "node": "r1",
+      "run": "vtysh -c 'configure terminal' -c 'route-map LOW-LP permit 10' -c 'set local-preference 150' -c 'end' -c 'clear ip bgp 10.10.0.20 soft in'",
+      "wait": 5
+    },
+    {
+      "name": "r1 eth1 down - r2 lost, r3 takes over",
+      "node": "r1",
+      "run": "ip link set eth1 down",
+      "wait": 3
+    },
+    {
+      "name": "r1 eth1 restored - r2 best again",
+      "node": "r1",
+      "run": "ip link set eth1 up && vtysh -c 'clear ip bgp 10.10.0.20'",
+      "wait": 10
+    }
+  ]
+}
