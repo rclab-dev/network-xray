@@ -2,6 +2,18 @@
 
 User-visible changes in each release, newest first. Dates are the release tag dates.
 
+## v1.1.9 — 2026-11-07
+
+- OSPF on the page: the neighbor-state text and the OSPF process circle use the same colors as the line (Init / 2-Way orange, ExStart to Loading and Full green), and a link to a single neighbor is drawn in the same four styles as the others.
+- Best-Path panel and `xray-query.js why`: a reason that the collector derived for Cisco IOS-XE is shown as inferred by network-xray, not as reported by FRR.
+- Collectors: a router whose answer is too large to read is marked unread instead of being shown with every neighbor down (FRR, SR Linux); on Cisco IOS-XE an OSPF interface that is down is no longer counted in the router's own LSA.
+- The recorded OSPF and BGP replay demos and the OSPF GIF were recorded again from real labs.
+- `xray.sh` no longer stops with exit code 141 on systems with busybox `sed`.
+- The Docker image's healthcheck counts only a 2xx / 3xx answer as healthy and uses the last `--port`.
+- The MCP server answers one fixed error message for a file that is not network-xray state.
+- Docs: README and `docs/dev/likely-questions.md` say what is not read yet, which best-path steps are not compared, what the collectors run, ways to avoid mounting the Docker socket, Node 18 and 24, and one scale-bench run.
+- New tools and checks: `scripts/capture-frames.js` and `demo/build-replay-bgp.js` (recording replay demos), `scripts/check-doc-commands.js`, `check-copies` fails on an unlisted copy, `.gitattributes` with a test that text files have no CR, CI on every push and pull request.
+
 ## v1.1.8 — 2026-11-06
 
 - Lighter refresh: the collector writes the state once per round (to a temp file, then renamed) together with a small signature file, and the pages reload the state only when a router changed and not while the tab is hidden.
