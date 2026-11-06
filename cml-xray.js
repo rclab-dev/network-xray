@@ -617,6 +617,9 @@ SshLine.prototype.login = function () {
       if (self.noSsh) { var ne = new Error('ssh not found on this machine: install an OpenSSH client (the routers are read over SSH)'); ne.fatal = true; throw ne; }
       if (/Permission denied|Authentication failed/i.test(self.err)) throw new Error('SSH login was denied (' + where + why + '): ' +
         (/@[^ ]*' *\(publickey\)|Permission denied \(publickey\)/i.test(self.err) ? 'the jump host did not take your key - NX_JUMP_USER / NX_JUMP_KEY (on Windows the key file must be readable by you only)' : 'set NX_IOS_USER / NX_IOS_PASSWORD to the routers\' login'));
+      /* nx_cml_stopped: the router does not answer at all (stopped in CML, paused, still booting) - not a login problem (seen 11-06 on IOL) */
+      if (/timed out|stdio forwarding failed|Connection refused|No route to host|Connection closed by .* port|Connection reset/i.test(self.err))
+        throw new Error('the router does not answer over SSH (' + where + why + ') - stopped, or still booting? It is read again when it answers');
       if (quiet) throw new Error('SSH did not log in to ' + where + why + ' - check NX_IOS_USER / NX_IOS_PASSWORD (the jump host: NX_JUMP_USER and its key - NX_JUMP_KEY or your ssh agent; ' +
         'on Windows the key file must be readable by you only), that the router has finished booting, and its "ip ssh" / "line vty" settings');   // a wrong password: ssh prints nothing at LogLevel ERROR
       throw new Error('no IOS prompt over SSH from ' + where + why);
