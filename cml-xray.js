@@ -461,7 +461,9 @@ function sshAskpass() {
   /* the host keys of this run go to a file of its own, removed with the helper (not /dev/null or NUL: one of them is a plain file
      to the other ssh on Windows) */
   var known = path.join(dir, 'known_hosts');
-  return { file: f, known: known, cleanup: function () { [f, js, known, known + '.old'].forEach(function (x) { try { fs.unlinkSync(x); } catch (e) {} }); try { fs.rmdirSync(dir); } catch (e) {} } };
+  return { file: f, known: known, cleanup: function () {   // everything in the folder: the helper and the per-session host-key files
+    try { fs.readdirSync(dir).forEach(function (x) { try { fs.unlinkSync(path.join(dir, x)); } catch (e) {} }); } catch (e) {}
+    try { fs.rmdirSync(dir); } catch (e) {} } };
 }
 function sshOpts(known, q) { return ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=' + (q ? '"' + sshPath(known) + '"' : sshPath(known)), '-o', 'LogLevel=ERROR', '-o', 'ConnectTimeout=15']; }
 function sshArgs(ip, jump, s) {
@@ -550,11 +552,21 @@ function SshLine(n, ip, jump, s) { this.node = n; this.ip = ip; this.jump = jump
 SshLine.prototype.waitFor = Console.prototype.waitFor;
 SshLine.prototype.send = Console.prototype.send;
 SshLine.prototype.cmd = Console.prototype.cmd;
+/* Windows: not detached. A detached ssh.exe has no console, so the ProxyCommand ssh it starts gets a new, visible console
+   window (one black window per router). With windowsHide and no detached, Node starts ssh with CREATE_NO_WINDOW = a
+   console of its own without a window: the ProxyCommand hop shares it (no window either), and ours is not touched (Ctrl+C). */
+var SSH_SPAWN = { stdio: ['pipe', 'pipe', 'pipe'], detached: false, windowsHide: true };
+var KNOWN_SEQ = 0;
 SshLine.prototype.start = function () {
   var self = this, s = this.s;
   this.buf = ''; this.host = null; this.err = ''; this.code = null;
-  var ch = this.child = cp.spawn('ssh', sshArgs(this.ip, this.jump, s), { env: Object.assign({}, process.env, { SSH_ASKPASS: s.askpass, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || ':0',
-    NX_IOS_PASSWORD: s.pass }), stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform === 'win32', windowsHide: true });   // as the console sessions: an ssh -tt must not take over our console (Ctrl+C)
+  /* a fresh host-key file for every session: a router that was stopped and started again has a new key, and with a
+     remembered old one OpenSSH turns password login off ("to avoid man-in-the-middle attacks") - the router then logs
+     User '' failed and the line never comes back. The keys are not kept anyway (the lab makes new ones on every start). */
+  var so = s;
+  if (s.known) { if (this.knownFile) try { fs.unlinkSync(this.knownFile); } catch (e) {} this.knownFile = s.known + '.' + (++KNOWN_SEQ); so = Object.assign({}, s, { known: this.knownFile }); }
+  var ch = this.child = cp.spawn('ssh', sshArgs(this.ip, this.jump, so), Object.assign({ env: Object.assign({}, process.env, { SSH_ASKPASS: s.askpass, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || ':0',
+    NX_IOS_PASSWORD: s.pass }) }, SSH_SPAWN));
   this.alive = true; s.kids.add(ch);
   ch.stdout.on('data', function (d) { self.buf += d.toString().replace(/\r/g, '').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ''); if (self.buf.length > 400000) self.buf = self.buf.slice(-200000); });
   ch.stderr.on('data', function (d) { self.err = (self.err + d.toString()).slice(-600); });
@@ -795,6 +807,7 @@ function selfTest() {
       try { fs.rmSync(outDir, { recursive: true, force: true }); } catch (e) {}
     }, function (e) { console.log = _log; A(false, 'ssh: round ' + e.message); });
   });
+  A(SSH_SPAWN.windowsHide === true && SSH_SPAWN.detached === false, 'ssh: started hidden and not detached (Windows: no console window per router, for the ProxyCommand hop too)');
   var pg = renderPage('lab', { nodes: [], links: [] }, null);
   A(pg.indexOf('SYNTHETIC_BADGE') > 0 && pg.indexOf('cml-xray has not read this node (yet)') > 0 && pg.indexOf('./xray.sh') < pg.indexOf('SYNTHETIC_BADGE'), 'ssh: the "Sample view" badge says what cml-xray does, not ./xray.sh');
   asyncTests = asyncTests.then(function () {   // no ssh on this machine -> a fatal "install an OpenSSH client", not "still booting"
