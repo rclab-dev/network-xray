@@ -31,6 +31,8 @@
  *                          the tool waits while someone types and has a Pause button) - only when you ask for it
  *   --quiet-wait <s>       --console only: after anything you type on the console, wait this long before reading (default 60)
  *   --sync-layout          moving a node on the graph moves it in the CML lab too (writes only the node's x / y; off by default)
+ *   --problem <file>       the lab's problem.json (network-xray-lab/0): the problem band above the graph and "✓ Solved" when its
+ *                          check passes (default: "<lab title>.problem.json" in the current folder, when there is one)
  * Environment: CML_HOST, CML_USER, CML_PASSWORD (never on the command line), CML_CA_FILE (optional);
  *   NX_IOS_USER / NX_IOS_PASSWORD (the routers, default admin / admin as in the examples); NX_JUMP_USER (the jump host, default
  *   nx = the user the README's jump host script makes) and NX_JUMP_KEY (its private key file; else your ssh agent / ~/.ssh keys). The jump host takes a key only:
@@ -60,6 +62,7 @@ for (var i = 0; require.main === module && i < argv.length; i++) {   // options 
   else if (a === '--console') opt.console = true;   /* nx_cml_ssh: the console way only when asked for */
   else if (a === '--jump') opt.jump = argv[++i];   /* nx_cml_ssh */
   else if (a === '--mgmt') opt.mgmt = argv[++i];   /* nx_cml_ssh */
+  else if (a === '--problem') opt.problem = argv[++i];   /* nx_cml_problem */
   else if (a === '--self-test') opt.selfTest = true;
   else if (a === '-h' || a === '--help') { usage(0); }
   else { console.error('!! unknown option ' + JSON.stringify(a)); usage(2); }
@@ -258,7 +261,16 @@ var SAMPLE_BODY = {
   en: 'Only the shape is drawn, from the CML lab. Colors, lines and states are not real: cml-xray has not read this node (yet). A router is read over SSH once the lab is started and its management network is up; other nodes are drawn only.',
   ja: 'CML のラボから形だけを描いています。色・線・状態は実物ではありません: cml-xray はこのノードを (まだ) 読んでいません。ルータはラボが起動し管理の網がつながると SSH で読みます。ほかのノードは描くだけです。'
 };
-var SAMPLE_WORDS_JS = '<script>(function(){var t=setInterval(function(){var B=window.clabXray&&window.clabXray.SYNTHETIC_BADGE;if(!B)return;clearInterval(t);' +
+/* nx_cml_lock (2026-11-06): the places come from the CML lab, so the nodes cannot be dragged on this page (click for DeepDive, zoom
+   and moving the whole view stay); one line in the corner says so. --sync-layout keeps dragging (it writes the place to CML). */
+var POS_EVERY_S = 5;   // the CML topology (places) is read again every 5 s and written to the page at once
+var LOCK_JS = '<script>(function(){var t=setInterval(function(){var tp=window.__nxTopo;if(!tp||typeof tp.nodeDraggable!=="function")return;clearInterval(t);tp.nodeDraggable(false);' +
+  'var L="en";try{L=localStorage.getItem("nx-lang")||"en";}catch(e){}var d=document.createElement("div");d.id="nx-cml-lock";' +
+  'd.style.cssText="position:fixed;left:8px;bottom:8px;z-index:9997;background:rgba(15,19,24,.85);color:#90a4ae;border:1px solid #37474f;border-radius:6px;padding:3px 8px;font:12px sans-serif";' +
+  'd.textContent=L==="ja"?"ノードの位置は CML のラボの通りで、ここでは動かせません。CML で動かすと約 ' + (POS_EVERY_S + 1) + ' 秒で図も動きます。":' +
+  '"Node positions come from your CML lab and can\'t be moved here. Move a node in CML and the graph follows within about ' + (POS_EVERY_S + 1) + ' s.";' +
+  'document.body.appendChild(d);},200);})();</script>';
+var SAMPLE_WORDS_JS ='<script>(function(){var t=setInterval(function(){var B=window.clabXray&&window.clabXray.SYNTHETIC_BADGE;if(!B)return;clearInterval(t);' +
   'var W=' + JSON.stringify(SAMPLE_BODY).replace(/</g, '\\u003c') + ';Object.keys(W).forEach(function(l){if(B[l])B[l].body=W[l];});' +
   'if(document.body.classList.contains("nx-synthetic")&&window.clabXray.markSynthetic)window.clabXray.markSynthetic(true);},100);})();</script>';
 function renderPage(name, data, pos) {
@@ -276,6 +288,7 @@ function renderPage(name, data, pos) {
   html = html.replace('</body>', SAMPLE_WORDS_JS + '</body>');   /* nx_cml_ssh: the "Sample view" badge in CML words */
   if (renderPage.pauseBar) html = html.replace('</body>', PAUSE_BAR + '</body>');   /* nx_cml_share */
   if (renderPage.syncLayout) html = html.replace('</body>', SYNC_JS + '</body>');   /* nx_cml_sync */
+  else html = html.replace('</body>', LOCK_JS + '</body>');   /* nx_cml_lock */
   return html.split('{{ .Name }}').join(esc(name));
 }
 /* nx_cml_sync: the page's centring moves every node by the same amount, so (page place - XRAY_POS) is the same for every node until one is
@@ -294,6 +307,20 @@ var PAUSE_BAR = '<div id="nx-cml-bar" style="position:fixed;top:8px;right:120px;
   'show();setInterval(show,1000);})();</script>';
 var MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.eot': 'application/vnd.ms-fontobject', '.webm': 'video/webm' };
+/* nx_cml_problem (2026-11-06): the lab's problem.json, as next to a containerlab topology: the page shows its band (title, text,
+   the RouteCrushLab button) from /static/problem.json, and focus + check go into xray-states.js (window.XRAY_PROBLEM) for
+   "✓ Solved". --problem <file>, else "<lab title>.problem.json" in the current folder. None = the page as before. */
+function loadProblem(file, title) {
+  var auto = !file, f = file || path.resolve(String(title).replace(/[\\/:*?"<>|]/g, '_') + '.problem.json');
+  if (auto && !fs.existsSync(f)) return null;
+  var text, pj;
+  try { text = fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''); pj = JSON.parse(text); } catch (e) { console.error('!! --problem ' + f + ': ' + e.message + ' - no problem band'); return null; }
+  if (!pj || typeof pj !== 'object' || Array.isArray(pj)) { console.error('!! --problem ' + f + ': not a problem.json object - no problem band'); return null; }
+  var xp = null;
+  if (pj.focus) (xp = xp || {}).focus = pj.focus;
+  if (pj.check) { (xp = xp || {}).check = pj.check; if (pj.format) xp.format = pj.format; }
+  return { file: f, text: text, xp: xp, check: !!pj.check };
+}
 function serve(getView) {
   var outDir = path.resolve(opt.out);
   var srv = http.createServer(function (q, r) {
@@ -318,6 +345,7 @@ function serve(getView) {
     if (!m) return send(404, 'text/plain', 'not found');
     var rel = path.normalize(m[1]);
     if (rel.split(path.sep).indexOf('..') >= 0 || path.isAbsolute(rel)) return send(404, 'text/plain', 'not found');
+    if (rel === 'problem.json') return serve.problem ? send(200, 'application/json; charset=utf-8', serve.problem) : send(404, 'text/plain', 'not found');   /* nx_cml_problem */
     var f = rel === 'xray-states.js' ? path.join(outDir, rel) : path.join(HERE, rel);   // states from --out, the rest from the tool's folder
     fs.readFile(f, function (err, buf) {
       if (err) return send(404, 'text/plain', 'not found');
@@ -692,19 +720,28 @@ Collector.prototype.round = function () {
       if (busy[n] && states[n]) states[n].nx_busy = busy[n];   /* nx_cml_share2: config mode / someone is typing / ... */
     });
     crossNodeHellos(states, self.view().adj, proto);
-    var _pos = self.view().pos || null;   /* nx_cml_follow */   /* nx_cml_ssh: self (this is not the collector inside the callback) */
-    var body = JSON.stringify(states) + (self.paused ? '|p' : '') + JSON.stringify(_pos);
-    if (body !== self.written) {
-      self.written = body;
-      var dest = path.join(path.resolve(self.cfg.out), 'xray-states.js'), tmp = dest + '.tmp';
-      fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused }) + ';\n' +
-        (_pos ? 'window.XRAY_POS = ' + JSON.stringify(_pos) + '; window.LIVE_POS = window.XRAY_POS;\n' : ''));   /* nx_cml_share */   /* nx_cml_follow */
-      fs.renameSync(tmp, dest);
-      var line = 'state ' + nodes.map(function (n) { var s = states[n]; return n + (s.nx_unread ? '(' + s.nx_unread + ')' : ':' + (s.bgp_neighbors || []).filter(function (b) { return /establ/i.test(b.state); }).length + 'bgp/' + (s.ospf_neighbors || []).filter(function (o) { return o.full; }).length + 'ospf/' + (s.routing_table || []).length + 'rt'); }).join(' ') + ' (' + proto + ')';
-      if (line !== self.logged) { self.logged = line; console.log('[' + new Date().toISOString() + '] ' + line); }   // the page file follows every change; the log only when the summary changes
-    }
+    self.write(states, proto, nodes);
   });
 };
+/* nx_cml_lock: the page file - written after every round, and when the places change in CML (posMoved, from the topology read
+   every POS_EVERY_S s) so a node moved in CML moves on the graph without waiting for the next round of show commands */
+Collector.prototype.write = function (states, proto, nodes) {
+  var self = this;
+  this.lastW = { states: states, proto: proto, nodes: nodes };
+  var _pos = self.view().pos || null;   /* nx_cml_follow */   /* nx_cml_ssh: self (this is not the collector inside the callback) */
+  var body = JSON.stringify(states) + (self.paused ? '|p' : '') + JSON.stringify(_pos);
+  if (body !== self.written) {
+    self.written = body;
+    var dest = path.join(path.resolve(self.cfg.out), 'xray-states.js'), tmp = dest + '.tmp';
+    fs.writeFileSync(tmp, 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\nwindow.LIVE_WATCH = true;\nwindow.XRAY_CML = ' + JSON.stringify({ paused: !!self.paused }) + ';\n' +
+      (_pos ? 'window.XRAY_POS = ' + JSON.stringify(_pos) + '; window.LIVE_POS = window.XRAY_POS;\n' : '') +
+      (self.cfg.problem ? 'window.XRAY_PROBLEM = ' + JSON.stringify(self.cfg.problem) + ';\n' : ''));   /* nx_cml_share */   /* nx_cml_follow */   /* nx_cml_problem: focus + check, as clab-xray-collect.js */
+    fs.renameSync(tmp, dest);
+    var line = 'state ' + nodes.map(function (n) { var s = states[n]; return n + (s.nx_unread ? '(' + s.nx_unread + ')' : ':' + (s.bgp_neighbors || []).filter(function (b) { return /establ/i.test(b.state); }).length + 'bgp/' + (s.ospf_neighbors || []).filter(function (o) { return o.full; }).length + 'ospf/' + (s.routing_table || []).length + 'rt'); }).join(' ') + ' (' + proto + ')';
+    if (line !== self.logged) { self.logged = line; console.log('[' + new Date().toISOString() + '] ' + line); }   // the page file follows every change; the log only when the summary changes
+  }
+};
+Collector.prototype.posMoved = function () { if (this.lastW) this.write(this.lastW.states, this.lastW.proto, this.lastW.nodes); };
 Collector.prototype.loop = function () {
   var self = this, t0 = Date.now();
   this.round().catch(function (e) { console.error('!! ' + e.message); }).then(function () {
@@ -818,16 +855,48 @@ function selfTest() {
     A(!r[4].ip && /no management network/.test(r[4].why), 'ssh: no nx-jump and no --jump -> not read, with why: ' + r[4].why);
     A(r[5].ip === '10.9.9.1' && r[6].host === '192.0.2.7' && r[6].user === 'me' && !r[7].ip, 'ssh: --mgmt / --jump by hand');
     var cv = { mgmt: { jump: null, ifs: {} }, cfgs: {}, ids: {}, adj: {}, defs: { r1: 'iol-xe' } };
-    var outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-t-')), col = new Collector(function () { return cv; }, 'L', { ssh: noJ, out: outDir, interval: 10 });
+    var outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-t-')), col = new Collector(function () { return cv; }, 'L', { ssh: noJ, out: outDir, interval: 10, problem: { focus: { node: 'r1' }, check: { all: [] }, format: 'network-xray-lab/0' } });
     var _log = console.log; console.log = function () {};
     return col.round().then(function () {
       console.log = _log;
       var txt = fs.readFileSync(path.join(outDir, 'xray-states.js'), 'utf8'), st = JSON.parse(/LIVE_STATES = (.*);\n/.exec(txt)[1]);
+      var xp = /XRAY_PROBLEM = (.*);\n/.exec(txt);
+      A(xp && JSON.parse(xp[1]).focus.node === 'r1' && JSON.parse(xp[1]).format === 'network-xray-lab/0', 'problem: focus + check go into xray-states.js (window.XRAY_PROBLEM)');
       A(st.r1 && st.r1.nx_unread === 'nomgmt' && st.r1.success === undefined, 'ssh: a router without a management network is on the page as "not read" (nomgmt), not as failed');
       try { fs.rmSync(outDir, { recursive: true, force: true }); } catch (e) {}
     }, function (e) { console.log = _log; A(false, 'ssh: round ' + e.message); });
   });
   A(SSH_SPAWN.windowsHide === true && SSH_SPAWN.detached === false, 'ssh: started hidden and not detached (Windows: no console window per router, for the ProxyCommand hop too)');
+  (function () {   // nx_cml_problem: --problem / <lab title>.problem.json
+    var d = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-p-')), keep = process.cwd(), _e = console.error; console.error = function () {};
+    try {
+      fs.writeFileSync(path.join(d, 'p.json'), '\uFEFF' + JSON.stringify({ format: 'network-xray-lab/0', title_en: 'T', focus: { node: 'r1' }, check: { all: [] }, check_note_en: 'x' }));
+      var p = loadProblem(path.join(d, 'p.json'), 'L');
+      A(p && p.check && p.xp.focus.node === 'r1' && p.xp.format === 'network-xray-lab/0' && !('check_note_en' in p.xp) && /title_en/.test(p.text), 'problem: --problem file read (BOM ok) - band text served as is, focus + check + format for the states');
+      fs.writeFileSync(path.join(d, 'bad.json'), '{');
+      A(loadProblem(path.join(d, 'bad.json'), 'L') === null, 'problem: a broken file -> no band (said once), not a crash');
+      process.chdir(d);
+      A(loadProblem(null, 'rcl-q9') === null, 'problem: no --problem and no <title>.problem.json -> nothing');
+      fs.writeFileSync(path.join(d, 'rcl-q9.problem.json'), JSON.stringify({ title_en: 'T9' }));
+      var a = loadProblem(null, 'rcl-q9');
+      A(a && !a.check && a.xp === null && /T9/.test(a.text), 'problem: <lab title>.problem.json in the current folder is found; no check -> the band only');
+    } finally { process.chdir(keep); console.error = _e; try { fs.rmSync(d, { recursive: true, force: true }); } catch (e) {} }
+  })();
+  var pgL = renderPage('lab', { nodes: [], links: [] }, null);
+  A(pgL.indexOf('nodeDraggable(false)') > 0 && pgL.indexOf("be moved here. Move a node in CML") > 0 && /約 \d+ 秒/.test(pgL), 'lock: a CML page cannot drag nodes, and says so (EN / JA, with the seconds)');
+  renderPage.syncLayout = true; var pgS = renderPage('lab', { nodes: [], links: [] }, null); renderPage.syncLayout = false;
+  A(pgS.indexOf('nodeDraggable(false)') < 0, 'lock: --sync-layout keeps dragging (it writes the place to CML)');
+  (function () {   // nx_cml_lock: a node moved in CML -> the page file at once, without a round
+    var od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-w-')), v = { pos: { r1: { x: 0, y: 0 } }, adj: {} }, _l = console.log; console.log = function () {};
+    var c = new Collector(function () { return v; }, 'L', { out: od });
+    try {
+      c.posMoved();
+      A(!fs.existsSync(path.join(od, 'xray-states.js')), 'lock: nothing written before the first round');
+      c.write({ r1: { target_node: 'r1' } }, 'ospf', ['r1']);
+      v = { pos: { r1: { x: 120, y: 40 } }, adj: {} }; c.posMoved();
+      A(/"x":120/.test(fs.readFileSync(path.join(od, 'xray-states.js'), 'utf8')), 'lock: a place changed in CML is written at once (no wait for the next round)');
+    } finally { console.log = _l; try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} }
+  })();
   var so = sshOpts('k', false).join(' ');
   A(/ServerAliveInterval=5/.test(so) && /ServerAliveCountMax=2/.test(so), 'ssh: keepalive - a stopped router ends its ssh in about 10 s');
   asyncTests = asyncTests.then(function () {   // nx_cml_stopped: stop on an ssh that has ended, twice -> nothing thrown, no 'error' event that ends the program
@@ -872,11 +941,12 @@ else if (require.main === module) {
   var ca = null;
   if (process.env.CML_CA_FILE) { try { ca = fs.readFileSync(process.env.CML_CA_FILE); } catch (e) { console.error('!! CML_CA_FILE: ' + e.message); process.exit(2); } }
   var api = apiClient(host, user, pass, ca, opt.insecure);
-  var view = null, lab = null;
+  var view = null, lab = null, onPos = null;
   var refresh = function () {
     return api.get('/labs/' + encodeURIComponent(lab.id) + '/topology').then(function (topo) {
       var t = toClabData(topo), sk = t.skipped.join(', ');
       if (sk && (!view || view.skippedMsg !== sk)) console.error('!! left out (the name is not a plain name): ' + sk);
+      if (onPos && view && JSON.stringify(view.pos) !== JSON.stringify(t.pos)) setTimeout(onPos, 0);   /* nx_cml_lock */
       view = { name: lab.title, data: t.data, adj: t.adj, defs: t.defs, ids: t.ids, pos: t.pos, skippedMsg: sk, mgmt: t.mgmt, cfgs: t.cfgs };   /* nx_cml_xy */   /* nx_cml_share: ids */   /* nx_cml_ssh: mgmt, cfgs */
       return view;
     });
@@ -887,11 +957,13 @@ else if (require.main === module) {
     if (opt.once) { console.log(JSON.stringify({ data: v.data, adjacency: v.adj }, null, 1)); return; }
     fs.mkdirSync(path.resolve(opt.out), { recursive: true });
     try { fs.unlinkSync(path.join(path.resolve(opt.out), 'xray-states.js')); } catch (e) {}   // no state from an earlier run on the page
+    var prob = loadProblem(opt.problem, lab.title);   /* nx_cml_problem */
+    if (prob) { serve.problem = prob.text; console.log('problem: ' + prob.file + (prob.check ? ' (the band + "Solved" when its check passes)' : ' (the band; no check in it)')); }
     serve(function () { return view; });
-    setInterval(function () { refresh().catch(function (e) { console.error('!! topology: ' + e.message); }); }, 5000);   // nx_cml_follow: CML's layout within seconds (nodes / links added: on the next page load)
+    setInterval(function () { refresh().catch(function (e) { console.error('!! topology: ' + e.message); }); }, POS_EVERY_S * 1000);   // nx_cml_follow: CML's layout within seconds (nodes / links added: on the next page load)
     if (opt.noState || !ios.length) return;
     if (opt.proto && !/^(ospf|bgp)$/.test(opt.proto)) { console.error('!! --proto ospf or bgp'); process.exit(2); }
-    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out };
+    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out, problem: prob ? prob.xp : null };
     if (!opt.console) {   /* nx_cml_ssh: the default - SSH on the management network; the consoles are left alone */
       var s = sshPlanner(api, lab, function () { return view; }, opt);
       if (!s) process.exit(2);
@@ -905,6 +977,7 @@ else if (require.main === module) {
         quietWait: opt.quietWait, consoleLog: function (n) { var id = view.ids && view.ids[n]; return id ? api.get('/labs/' + encodeURIComponent(lab.id) + '/nodes/' + encodeURIComponent(id) + '/consoles/0/log?lines=5') : Promise.reject(new Error('no id')); } });   /* nx_cml_share */
     }
     var col = new Collector(function () { return view; }, lab.title, cfgC);
+    onPos = function () { col.posMoved(); };   /* nx_cml_lock */
     if (cfgC.ssh) ios.forEach(function (n) { cfgC.ssh.plan(n).then(function (p) { if (p.ip) console.log('   ' + n + ': SSH ' + cfgC.ssh.user + '@' + p.ip + (opt.jump ? ' via ' + opt.jump : ' via nx-jump')); }); });   /* nx_cml_ssh: the not-read ones are said by the first round */
     if (/^(127\.|::1$|localhost$)/.test(opt.listen)) { serve.control = function (on) { col.paused = on; console.log(on ? 'paused: nothing is sent to the routers' : 'resumed'); col.written = ''; }; renderPage.pauseBar = true; }   /* nx_cml_share: local page only */
     if (opt.syncLayout && /^(127\.|::1$|localhost$)/.test(opt.listen)) {   /* nx_cml_sync: write back a moved node's x / y (local page only) */
@@ -936,4 +1009,4 @@ else if (require.main === module) {
 }
 
 module.exports = { KIND: KIND, IOS_DEFS: IOS_DEFS, toClabData: toClabData, renderPage: renderPage,
-  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress };   /* nx_cml_ssh */
+  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress, loadProblem: loadProblem };   /* nx_cml_ssh */   /* nx_cml_problem */

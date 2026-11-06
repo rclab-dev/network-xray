@@ -319,6 +319,12 @@ a lab with 4 routers and the jump host fits; with more, leave a host out or use 
   Stop the lab when you are done. The routers' SSH keys are not remembered (they change every time the lab is wiped).
 - **No management network?** The routers are drawn, greyed, with a note; their state is not read. Or read them over the console with **`--console`**:
   the tool then types its `show` commands on the CML consoles (you see them there; it waits while you type and has a Pause button). Off by default.
+- **Node positions come from your CML lab.** On the graph you can't drag a node (click it for DeepDive, zoom and move the whole view as usual).
+  Move a node in CML and the graph follows within about 6 s (the lab's layout is read every 5 s). network-xray never moves nodes in your lab.
+- **A router that stops answering** (stopped in CML, or its SSH hangs) turns grey within about 20 s, with a note; its DeepDive keeps the last state it
+  read, marked with the time. The other routers keep being read. Start it again and it is read again once it has booted.
+- **Problem band and "✓ Solved":** `--problem <file>` (or `<lab title>.problem.json` in the folder you start cml-xray in) shows the problem above the
+  graph, as for the containerlab examples, and "✓ Solved" when its `check` passes ([problem format](docs/problem-format.md)).
 - Tried on CML 2.10 with IOL 17.18 (`iol-xe`). The other IOS node types use the same `show` commands but have not been tried yet.
 
 ## FAQ / Troubleshooting
@@ -1074,6 +1080,12 @@ node cml-xray.js --lab "<CML でのラボのタイトル>" --insecure     # CML 
   使い終わったらラボを止めてください。ルータの SSH の鍵は覚えません (ラボを wipe するたびに変わるため)。
 - **管理の網が無い時:** ルータは灰色で注記付きで描き、状態は読みません。コンソールで読む **`--console`** もあります:
   その時は道具が CML のコンソールに `show` を打ちます (その画面に流れます・打っている間は待ち・一時停止のボタンあり)。既定ではしません。
+- **ノードの位置は CML のラボの通り:** 図ではノードを引っ張って動かせません (押して DeepDive・拡大縮小・全体をずらす はいつもどおり)。
+  CML でノードを動かすと、約 6 秒で図も動きます (ラボの配置を 5 秒ごとに読み直します)。network-xray がラボのノードを動かす事はありません。
+- **答えなくなったルータ** (CML で止めた・SSH が詰まった) は約 20 秒で灰色になり、注記が出ます。DeepDive は最後に読めた状態を、その時刻の印付きで
+  出します。ほかのルータは読み続けます。Start し直すと、起動し終わった後にまた読みます。
+- **問題文の帯と「✓ Solved」:** `--problem <ファイル>` (または cml-xray を起動したフォルダの `<ラボの名前>.problem.json`) で、containerlab の
+  例題と同じく図の上に問題文が出て、`check` が通ると「✓ Solved」が出ます ([問題の形式](docs/problem-format.md))。
 - 試したのは CML 2.10 + IOL 17.18 (`iol-xe`) です。ほかの IOS のノードの種類も同じ `show` を使いますが、まだ試していません。
 
 ## よくある質問 / 困ったとき
