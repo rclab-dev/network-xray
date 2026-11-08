@@ -10688,16 +10688,16 @@ function _xrayDeepDeconflict() {
         if (!(fullFrame && lp)) {
           var _one = L.iface + (L.peer ? " - " + L.peer : "");
           var _lyR = _sEdge === "top" ? _sbe[1] - 8 : _sEdge === "bottom" ? _sbe[1] + 18 : _ly1; /* nx_simple_edge_label_outside */ /* simple_single_link_label_terminus: single-link label follows the link terminus (like the multi-link path) not a fixed bottom slot */
-          s += '<text x="' + lx + '" y="' + (_lyR + (L.pk || 0) * 16 * (_sEdge === "top" ? -1 : 1)).toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + _one + "</text>";
+          s += '<text x="' + lx + '" y="' + (_lyR + (L.pk || 0) * 16 * (_sEdge === "top" ? -1 : 1)).toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '" paint-order="stroke" stroke="var(--xto-bg,#0d1620)" stroke-width="3" stroke-linejoin="round">' + _escapeHtml(_one) + "</text>";   /* nx-unified-label-20261107: names as text */
           return;
         }
-        s += '<text x="' + lx + '" y="' + _ly1.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '">' + L.iface + "</text>";
-        if (l2) s += '<text x="' + lx + '" y="' + _ly2.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '">' + l2 + "</text>";
+        s += '<text x="' + lx + '" y="' + _ly1.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '">' + _escapeHtml(L.iface) + "</text>";
+        if (l2) s += '<text x="' + lx + '" y="' + _ly2.toFixed(1) + '" fill="' + col + '" font-size="12" font-family="monospace" text-anchor="' + anc + '">' + _escapeHtml(l2) + "</text>";
         return;
       }
       var reach = reachFor(a), lbl = L.iface + (L.peer ? " - " + L.peer : "");
       var lp = pt(a, reach + 6), anc2 = _co < -.35 ? "end" : _co > .35 ? "start" : "middle";
-      s += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] + 4 + (L.pk || 0) * 16).toFixed(1) + '" fill="var(--xto-accent,#7fb2c2)" font-size="12" font-family="monospace" text-anchor="' + anc2 + '">' + lbl + "</text>";
+      s += '<text x="' + lp[0].toFixed(1) + '" y="' + (lp[1] + 4 + (L.pk || 0) * 16).toFixed(1) + '" fill="var(--xto-accent,#7fb2c2)" font-size="12" font-family="monospace" text-anchor="' + anc2 + '">' + _escapeHtml(lbl) + "</text>";
     });
     if (ax.processGlyph === "inside" || ax.processGlyph === "outside") {
       var order = [], rank = {
@@ -10875,7 +10875,7 @@ function _xrayDeepDeconflict() {
     var _tnX = shape === "rect" ? fullFrame ? 60 : CX - HW + 20 : CX, _tnY = shape === "rect" ? fullFrame ? 50 : CY - HH + 28 : CY + RER - 6, _tnA = shape === "rect" ? "start" : "middle";
     var _tnFs = fullFrame ? 22 : imm ? 20 : 9;
     var _tnFam = fullFrame ? "sans-serif" : "monospace", _tnLs = fullFrame ? ' letter-spacing="3"' : "";
-    s += '<text x="' + _tnX.toFixed(1) + '" y="' + _tnY.toFixed(1) + '" fill="var(--xto-ok,#39ff14)" font-size="' + _tnFs + '" font-weight="700" font-family="' + _tnFam + '"' + _tnLs + ' text-anchor="' + _tnA + '">' + node.target + "</text>";
+    s += '<text x="' + _tnX.toFixed(1) + '" y="' + _tnY.toFixed(1) + '" fill="var(--xto-ok,#39ff14)" font-size="' + _tnFs + '" font-weight="700" font-family="' + _tnFam + '"' + _tnLs + ' text-anchor="' + _tnA + '">' + _escapeHtml(node.target) + "</text>";
     s += "</svg>";
     return s;
   }
