@@ -40,9 +40,9 @@ function nodeName(st, fallback) { return String(st.target_node || st.id || fallb
 
 // a parsed object -> { <node>: state }
 function statesFromObject(obj, fallbackName) {
-  if (isState(obj)) { var one = {}; one[nodeName(obj, fallbackName)] = obj; return one; }
+  if (isState(obj)) { var one = Object.create(null); one[nodeName(obj, fallbackName)] = obj; return one; }
   if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-    var out = {};
+    var out = Object.create(null);   // node names are data: "__proto__" / "constructor" stay plain keys
     Object.keys(obj).forEach(function (k) { if (isState(obj[k])) out[k] = obj[k]; });
     if (Object.keys(out).length) return out;
   }
@@ -79,7 +79,7 @@ function loadStates(input) {
     return parseText(text, base);
   }
   var files = fs.readdirSync(input).sort();
-  var out = {};
+  var out = Object.create(null);
   var isFile = function (f) { try { return fs.statSync(path.join(input, f)).isFile(); } catch (e) { return false; } };
   files.filter(function (f) { return /^state_.+\.json$/.test(f) && isFile(f); }).forEach(function (f) {
     var s = parseText(fs.readFileSync(path.join(input, f), 'utf8'), f.slice(6, -5));
@@ -135,7 +135,7 @@ function summarize(states) {
 
   var ospf = [], bgp = [];
   names.forEach(function (n) {
-    var s = states[n], peerOf = {};
+    var s = states[n], peerOf = Object.create(null);   // interface names are data (an interface named "constructor")
     (s.peer_links || []).forEach(function (r) { if (r && r.iface && r.peer) peerOf[r.iface] = r.peer; });
     (s.ospf_neighbors || []).forEach(function (x) {
       var o = { node: n, neighbor_id: x.router_id || '', address: x.address || '', iface: x.iface || '', state: x.state || '' };
@@ -184,6 +184,11 @@ function pathOut(r) {
   return o;
 }
 
+// the same address however it is written (case, leading zeros, ::); text compare when it is not an address
+function sameNet(a, b) {
+  var x = parseAddr(a), y = parseAddr(b);
+  return x && y ? x.bits === y.bits && x.n === y.n : String(a).toLowerCase() === String(b).toLowerCase();
+}
 function why(states, node, prefix, vrf) {
   if (!node) throw new QueryError('missing node');
   if (!prefix) throw new QueryError('missing prefix');
@@ -193,7 +198,7 @@ function why(states, node, prefix, vrf) {
   var vrfOf = function (r) { return r.vrf || 'default'; };
   var paths = (s.bgp_routes || []).filter(function (r) {
     var rp = splitPrefix(r.prefix || '');
-    if (rp.net !== q.net) return false;
+    if (!sameNet(rp.net, q.net)) return false;
     if (vrf && vrfOf(r) !== vrf) return false;
     return q.len == null || routeLen(r) === q.len;
   });
@@ -296,7 +301,7 @@ function whyPath(states, router, destination, vrf) {
   }
   var out = { router: router, prefix: w.prefix };
   if (w.vrf) out.vrf = w.vrf;
-  if (matched) out.destination = String(destination).trim();
+  if (matched) { out.destination = String(destination).trim(); out.destination_note = 'answered with the BGP prefix that contains the address; the router may forward it by a longer route from another protocol (route_lookup shows the routing table)'; }
   var bestIdx = w.candidates.findIndex(function (c) { return c.best; });
   out.selected = bestIdx >= 0 ? w.candidates[bestIdx] : null;
   out.candidates = w.candidates.filter(function (c, i) { return i !== bestIdx; });
@@ -371,6 +376,7 @@ function listRouters(states) {
   var routers = Object.keys(states).sort().map(function (n) {
     var s = states[n], o = { name: n };
     if (s.nos) o.nos = s.nos;
+    if (s.nx_unread) { o.unread = s.nx_unread; if (s.nx_stale_since) o.stale_since = s.nx_stale_since; }   // could not be read: the counts below are its last state or empty
     var protocols = [];
     if (nonEmpty(s.ospf_neighbors) || nonEmpty(s.lsdb_prefixes)) protocols.push('ospf');
     if (nonEmpty(s.bgp_neighbors) || nonEmpty(s.bgp_routes)) protocols.push('bgp');
@@ -507,7 +513,8 @@ function routeLookup(states, node, destination, vrf) {
 var MAX_LINE = 99;   // every printed line stays under 100 characters
 var SGR = { bold: '1', green: '32', yellow: '33', red: '31', dim: '2' };
 
-function cell(v) { return v == null || v === '' ? '-' : String(v); }
+function plain(s) { return String(s).replace(/[\u0000-\u001f\u007f-\u009f]/g, '?'); }   // router-supplied text: no terminal control characters
+function cell(v) { return v == null || v === '' ? '-' : plain(v); }
 function clip(s, w) { return s.length <= w ? s : (w <= 1 ? s.slice(0, w) : s.slice(0, w - 1) + '~'); }
 function paint(s, style, color) { return color && style ? '\x1b[' + SGR[style] + 'm' + s + '\x1b[0m' : s; }
 
@@ -539,8 +546,8 @@ function renderTable(cols, rows, color, indent) {
   return out;
 }
 function hasAny(rows, key) { return rows.some(function (r) { return r[key] != null && r[key] !== ''; }); }
-function title(s, color) { return paint(clip(s, MAX_LINE), 'bold', color); }
-function textLine(s) { return clip(s, MAX_LINE); }
+function title(s, color) { return paint(clip(plain(s), MAX_LINE), 'bold', color); }
+function textLine(s) { return clip(plain(s), MAX_LINE); }
 
 function ospfStyle(v) { return /^full/i.test(v) ? 'green' : /^(2-?way|-)$/i.test(v) ? null : 'yellow'; }
 function bgpStyle(v) { return /^established$/i.test(v) ? 'green' : 'red'; }
@@ -551,16 +558,16 @@ function stateTable(states, color) {
   var rrows = lr.routers.map(function (r) {
     var ifs = states[r.name].interfaces || {}, names = Object.keys(ifs);
     var up = names.filter(function (i) { return ifs[i] && ifs[i].up; }).length;
-    return { name: r.name, nos: r.nos, protocols: r.protocols.join(','), ifaces: up + '/' + names.length,
+    return { name: r.name, nos: r.nos, unread: r.unread, protocols: r.protocols.join(','), ifaces: up + '/' + names.length,
       ospf: r.counts.ospf_neighbors, bgp: r.counts.bgp_neighbors, bgp_routes: r.counts.bgp_routes,
       routes: r.routing_table ? r.counts.routes : null };
   });
   out = out.concat(renderTable([
-    { head: 'ROUTER', key: 'name' }, { head: 'NOS', key: 'nos' }, { head: 'PROTOCOLS', key: 'protocols' },
+    { head: 'ROUTER', key: 'name' }, { head: 'NOS', key: 'nos' }].concat(hasAny(rrows, 'unread') ? [{ head: 'UNREAD', key: 'unread' }] : []).concat([{ head: 'PROTOCOLS', key: 'protocols' },
     { head: 'IFACES UP', key: 'ifaces', right: true }, { head: 'OSPF NBRS', key: 'ospf', right: true },
     { head: 'BGP PEERS', key: 'bgp', right: true }, { head: 'BGP ROUTES', key: 'bgp_routes', right: true },
     { head: 'RIB ROUTES', key: 'routes', right: true }
-  ], rrows, color, '  '));
+  ]), rrows, color, '  '));
 
   var orows = [];
   on.routers.forEach(function (r) {
@@ -687,7 +694,7 @@ if (require.main === module) {
     res = { error: (e && e.message) || String(e) }; code = 2;
   }
   if (typeof res === 'string') process.stdout.write(res);
-  else if (code && opts && opts.format === 'table') process.stderr.write('error: ' + res.error + '\n');
+  else if (code && opts && opts.format === 'table') process.stderr.write('error: ' + plain(res.error) + '\n');
   else process.stdout.write(JSON.stringify(res, null, 2) + '\n');
   process.exitCode = code;
 }
