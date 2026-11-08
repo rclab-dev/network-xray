@@ -10,11 +10,11 @@
 # node:24-alpine, pinned (multi-arch index digest); bump the digest together with the tag
 FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53
 
-ARG CLAB_VERSION=0.82.0
+ARG CLAB_VERSION=0.83.0
 ARG TARGETARCH=amd64
 # sha256 of the containerlab release tarballs (from the release checksums.txt); change them with CLAB_VERSION
-ARG CLAB_SHA256_AMD64=87a6415803848878c2c886bd79e89a4d0ee34091ebf889488ea1029cef7e2d78
-ARG CLAB_SHA256_ARM64=f04ac8c1f2f6a04c344585cb6a36177c446fce18cb6073b4a0dbd517f3512210
+ARG CLAB_SHA256_AMD64=1ee43b8fd5979d8baa205e267480d69177f7461b2d1bf512df144800c08cfe2c
+ARG CLAB_SHA256_ARM64=2ac916c1cfb05192abc8da7d85d79ce794da51b5726b05b56f3d16157f1928f4
 
 # npm / npx / corepack / yarn are removed at the end of this step: network-xray only runs node at run time,
 # and their bundled dependencies are what an image scanner reports for the Node layer.

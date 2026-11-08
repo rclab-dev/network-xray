@@ -63,7 +63,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 | | Versions |
 |---|---|
-| containerlab | 0.81.0 and 0.82.0 (host) · 0.82.0 (inside the image) |
+| containerlab | 0.81.0 and 0.82.0 (host) · 0.83.0 (inside the image) |
 | FRR | 8.4 (the example labs, pinned) · 10.7.1 (netlab 26.10's default) |
 | SR Linux | 26.3.3 (read by network-xray, containerlab). 26.7.2 appeared only as the device under test in netlab's BGP tests; network-xray read its FRR neighbors, not the SR Linux itself |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`, image built with vrnetlab) |
@@ -891,7 +891,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 | | 版 |
 |---|---|
-| containerlab | 0.81.0 と 0.82.0 (ホスト)・0.82.0 (イメージ内) |
+| containerlab | 0.81.0 と 0.82.0 (ホスト)・0.83.0 (イメージ内) |
 | FRR | 8.4 (例題、固定)・10.7.1 (netlab 26.10 の既定) |
 | SR Linux | 26.3.3 (network-xray が読んだ・containerlab)。26.7.2 は netlab の BGP テストの対象として出ただけで、network-xray が読んだのは隣の FRR です (SR Linux そのものは読んでいません) |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`、vrnetlab で構築したイメージ) |
