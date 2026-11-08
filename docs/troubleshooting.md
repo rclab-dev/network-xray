@@ -147,7 +147,7 @@ error: unable to create file test/fixtures/...: Filename too long
 
 ## Docker socket permission
 
-<!-- nx-docker-check-docs-w2-20261105 -->
+<!-- nx-docker-check-docs-20261105 -->
 **What you see.** `xray.sh` checks Docker before it deploys anything and stops:
 
 ```

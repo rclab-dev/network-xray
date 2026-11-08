@@ -153,7 +153,7 @@ Git for Windows で clone するなら、`git config --global core.longpaths tru
 <a id="docker-socket-permission"></a>
 ## Docker のソケットの権限
 
-<!-- nx-docker-check-docs-w2-20261105 -->
+<!-- nx-docker-check-docs-20261105 -->
 **出る文。** `xray.sh` は何かをデプロイする前に Docker を確かめ、止まります:
 
 ```

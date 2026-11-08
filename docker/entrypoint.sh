@@ -37,7 +37,7 @@ SRC=/opt/network-xray; WORK=/tmp/network-xray
 # containerlab's own update check asks GitHub for its latest release: off unless CLAB_VERSION_CHECK is set
 export CLAB_VERSION_CHECK="${CLAB_VERSION_CHECK-disable}"
 [ -f "$TOPO" ] || { echo "topology not found: $TOPO (mount the lab directory: -v \"\$(pwd)\":/lab:ro)" >&2; exit 1; }
-_dto=""; command -v timeout >/dev/null 2>&1 && _dto="timeout 10"   # nx-docker-check-w2-20261105: a docker info that hangs must not hang the start
+_dto=""; command -v timeout >/dev/null 2>&1 && _dto="timeout 10"   # nx-docker-check-20261105: a docker info that hangs must not hang the start
 if ! DERR="$($_dto docker info 2>&1 >/dev/null)"; then
   # say which case it is: no socket, a path that is not a socket, or no permission on it
   SOCK=/var/run/docker.sock; case "${DOCKER_HOST-}" in unix://*) SOCK="${DOCKER_HOST#unix://}" ;; ?*) SOCK="" ;; esac

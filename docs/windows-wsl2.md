@@ -1,6 +1,6 @@
 [日本語](ja/windows-wsl2.md)
 
-<!-- nx-wsl2-w2-20261105 -->
+<!-- nx-wsl2-20261105 -->
 # Running on Windows (WSL2)
 
 network-xray runs on Linux. On Windows, run it inside a **WSL2** Linux distribution: every command below

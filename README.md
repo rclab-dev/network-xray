@@ -221,7 +221,7 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 
 **Security notes:** anyone who can use the Docker socket (the `-v /var/run/docker.sock` mount, or membership in the `docker` group) can run anything as root on the host. The page has no login: with `docker run` publish it as `-p 127.0.0.1:8600:8600` (this machine only), and with `containerlab graph` use `-s 127.0.0.1:8080` unless others must see it. For Cisco IOS-XE the collector does not check SSH host keys (lab routers get new keys on every deploy) — use it on the lab's management network only; the password comes from `NX_IOS_PASSWORD` and is not printed or written to the state. The collectors take names from the topology as data only (no shell; a name that is not a plain name is left out) and write only `xray-states.js` into the output directory; their per-node temporary files are in a directory only your user can open.
 
-<!-- nx_readme_iosxe (2026-10-29) / nx_readme_iosxe_w5 (2026-10-30) -->
+<!-- nx_readme_iosxe (2026-10-29 / 2026-10-30) -->
 ## Cisco IOS-XE (IOL)
 
 network-xray reads **Cisco IOS-XE** routers in containerlab too: nodes of kind `cisco_iol` go to `clab-iosxe-collect.js`, which logs in

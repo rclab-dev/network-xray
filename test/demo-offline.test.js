@@ -2,7 +2,7 @@
 // demo/, the local CSS it loads (url() / @import, followed) and the local scripts it loads, and checks the references
 // written in them: none may be a remote URL or a missing local file. Hyperlinks the user clicks (<a>/<area> href) are
 // allowed. It does not run the pages: a URL a script builds at run time (e.g. from a variable) is not seen.
-// nx-offline-w2-20261105
+// nx-offline-20261105
 // Run: node --test        (from the repo root; Node >= 18, no dependencies)
 'use strict';
 var test = require('node:test');

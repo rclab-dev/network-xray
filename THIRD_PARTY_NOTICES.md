@@ -103,4 +103,4 @@ copyright or license notice, and the repository names no outside source for them
 offered under [LICENSE](./LICENSE) with the rest of the repository. They have not been checked
 frame by frame for third-party material: some recordings (for example `docs/nextui-deepdive.gif`)
 show the NeXt UI graph (EPL-1.0, see above) on screen.
-<!-- nx-notices-w2-20261105 -->
+<!-- nx-notices-20261105 -->
