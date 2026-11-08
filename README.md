@@ -128,6 +128,8 @@ version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo
 
 ![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
+**The same in one script:** `bash scripts/demo-locpref-flip.sh` deploys the q21 lab, changes one Local Preference on r1 and prints the winner and the reason before and after (it shows the answer of q21). A real run: [docs/demo-locpref-flip.md](docs/demo-locpref-flip.md).
+
 **Also a recorded OSPF lab** — OSPF goes Full (green tunnels, LSDB sync indicator), a link drops and a router is isolated
 (route lost, packet dropped), then it recovers and re-converges:
 
@@ -911,6 +913,8 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 **BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** r1 は `8.8.8.0/24` を 2 つの上流 (r2・r3) から受け、受ける時に経路ごとに違う Local Preference を付けます (r1 の受信側の route-map)。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常にルータ自身が best にした経路です** (FRR の `bestpath`・Cisco IOL の `*>` の行・SR Linux の `best-route`)。 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。その後の段 (iBGP より eBGP・next hop までの IGP のコスト・router ID・cluster list) は比べません。MED は同じ隣の AS から来た経路の間だけで比べます。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
 ![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
+
+**同じことを 1 本のスクリプトで:** `bash scripts/demo-locpref-flip.sh` が q21 のラボを立て、r1 の Local Preference を 1 か所変え、変える前と後の勝者と理由を出します (q21 の答えが出ます)。本物の出力例: [docs/demo-locpref-flip.md](docs/demo-locpref-flip.md)。
 
 **記録した OSPF のラボも** — OSPF が Full になり (緑のトンネル・LSDB 同期の表示)、リンクが落ちてルータが孤立し (経路が消え、パケットは捨てられる)、その後に戻って収束し直します:
 
