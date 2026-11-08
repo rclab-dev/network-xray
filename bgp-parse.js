@@ -21,7 +21,7 @@
     var mAs = (text || '').match(/local AS(?: number)?\s+(\d+)/i); if (mAs) out.localAs = mAs[1];
     var mRid = (text || '').match(/(?:router identifier|local router ID is)\s+([0-9.]+)/i); if (mRid) out.routerId = mRid[1];
     var ipRe = /^\d{1,3}(?:\.\d{1,3}){3}$/;
-    var timeRe = /^(?:\d+:\d{2}:\d{2}|\d+[wdhms]\d*[wdhms]?|never)$/i;  // Up/Down: hh:mm:ss / 3d04h / 1w2d / never
+    var timeRe = /^(?:\d+:\d{2}:\d{2}|(?:\d+[ywdhms]){1,3}|never)$/i;  // Up/Down as FRR prints it: hh:mm:ss / 1d02h03m / 02w3d04h / 01y02w3d / never
     var rows = [];
     for (var i = 0; i < raw.length; i++) {
       var t = raw[i].trim().split(/\s+/).filter(Boolean);
@@ -37,7 +37,8 @@
     }
     rows.forEach(function (t) {
       var si = -1; for (var k = 3; k < t.length; k++) { if (timeRe.test(t[k])) { si = k + 1; break; } }
-      var state = si >= 0 && si < t.length ? t[si] : t[t.length - 1];
+      // no Up/Down column found: the state is not known (the last field could be PfxSnt or Desc)
+      var state = si >= 0 && si < t.length ? t[si] : 'unknown';
       var established = /^\d+$/.test(state);
       out.neighbors.push({ ip: t[0], remoteAs: t[2], established: established,
         pfxRcvd: established ? parseInt(state, 10) : 0, state: established ? 'Established' : state, up: si >= 1 ? t[si - 1] : '' });
