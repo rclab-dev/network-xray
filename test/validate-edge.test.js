@@ -9,6 +9,15 @@ const path = require('path');
 const cp = require('child_process');
 const nv = require('../netlab-validate.js');
 
+test('a test argument that points at a password / secret field is not read (shown as not checked)', function () {
+  const ctx = { nodes: { r1: { password: 's3cret', bgp: { secret: 'x' }, loopback: { ipv4: '10.0.0.1/32' } } }, topo: { name: 'l' } };
+  for (const ref of ['nodes.r1.password', 'nodes.r1.bgp.secret']) {
+    const call = nv.parseCall('bgp_prefix(' + ref + ')');
+    assert.throws(function () { nv.evalValue(call.args[0], ctx); }, function (e) { return e.unsupported === true && /not read/.test(e.message) && e.message.indexOf('s3cret') < 0; });
+  }
+  assert.strictEqual(nv.evalValue(nv.parseCall('bgp_prefix(nodes.r1.loopback.ipv4)').args[0], ctx), '10.0.0.1/32');
+});
+
 /* ---- stubbed router: answers[`${container}|${command}`] or answers[command] = JSON value, Error, or raw string ---- */
 let answers = {}, calls = [];
 const realExecFile = cp.execFile;

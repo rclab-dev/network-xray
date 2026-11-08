@@ -98,6 +98,9 @@ function evalValue(v, ctx) {
   for (var i = 1; i < path.length; i++) {
     var key = typeof path[i] === 'string' ? path[i] : evalValue(path[i], ctx);
     shown += typeof path[i] === 'string' ? '.' + key : '[' + key + ']';
+    /* nx-validate-noref-secret-20261107: a test result is written to the state file the page reads: values under a password / secret / token /
+       private key name are not read (the test is shown as not checked) */
+    if (typeof key === 'string' && /pass(word|wd)?$|secret|token|private[_-]?key/i.test(key)) throw Object.assign(new Error('not read: ' + shown), { unsupported: true });
     /* netlab 26.x moves bgp.originate into bgp.advertise ({ipv4: ...}) while building the lab, so older validate.yml
        files that say nodes.X.bgp.originate[0] would find nothing: read the advertised prefixes instead */
     if (key === 'originate' && cur && has(cur, 'advertise') && !(Array.isArray(cur.originate) && cur.originate.length)) {
