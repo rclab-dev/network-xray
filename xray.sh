@@ -298,7 +298,7 @@ case "$BIND" in
   *) echo "==> open  http://${BIND_HP}:${PORT}/   (Ctrl-C to stop)" ;;
 esac
 # nx_bind_note (owner A, 2026-11-03): the default stays all interfaces - say so once, with the way to narrow it
-[ -z "$BIND_SET" ] && echo "    listening on all interfaces (0.0.0.0) - to allow only this machine, use --bind 127.0.0.1"
+[ -z "$BIND_SET" ] && echo "    listening on all interfaces (0.0.0.0), and the page has no login - to allow only this machine, use --bind 127.0.0.1"   # nx-v1110-bindnote-20261107
 echo "    Click any router to open its DeepDive. Fix the lab in a router's shell, e.g.:"
 # nx_iol_demo_msgs: the shell by node kind (IOL has no vtysh: ssh with containerlab's cisco_iol default login)
 # nx_cli_msgs: an FRR node is a linux node with an frr image (alpine hosts are linux too and have no vtysh)

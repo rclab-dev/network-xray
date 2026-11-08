@@ -329,7 +329,7 @@ test('xray.sh: with no options the graph listens on 0.0.0.0 (as before) and the 
   assert.deepStrictEqual(calls(r, 'node')[0].slice(-3), ['--watch', '--interval', '1']);
   assert.deepStrictEqual(calls(r, 'containerlab').pop().slice(-2), ['-s', '0.0.0.0:' + port]);
   assert.match(r.stdout, /==> collecting router state every second /);
-  assert.match(r.stdout, /listening on all interfaces \(0\.0\.0\.0\) - to allow only this machine, use --bind 127\.0\.0\.1/);   // nx_bind_note: the default says how to narrow it
+  assert.match(r.stdout, /listening on all interfaces \(0\.0\.0\.0\), and the page has no login - to allow only this machine, use --bind 127\.0\.0\.1/);   // nx_bind_note: the default says how to narrow it
   assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
 });
 
