@@ -34,7 +34,7 @@
 var readline = require('readline');
 var query = require('./xray-query.js');
 
-var SERVER_INFO = { name: 'network-xray', version: '0.1.0' };
+var SERVER_INFO = { name: 'network-xray', version: '1' };   // the image's major tag (ghcr.io/rclab-dev/network-xray:1): no full version kept in a file
 var PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];   // the initialize-based revisions; newest first
 
 // stdout carries JSON-RPC only: anything that logs with console.log goes to stderr instead

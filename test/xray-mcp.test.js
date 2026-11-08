@@ -35,6 +35,7 @@ test('initialize and tools/list', function () {
   assert.strictEqual(init.jsonrpc, '2.0');
   assert.strictEqual(init.result.protocolVersion, '2025-06-18');
   assert.strictEqual(init.result.serverInfo.name, 'network-xray');
+  assert.strictEqual(init.result.serverInfo.version, '1', 'the major version, as the image tag');
   assert.ok(init.result.capabilities.tools);
   var tools = s.byId[2].result.tools;
   assert.deepStrictEqual(tools.map(function (t) { return t.name; }),

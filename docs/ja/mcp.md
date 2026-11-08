@@ -66,7 +66,7 @@ printf '%s\n' \
 `initialize` への返事:
 
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"network-xray","version":"0.1.0"},"instructions":"Read-only questions about a network-xray lab from saved state files. No router is contacted."}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"network-xray","version":"1"},"instructions":"Read-only questions about a network-xray lab from saved state files. No router is contacted."}}
 ```
 
 ## クライアントの設定
