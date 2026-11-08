@@ -3,7 +3,7 @@
 <!-- nx-wsl2-20261105 -->
 # Running on Windows (WSL2)
 
-network-xray runs on Linux. On Windows, run it inside a **WSL2** Linux distribution: every command below
+rclab-dev/network-xray runs on Linux. On Windows, run it inside a **WSL2** Linux distribution: every command below
 is typed in the Linux shell (e.g. Ubuntu), not in PowerShell or `cmd`. The page is then opened from the
 Windows browser.
 

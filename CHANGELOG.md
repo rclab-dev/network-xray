@@ -1,6 +1,6 @@
 # Changelog
 
-User-visible changes in each release, newest first. Dates are the release tag dates.
+User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
 ## v1.2.0 — 2026-11-08
 

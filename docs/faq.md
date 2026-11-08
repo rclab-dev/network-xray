@@ -2,7 +2,7 @@
 
 # network-xray FAQ
 
-Short answers for network engineers looking at network-xray for the first time. Each answer points to the part of the
+Short answers for network engineers looking at rclab-dev/network-xray for the first time. Each answer points to the part of the
 [README](../README.md) that has the details.
 
 ## What it reads

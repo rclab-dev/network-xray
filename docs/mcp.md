@@ -3,7 +3,7 @@
 # MCP server: ask an AI assistant about a lab
 
 `scripts/xray-mcp.js` is a small [Model Context Protocol](https://modelcontextprotocol.io) server. It lets an MCP
-client (Claude Code, Claude Desktop, or any other client that starts stdio servers) ask network-xray about a lab:
+client (Claude Code, Claude Desktop, or any other client that starts stdio servers) ask rclab-dev/network-xray about a lab:
 which routers are up, what their OSPF and BGP neighbors are, which BGP path a router chose and why, and which route
 it uses for an address.
 

@@ -3,7 +3,7 @@
 # MCP サーバ: AI アシスタントにラボのことを聞く
 
 `scripts/xray-mcp.js` は小さな [Model Context Protocol](https://modelcontextprotocol.io) のサーバです。MCP の
-クライアント (Claude Code・Claude Desktop・そのほか stdio のサーバを起動できるクライアント) から、network-xray にラボの
+クライアント (Claude Code・Claude Desktop・そのほか stdio のサーバを起動できるクライアント) から、rclab-dev/network-xray にラボの
 ことを聞けます。どのルータが動いているか、OSPF と BGP のネイバーは何か、ルータがどの BGP の経路をなぜ選んだか、
 あるアドレスにどの経路を使うか、などです。
 

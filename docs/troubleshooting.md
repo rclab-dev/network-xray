@@ -2,7 +2,7 @@
 
 # Troubleshooting
 
-Problems that `xray.sh` and the collector (`clab-xray-collect.js`) detect, and what to do about them.
+Problems that `xray.sh` and the collector (`clab-xray-collect.js`) of rclab-dev/network-xray detect, and what to do about them.
 Messages are shown as the tools print them; `<...>` stands for your own value.
 "The network-xray log" means the terminal that runs `xray.sh` (or the collector), or `docker logs <container>` for the
 `docker run` / netlab container.

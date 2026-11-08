@@ -2,7 +2,7 @@
 
 # What network-xray connects to
 
-network-xray has no telemetry, no analytics and no account. This page lists every connection it makes, so you can check
+rclab-dev/network-xray has no telemetry, no analytics and no account. This page lists every connection it makes, so you can check
 that for yourself. `node scripts/check-no-external.js` is a lint that looks for the usual ways a page or a script could
 reach another host (script and style tags, `fetch`, WebSocket, workers, `curl`, tracking snippets, …) and fails on any
 that is not listed below. It reads the source text: it finds the known patterns, it is not a proof.

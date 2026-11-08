@@ -2,7 +2,7 @@
 
 # Troubleshooting (困ったとき)
 
-`xray.sh` と collector (`clab-xray-collect.js`) が見つける問題と、その時にする事をまとめています。
+rclab-dev/network-xray の `xray.sh` と collector (`clab-xray-collect.js`) が見つける問題と、その時にする事をまとめています。
 メッセージはツールが出すそのままの英語で載せています。`<...>` は自分の値に読み替えてください。
 「network-xray のログ」は、`xray.sh` (または collector) を動かしている端末のことです。`docker run` / netlab のコンテナでは
 `docker logs <コンテナ>` です。

@@ -2,7 +2,7 @@
 
 # Windows (WSL2) で動かす
 
-network-xray は Linux で動きます。Windows では **WSL2** の Linux ディストリビューションの中で動かします。下のコマンドは
+rclab-dev/network-xray は Linux で動きます。Windows では **WSL2** の Linux ディストリビューションの中で動かします。下のコマンドは
 すべて Linux のシェル (例: Ubuntu) で打ちます。PowerShell や `cmd` ではありません。画面は Windows のブラウザで開きます。
 
 **(未確認)** の印の所は、コードとほかの文書から書いた物で、Windows のマシンでは試していません。

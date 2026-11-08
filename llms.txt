@@ -1,4 +1,4 @@
-# network-xray
+# network-xray (rclab-dev/network-xray) — live BGP / OSPF state viewer for containerlab and netlab labs (FRR, SR Linux, Cisco IOL). Read-only.
 
 > Browser view of why a router chose its path, read from the live state of FRR / Nokia SR Linux / Cisco IOS-XE (IOL) routers in a containerlab or netlab lab. It shows the BGP candidate routes and the reason the best path won (Best-Path Decision), OSPF adjacency state and OSPF-learned routes, interfaces and the routing table, as a topology view plus a per-router "DeepDive". Read-only: it runs show commands and changes nothing.
 

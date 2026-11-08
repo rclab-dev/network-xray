@@ -2,7 +2,7 @@
 
 # network-xray が通信する先
 
-network-xray には、テレメトリも、アクセス解析も、アカウントもありません。自分で確かめられる様に、通信する先をここに全部
+rclab-dev/network-xray には、テレメトリも、アクセス解析も、アカウントもありません。自分で確かめられる様に、通信する先をここに全部
 並べます。`node scripts/check-no-external.js` は、頁やスクリプトがほかの機械へ届く「よくある書き方」(script / style の
 タグ・`fetch`・WebSocket・Worker・`curl`・解析のタグ …) を探し、下に無い物があれば失敗する lint です。ソースの文字を
 読む物で、よくある形を見つける物です (証明ではありません)。
