@@ -123,16 +123,21 @@ router at the forwarding decision (the deepdive).
                                      |  :8080 (xray.sh) / :8600 (image)           |    GET   |  xray-states.js        |
                                      +--------------------------------------------+          +------------------------+
    scripts/xray-query.js and the MCP server read the same state files from disk (no router, no network).
+   Arrows point from the side that asks; the answer flows back.
 ```
 
-- The collector only reads the routers: `show` on FRR and Cisco IOL, `info from state` on SR Linux. It writes `xray-states.js`
-  and `xray-states.sig.js` next to the page.
+- The collector never changes a router: it only reads (`show` on FRR and Cisco IOL, `info from state` on SR Linux; Cisco IOL
+  every 10 s with both `./xray.sh` and the image). It writes `xray-states.js` and `xray-states.sig.js` next to the page.
 - The page is static files served by `containerlab graph`; the browser asks for them with ordinary HTTP GET. There is no
-  WebSocket and no push: the page reads the small `.sig.js` every second (the static `xray-graph.html`: every 3 s) and loads
+  WebSocket and no push: the page reads the small `.sig.js` every second (the simpler `xray-graph.html`: every 3 s) and loads
   `xray-states.js` only when it changed.
 - `./xray.sh` runs the collector and `containerlab graph` on the lab host; the image (`docker run`, the netlab tool) runs both
-  inside one container. The image also reads the running configuration every 30 s to choose OSPF or BGP, and `./xray.sh` /
-  a release's `run.sh` restart FRR right after deploy in a router whose FRR did not come up.
+  inside one container, and `:8600` is the port it publishes on the lab host (`-p 127.0.0.1:8600:8600`). With the image the
+  state files are inside the container: from the host, `curl http://localhost:8600/static/xray-states.js`. The image also
+  reads each router's running configuration every 30 s to choose OSPF or BGP (`show running-config` / `sr_cli 'info from
+  running …'`, read-only; Cisco IOL from the last collected state, no second login).
+- Only starting a lab touches a router: `./xray.sh` and a release's `run.sh`, right after deploy, restart FRR in a router
+  whose FRR did not come up (the configuration is not changed). Viewing the lab never does.
 
 ## See it
 
@@ -942,12 +947,16 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
                                      |  :8080 (xray.sh) / :8600 (image)           |    GET   |  xray-states.js        |
                                      +--------------------------------------------+          +------------------------+
    scripts/xray-query.js and the MCP server read the same state files from disk (no router, no network).
+   Arrows point from the side that asks; the answer flows back.
 ```
 
 - collector はルータを読むだけです (FRR と Cisco IOL は `show`・SR Linux は `info from state`)。画面の隣に `xray-states.js` と
   `xray-states.sig.js` を書きます。画面は `containerlab graph` が配る静的なファイルで、ブラウザは普通の HTTP GET で取ります。
-- WebSocket や push はありません。画面は小さな `.sig.js` を 1 秒ごと (静的な `xray-graph.html` は 3 秒ごと) に読み、変わった時だけ
+- WebSocket や push はありません。画面は小さな `.sig.js` を 1 秒ごと (簡単な方の `xray-graph.html` は 3 秒ごと) に読み、変わった時だけ
   `xray-states.js` を読み直します。`scripts/xray-query.js` と MCP サーバは同じ状態のファイルを読むだけです。
+- collector はルータを変えません。ルータに触るのはラボを立てる時だけで、`./xray.sh` とリリースの `run.sh` が deploy の直後に、
+  上がらなかった FRR を立て直します (設定は変えません)。image の時、状態のファイルはコンテナの中です
+  (host からは `curl http://localhost:8600/static/xray-states.js`)。<!-- nx-how-it-works2-20261107 -->
 
 ## 見る
 
