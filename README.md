@@ -107,6 +107,33 @@ a picture in your own head is worthless if the person you're talking to can't se
 those two diagrams turned into a tool: the topology at a glance, and a look *inside* the
 router at the forwarding decision (the deepdive).
 
+<!-- nx-how-it-works-20261107 -->
+## How it works
+
+```text
+ lab (containerlab / netlab)          network-xray (on the lab host, or in the image)         browser
++-------------------------+          +--------------------------------------------+          +------------------------+
+| FRR        docker exec, |<--read---| collector (clab-xray-collect.js)           |          | the page               |
+|            vtysh show   |          |  every 1 s with xray.sh, 2 s in the image  |          | xray-graph-nextui.html |
+| SR Linux   docker exec, |<--read---|  (Cisco IOL: every 10 s)                   |          |  (the default)         |
+|            sr_cli info  |          |  writes xray-states.js                     |          |                        |
+| Cisco IOL  SSH, show    |<--read---|     and xray-states.sig.js                 |          | every 1 s: GET         |
++-------------------------+          |                                            |   HTTP   |  xray-states.sig.js;   |
+                                     | containerlab graph = static file server    |<---------|  if it changed: GET    |
+                                     |  :8080 (xray.sh) / :8600 (image)           |    GET   |  xray-states.js        |
+                                     +--------------------------------------------+          +------------------------+
+   scripts/xray-query.js and the MCP server read the same state files from disk (no router, no network).
+```
+
+- The collector only reads the routers: `show` on FRR and Cisco IOL, `info from state` on SR Linux. It writes `xray-states.js`
+  and `xray-states.sig.js` next to the page.
+- The page is static files served by `containerlab graph`; the browser asks for them with ordinary HTTP GET. There is no
+  WebSocket and no push: the page reads the small `.sig.js` every second (the static `xray-graph.html`: every 3 s) and loads
+  `xray-states.js` only when it changed.
+- `./xray.sh` runs the collector and `containerlab graph` on the lab host; the image (`docker run`, the netlab tool) runs both
+  inside one container. The image also reads the running configuration every 30 s to choose OSPF or BGP, and `./xray.sh` /
+  a release's `run.sh` restart FRR right after deploy in a router whose FRR did not come up.
+
 ## See it
 
 **Why one BGP route wins — and the picture follows live.** r1 hears `8.8.8.0/24` from two upstreams, r2 and r3, and
@@ -899,6 +926,28 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 **「中」で何が起きているか**の図です。どちらも同じことを教えてくれました ——**自分の頭の中に絵があっても、
 話す相手に同じ絵が浮かばなければ意味がない**。X-Ray はこの2つの図を道具にしたものです:全体を一目で見る
 **全体図**と、ルータの中の転送判断を覗く **DeepDive**。
+
+## 仕組み
+
+```text
+ lab (containerlab / netlab)          network-xray (on the lab host, or in the image)         browser
++-------------------------+          +--------------------------------------------+          +------------------------+
+| FRR        docker exec, |<--read---| collector (clab-xray-collect.js)           |          | the page               |
+|            vtysh show   |          |  every 1 s with xray.sh, 2 s in the image  |          | xray-graph-nextui.html |
+| SR Linux   docker exec, |<--read---|  (Cisco IOL: every 10 s)                   |          |  (the default)         |
+|            sr_cli info  |          |  writes xray-states.js                     |          |                        |
+| Cisco IOL  SSH, show    |<--read---|     and xray-states.sig.js                 |          | every 1 s: GET         |
++-------------------------+          |                                            |   HTTP   |  xray-states.sig.js;   |
+                                     | containerlab graph = static file server    |<---------|  if it changed: GET    |
+                                     |  :8080 (xray.sh) / :8600 (image)           |    GET   |  xray-states.js        |
+                                     +--------------------------------------------+          +------------------------+
+   scripts/xray-query.js and the MCP server read the same state files from disk (no router, no network).
+```
+
+- collector はルータを読むだけです (FRR と Cisco IOL は `show`・SR Linux は `info from state`)。画面の隣に `xray-states.js` と
+  `xray-states.sig.js` を書きます。画面は `containerlab graph` が配る静的なファイルで、ブラウザは普通の HTTP GET で取ります。
+- WebSocket や push はありません。画面は小さな `.sig.js` を 1 秒ごと (静的な `xray-graph.html` は 3 秒ごと) に読み、変わった時だけ
+  `xray-states.js` を読み直します。`scripts/xray-query.js` と MCP サーバは同じ状態のファイルを読むだけです。
 
 ## 見る
 

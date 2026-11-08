@@ -26,6 +26,30 @@
 - MCP clients: Claude Code `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js`; Claude Desktop and other clients use an `mcpServers` entry: `{"mcpServers": {"network-xray": {"command": "node", "args": ["/path/to/network-xray/scripts/xray-mcp.js"]}}}` (Claude Desktop: `claude_desktop_config.json`, Settings → Developer → Edit Config; other clients, e.g. Cursor, use their own file: check that client's documentation, do not guess the path). See docs/mcp.md. With `./xray.sh` the live state is `<repository>/xray-states.js`; with the image, save it with `curl -s http://localhost:8600/static/xray-states.js -o <dir>/xray-states.js` and give that file.
 - Stop: Ctrl-C stops the page and the collector; the lab keeps running. Remove the lab only when asked (rule 7): `sudo containerlab destroy -t <lab.clab.yml> --cleanup`.
 
+## How it works
+```text
+ lab (containerlab / netlab)          network-xray (on the lab host, or in the image)         browser
++-------------------------+          +--------------------------------------------+          +------------------------+
+| FRR        docker exec, |<--read---| collector (clab-xray-collect.js)           |          | the page               |
+|            vtysh show   |          |  every 1 s with xray.sh, 2 s in the image  |          | xray-graph-nextui.html |
+| SR Linux   docker exec, |<--read---|  (Cisco IOL: every 10 s)                   |          |  (the default)         |
+|            sr_cli info  |          |  writes xray-states.js                     |          |                        |
+| Cisco IOL  SSH, show    |<--read---|     and xray-states.sig.js                 |          | every 1 s: GET         |
++-------------------------+          |                                            |   HTTP   |  xray-states.sig.js;   |
+                                     | containerlab graph = static file server    |<---------|  if it changed: GET    |
+                                     |  :8080 (xray.sh) / :8600 (image)           |    GET   |  xray-states.js        |
+                                     +--------------------------------------------+          +------------------------+
+   scripts/xray-query.js and the MCP server read the same state files from disk (no router, no network).
+```
+- The collector only reads the routers: `show` on FRR and Cisco IOL, `info from state` on SR Linux. It writes `xray-states.js`
+  and `xray-states.sig.js` next to the page.
+- The page is static files served by `containerlab graph`; the browser asks for them with ordinary HTTP GET. There is no
+  WebSocket and no push: the page reads the small `.sig.js` every second (the static `xray-graph.html`: every 3 s) and loads
+  `xray-states.js` only when it changed.
+- `./xray.sh` runs the collector and `containerlab graph` on the lab host; the image (`docker run`, the netlab tool) runs both
+  inside one container. The image also reads the running configuration every 30 s to choose OSPF or BGP, and `./xray.sh` /
+  a release's `run.sh` restart FRR right after deploy in a router whose FRR did not come up.
+
 ## What it is
 - A descriptive renderer of live router state, not a simulator and not a config checker.
 - Input: live state, read-only commands only. FRR: `docker exec <node> vtysh -c '<show command>'`. SR Linux: `docker exec <node> sr_cli 'info from state … | as json'`. Cisco IOL: SSH, `terminal length 0` and `terminal width 0` (for that session only), then plain-text `show ip ospf neighbor`, `show ip ospf interface [brief]`, `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show ip protocols`, `show bridge-domain` (login `NX_IOS_USER` / `NX_IOS_PASSWORD`, default admin / admin).
