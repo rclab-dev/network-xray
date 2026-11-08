@@ -17,7 +17,10 @@ network-xray には、テレメトリも、アクセス解析も、アカウン�
 ## ルータを読む (collector)
 
 - ラボのコンテナへの `docker exec` (FRR の `vtysh`・SR Linux の `sr_cli`) と、Cisco IOL へのラボの管理網での SSH。
-  どれもあなたの機械の中です。送るのは `show` の命令だけです。
+  どれもあなたの機械の中です。collector が送るのは読むだけの命令です: `show` (FRR・IOL) と `info from state` (SR Linux)。
+  コンテナは OSPF か BGP かを決めるため、始めと 30 秒ごとに設定も読みます (`show running-config` / `info from running`)。
+- `./xray.sh` とリリースの `run.sh` は、ラボを作った直後に FRR が上がらなかったルータで FRR を立て直します
+  (`watchfrr.sh restart all`・最大 3 回)。設定は変えません。
 
 ## ラボを起こす (`xray.sh`・containerlab・netlab)
 
@@ -25,6 +28,8 @@ network-xray には、テレメトリも、アクセス解析も、アカウン�
   Docker のいつもの動きで、network-xray が足す通信ではありません。
 - `./xray.sh` とコンテナは、案内のリンク (containerlab・Docker・Node.js の入れ方の頁) を表示します。表示するだけで、
   開きません。
+- containerlab 自身の版の確かめ (GitHub に最新の版を聞く) は切っています: `./xray.sh` とコンテナは、その変数を自分で
+  決めていなければ `CLAB_VERSION_CHECK=disable` で containerlab を動かします。
 
 ## image を作る / 取る
 

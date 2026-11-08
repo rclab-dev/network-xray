@@ -34,6 +34,8 @@ while [ $# -gt 0 ]; do
 done
 
 SRC=/opt/network-xray; WORK=/tmp/network-xray
+# containerlab's own update check asks GitHub for its latest release: off unless CLAB_VERSION_CHECK is set
+export CLAB_VERSION_CHECK="${CLAB_VERSION_CHECK-disable}"
 [ -f "$TOPO" ] || { echo "topology not found: $TOPO (mount the lab directory: -v \"\$(pwd)\":/lab:ro)" >&2; exit 1; }
 _dto=""; command -v timeout >/dev/null 2>&1 && _dto="timeout 10"   # nx-docker-check-w2-20261105: a docker info that hangs must not hang the start
 if ! DERR="$($_dto docker info 2>&1 >/dev/null)"; then
@@ -77,8 +79,9 @@ if [ -n "$MGMT" ]; then MGARG=(--mgmt-subnet "$MGMT"); else MGARG=(--exclude-mgm
 # -> the netlab validate band, judged by network-xray itself. The file is read on every round (it may appear later).
 VALARG=(--validate "$(dirname "$TOPO")/network-xray.json")
 
-# the names that start with clab-<lab>- (a plain string compare: a . in the lab name is not a regex)
-routers() { docker ps --format '{{.Names}}' | awk -v p="$CPFX" 'index($0, p) == 1' || true; }
+# this lab's containers: containerlab labels them containerlab=<lab> (as xray.sh does - a name prefix would also match a lab
+# whose name starts with this one, e.g. a and a-b)
+routers() { docker ps --filter "label=containerlab=$LABNAME" --format '{{.Names}}' || true; }
 
 detect_proto() {
   local c p=static

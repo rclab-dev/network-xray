@@ -18,7 +18,11 @@ that is not listed below. It reads the source text: it finds the known patterns,
 ## Reading the routers (the collector)
 
 - `docker exec` into the lab's containers (FRR `vtysh`, SR Linux `sr_cli`) and SSH to Cisco IOL nodes on the lab's
-  management network. All of these are on your machine. Only `show` commands are sent.
+  management network. All of these are on your machine. The collectors send only read commands: `show` (FRR, IOL) and
+  `info from state` (SR Linux). The container also reads the running configuration at start and every 30 s to pick OSPF
+  or BGP (`show running-config` / `info from running`).
+- `./xray.sh` and a release's `run.sh`, right after they deploy a lab, restart FRR in a router whose FRR did not come up
+  (`watchfrr.sh restart all`, at most 3 times). The configuration is not changed.
 
 ## Starting a lab (`xray.sh`, containerlab, netlab)
 
@@ -26,6 +30,8 @@ that is not listed below. It reads the source text: it finds the known patterns,
   containerlab / Docker doing what they always do; network-xray does not add to it.
 - `./xray.sh` and the container print hint links (containerlab, Docker, Node.js install pages). They are printed, not
   opened.
+- containerlab's own update check (it asks GitHub for its latest release) is turned off: `./xray.sh` and the container run
+  containerlab with `CLAB_VERSION_CHECK=disable` unless you set that variable yourself.
 
 ## Building or pulling the image
 

@@ -27,6 +27,8 @@ set -euo pipefail
 unset CDPATH   # a CDPATH from the environment would make the cd below print a path or pick another folder
 HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
 BIND=0.0.0.0; BIND_SET=""; INTERVAL=1; CHECK=""; ATTACH=""; POS=()
+# containerlab's own update check asks GitHub for its latest release: off unless you set CLAB_VERSION_CHECK yourself  # nx-v1110-review-20261107
+export CLAB_VERSION_CHECK="${CLAB_VERSION_CHECK-disable}"
 usage() {
   cat <<'EOF'
 usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] [lab.clab.yml] [port] [template.html]
