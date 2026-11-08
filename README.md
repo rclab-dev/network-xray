@@ -63,7 +63,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 |---|---|
 | containerlab | 0.81.0 and 0.82.0 (host) · 0.82.0 (inside the image) |
 | FRR | 8.4 (the example labs, pinned) · 10.7.1 (netlab 26.10's default) |
-| SR Linux | 26.3.3 (read directly, containerlab) · 26.7.2 (as the device under test in netlab's BGP tests, judged from its FRR neighbors) |
+| SR Linux | 26.3.3 (read by network-xray, containerlab). 26.7.2 appeared only as the device under test in netlab's BGP tests; network-xray read its FRR neighbors, not the SR Linux itself |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`, image built with vrnetlab) |
 | netlab | 26.10 |
 | Node.js | 18 and 24 (for `xray.sh` / the collector without the image; the tests run on both, and CI and the image use 24) |
@@ -79,7 +79,7 @@ A single copyright holder is kept so the project can be relicensed later. Issues
 `network-xray` turns live router & network **state** (OSPF/BGP adjacency, routes, interfaces) into a
 picture you can **reason about** — where the packet goes, why the route is (or isn't) there, and how a
 failure propagates and recovers. It renders a **topology view** and an **"inside the router"
-DeepDive cylinder** (forwarding plane, OSPF/BGP processor, hello & LSDB sync, the route it installs).
+DeepDive cylinder** (forwarding plane, OSPF/BGP process, hello and an LSDB-sync indicator derived from neighbor state, and the installed route the router reports).
 You control it with a few calls through the `xrayCore` API.
 
 > This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en)**,
@@ -89,9 +89,10 @@ It runs **on top of your execution engine** — paste a **containerlab** topolog
 or point it at live FRR / SR Linux / Cisco IOS-XE (IOL) — the **"why"** layer above the "what".
 
 It is **descriptive**, not a simulator: it draws the state your feed reports. And it is
-**vendor-neutral** — every field it reads is a standard `show`-command concept. FRRouting,
-**Nokia SR Linux** and **Cisco IOS-XE (IOL)** are implemented today (a mixed lab renders uniformly);
-Arista and others would need a small adapter of the same kind.
+**vendor-neutral** in its state shape — the fields it draws are standard `show`-command concepts. FRRouting,
+**Nokia SR Linux** and **Cisco IOS-XE (IOL)** are implemented today (a mixed lab renders uniformly).
+Other NOSes (Arista, Junos, …) would need their own collector that maps their `show` output to the same
+state shape (see [DATA-CONTRACT.md](./DATA-CONTRACT.md)); the IOL collector is a worked example.
 
 **Status:** network-xray supports containerlab and netlab with FRR, SR Linux and Cisco IOL (IOS-XE), and Cisco CML2 labs with `cml-xray.js`.
 
@@ -116,11 +117,11 @@ router at the forwarding decision (the deepdive).
 
 ## See it
 
-**Why one BGP route wins — and the picture follows live.** Two upstreams advertise `8.8.8.0/24` with
-different Local Preference. Open r1: the BGP table shows both candidates and a **Best-Path
+**Why one BGP route wins — and the picture follows live.** r1 hears `8.8.8.0/24` from two upstreams, r2 and r3, and
+gives each path a different Local Preference on the way in (an inbound route-map on r1). Open r1: the BGP table shows both candidates and a **Best-Path
 Decision** panel that explains *why* the winner won (LocPref) — then change the LocPref on the running
 lab and the best path flips **in place, no reload** (in the GIF below, recorded on the q21 example: via r3 at 100 ⇄ via r2 at 150). X-Ray re-reads the
-real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path FRR itself marked best** (`bestpath`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. The later steps (eBGP over iBGP, IGP cost to the next hop, router ID, cluster list) are not compared, and MED only between paths from the same neighbor AS. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
+real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path the router itself marked best** (FRR's `bestpath`, the `*>` line on Cisco IOL, SR Linux's `best-route`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. The later steps (eBGP over iBGP, IGP cost to the next hop, router ID, cluster list) are not compared, and MED only between paths from the same neighbor AS. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
 version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
 ![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
@@ -351,7 +352,7 @@ For a message you see in the terminal or on the page and what to do about it, se
 | The first start is slow | It pulls the FRR image once — **FRR 8.4** from Docker Hub `frrouting/frr`, pinned by digest so everyone runs the same build (moving to FRR 10.x from quay.io is planned). You can pull it beforehand: `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce`. |
 | The collector feels heavy on a large lab | Read the routers less often: `./xray.sh --interval 3 <lab.clab.yml>` (seconds; the default is 1). A slow or stopped router does not hold up the others: it keeps its last state (marked as not read on the default page, `xray-graph-nextui.html`) and is read again on the next round. The `docker run` / netlab container collects every 2 s by default; pass `--interval N` after `--topo …` to change it. `scripts/scale-bench.js` times the Node steps on synthetic labs of growing size. |
 | `docker pull` fails with "toomanyrequests" / rate limit | Docker Hub limits pulls without a login, counted per IP address — a classroom or office behind one connection can hit it when many people start at once. Run `docker login` first (a free Docker account raises the limit). |
-| `zebra is not running` / a router has no IP address or routes right after start | The example labs, `run.sh` and `xray.sh` restart FRR by themselves when this happens (up to 3 times, also with a plain `containerlab deploy`). With packages from v1.0.0 / v1.0.1 or your own labs, restart it by hand: `docker exec clab-<lab>-<node> /usr/lib/frr/watchfrr.sh restart all`. Why: zebra sometimes crashes right after the container starts (in our tests a few in 100 router starts with FRR 8.4, sometimes without any message) and leaves the router without its IP addresses and routes. This is an FRR start-up issue, not something you did. |
+| `zebra is not running` / a router has no IP address or routes right after start | The example labs, `run.sh` and `xray.sh` restart FRR by themselves when this happens (up to 3 times, also with a plain `containerlab deploy`). With packages from v1.0.0 / v1.0.1 or your own labs, restart it by hand: `docker exec clab-<lab>-<node> /usr/lib/frr/watchfrr.sh restart all`. Why: zebra sometimes crashes right after the container starts (in our tests a few in 100 router starts with FRR 8.4, sometimes without any message) and leaves the router without its IP addresses and routes. We have not traced the cause; it is not caused by anything you typed. |
 | A router shows nothing / routes do not appear | Give it 30–60 seconds (OSPF/BGP need time to come up). If it stays empty, check `docker ps` (the router is running) and `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`. Then ask the router directly: `docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'` (or `show ip ospf neighbor json`) — if that is empty too, the router has nothing yet; if it answers but the page stays empty, look at the log (`docker logs <network-xray container> 2>&1 | tail -30`: it names the containers it reads, `clab-<lab>-*`) and open an issue with both. |
 | A previous lab is still running | `sudo containerlab inspect --all` lists the labs; `sudo containerlab destroy -t <lab.clab.yml> --cleanup` removes one. |
 | WSL2 | Docker Desktop with the WSL2 backend (or Docker inside the WSL2 distro) is fine. Run everything inside the Linux shell, not in PowerShell. |
@@ -479,14 +480,14 @@ OSPF and BGP. The collector is checked by self-tests on recorded FRR JSON output
 differ, collect the json yourself and pass `--fixtures <dir>` (one file per command: `ospf-neighbor.json`,
 `ospf-interface.json`, `interface.json`, `route.json`, `bgp-summary.json`, `bgp.json` — not the `show_ip_….json`
 names of `frr-collect.js --from-dir`; a file with another name is read as absent),
-and please open an issue with the raw output. *(Without the collector, the template renders a synthesized state — correct topology,
-assumed-healthy adjacencies.)*
+and please open an issue with the raw output. *(Without the collector the template has no router state: it draws the shape from the topology file,
+marks the page **Sample view — not connected to the routers**, and its colors, lines and states are not real.)*
 
 **Auto-wire the whole graph (optional):** `clab-xray-collect.js` does the above for *every* node in
 one step — it derives each node's adjacency from the topology links, runs `clab-collect.js` per node,
 and writes `xray-states.js` (`window.LIVE_STATES`) next to the assets. `xray-graph.html` loads it
 automatically when present, so every node's DeepDive shows its **reported** state; if it's absent the graph
-falls back to the synthetic scaffold (so this step is purely additive):
+falls back to the sample view (marked as such; this step is purely additive):
 
 ```
 node clab-xray-collect.js lab.clab.yml <this gallery dir>     # writes <dir>/xray-states.js
@@ -851,7 +852,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 |---|---|
 | containerlab | 0.81.0 と 0.82.0 (ホスト)・0.82.0 (イメージ内) |
 | FRR | 8.4 (例題、固定)・10.7.1 (netlab 26.10 の既定) |
-| SR Linux | 26.3.3 (containerlab で直接収集)・26.7.2 (netlab の BGP テスト対象、隣の FRR から判定) |
+| SR Linux | 26.3.3 (network-xray が読んだ・containerlab)。26.7.2 は netlab の BGP テストの対象として出ただけで、network-xray が読んだのは隣の FRR です (SR Linux そのものは読んでいません) |
 | Cisco IOL (IOS-XE) | 17.18.02 (containerlab `cisco_iol`、vrnetlab で構築したイメージ) |
 | netlab | 26.10 |
 | Node.js | 18 と 24 (`xray.sh` / イメージを使わない collector。試験は両方で流し、CI とイメージは 24) |
@@ -867,7 +868,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 `network-xray` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
 **筋道立てて考えられる絵**にします — パケットがどこへ向かうか、なぜ経路が在る(または無い)のか、
 障害がどう波及し復旧するか。**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、
-OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストールされる経路)を描きます。操作は
+OSPF/BGP プロセス、hello とネイバー状態から出す LSDB 同期の表示、ルータが報告するインストール経路)を描きます。操作は
 `xrayCore` API を数回呼び出すだけです。
 
 > これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=ja) を動かしているのと同じ描画コア**で、
@@ -877,8 +878,9 @@ OSPF/BGP プロセッサ、hello と LSDB 同期、実際にインストール�
 FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
 
 **シミュレータではなく記述的 (descriptive)**: 入力で報告された状態を描くだけで、経路の計算もプロトコルの実行も
-しません。また**ベンダー中立**で、読み取る項目はすべて標準的な `show` コマンドの概念です。
-FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みで (混ざったラボも同じように描けます)、Arista などは同じ種類の小さなアダプタが要ります。
+しません。また状態の形が**ベンダー中立**で、描く項目は標準的な `show` コマンドの概念です。
+FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (混ざったラボも同じように描けます)。
+ほかの OS (Arista・Junos など) は、その `show` の出力を同じ状態の形に直す collector がそれぞれ要ります ([DATA-CONTRACT.md](./DATA-CONTRACT.md))。IOL の collector がその例です。
 
 **現状:** containerlab と netlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。Cisco CML2 のラボは `cml-xray.js` で読みます。
 
@@ -901,7 +903,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みで (混�
 
 ## 見る
 
-**BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** 2 つの上流が `8.8.8.0/24` を違う Local Preference で広告します。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常に FRR 自身が best にした経路 (`bestpath`) です。** 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。その後の段 (iBGP より eBGP・next hop までの IGP のコスト・router ID・cluster list) は比べません。MED は同じ隣の AS から来た経路の間だけで比べます。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
+**BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** r1 は `8.8.8.0/24` を 2 つの上流 (r2・r3) から受け、受ける時に経路ごとに違う Local Preference を付けます (r1 の受信側の route-map)。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常にルータ自身が best にした経路です** (FRR の `bestpath`・Cisco IOL の `*>` の行・SR Linux の `best-route`)。 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。その後の段 (iBGP より eBGP・next hop までの IGP のコスト・router ID・cluster list) は比べません。MED は同じ隣の AS から来た経路の間だけで比べます。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
 ![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
 
@@ -1122,7 +1124,7 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
 | 初回の起動が遅い | FRR のイメージを 1 回取得している — Docker Hub の `frrouting/frr` の **FRR 8.4** を digest で固定 (誰でも同じ版で動く・quay.io の FRR 10.x への移行は今後)。先に `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce` しておくと早い。 |
 | ノードの多いラボで collector が重い | ルータを読む間隔を空ける: `./xray.sh --interval 3 <ラボ>.clab.yml` (秒・既定は 1)。遅いルータや止まったルータがあっても、ほかのルータは待たされません (そのルータは前の状態のまま = 既定の頁 `xray-graph-nextui.html` では読めなかった印が付く・次の回にまた読む)。`docker run` / netlab のコンテナは既定で 2 秒ごと。変える時は `--topo …` の後に `--interval N`。`scripts/scale-bench.js` で、大きさを変えた合成のラボで Node の処理の時間を測れます。 |
 | `docker pull` が "toomanyrequests" (回数の上限) で失敗する | Docker Hub はログインなしの pull に回数の上限があり、IP アドレスごとに数える — 教室や会社など、同じ回線から大勢が一斉に始めると当たることがある。先に `docker login` しておく (無料のアカウントで上限が上がる)。 |
-| 起動直後に `zebra is not running` / ルータに IP や経路が無い | 例題のラボ・`run.sh`・`xray.sh` は、この時に自分で FRR を立て直します (最大 3 回・`containerlab deploy` だけで立てた時も)。v1.0.0 / v1.0.1 のパッケージや自分で作ったラボでは、手で `docker exec clab-<ラボ名>-<ノード> /usr/lib/frr/watchfrr.sh restart all`。わけ: まれに (FRR 8.4 の試しでルータの起動 100 回に数回)、コンテナの起動直後に zebra が落ちて (何も出さずに落ちることもある)、ルータに IP アドレスや経路が入らないまま残ります。FRR の起動時の不具合で、操作の誤りではありません。 |
+| 起動直後に `zebra is not running` / ルータに IP や経路が無い | 例題のラボ・`run.sh`・`xray.sh` は、この時に自分で FRR を立て直します (最大 3 回・`containerlab deploy` だけで立てた時も)。v1.0.0 / v1.0.1 のパッケージや自分で作ったラボでは、手で `docker exec clab-<ラボ名>-<ノード> /usr/lib/frr/watchfrr.sh restart all`。わけ: まれに (FRR 8.4 の試しでルータの起動 100 回に数回)、コンテナの起動直後に zebra が落ちて (何も出さずに落ちることもある)、ルータに IP アドレスや経路が入らないまま残ります。原因はまだ突き止めていません。操作の誤りではありません。 |
 | ルータの中が空 / 経路が出ない | 30〜60 秒待つ (OSPF/BGP は立ち上がりに時間がかかる)。空のままなら `docker ps` (ルータが動いているか) と `docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`。次に、ルータに直接聞く: `docker exec clab-<lab>-r1 vtysh -c 'show ip bgp summary json'` (または `show ip ospf neighbor json`)。それも空なら、ルータにはまだ何も無い。ルータは答えるのに画面が空のままなら、ログ (`docker logs <network-xray のコンテナ> 2>&1 | tail -30`: 読むコンテナ `clab-<lab>-*` の名前が出る) を見て、両方を付けて issue を開いてください。 |
 | 前のラボが残っている | `sudo containerlab inspect --all` で一覧、`sudo containerlab destroy -t <lab.clab.yml> --cleanup` で消す。 |
 | WSL2 | Docker Desktop (WSL2 バックエンド) か WSL2 の中の Docker で動く。PowerShell ではなく Linux のシェルで打つ。 |
@@ -1242,8 +1244,8 @@ neighbor を interface で clab ピアにマップする(任意 IP プランで�
 DeepDive を駆動)。JSON の形は FRR 10.7.1 (netlab 26.10 の既定) でも確かめています。それ以外の FRR で `… json` のキーが違う
 場合は自分で json を集め `--fixtures <dir>` で渡し (コマンドごとに 1 ファイル: `ospf-neighbor.json`・`ospf-interface.json`・
 `interface.json`・`route.json`・`bgp-summary.json`・`bgp.json`。`frr-collect.js --from-dir` の `show_ip_….json` の名前ではありません。
-ほかの名前のファイルは無いものとして読みます)、raw 出力を issue で報告ください。*(collector 無しでもテンプレは合成 state で
-描画します — トポロジは正しく、隣接は健全と仮定。)*
+ほかの名前のファイルは無いものとして読みます)、raw 出力を issue で報告ください。*(collector 無しではルータの状態がありません。トポロジのファイルから形だけを描き、
+頁に **見本の図 — ルータにはつないでいません** と出します。色・線・状態は実物ではありません。)*
 
 **全体を一度に (任意):** `clab-xray-collect.js` は上のことを*全部の*ノードに一度に行います — トポロジのリンクから各ノードの隣接を求め、ノードごとに `clab-collect.js` を動かし、`xray-states.js` (`window.LIVE_STATES`) を資産の隣に書きます。`xray-graph.html` はこれがあれば自動で読み、各ノードの DeepDive に**報告された**状態を出します。無ければ合成の雛形に戻ります (足すだけの手順です):
 
