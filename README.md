@@ -72,23 +72,13 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 <a id="maintenance-policy"></a>
 Issues with the raw output attached are welcome and fixes are made here; pull requests are not merged.
-A single copyright holder is kept so the project can be relicensed later. Issues carry no SLA; forks are welcome.
+A single copyright holder is kept so the project can be relicensed later. Released versions stay MIT. Issues carry no SLA; forks are welcome.
 
 **Walkthrough:** [See why BGP picked that path — a browser X-ray for your containerlab lab](https://dev.to/routecrushlab/see-why-bgp-picked-that-path-a-browser-x-ray-for-your-containerlab-lab-3e) (dev.to)
 
 **See *why* a router chose its path.** `network-xray` turns a router's live state (`show` / JSON) into a picture of the forwarding decision — which route won, which lost, and why. The gallery pages (below) are zero-install, browser-only.
 
-`network-xray` turns live router & network **state** (OSPF/BGP adjacency, routes, interfaces) into a
-picture you can **reason about** — where the packet goes, why the route is (or isn't) there, and how a
-failure propagates and recovers. It renders a **topology view** and an **"inside the router"
-DeepDive cylinder** (forwarding plane, OSPF/BGP process, hello and an LSDB-sync indicator derived from neighbor state, and the installed route the router reports).
-You control it with a few calls through the `xrayCore` API.
-
-> This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en)**,
-> not a fork — extracted as a shared module to keep them from drifting apart.
-
-It runs **on top of your execution engine** — paste a **containerlab** topology, replay a recorded lab,
-or point it at live FRR / SR Linux / Cisco IOS-XE (IOL) — the **"why"** layer above the "what".
+Under the hood the drawing is a plain-JS library (`xray-core.js`) you can also embed in your own page — see [Embed the engine](#embed-the-engine).
 
 It is **descriptive**, not a simulator: it draws the state your feed reports. And it is
 **vendor-neutral** in its state shape — the fields it draws are standard `show`-command concepts. FRRouting,
@@ -388,12 +378,24 @@ network behaves the way it does. No install, no signup.
 → **[Start with a BGP best-path lab (English, beta)](https://routecrushlab.com/lab/tl/q21?try=guest&lang=en&ref=oss)**
 Two ISPs advertise the same route — watch why traffic takes the slow one, then fix it.
 
-## Run it
+## Open the gallery locally
 
 Open **`index.html`** in a browser — no build, no server, no install. (Or
 `python -m http.server --bind 127.0.0.1` then `http://localhost:8000/`.)
 
-## Quickstart (embed the engine)
+## Embed the engine
+
+`network-xray` turns live router & network **state** (OSPF/BGP adjacency, routes, interfaces) into a
+picture you can **reason about** — where the packet goes, why the route is (or isn't) there, and how a
+failure propagates and recovers. It renders a **topology view** and an **"inside the router"
+DeepDive cylinder** (forwarding plane, OSPF/BGP process, hello and an LSDB-sync indicator derived from neighbor state, and the installed route the router reports).
+You control it with a few calls through the `xrayCore` API.
+
+> This is the **same rendering core that powers [RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=en)**,
+> not a fork — extracted as a shared module to keep them from drifting apart.
+
+It runs **on top of your execution engine** — paste a **containerlab** topology, replay a recorded lab,
+or point it at live FRR / SR Linux / Cisco IOS-XE (IOL) — the **"why"** layer above the "what".
 
 ```html
 <script src="xray-core.js"></script>   <!-- the engine (self-injects its CSS) -->
@@ -422,7 +424,7 @@ Open `index.html` for the gallery, or open a page directly:
 | **`xray-graph.html`** | A **containerlab `graph --template`** drop-in: render your *live* lab as a topology view with no fixed limit on nodes or links (speed depends on lab size), then click any node for its X-Ray DeepDive. *See [containerlab graph template](#containerlab-graph-template) below.* |
 | **`ccna-ospf.html`** | Step the OSPF neighbor states (Down→Full) without booting a router. DeepDive shows hello, LSDB sync, and the route appearing at Full. (Shows the neighbor states described in RFC 2328 §10.1, except Attempt, which is used only on NBMA networks. Each step is a fixed example, not a running state machine.) |
 | **`bgp-session.html`** | Step the eBGP FSM (Idle→Established) between two ASes. DeepDive shows the BGP processor and the session tunnel; at Established it learns `203.0.113.0/24`. (RFC 4271 §8.) |
-| **`noc-live.html`** | Wire `startPolling()` to telemetry; the view updates itself in real time. |
+| **`noc-live.html`** | Demo: wire `startPolling()` to a state feed; the view redraws when it changes. |
 | **`failover.html`** | A redundant OSPF triangle: cut the shortest path → detour, cut the backup → isolation. |
 
 ## containerlab graph template
@@ -630,10 +632,10 @@ The same `clab-collect.js` states drive both, so there's nothing to keep in sync
 figure's **interface link angles follow the layout live** as you drag nodes around. **Interactive example:**
 open `topo-explorer.html` (topology view + detail side by side, draggable with live follow, link-break scenario).
 
-## What people build with it
+## What you could build with it
 
 - **Interactive teaching modules** — embed an OSPF/BGP walkthrough in a blog post or course.
-- **Live NOC / lab dashboards** — point `startPolling()` at your telemetry (e.g. Containerlab, FRR).
+- **Lab dashboards** — point `startPolling()` at a lab collector (not meant for production monitoring).
 - **Paste-to-visualize** — drop CLI output in the browser to reconstruct a topology, no setup.
 - **Postmortem & MOP figures** — render before/after state to show what rerouted, for a writeup.
 
@@ -866,23 +868,13 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 <a id="maintenance-policy-ja"></a>
 生の出力を添えた issue を歓迎します。修正はここで行い、Pull Request はマージしません。
-将来の再ライセンスのため著作権者を単一に保ちます。Issue に SLA はありません。フォークは歓迎します。
+将来の再ライセンスのため著作権者を単一に保ちます。公開済みの版は MIT のままです。Issue に SLA はありません。フォークは歓迎します。
 
 **解説記事:** [network-xray の紹介 (Zenn)](https://zenn.dev/routecrushlab/articles/network-xray-oss)
 
 **ルータが *なぜ* その経路を選んだかを見る。** `network-xray` は、ルータの稼働状態 (`show` / JSON) をもとに、パケット転送の判断を図解します — どの経路が勝ち、どれが負け、なぜか。ギャラリーはインストール不要・ブラウザだけ。
 
-`network-xray` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
-**筋道立てて考えられる絵**にします — パケットがどこへ向かうか、なぜ経路が在る(または無い)のか、
-障害がどう波及し復旧するか。**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、
-OSPF/BGP プロセス、hello とネイバー状態から出す LSDB 同期の表示、ルータが報告するインストール経路)を描きます。操作は
-`xrayCore` API を数回呼び出すだけです。
-
-> これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=ja) を動かしているのと同じ描画コア**で、
-> フォークではありません — 共有モジュールとして切り出し、本体と食い違わないようにしています。
-
-**実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの
-FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
+描画の中身は素の JS のライブラリ (`xray-core.js`) で、自分の頁にも組み込めます — [エンジンを組み込む](#エンジンを組み込む) を見てください。
 
 **シミュレータではなく記述的 (descriptive)**: 入力で報告された状態を描くだけで、経路の計算もプロトコルの実行も
 しません。また状態の形が**ベンダー中立**で、描く項目は標準的な `show` コマンドの概念です。
@@ -1163,12 +1155,24 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
 → **[BGP の best path のラボから始める](https://routecrushlab.com/lab/tl/q21?try=guest&lang=ja&ref=oss)**
 2 つの ISP が同じ経路を広告します — なぜ遅い方を通るのかを見て、直してください。
 
-## 動かす
+## ギャラリーを手元で開く
 
 ブラウザで **`index.html`** を開くだけ — ビルド・サーバ・インストール不要
 (または `python -m http.server --bind 127.0.0.1` → `http://localhost:8000/`)。
 
-## クイックスタート (エンジンを組み込む)
+## エンジンを組み込む
+
+`network-xray` は、生きたルータ／ネットワークの**状態**(OSPF/BGP の隣接・経路・インターフェース)を、
+**筋道立てて考えられる絵**にします — パケットがどこへ向かうか、なぜ経路が在る(または無い)のか、
+障害がどう波及し復旧するか。**全体トポロジ**と、**「ルータの中」を見る DeepDive 円柱**(転送プレーン、
+OSPF/BGP プロセス、hello とネイバー状態から出す LSDB 同期の表示、ルータが報告するインストール経路)を描きます。操作は
+`xrayCore` API を数回呼び出すだけです。
+
+> これは **[RouteCrushLab](https://routecrushlab.com/?ref=oss&lang=ja) を動かしているのと同じ描画コア**で、
+> フォークではありません — 共有モジュールとして切り出し、本体と食い違わないようにしています。
+
+**実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの
+FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
 
 ```html
 <script src="xray-core.js"></script>   <!-- エンジン本体(CSS を自己注入) -->
@@ -1197,7 +1201,7 @@ view.openDeepDive();                                      // ルータの中へ
 | **`xray-graph.html`** | **containerlab `graph --template`** の drop-in:稼働中ラボをノード数・リンク数に固定上限のない全体図で描き、ノードをクリックでそのノードの X-Ray DeepDive (速度はラボの規模によります)。*下記 [containerlab graph テンプレート](#containerlab-graph-テンプレート) 参照。* |
 | **`ccna-ospf.html`** | OSPF のネイバー状態(Down→Full)をルータを起動せずに1歩ずつ。DeepDive で hello・LSDB 同期・Full での経路出現を表示(RFC 2328 §10.1 に記載されたネイバー状態を表示。NBMA だけで使う Attempt は除く。各段は固定の例で、状態機械を動かしてはいません)。 |
 | **`bgp-session.html`** | eBGP の FSM(Idle→Established)を2つの AS 間で1歩ずつ。DeepDive で BGP プロセッサとセッショントンネルを表示し、Established で `203.0.113.0/24` を学習(RFC 4271 §8)。 |
-| **`noc-live.html`** | `startPolling()` をテレメトリに繋ぐと、ビューが自分でリアルタイム更新。 |
+| **`noc-live.html`** | 見本: `startPolling()` を状態の入力に繋ぐと、変わった時にビューが描き直す。 |
 | **`failover.html`** | 冗長 OSPF 三角形:最短路を切る→迂回、バックアップも切る→孤立。 |
 
 ## containerlab graph テンプレート
@@ -1347,7 +1351,7 @@ node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exc
 ## 何に使えるか
 
 - **インタラクティブ教材** — OSPF/BGP の解説をブログ記事や講座に埋め込む。
-- **ライブ NOC / ラボ ダッシュボード** — `startPolling()` を自分のテレメトリ(Containerlab・FRR など)へ。
+- **ラボのダッシュボード** — `startPolling()` をラボの collector へ (本番の監視向けではありません)。
 - **貼って可視化** — CLI 出力をブラウザに貼るだけでトポロジを再構築、セットアップ不要。
 - **ポストモーテム・MOP 図** — 障害前後の状態を描いて「何が迂回したか」を報告書に。
 

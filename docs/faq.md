@@ -182,7 +182,7 @@ and the netlab tool) bundles the NeXt UI Toolkit under EPL-1.0; `xray-graph.html
 
 ### Can I contribute code?
 
-Pull requests are not accepted; the project has a single maintainer and keeps a single copyright holder. Issues are read,
+Pull requests are not accepted; the project has a single maintainer and keeps a single copyright holder (released versions stay MIT). Issues are read,
 with no SLA, and forking is welcome under the licence. See [Scope & maintenance](../README.md#scope--maintenance).
 
 ### The picture looks wrong. How do I report it?
