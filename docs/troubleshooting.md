@@ -141,7 +141,9 @@ error: unable to create file test/fixtures/...: Filename too long
 
 **Why.** Some test fixture paths are long (up to about 110 characters), and Windows limits a full path to 260 characters unless long paths are enabled.
 
-**What to do.** Run `git config --global core.longpaths true` and clone again, or clone into a shorter folder (for example `C:src`).
+**What to do.** The recommended way on Windows is to clone inside WSL2 with the Linux `git` (see
+[Running on Windows (WSL2)](windows-wsl2.md)). If you clone with Git for Windows, run
+`git config --global core.longpaths true` and clone again, or clone into a shorter folder (for example `C:\src`).
 
 ## Docker socket permission
 

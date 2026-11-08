@@ -146,7 +146,9 @@ error: unable to create file test/fixtures/...: Filename too long
 
 **わけ。** 試験の資料のパスに長い物があり (110 字ほどまで)、Windows は長いパスを許す設定にしないとパス全体を 260 字までに限ります。
 
-**する事。** `git config --global core.longpaths true` を打ってから clone し直すか、短いフォルダ (例 `C:src`) に clone します。
+**する事。** Windows では、WSL2 の中で Linux の `git` で clone するのが勧める形です ([Windows (WSL2) で動かす](windows-wsl2.md))。
+Git for Windows で clone するなら、`git config --global core.longpaths true` を打ってから clone し直すか、短いフォルダ
+(例 `C:\src`) に clone します。
 
 <a id="docker-socket-permission"></a>
 ## Docker のソケットの権限

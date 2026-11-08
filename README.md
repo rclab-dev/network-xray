@@ -4,6 +4,8 @@
 
 *English | [日本語](#日本語)*
 
+**Already have containerlab?** Jump to the [Quick start](#quick-start-run-a-lab-in-containerlab).
+
 <!-- nx_readme_entry (2026-10-20) -->
 ![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
@@ -152,7 +154,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 **You need:** Linux (or Windows with **WSL2**, or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container).
 
-**Which way?** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
+**Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
 > **Before you start:** use a lab machine — containerlab runs with `sudo`. `xray.sh` serves the page on all interfaces (`0.0.0.0`, port 8080 by default) with no login: anyone who can reach the machine can see the lab, so keep it on a trusted network. For this machine only: `./xray.sh --bind 127.0.0.1 examples/q21-bgp-lp/q21.clab.yml`. `--interval <seconds>` reads the routers less often (default 1). [More](#security-notes)
 
@@ -165,6 +167,8 @@ cd network-xray
 `xray.sh` was called `demo.sh` before; `./demo.sh` still works (it runs `xray.sh`).
 
 1. Wait for `==> open  http://<this machine>:8080/` (the first run pulls the FRR image — this can take a few minutes).
+   Stuck or failing (Docker Hub rate limit, Docker permission, port in use)? See [FAQ / Troubleshooting](#faq--troubleshooting)
+   and [docs/troubleshooting.md](docs/troubleshooting.md).
 2. Open **http://localhost:8080/** (from another machine: `http://<host-ip>:8080/`).
 3. The **problem** is the band at the top (English / 日本語 toggle at the top right). Below it: the **topology view** (the whole lab) — click a router to open its **DeepDive** (Routing Engine, Routing table, BGP Table / LSDB, Best-Path Decision).
 4. Fix the lab in a router's shell — the picture follows within a few seconds:
@@ -347,6 +351,7 @@ For a message you see in the terminal or on the page and what to do about it, se
 |---|---|
 | `containerlab: command not found` | Install it: <https://containerlab.dev/install/> (one line: `bash -c "$(curl -sL https://get.containerlab.dev)"`). |
 | `permission denied` / asks for a password | containerlab needs root: `xray.sh` runs it with `sudo`. If your user is in the `clab_admins` and `docker` groups, run `SUDO= ./xray.sh …`. |
+| `cannot reach Docker: permission denied on /var/run/docker.sock` | Your user cannot use the Docker socket: `sudo usermod -aG docker "$USER"`, then log in again. See [Docker socket permission](docs/troubleshooting.md#docker-socket-permission). |
 | `address already in use` / `port 8080 is already in use` | Another graph is on 8080. Add a port: `./xray.sh <lab.clab.yml> 8081`, or stop the other one. |
 | The page does not open from another PC | Use the machine's IP (`http://<host-ip>:8080/`), and allow the port in its firewall. On WSL2, open `http://localhost:8080/` from Windows. |
 | The first start is slow | It pulls the FRR image once — **FRR 8.4** from Docker Hub `frrouting/frr`, pinned by digest so everyone runs the same build (moving to FRR 10.x from quay.io is planned). You can pull it beforehand: `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce`. |
@@ -930,7 +935,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 
 **必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)。
 
-**どちらで始めるか:** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
+**どちらで始めるか:** **初めてなら下の `xray.sh` を。** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
 
 > **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`xray.sh` はすべてのインターフェース (`0.0.0.0`、既定ポート: 8080) で画面を配信し、ログイン認証はありません。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で使ってください。この機械の中だけにしたい時は `./xray.sh --bind 127.0.0.1 examples/q21-bgp-lp/q21.clab.yml`。`--interval <秒>` でルータを読む間隔を延ばせます (既定 1)。[詳しく](#security-notes-ja)
 
@@ -943,6 +948,8 @@ cd network-xray
 `xray.sh` は前は `demo.sh` という名前でした。`./demo.sh` も今まで通り動きます (`xray.sh` を動かします)。
 
 1. `==> open  http://<this machine>:8080/` が出るまで待つ (初回は FRR のイメージを取得するので数分かかることがある)。
+   止まる・失敗する (Docker Hub の回数制限・Docker の権限・ポートが使用中) 時は [よくある質問 / 困ったとき](#よくある質問--困ったとき) と
+   [docs/ja/troubleshooting.md](docs/ja/troubleshooting.md) を見てください。
 2. ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。
 3. **問題文**は上の帯 (右上の 日本語 / English で切り替え)。その下が **全体図** (ラボ全体)。ルータをクリックすると **DeepDive** (Routing Engine・Routing table・BGP Table / LSDB・Best-Path Decision) が開く。
 4. ルータのシェルでラボを直す。数秒で図が追いかける:
@@ -1119,6 +1126,7 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
 |---|---|
 | `containerlab: command not found` | 入れる: <https://containerlab.dev/install/> (1 行で: `bash -c "$(curl -sL https://get.containerlab.dev)"`)。 |
 | `permission denied` / パスワードを聞かれる | containerlab は root が要る。`xray.sh` は `sudo` で動かす。ユーザが `clab_admins` と `docker` のグループにいれば `SUDO= ./xray.sh …`。 |
+| `cannot reach Docker: permission denied on /var/run/docker.sock` | 自分のユーザが Docker のソケットを使えない: `sudo usermod -aG docker "$USER"` の後、ログインし直す。[Docker のソケットの権限](docs/ja/troubleshooting.md#docker-socket-permission) を参照。 |
 | `address already in use` / `port 8080 is already in use` | 別の graph が 8080 を使っている。末尾にポート: `./xray.sh <lab.clab.yml> 8081`、または前のものを止める。 |
 | 別の PC から開けない | そのマシンの IP で開く (`http://<IP>:8080/`)・ファイアウォールでポートを許可。WSL2 なら Windows から `http://localhost:8080/`。 |
 | 初回の起動が遅い | FRR のイメージを 1 回取得している — Docker Hub の `frrouting/frr` の **FRR 8.4** を digest で固定 (誰でも同じ版で動く・quay.io の FRR 10.x への移行は今後)。先に `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce` しておくと早い。 |

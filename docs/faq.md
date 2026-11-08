@@ -30,7 +30,9 @@ install on the routers and no SNMP, gNMI or streaming telemetry.
 ### Does it ever change the routers' configuration?
 
 No. The collectors only run `show` commands (FRR, IOL) and `info from state` (SR Linux), and never enter configuration
-mode. On IOL the SSH session also sets `terminal length 0` and `terminal width 0`, which last only for that session. Any change you see in the picture comes from a change you made yourself in the lab.
+mode. On IOL the SSH session also sets `terminal length 0` and `terminal width 0`, which last only for that session. The one thing that is changed is FRR itself, not its configuration: `./xray.sh` and a
+release's `run.sh`, right after deploy, restart FRR in a router whose FRR did not come up. Any change you see in the picture
+comes from a change you made yourself in the lab.
 
 ### Is the Best-Path winner network-xray's own calculation?
 
@@ -174,8 +176,8 @@ or a clone of this repository with Node.js 18+, Docker and containerlab on Linux
 
 ### What is the licence?
 
-MIT, copyright RouteCrushLab. The opt-in NeXt UI graph (`xray-graph-nextui.html`) bundles the NeXt UI Toolkit under
-EPL-1.0; the default `xray-graph.html` is MIT only. See [License](../README.md#license) and
+MIT, copyright RouteCrushLab. The NeXt UI graph (`xray-graph-nextui.html`, the default page of `xray.sh`, the container
+and the netlab tool) bundles the NeXt UI Toolkit under EPL-1.0; `xray-graph.html`, when you select it explicitly, is MIT only. See [License](../README.md#license) and
 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
 
 ### Can I contribute code?

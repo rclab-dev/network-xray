@@ -30,7 +30,8 @@ Cisco IOL は SSH で文字の `show` コマンドを使って読みます。コ
 ### ルータの設定を変えることはありますか?
 
 ありません。collector が打つのは `show` コマンド (FRR・IOL) と `info from state` (SR Linux) だけで、設定モードには
-入りません。IOL では SSH のセッションで `terminal length 0` と `terminal width 0` も打ちますが、そのセッションの間だけの設定です。絵に出る変化は、すべて自分でラボに加えた変化から来ます。
+入りません。IOL では SSH のセッションで `terminal length 0` と `terminal width 0` も打ちますが、そのセッションの間だけの設定です。変えるのは FRR そのものだけで、設定ではありません: `./xray.sh` とリリースの
+`run.sh` は、deploy の直後に FRR が上がらなかったルータで FRR を立て直します。絵に出る変化は、すべて自分でラボに加えた変化から来ます。
 
 ### Best-Path の勝者は network-xray が計算したものですか?
 
@@ -175,8 +176,8 @@ FRR のようなコンテナのノードだけです。
 
 ### ライセンスは?
 
-MIT です (copyright RouteCrushLab)。オプションの NeXt UI の graph (`xray-graph-nextui.html`) には、EPL-1.0 の
-NeXt UI Toolkit が同梱されています。既定の `xray-graph.html` は MIT だけです。[License](../../README.md#license) と
+MIT です (copyright RouteCrushLab)。NeXt UI の graph (`xray-graph-nextui.html`・`xray.sh`・コンテナ・netlab のツールの既定の画面)
+には、EPL-1.0 の NeXt UI Toolkit が同梱されています。明示して選んだ `xray-graph.html` は MIT だけです。[License](../../README.md#license) と
 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) を参照してください。
 
 ### コードで貢献できますか?
