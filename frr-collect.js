@@ -63,7 +63,7 @@ function buildExecArgv(prefix, showCmd) {
   return p.concat(['vtysh', '-c', showCmd + ' json']);
 }
 /* nx_unread: a router that gave no answer in 8 s is not asked again this run and is reported as such, not as an empty router */
-var execTimedOut = false;
+var execTimedOut = false, execTooLarge = false;   /* nx_unread_toolarge */
 function execVtyshJson(prefix, showCmd) {
   if (!/^[A-Za-z0-9 .\/_-]+$/.test(showCmd)) return null;
   if (execTimedOut) return null;
@@ -71,7 +71,7 @@ function execVtyshJson(prefix, showCmd) {
   var out;
   try {
     out = cp.execFileSync(av[0], av.slice(1), { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 8000, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'ignore'] });   /* nx_review_1017 (F-04) */
-  } catch (e) { if (e && e.code === 'ETIMEDOUT') execTimedOut = true; return null; }               // コマンド不在 / iface down 等は null (呼び側で欠落許容)
+  } catch (e) { if (e && e.code === 'ETIMEDOUT') execTimedOut = true; if (e && e.code === 'ENOBUFS') execTimedOut = execTooLarge = true; return null; }   /* nx_unread_toolarge: stop asking, like a timeout */               // コマンド不在 / iface down 等は null (呼び側で欠落許容)
   try { return JSON.parse(out); } catch (e) { return null; }
 }
 
@@ -183,7 +183,7 @@ function assemble(getShow, opts) {
 
 function collectViaExec(opts) {
   var prefix = opts.exec || '';
-  execTimedOut = false;   /* per collection: a router that timed out earlier in this process must not stop the next one */
+  execTimedOut = execTooLarge = false;   /* per collection: a router that timed out earlier in this process must not stop the next one */
   return assemble(function (cmd) { return execVtyshJson(prefix, cmd); }, opts);
 }
 function collectFromDir(opts) {
@@ -290,6 +290,7 @@ if (typeof require !== 'undefined' && require.main === module) {
   else if (a.node && (a.exec !== undefined)) {
     var r2 = collectViaExec({ node: a.node, id: a.id || a.node, exec: (a.exec === true ? '' : a.exec),
       proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: mgmt });
+    if (execTooLarge) { console.error('NX_UNREAD toolarge the answer is larger than the read limit'); process.exit(3); }   /* nx_unread_toolarge */
     if (execTimedOut) { console.error('NX_UNREAD timeout no answer in 8 s'); process.exit(3); }   /* nx_unread */
     var o2 = JSON.stringify(r2.state, null, 2);
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, o2); console.log('wrote ' + a.out); } else console.log(o2);

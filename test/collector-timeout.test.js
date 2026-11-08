@@ -123,6 +123,14 @@ test.describe('collector timeouts', { concurrency: true, skip: !POSIX }, functio
     } finally { sb.done(); }
   });
 
+  test.it('frr-collect --exec: an answer over the read limit is a router that could not be read (toolarge), not an empty router', async function () {
+    var sb = sandbox(); sb.set('r1', 'huge');
+    var r;
+    try { r = await run(sb, [FRR, '--node', 'r1', '--exec', 'docker exec r1', '--proto', 'ospf']); } finally { sb.done(); }
+    assert.strictEqual(r.code, 3, r.stderr); assert.match(r.stderr, /NX_UNREAD toolarge/);
+    assert.ok(!/"success"/.test(r.stdout), 'no state printed: ' + r.stdout.slice(0, 80));
+  });
+
   test.it('a router that answers with half an output or exits non-zero is still a router that answered (no hang, not marked)', async function () {
     var sb = sandbox();
     try {

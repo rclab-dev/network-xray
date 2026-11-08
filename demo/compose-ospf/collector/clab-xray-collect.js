@@ -184,7 +184,8 @@ var dictRx = { exec: (function () { var all = dictLinks(topo), k = 0; return fun
     var lk = [a + ':' + ai2, b + ':' + bi].sort().join('|');
     if (seenLink[lk]) continue;
     seenLink[lk] = 1;
-    if (!SAFE_NAME.test(a) || !SAFE_NAME.test(b) || !SAFE_IF.test(ai2) || !SAFE_IF.test(bi)) {   /* nx_no_shell */
+    if (!SAFE_NAME.test(a) || !SAFE_NAME.test(b) || !SAFE_IF.test(ai2) || !SAFE_IF.test(bi)
+        || a in Object.prototype || b in Object.prototype) {   /* nx_no_shell / nx_name_not_builtin: the names key plain objects ("constructor" broke them) */
       console.error('!! left out a link with a name that is not a plain name: ' + shown(a + ':' + ai2) + ' - ' + shown(b + ':' + bi));
       continue;
     }
@@ -362,9 +363,11 @@ function collectAll() {
       var psm = st.peer_sending_hellos || (st.peer_sending_hellos = {});
       (adj[cn] || []).forEach(function (link) {
         var peerSt = states[link.peer];
-        psm[link.peer] = !!(peerSt && !peerSt.nx_unread && peerSt.iface_hellos && peerSt.iface_hellos[link.peerIface]);   /* nx_unread */
+        /* nx_peer_iface_name: the peer's iface as the PEER's router prints it (SR Linux e1-1 -> ethernet-1/1.0), as nodeJob() passes it */
+        var _pv = vendorOf(link.peer), _pif = _pv.iface ? _pv.iface(link.peerIface, kindOf[link.peer]) : link.peerIface;
+        psm[link.peer] = !!(peerSt && !peerSt.nx_unread && peerSt.iface_hellos && peerSt.iface_hellos[_pif]);   /* nx_unread */
         /* nx_peer_hello_from_iface (2026-10-06, q6): receive period = the peer's hello on the facing iface */
-        var _pvh = peerSt && peerSt.iface_hellos && peerSt.iface_hellos[link.peerIface];
+        var _pvh = peerSt && peerSt.iface_hellos && peerSt.iface_hellos[_pif];
         if (_pvh > 0) (st.peer_hellos || (st.peer_hellos = {}))[link.peer] = _pvh;
       });
       st.peer_sending_hello = Object.keys(psm).some(function (k) { return psm[k]; });
