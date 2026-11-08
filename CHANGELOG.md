@@ -2,6 +2,19 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.2.1 — 2026-11-09
+
+- Docker image: containerlab 0.83.0.
+- `xray.sh` and the image: containerlab's own update check is off unless you set `CLAB_VERSION_CHECK`; the image finds the lab's containers by their containerlab label (a lab named `a` no longer picks up the containers of a lab named `a-b`).
+- `xray.sh` says when it starts that it listens on all interfaces and that the page has no login; `SECURITY.md` states the default.
+- Collectors: in labs that mix FRR and SR Linux, the OSPF Hellos of SR Linux neighbors are found; node names such as `constructor` are left out with a warning; `frr-collect.js` marks a router whose answer is too large as unread.
+- `xray-query.js`: unread routers in the list and the table, IPv6 prefixes in any case or zero padding, and a note when you ask by address. The MCP server reports version 1.
+- `netlab-validate.js`: values under password / secret / token / private key names are not read (the test shows as not checked).
+- Simple view: interface and node names in the labels are written as text, as in the other views.
+- The BGP paste page reads FRR up-times with three units (`1d02h03m`, `02w3d04h`), so a session up for more than a day is shown as Established.
+- New: `scripts/demo-locpref-flip.sh` deploys the q21 example, changes one LocPref and shows the best path flip (`docs/demo-locpref-flip.md`, en / ja).
+- Docs: a "How it works" diagram, where to start the first time, the image digest in each release's notes, how the page checks for updates (no WebSocket), released versions stay MIT; troubleshooting by symptom (en / ja); `llms.txt` with rules for AI agents.
+
 ## v1.2.0 — 2026-11-08
 
 - Cisco CML2 labs (CML-Free works): `node cml-xray.js --lab "<the lab's title>"` reads the lab's nodes and links from the CML REST API and the IOS nodes over SSH on the lab's management network (through a jump host that takes a key only), and serves the same graph and DeepDive page. Read only: `show` commands and API GETs; nothing is typed on the CML consoles unless you pass `--console`.
