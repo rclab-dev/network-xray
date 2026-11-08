@@ -19,7 +19,7 @@
 - A netlab lab: the netlab tool (see Start); do not use `./xray.sh` on it (it would redeploy what netlab configured).
 - A problem downloaded from Releases: its own `./run.sh` → port 50080.
 - Windows: everything inside WSL2, in the Linux shell (https://github.com/rclab-dev/network-xray/blob/main/docs/windows-wsl2.md).
-- Cisco IOL nodes: login from `NX_IOS_USER` / `NX_IOS_PASSWORD` (default admin / admin); with the image, pass them with `-e`. Only the global table is read (no VRFs). Reading IOL from the image with the plain `docker run` line (default bridge network) is not verified yet; `./xray.sh` on the lab host is the tested way.
+- Cisco IOL nodes: login from `NX_IOS_USER` / `NX_IOS_PASSWORD` (default admin / admin); with the image, pass them with `-e`. Only the global table is read (no VRFs). The image reads IOL with the plain `docker run` line too: on the default bridge network it reaches the lab's management network over SSH (checked with containerlab 0.82 and IOL 17.18.02). IOL takes about a minute to boot; until then the node shows "not ready yet".
 - Open the page from another machine: `./xray.sh` already listens on all addresses; with the image use `-p 8600:8600`. The page has no login (rule 4).
 - Show why a best path changes after one Local Preference change: `bash scripts/demo-locpref-flip.sh` (rule 2; it shows the answer of example q21).
 - Read the state from a script or an AI assistant: `node scripts/xray-query.js state|why <path> …` or the MCP server (see Query). `xray-states.js` is JavaScript: `window.LIVE_STATES = { "<node>": {…}, … };` (one JSON object per node), sometimes followed by `window.LIVE_WATCH` / `window.XRAY_PROBLEM` / `window.XRAY_VALIDATE` lines. The per-node format is DATA-CONTRACT.md.
