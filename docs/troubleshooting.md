@@ -8,6 +8,17 @@ Messages are shown as the tools print them; `<...>` stands for your own value.
 `docker run` / netlab container.
 On Windows, see [Running on Windows (WSL2)](windows-wsl2.md) first.
 
+<!-- nx-trouble-v1110-20261106 -->
+**By what you see:**
+
+- The page does not open → [The page does not open](#the-page-does-not-open)
+- A router is grey → [Docker socket permission](#docker-socket-permission), [Routers still booting (Cisco IOL)](#routers-still-booting-cisco-iol),
+  [FRR did not start cleanly](#frr-did-not-start-cleanly), [Device type that is not read](#device-type-that-is-not-read-drawn-only),
+  [Old state after the lab is destroyed](#old-state-after-the-lab-is-destroyed)
+- A table is empty or a link has no OSPF / BGP colour → [Routes do not show](#routes-do-not-show)
+
+**All sections:**
+
 - [The page does not open](#the-page-does-not-open)
 - [Port already in use](#port-already-in-use)
 - [Topology not found](#topology-not-found)
@@ -35,9 +46,14 @@ On Windows, see [Running on Windows (WSL2)](windows-wsl2.md) first.
   publishes the port on `127.0.0.1` only, so another machine cannot open it: use `-p 8600:8600` instead, or an SSH tunnel
   (`ssh -L 8600:localhost:8600 <lab host>`, then open `http://localhost:8600/` on your own machine).
 - netlab tool: the address `netlab up` prints, `Open http://<host>:8600/` (8600 + N with the `multilab` plugin).
+- `containerlab graph` you started yourself (the README's "Labs started another way"): the address you gave with `-s`;
+  the README example `-s 127.0.0.1:8080` opens at `http://localhost:8080/` on that machine only.
 
 **Why.** `xray.sh` starts the page only after the lab is deployed (that is when it prints the `==> open` line), and the
 container waits up to 2 minutes for the lab before it starts the page. Until then nothing answers on the port.
+If the lab is still not there after 2 minutes, the container prints
+`no running containers named clab-<lab>-* yet - waiting for the lab` and starts the page anyway; the routers stay grey
+until the lab is up.
 
 **What to do.** Look at the network-xray log: wait for the `==> open` line, or read the error above it — most are on
 this page (for example [Port already in use](#port-already-in-use)). If the page opens on the lab machine but not from
@@ -219,6 +235,11 @@ or another vendor's image) cannot be read, so it is drawn in the topology but ha
 **What you see.** The router is read (not grey), but its routing table or BGP table in the DeepDive is empty, or a link
 has no OSPF / BGP colour.
 
+The OSPF / BGP colours are on the tunnels in a router's DeepDive. OSPF: orange while the neighbor is coming up (Init =
+dotted, 2-Way = solid), green from ExStart on (ExStart / Exchange / Loading = dotted, Full = solid). BGP: purple when
+Established, paler purple when it is not. The lines in the overview graph
+are not coloured by OSPF / BGP (they turn green / red only for netlab `validate:` tests).
+
 **Why.** network-xray shows only what the router reports. Most often OSPF / BGP have not come up yet (they need 30–60
 seconds after the lab starts), or the router really has no such route — in the example labs that is often the fault
 you are meant to find.
@@ -234,10 +255,22 @@ you are meant to find.
    docker exec clab-<lab>-r1 vtysh -c 'show ip ospf neighbor json'
    ```
 
+   SR Linux (the same reads the collector makes):
+
+   ```
+   docker exec clab-<lab>-<node> sr_cli 'info from state network-instance default route-table ipv4-unicast'
+   docker exec clab-<lab>-<node> sr_cli 'info from state network-instance default protocols bgp neighbor *'
+   docker exec clab-<lab>-<node> sr_cli 'info from state network-instance default protocols ospf instance default area *'
+   ```
+
+   Cisco IOL: log in with `ssh admin@clab-<lab>-<node>` (password `admin`) and run `show ip route`,
+   `show ip bgp summary` and `show ip ospf neighbor`.
+
    If the router has no route or no neighbor either, the lab itself is the cause: look at its configuration
    (`docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`).
 3. Some state is not read: the IPv6 BGP table on FRR ([FAQ](faq.md#is-ipv6-read)) and VRFs on Cisco IOL
-   ([FAQ](faq.md#are-vrfs-supported)). On FRR, the VRF buttons show one VRF at a time.
+   ([FAQ](faq.md#are-vrfs-supported)). On SR Linux only the `default` network-instance is read. On FRR, the VRF buttons
+   show one VRF at a time.
 4. If the router answers but the page stays empty, look at the network-xray log (with the container,
    `docker logs <network-xray container> 2>&1 | tail -30`: it names the containers it reads, `clab-<lab>-*`) and open an
    issue with both outputs.

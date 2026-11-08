@@ -8,6 +8,17 @@
 `docker logs <コンテナ>` です。
 Windows では、先に [Windows (WSL2) で動かす](windows-wsl2.md) を見てください。
 
+<!-- nx-trouble-v1110-20261106 -->
+**出ている事から探す:**
+
+- 画面が開かない → [画面が開かない](#the-page-does-not-open)
+- ルータが灰色 → [Docker のソケットの権限](#docker-socket-permission)・[ルータがまだ起動中 (Cisco IOL)](#routers-still-booting-cisco-iol)・
+  [FRR がきちんと立ち上がらない](#frr-did-not-start-cleanly)・[読まない種類の機器](#device-type-that-is-not-read-drawn-only)・
+  [ラボを消した後に古い状態が残る](#old-state-after-the-lab-is-destroyed)
+- 表が空・リンクに OSPF / BGP の色が付かない → [経路が出ない](#routes-do-not-show)
+
+**全部の項目:**
+
 - [画面が開かない](#the-page-does-not-open)
 - [ポートがもう使われている](#port-already-in-use)
 - [トポロジのファイルが見つからない](#topology-not-found)
@@ -36,9 +47,13 @@ Windows では、先に [Windows (WSL2) で動かす](windows-wsl2.md) を見て
   公開するので、別のマシンからは開けません。`-p 8600:8600` にするか、SSH のトンネル
   (`ssh -L 8600:localhost:8600 <ラボのホスト>` の後、自分のマシンで `http://localhost:8600/`) を使います。
 - netlab のツール: `netlab up` が出すアドレス `Open http://<host>:8600/` (`multilab` のプラグインでは 8600 + N)。
+- 自分で動かした `containerlab graph` (README の「Labs started another way」): `-s` で渡したアドレス。README の例
+  `-s 127.0.0.1:8080` なら、そのマシンだけで `http://localhost:8080/` で開きます。
 
 **わけ。** `xray.sh` はラボを作り終えてから画面を始めます (その時に `==> open` の行を出します)。コンテナはラボを最大 2 分
 待ってから画面を始めます。それまではポートに何も応えません。
+2 分たってもラボが無い時は、コンテナは `no running containers named clab-<lab>-* yet - waiting for the lab` と出して、
+そのまま画面を始めます。ラボが上がるまでルータは灰色です。
 
 **する事。** network-xray のログを見ます: `==> open` の行を待つか、その上のエラーを読みます。多くはこのページにあります
 (例えば [ポートがもう使われている](#port-already-in-use))。ラボのマシンでは開くのに別のマシンから開かない時は、上の
@@ -229,6 +244,11 @@ FRR を立て直します。FRR が動くまでは、そのルータは読めま
 
 **出ること。** ルータは読めている (灰色ではない) のに、DeepDive の経路表や BGP の表が空、またはリンクに OSPF / BGP の色が付かない。
 
+OSPF / BGP の色は、ルータの DeepDive のトンネルに付きます。OSPF: ネイバーが立ち上がる途中は橙 (Init = 点線・2-Way = 実線)、
+ExStart から先は緑 (ExStart / Exchange / Loading = 点線・Full = 実線)。BGP: Established なら紫・そうでない時は薄い紫。
+全体図の線には OSPF / BGP の色は付きません (緑 / 赤になるのは netlab の
+`validate:` の試験の時だけ)。
+
 **わけ。** network-xray はルータが報告する物だけを出します。多くは OSPF / BGP がまだ上がっていない (ラボを始めてから 30〜60 秒
 かかる) か、ルータに本当にその経路が無い時です。例題のラボでは、それが見つける障害そのものであることがよくあります。
 
@@ -243,10 +263,22 @@ FRR を立て直します。FRR が動くまでは、そのルータは読めま
    docker exec clab-<lab>-r1 vtysh -c 'show ip ospf neighbor json'
    ```
 
+   SR Linux (collector が読むのと同じ物):
+
+   ```
+   docker exec clab-<lab>-<node> sr_cli 'info from state network-instance default route-table ipv4-unicast'
+   docker exec clab-<lab>-<node> sr_cli 'info from state network-instance default protocols bgp neighbor *'
+   docker exec clab-<lab>-<node> sr_cli 'info from state network-instance default protocols ospf instance default area *'
+   ```
+
+   Cisco IOL: `ssh admin@clab-<lab>-<node>` (パスワード `admin`) でログインして `show ip route`・`show ip bgp summary`・
+   `show ip ospf neighbor`。
+
    ルータ自身にも経路やネイバーが無ければ、原因はラボの方です。設定を見ます
    (`docker exec -it clab-<lab>-r1 vtysh -c 'show running-config'`)。
 3. 読まない物があります: FRR の IPv6 の BGP の表 ([FAQ](faq.md#ipv6-は読みますか)) と、Cisco IOL の VRF
-   ([FAQ](faq.md#vrf-には対応していますか))。FRR では、VRF のボタンで 1 度に 1 つの VRF を見ます。
+   ([FAQ](faq.md#vrf-には対応していますか))。SR Linux は `default` の network-instance だけを読みます。FRR では、VRF のボタンで
+   1 度に 1 つの VRF を見ます。
 4. ルータは答えるのに画面が空のままなら、network-xray のログを見て (コンテナでは
    `docker logs <network-xray のコンテナ> 2>&1 | tail -30`: 読むコンテナ `clab-<lab>-*` の名前が出る)、両方を付けて issue を開いてください。
 
