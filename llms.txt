@@ -2,28 +2,28 @@
 
 > Browser view of why a router chose its path, read from the live state of FRR / Nokia SR Linux / Cisco IOS-XE (IOL) routers in a containerlab or netlab lab. It shows the BGP candidate routes and the reason the best path won (Best-Path Decision), OSPF adjacency state and OSPF-learned routes, interfaces and the routing table, as a topology view plus a per-router "DeepDive". Read-only: it runs show commands and changes nothing.
 
-<!-- nx-llms-agents-20261107 -->
+<!-- nx-llms-agents-20261107 / nx-llms-agents2-20261107 -->
 ## For AI agents (read this first)
 1. A lab that is already running: do NOT run `./xray.sh <lab.clab.yml>` on it. It redeploys the lab (`containerlab deploy --reconfigure`), which wipes changes made by hand (it prints one warning and does not ask). Use `./xray.sh --attach <lab.clab.yml>` or the `docker run … --topo /lab/<lab>.clab.yml` line below.
 2. Read-only by default: do not change router configuration. `scripts/demo-locpref-flip.sh` deploys its own lab, changes r1's running configuration and destroys the lab afterwards: run it only when the user asks for that demo.
 3. `docker run -v /var/run/docker.sock:…` gives the container root-equivalent access to the host: confirm the user is on a lab machine first.
 4. Keep the page on this machine: `-p 127.0.0.1:8600:8600`, `./xray.sh --bind 127.0.0.1`. `./xray.sh` listens on all addresses by default: say so. Open it to the network (`-p 8600:8600`, `--bind 0.0.0.0`) only when the user asks, and say that the page has no login.
-5. Never print or send the contents of `network-xray.json` (it holds the lab's passwords) or the value of `NX_IOS_PASSWORD`.
-6. Do not invent values. The image digest is on the release page of that version (the sha256 shown for `frrouting/frr` in the README is the FRR image, not network-xray). If a value is not in these documents, ask the user or say it is not known.
+5. Never print or send the contents of `network-xray.json` (it holds the lab's passwords) or the value of `NX_IOS_PASSWORD`. You may name the IOL image's default login (containerlab `cisco_iol`: admin / admin); never print a login the user set.
+6. Do not invent values. Image digest: https://github.com/rclab-dev/network-xray/releases — from v1.1.10 on, the release notes start with a line `Image: ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the sha256 shown for `frrouting/frr` in the README is the FRR image, not network-xray). If a value is not in these documents, ask the user or say it is not known.
 7. Do not remove labs (`containerlab destroy`, `netlab down`) unless the user asks.
 8. `./xray.sh` runs containerlab with `sudo`. If it asks for a password, stop and tell the user; do not try to get around it (`SUDO= ./xray.sh …` only when the user's account can run containerlab without sudo).
 
 ## Task → command
 - Try an example lab: `./xray.sh examples/q21-bgp-lp/q21.clab.yml` (deploys it) → http://localhost:8080/ . Check first, starting nothing: `./xray.sh --check examples/q21-bgp-lp/q21.clab.yml`.
-- Look at a containerlab lab that is already running: `./xray.sh --attach <lab.clab.yml>` (port 8080; stops with "is not running" if the lab is not up) or, in the lab folder, `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` → http://localhost:8600/ .
+- Look at a containerlab lab that is already running: `./xray.sh --attach <lab.clab.yml>` (port 8080; no sudo, since it does not deploy; works with `--bind` / `--interval`; the collector writes `xray-states.js` in the repository folder as usual; stops with "is not running" if the lab is not up) or, in the lab folder, `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` → http://localhost:8600/ .
 - A netlab lab: the netlab tool (see Start); do not use `./xray.sh` on it (it would redeploy what netlab configured).
 - A problem downloaded from Releases: its own `./run.sh` → port 50080.
 - Windows: everything inside WSL2, in the Linux shell (https://github.com/rclab-dev/network-xray/blob/main/docs/windows-wsl2.md).
-- Cisco IOL nodes: login from `NX_IOS_USER` / `NX_IOS_PASSWORD` (default admin / admin); with the image, pass them with `-e`. Only the global table is read (no VRFs).
+- Cisco IOL nodes: login from `NX_IOS_USER` / `NX_IOS_PASSWORD` (default admin / admin); with the image, pass them with `-e`. Only the global table is read (no VRFs). Reading IOL from the image with the plain `docker run` line (default bridge network) is not verified yet; `./xray.sh` on the lab host is the tested way.
 - Open the page from another machine: `./xray.sh` already listens on all addresses; with the image use `-p 8600:8600`. The page has no login (rule 4).
 - Show why a best path changes after one Local Preference change: `bash scripts/demo-locpref-flip.sh` (rule 2; it shows the answer of example q21).
-- Read the state from a script or an AI assistant: `node scripts/xray-query.js state|why <path> …` or the MCP server (see Query). The state format is DATA-CONTRACT.md.
-- MCP clients: Claude Code `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js`; Claude Desktop and other clients use an `mcpServers` entry (`claude_desktop_config.json` for Claude Desktop), see docs/mcp.md. With `./xray.sh` the live state is `<repository>/xray-states.js`; with the image, save it with `curl -s http://localhost:8600/static/xray-states.js -o <dir>/xray-states.js` and give that file.
+- Read the state from a script or an AI assistant: `node scripts/xray-query.js state|why <path> …` or the MCP server (see Query). `xray-states.js` is JavaScript: `window.LIVE_STATES = { "<node>": {…}, … };` (one JSON object per node), sometimes followed by `window.LIVE_WATCH` / `window.XRAY_PROBLEM` / `window.XRAY_VALIDATE` lines. The per-node format is DATA-CONTRACT.md.
+- MCP clients: Claude Code `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js`; Claude Desktop and other clients use an `mcpServers` entry: `{"mcpServers": {"network-xray": {"command": "node", "args": ["/path/to/network-xray/scripts/xray-mcp.js"]}}}` (Claude Desktop: `claude_desktop_config.json`, Settings → Developer → Edit Config; other clients, e.g. Cursor, use their own file: check that client's documentation, do not guess the path). See docs/mcp.md. With `./xray.sh` the live state is `<repository>/xray-states.js`; with the image, save it with `curl -s http://localhost:8600/static/xray-states.js -o <dir>/xray-states.js` and give that file.
 - Stop: Ctrl-C stops the page and the collector; the lab keeps running. Remove the lab only when asked (rule 7): `sudo containerlab destroy -t <lab.clab.yml> --cleanup`.
 
 ## What it is
