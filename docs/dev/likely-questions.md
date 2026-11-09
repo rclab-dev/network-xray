@@ -147,7 +147,7 @@ Running it does. network-xray has no telemetry, no analytics and no account; the
 
 MIT (`LICENSE`).
 
-- `xray-graph-nextui.html` bundles NeXt UI (EPL-1.0: `js/next.js`, `css/next.css`, `fonts/next-font.*`, `fonts/ciscosans*`) and Tailwind CSS 3.0.23 (MIT).
+- `xray-graph-nextui.html` bundles NeXt UI (EPL-1.0: `js/next.js`, `css/next.css`, `fonts/next-font.*`; text uses the system fonts) and Tailwind CSS 3.0.23 (MIT).
 - `xray-graph.html` uses neither.
 - See `THIRD_PARTY_NOTICES.md`.
 
