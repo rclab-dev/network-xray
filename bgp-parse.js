@@ -99,7 +99,7 @@
       var best = />/.test(flags);
       out.routes.push({ prefix: prefix, nexthop: nh, best: best, ibgp: /i/.test(flags.replace('>', '')),
         metric: num(metric, 0), local_pref: num(locprf, 100), weight: num(weight, 0),   // LocPrf blank = default 100
-        as_path: aspath, origin: origin, status: best ? (/i/.test(flags.replace('>', '')) ? '*>i' : '*>') : (flags || '*') });
+        as_path: aspath, origin: origin, status: flags.replace(/\s+/g, '') || (best ? '*>' : '*') });
     });
     return out;
   }
@@ -119,7 +119,7 @@
     var routerId = sum.routerId || tbl.routerId || '';
 
     // peers: one per BGP neighbor. Placed to the LEFT of self (cylinder-to-left), so self is last.
-    var peers = [];          // { name, ip, remoteAs, established, pfxRcvd, state, iface, selfIp, subnet }
+    var peers = [], estimates = [];   // peers: { name, ip, remoteAs, established, pfxRcvd, state, iface, selfIp, subnet }
     var ifaceByPeer = {};
     sum.neighbors.forEach(function (n, i) {
       var name = 'r' + (i + 2);
@@ -127,6 +127,8 @@
       var subnet = net24(n.ip) + '/24';
       // self's address on this link: router-id if it sits on the same /24, else .254 of the peer net
       var selfIp = sameNet24(routerId, n.ip) ? routerId : (net24(n.ip).replace(/\.0$/, '.254'));
+      if (selfIp === n.ip) selfIp = net24(n.ip).replace(/\.0$/, '.253');
+      if (selfIp !== routerId) estimates.push(selfName + ' toward ' + name + ': address ' + selfIp + ' is a guess (the paste has no interface addresses)');
       peers.push({ name: name, ip: n.ip, remoteAs: n.remoteAs, established: n.established,
         pfxRcvd: n.pfxRcvd, state: n.state, iface: iface, selfIp: selfIp, subnet: subnet });
       ifaceByPeer[name] = iface;
@@ -224,10 +226,13 @@
       // if this peer advertises the representative prefix, show it as a stub network on the peer
       if (bestByPeer[p.name]) {
         var pfx = bestByPeer[p.name].prefix;
-        ifs.push({ name: 'eth1', ip: pfx.split('/')[0].replace(/\.0$/, '.1'), prefix: 24, state: 'UP' });
+        ifs.push({ name: 'eth1', ip: pfx.split('/')[0].replace(/\.0$/, '.1'), prefix: parseInt(pfx.split('/')[1], 10) || 24, state: 'UP' });
+        estimates.push(p.name + ': the network ' + pfx + ' is drawn on it with address .1 (a guess)');
       }
       topo.nodes[p.name] = ifs;
     });
+
+    if (peers.length) estimates.push('interface names (' + peers.map(function (p) { return p.iface; }).join(', ') + ') and the /24 link lengths are labels, not from the paste');
 
     // trace (Seam B) suppressed — this is a session/route view, not a ping path
     var trace = { success: true, reached: false, hops: [] };
@@ -240,7 +245,7 @@
         local_pref: r.local_pref, weight: r.weight, metric: r.metric, as_path: r.as_path, origin: r.origin, best: r.best };
     });
 
-    return { config: config, state: state, topo: topo, trace: trace, bgpRows: bgpRows,
+    return { config: config, state: state, topo: topo, trace: trace, bgpRows: bgpRows, estimates: estimates,
       _debug: { summary: sum, table: tbl, peers: peers } };
   }
 

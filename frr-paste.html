@@ -53,6 +53,7 @@
      remains in the engine — see DATA-CONTRACT). Protocol state (hello/LSDB/beams, etc.) and route arrows are shown. */
   #demo-wrap .de-ping-orb,#demo-wrap .de-ping-req,#demo-wrap .de-ping-rep,
   #demo-wrap .de-packet,#demo-wrap .xray-packet-orb{display:none!important}
+  .est{display:none;margin-top:10px;padding:8px 12px;border-radius:8px;background:#1a222c;border:1px dashed #546e7a;color:#90a4ae;font-size:12px;line-height:1.6}
   .err{display:none;margin-top:14px;padding:12px 14px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px;white-space:pre-wrap}
   pre{background:#0c1016;border:1px solid #2b3a44;border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:"Courier New",monospace;font-size:12.5px;line-height:1.6;color:#cfe8ee;margin-top:22px}
   pre .c{color:#5f7d8c}pre .k{color:#80cbc4}
@@ -107,6 +108,7 @@ L&gt;* 10.132.0.20/32 is directly connected, eth1, 00:01:21</textarea>
     <div class="xray-deep-engine"></div>
   </div>
   <div class="err" id="err"></div>
+  <div class="est" id="est"></div>
 
 <pre><span class="c">// frr-parse.js turns the pasted text into the engine's config/state…</span>
 <span class="k">var</span> r = FRR.build(routeText, neighborText, <span style="color:#a5d6a7">'r1'</span>);
@@ -130,6 +132,7 @@ view.openDeepDive();</pre>
 (function () {
   var view = null;
   function showErr(e) {
+    showEst([]);   // an old list must not stay under an error
     var el = document.getElementById('err');
     el.style.display = 'block';
     el.innerHTML = '<b>Could not build a topology from this paste.</b><br>' +
@@ -139,6 +142,16 @@ view.openDeepDive();</pre>
       'Your data stayed in the browser.' +
       '<br><span style="opacity:.6;font-size:11px">(' + (e && e.message ? e.message : e) + ')</span>';
     if (window.console) console.error(e);
+  }
+  // what is not in the paste: network-xray estimated it (or it is unknown) - shown so it is not read as the router's own report
+  function showEst(list) {
+    var el = document.getElementById('est');
+    if (!el) return;
+    list = list || [];
+    el.style.display = list.length ? 'block' : 'none';
+    el.innerHTML = list.length ? '<b>Estimated by network-xray (not in the paste):</b><br>' + list.map(function (t) {
+      return '&middot; ' + String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+    }).join('<br>') : '';
   }
   function setDeepLabel(open) {
     var b = document.getElementById('deepBtn');
@@ -165,6 +178,7 @@ view.openDeepDive();</pre>
       r.config.deep_engine = 'unified';   // opt in to the unified variable-angle DeepDive renderer
       view = xrayCore.renderTopology('#topo', r.config, { topology: r.topo, trace: r.trace });
       view.applyState(r.state);
+      showEst(r.estimates);
       setDeepLabel(false);
     } catch (e) { showErr(e); }
   };
