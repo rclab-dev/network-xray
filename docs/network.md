@@ -42,7 +42,8 @@ that is not listed below. It reads the source text: it finds the known patterns,
 ## Links you click
 
 - The README, the page and `problem.json` contain ordinary links (GitHub, routecrushlab.com, RFCs, …). They open only
-  when you click them.
+  when you click them. The routecrushlab.com links (the README's, and "Powered by RCL" in the DeepDive) carry `ref=` /
+  `utm_` tags so the site can count visits that came from here; that is all they carry, and nothing is sent until you click.
 
 ## MCP server
 

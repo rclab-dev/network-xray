@@ -138,8 +138,46 @@ router at the forwarding decision (the deepdive).
   state files are inside the container: from the host, `curl http://localhost:8600/static/xray-states.js`. The image also
   reads each router's running configuration every 30 s to choose OSPF or BGP (`show running-config` / `sr_cli 'info from
   running …'`, read-only; Cisco IOL from the last collected state, no second login).
-- Only starting a lab touches a router: `./xray.sh` and a release's `run.sh`, right after deploy, restart FRR in a router
-  whose FRR did not come up (the configuration is not changed). Viewing the lab never does.
+- Only starting a lab touches a router, and viewing it never does: see [Read-only](#read-only) below.
+
+<a id="read-only"></a>
+### Read-only: what it means, and the exceptions <!-- nx-readonly-20261108 -->
+
+network-xray reads; it does not configure. "Read-only" means the commands are fixed in the source: `show` on FRR and
+Cisco IOL, `info from state` / `info from running` on SR Linux, and `show running-config` on FRR for the image's 30 s
+check. Nothing on the router side enforces that (there is no allowlist), and the login it uses may be allowed to do more:
+the limit is the code. The exceptions, all on purpose:
+
+- **Starting a lab:** `./xray.sh` and a release's `run.sh`, right after deploy, restart FRR (`watchfrr.sh restart all`,
+  at most 3 times) in a router whose FRR did not come up. The configuration is not changed. `--attach` skips this, and
+  viewing a lab never does it.
+- **Logins:** Cisco IOL is read over SSH with containerlab's default login (`admin` / `admin`, or `NX_IOS_USER` /
+  `NX_IOS_PASSWORD`); it does not type `enable`. For the same reason `cml-xray.js` needs a user with privilege 15 in a
+  Cisco CML lab.
+- **The CML jump host:** if nx-jump's configuration still says `<your public key>`, `cml-xray.js` writes the public key of
+  `NX_JUMP_KEY` into it and stops, wipes and starts nx-jump. That is its only change to the lab (the routers keep running);
+  its other CML API calls are reads (GET, and the login).
+- **`--console` (CML, off by default):** types `enable`, `terminal length 0` and the `show` commands on the CML consoles,
+  so they appear on the console you use.
+- **Files on your machine:** the collector writes `xray-states.js` and `xray-states.sig.js` next to the page; the netlab
+  tool writes `network-xray.json` (it holds the lab's passwords; `netlab down` removes it).
+- **Nothing is sent anywhere else:** no telemetry, no analytics, no account. The "Powered by RCL" link in the DeepDive and
+  the routecrushlab.com links in this README are ordinary links with `ref=` / `utm_` tags, so the site can count visits
+  that came from here; nothing is sent until you click one. Every connection is listed in [docs/network.md](docs/network.md).
+
+### What the router reports, and what network-xray works out
+
+| On the page | Where it comes from |
+|---|---|
+| Neighbors, sessions, routes, the routing table | Reported by the router (`show … json`, `info from state`, IOS `show`) |
+| Which BGP path won | Reported by the router (its `>` mark or `best: true`); network-xray never picks one |
+| Why it won: Weight, LocPref, AS path, Origin, MED | Worked out by network-xray from the collected attributes |
+| A tie past MED | FRR's own `selectionReason`, marked "(FRR)" |
+| Why it won on Cisco IOL | Worked out by the collector from the printed columns (IOS prints no reason); the panel says it is inferred |
+| eBGP over iBGP, IGP metric, router ID, cluster list | Not compared |
+
+`xray-query.js why` gives the same split in `reason_source` (`device` / `comparison` / `null`). More in
+[docs/dev/likely-questions.md](docs/dev/likely-questions.md) (§14).
 
 ## See it
 
@@ -959,9 +997,45 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
   `xray-states.sig.js` を書きます。画面は `containerlab graph` が配る静的なファイルで、ブラウザは普通の HTTP GET で取ります。
 - WebSocket や push はありません。画面は小さな `.sig.js` を 1 秒ごと (簡単な方の `xray-graph.html` は 3 秒ごと) に読み、変わった時だけ
   `xray-states.js` を読み直します。`scripts/xray-query.js` と MCP サーバは同じ状態のファイルを読むだけです。
-- collector はルータを変えません。ルータに触るのはラボを立てる時だけで、`./xray.sh` とリリースの `run.sh` が deploy の直後に、
-  上がらなかった FRR を立て直します (設定は変えません)。image の時、状態のファイルはコンテナの中です
+- collector はルータを変えません。ルータに触るのはラボを立てる時だけです (下の [読むだけ](#read-only-ja))。image の時、状態のファイルはコンテナの中です
   (host からは `curl http://localhost:8600/static/xray-states.js`)。<!-- nx-how-it-works2-20261107 -->
+
+<a id="read-only-ja"></a>
+### 読むだけ: その意味と例外
+
+network-xray は読むだけで、設定はしません。「読むだけ」とは、送るコマンドがソースで決まっているという意味です (FRR と
+Cisco IOL は `show`・SR Linux は `info from state` / `info from running`・image の 30 秒ごとの確かめは FRR の
+`show running-config`)。ルータの側でそれを強いる物 (allowlist) はありません。使うログインはもっと多くの事ができる場合もあり、
+限っているのはコードです。例外 (どれも意図した物):
+
+- **ラボを立てる時:** `./xray.sh` とリリースの `run.sh` は deploy の直後に、FRR が上がらなかったルータで FRR を立て直します
+  (`watchfrr.sh restart all`・最大 3 回)。設定は変えません。`--attach` の時はしません。ラボを見ている間もしません。
+- **ログイン:** Cisco IOL は SSH で、containerlab の既定のログイン (`admin` / `admin`、または `NX_IOS_USER` /
+  `NX_IOS_PASSWORD`) で読みます。`enable` は打ちません。同じ理由で、Cisco CML のラボの `cml-xray.js` には privilege 15 の
+  ユーザが要ります。
+- **CML の踏み台:** nx-jump の設定がまだ `<your public key>` のままなら、`cml-xray.js` は `NX_JUMP_KEY` の公開鍵をそこに書き、
+  nx-jump を止めて・消して・起動します。ラボへの変更はこれだけです (ルータは動いたまま)。ほかの CML の API は読むだけ (GET とログイン) です。
+- **`--console` (CML・既定では使わない):** CML のコンソールで `enable`・`terminal length 0` と `show` のコマンドを打ちます。
+  使っているコンソールにそれが出ます。
+- **手元のファイル:** collector は画面の隣に `xray-states.js` と `xray-states.sig.js` を書きます。netlab のツールは
+  `network-xray.json` を書きます (ラボのパスワードが入ります・`netlab down` で消えます)。
+- **ほかへは何も送りません:** テレメトリ・アクセス解析・アカウントはありません。DeepDive の「Powered by RCL」と、この README の
+  routecrushlab.com へのリンクは普通のリンクで、ここから来た訪問をサイトが数えられる様に `ref=` / `utm_` が付いています。
+  押すまで何も送りません。通信する先はすべて [docs/ja/network.md](docs/ja/network.md) にあります。
+
+### ルータが報告する所、network-xray が推し量る所
+
+| 画面のどこ | どこから来るか |
+|---|---|
+| ネイバー・セッション・経路・ルーティングテーブル | ルータが報告 (`show … json`・`info from state`・IOS の `show`) |
+| どの BGP の経路が勝ったか | ルータが報告 (`>` の印か `best: true`)。network-xray が選ぶことはありません |
+| なぜ勝ったか: Weight・LocPref・AS パス・Origin・MED | 集めた属性から network-xray が推し量る |
+| MED まで同じ時 | FRR 自身の `selectionReason`・「(FRR)」の印 |
+| Cisco IOL でなぜ勝ったか | 表示された列から collector が推し量る (IOS は理由を出さない)。パネルにも推し量った物と出ます |
+| eBGP と iBGP・IGP のメトリック・router ID・cluster list | 比べない |
+
+`xray-query.js why` も同じ区別を `reason_source` (`device` / `comparison` / `null`) で返します。詳しくは
+[docs/dev/likely-questions.md](docs/dev/likely-questions.md) (§14・英語)。
 
 ## 見る
 

@@ -40,6 +40,8 @@ rclab-dev/network-xray には、テレメトリも、アクセス解析も、ア
 ## あなたが押すリンク
 
 - README・頁・`problem.json` には普通のリンク (GitHub・routecrushlab.com・RFC …) があります。押した時だけ開きます。
+- routecrushlab.com へのリンク (README の物と、DeepDive の「Powered by RCL」) には、ここから来た訪問をサイトが数えられる様に
+  `ref=` / `utm_` が付いています。付いているのはそれだけで、押すまで何も送りません。
 
 ## MCP サーバ
 
