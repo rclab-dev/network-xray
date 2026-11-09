@@ -2,6 +2,15 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.2.2 — 2026-11-10
+
+- `cml-xray.js` (Cisco CML2): long runs keep reading the routers, Pause also stops a round already in progress, an interrupted key setup on the jump host is cleaned up, and the askpass helper on Windows takes no arguments. The README says that `--listen` other than `127.0.0.1` has no login.
+- Paste pages (FRR 10): every BGP route is read (7-digit MED, wrapped prefixes), `(Policy)` is an established session, "BGP instance not found" means no BGP rather than an idle session, the forward arrow follows a learned best route, and two OSPF links to one router stay one router.
+- Paste pages: every neighbor on a LAN is linked, FRR 10.7 local routes (`L`) are read, route flags are kept as printed, and a new "Estimated by network-xray" box lists what the paste does not show (for example, no green Ping OK without a ping).
+- README and `docs/network.md` (en / ja): what read-only means, and what is not read-only.
+- The NeXt UI page uses the system fonts instead of bundled webfonts.
+- `netlab-validate.js`: values under more key names are not shown in test results, and only known address families are read.
+
 ## v1.2.1 — 2026-11-09
 
 - Docker image: containerlab 0.83.0.
