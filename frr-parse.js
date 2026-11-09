@@ -95,11 +95,15 @@
     var peers = [];           // { name, rid, address, iface, state }
     var ifacePeer = {};       // iface -> peer.name
     var nextIdx = 2;
+    var peerByRid = {};
     neighbors.forEach(function (n) {
+      var seen = n.rid && peerByRid[n.rid];
+      if (seen) { ifacePeer[n.iface] = seen.name; seen.full = seen.full || /full/i.test(n.state); return; }   // the same router on another link
       var name = 'r' + (nextIdx++);
       var p = { name: name, rid: n.rid, address: n.address, iface: n.iface, full: /full/i.test(n.state), state: n.state };
       peers.push(p);
       ifacePeer[n.iface] = name;
+      if (n.rid) peerByRid[n.rid] = p;
     });
 
     // nodes
@@ -119,14 +123,16 @@
       var peerName = ifacePeer[ifn];
       if (!peerName) return;
       var subnet = ifaces[ifn].subnet || (ifaces[ifn].ip ? subnetOf(ifaces[ifn].ip) + '/24' : null);
-      networks.push({ name: 'net-' + selfName + peerName, subnet: subnet,
+      var nname = 'net-' + selfName + peerName;
+      if (networks.some(function (x) { return x.name === nname; })) nname += '-' + ifn;   // a second link to the same router
+      networks.push({ name: nname, subnet: subnet,
         members: [{ node: selfName }, { node: peerName }] });
     });
 
     // infer peer<->peer link: an OSPF subnet reachable via 2+ different next-hops
     // whose next-hop ifaces map to 2 different peers = the link between those peers.
     routes.forEach(function (r) {
-      if (r.proto !== 'O' || r.connected) return;
+      if (r.proto !== 'O' || r.connected || !r.selected) return;
       var viaPeers = {};
       r.nexthops.forEach(function (nh) { var pn = ifacePeer[nh.iface]; if (pn) viaPeers[pn] = true; });
       var pn = Object.keys(viaPeers);
@@ -154,7 +160,7 @@
     // pick a target: first /32 OSPF route (a remote loopback)
     var target = null, targetNh = null;
     routes.forEach(function (r) {
-      if (!target && r.proto === 'O' && /\/32$/.test(r.prefix) && r.nexthops[0] && r.nexthops[0].ip) {
+      if (!target && r.proto === 'O' && r.selected && /\/32$/.test(r.prefix) && r.nexthops[0] && r.nexthops[0].ip) {
         target = r.prefix.split('/')[0]; targetNh = r.nexthops[0];
       }
     });

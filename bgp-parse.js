@@ -22,8 +22,10 @@
     var mRid = (text || '').match(/(?:router identifier|local router ID is)\s+([0-9.]+)/i); if (mRid) out.routerId = mRid[1];
     var ipRe = /^\d{1,3}(?:\.\d{1,3}){3}$/;
     var timeRe = /^(?:\d+:\d{2}:\d{2}|(?:\d+[ywdhms]){1,3}|never)$/i;  // Up/Down as FRR prints it: hh:mm:ss / 1d02h03m / 02w3d04h / 01y02w3d / never
-    var rows = [];
+    var rows = [], section = null;
     for (var i = 0; i < raw.length; i++) {
+      var sh = raw[i].length < 80 && /^\s*([A-Za-z0-9 -]{3,40}?) Summary:?\s*$/.exec(raw[i]); if (sh) { section = sh[1]; continue; }   // "IPv4 Unicast Summary:" / "IPv6 Unicast Summary:" (a long line is never a header)
+      if (section && !/^IPv4 Unicast$/i.test(section)) continue;   // other address families list the same neighbors again
       var t = raw[i].trim().split(/\s+/).filter(Boolean);
       if (t.length >= 3 && ipRe.test(t[0]) && /^\d+$/.test(t[1]) && /^\d+$/.test(t[2])) {
         var joined = t.slice(), guard = 0;                       // fold wrapped continuation line(s)
@@ -35,13 +37,18 @@
         rows.push(joined);
       }
     }
+    var seenIp = {};
     rows.forEach(function (t) {
+      if (seenIp[t[0]]) return; seenIp[t[0]] = true;
       var si = -1; for (var k = 3; k < t.length; k++) { if (timeRe.test(t[k])) { si = k + 1; break; } }
       // no Up/Down column found: the state is not known (the last field could be PfxSnt or Desc)
       var state = si >= 0 && si < t.length ? t[si] : 'unknown';
-      var established = /^\d+$/.test(state);
-      out.neighbors.push({ ip: t[0], remoteAs: t[2], established: established,
-        pfxRcvd: established ? parseInt(state, 10) : 0, state: established ? 'Established' : state, up: si >= 1 ? t[si - 1] : '' });
+      var policy = state === '(Policy)';   // Established, but nothing accepted: no policy for this eBGP neighbor (ebgp-requires-policy)
+      var established = /^\d+$/.test(state) || policy;
+      var nb = { ip: t[0], remoteAs: t[2], established: established,
+        pfxRcvd: /^\d+$/.test(state) ? parseInt(state, 10) : 0, state: established ? 'Established' : state, up: si >= 1 ? t[si - 1] : '' };
+      if (policy) nb.note = '(Policy)';
+      out.neighbors.push(nb);
     });
     return out;
   }
@@ -61,20 +68,32 @@
         cols = { network: h.indexOf('Network'), nexthop: h.search(/Next\s*Hop/i),
           metric: h.indexOf('Metric'), locprf: h.indexOf('LocPrf'), weight: h.indexOf('Weight'), path: h.indexOf('Path') };
         break; } }
-    var ipRe = /^\d{1,3}(?:\.\d{1,3}){3}$/, lastPrefix = null;
+    var ipRe = /^\d{1,3}(?:\.\d{1,3}){3}$/, pfxRe = /^\d{1,3}(?:\.\d{1,3}){3}\/\d+$/, lastPrefix = null, pending = null;
     function num(s, d) { s = (s || '').trim(); return s === '' ? d : (isNaN(parseInt(s, 10)) ? d : parseInt(s, 10)); }
+    function words(ln, from) { var o = [], m, re = /\S+/g; while ((m = re.exec(ln))) if (m.index >= from) o.push({ s: m.index, e: m.index + m[0].length, t: m[0] }); return o; }
+    function near(a, b) { return Math.abs(a - b) <= 2; }   // a wrapped row's next line sits one column to the left
     lines.forEach(function (ln) {
       if (!cols) return;
       if (ln.indexOf('Network') >= 0 && /Next\s*Hop/i.test(ln)) return;   // skip header
       var flags = ln.slice(0, cols.network).trim();
-      var netRaw = ln.slice(cols.network, cols.nexthop).trim();
-      var nh = ln.slice(cols.nexthop, cols.metric).trim();
-      if (!ipRe.test(nh)) return;                              // not a route row (preamble/footer)
-      var metric = ln.slice(cols.metric, cols.locprf), locprf = ln.slice(cols.locprf, cols.weight), weight = ln.slice(cols.weight, cols.path);
-      var pathRaw = ln.slice(cols.path).trim();
-      var mPfx = netRaw.match(/\d{1,3}(?:\.\d{1,3}){3}\/\d+/);
-      var prefix = mPfx ? mPfx[0] : lastPrefix;                // blank Network = continuation → previous prefix (multipath)
-      if (!prefix) return; lastPrefix = prefix;
+      var w = words(ln, cols.network - 1);
+      if (!w.length) return;
+      if (w.length === 1 && pfxRe.test(w[0].t) && flags) { pending = { prefix: w[0].t, flags: flags }; return; }   // a long prefix: the rest is on the next line
+      var prefix, k;
+      if (pfxRe.test(w[0].t)) { prefix = w[0].t; k = 1; pending = null; }
+      else if (ipRe.test(w[0].t)) { k = 0; if (pending) { prefix = pending.prefix; flags = pending.flags; pending = null; } else prefix = lastPrefix; }   // blank Network = the wrapped prefix, or another path of the previous prefix
+      else return;                                             // not a route row (preamble/footer)
+      var nhw = w[k];
+      if (!prefix || !nhw || !ipRe.test(nhw.t)) return;
+      var nh = nhw.t; lastPrefix = prefix;
+      var rest = w.slice(k + 1), metric = '', locprf = '', weight = '', pathFrom = 0;
+      rest.forEach(function (x, j) {   // the numbers end under the end of their header word
+        if (!/^\d+$/.test(x.t) || pathFrom) return;
+        if (near(x.e, cols.metric + 6)) metric = x.t;
+        else if (near(x.e, cols.locprf + 6)) locprf = x.t;
+        else if (near(x.e, cols.weight + 6)) { weight = x.t; pathFrom = j + 1; }
+      });
+      var pathRaw = rest.slice(pathFrom).map(function (x) { return x.t; }).join(' ');
       var mo = pathRaw.match(/([ie?])\s*$/); var origin = mo ? mo[1] : '';
       var aspath = pathRaw.replace(/\s*[ie?]\s*$/, '').trim();
       var best = />/.test(flags);
@@ -170,7 +189,7 @@
       interfaces: stIfaces,
       wan_iface: primaryPeer ? primaryPeer.iface : 'eth0',
       lan_iface: primaryPeer ? primaryPeer.iface : 'eth0',
-      bgp_configured: true,
+      bgp_configured: !(sum.neighbors.length === 0 && /^%/m.test(summaryText || '')),   // "% BGP instance not found" = no BGP here
       is_established: anyEst,
       bgp_state: anyEst ? 'Established' : (primaryPeer ? primaryPeer.state : 'Idle'),
       pfx_rcvd: totalPfx,
@@ -190,7 +209,7 @@
     if (isDual) {
       state[peerL.name + '_iface'] = peerL.iface;
       state[peerR.name + '_iface'] = peerR.iface;
-      state.best_path_via = primaryPeer ? primaryPeer.name : (peerR.established ? peerR.name : peerL.name);
+      state.best_path_via = primaryRoute && primaryPeer ? primaryPeer.name : '';   // only a best route via a peer points the arrow (not a guess)
     }
 
     // ---- topology snapshot (Seam A) ----
