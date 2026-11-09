@@ -308,3 +308,33 @@ test('the tiers of a lab with odd groups do not throw', function () {
   assert.deepStrictEqual(nv.tiers({ nodes: { a: {}, b: {} }, groups: { isp: { members: ['a'] }, x: null } }), { a: 0, b: 1 });
   assert.strictEqual(nv.tiers({}), null);
 });
+
+/* ---------- values the result must never carry: a whole object as a value, a field named by the address family ---------- */
+const PW = 'W3-not-a-real-pw';
+const SECRET_NODES = {
+  r1: { device: 'frr', bgp: { router_id: '10.0.0.1', neighbors: [{ name: 'r2', ipv4: '10.1.0.2', password: PW }] } },
+  r2: { device: 'frr', bgp: { router_id: '10.0.0.2', neighbors: [{ name: 'r1', ipv4: '10.1.0.1', password: PW, md5_key: PW, auth_key: PW }] } }
+};
+const PFX = 'bgp vrf default ipv4 unicast 10.0.0.0/24 json';
+const PATH_R2 = { prefix: '10.0.0.0/24', paths: [{ valid: true, bestpath: { overall: true }, peer: { routerId: '10.0.0.2', peerId: '10.1.0.2' }, nexthops: [{ ip: '10.1.0.2' }] }] };
+test('a whole node / bgp block given as a value does not carry its passwords into the result', async function () {
+  const res = await judge(topo([
+    { name: 'peer_obj', nodes: ['r1'], plugin: "bgp_prefix('10.0.0.0/24', peer=nodes.r2)" },
+    { name: 'as_obj', nodes: ['r1'], plugin: "bgp_prefix('10.0.0.0/24', as_elements=nodes.r2.bgp)" }
+  ], SECRET_NODES), { [PFX]: PATH_R2, [SUMMARY]: UP });
+  assert.strictEqual(JSON.stringify(res).indexOf(PW), -1, JSON.stringify(res));
+  assert.ok(JSON.stringify(res).indexOf('(not shown)') >= 0);
+});
+test('an address family that is not one netlab knows is not read (a password field cannot be named by it)', async function () {
+  const res = await judge(topo([{ name: 'af_pw', nodes: ['r1'], plugin: "bgp_neighbor(node.bgp.neighbors, 'r2', 'password')" }], SECRET_NODES),
+    { [SUMMARY]: { peers: {} } });
+  assert.deepStrictEqual(statuses(res), ['unsupported']);
+  assert.strictEqual(JSON.stringify(res).indexOf(PW), -1);
+});
+test('more password-like names are not read by reference', function () {
+  const ctx = { nodes: { r2: { bgp: { md5_key: 'x1', auth_key: 'x2', api_key: 'x3', passphrase: 'x4', psk: 'x5', ipv4: '10.1.0.2' } } }, topo: { name: 'l' } };
+  for (const k of ['md5_key', 'auth_key', 'api_key', 'passphrase', 'psk']) {
+    assert.throws(function () { nv.evalValue(nv.parseCall('bgp_prefix(nodes.r2.bgp.' + k + ')').args[0], ctx); }, function (e) { return e.unsupported === true; }, k);
+  }
+  assert.strictEqual(nv.evalValue(nv.parseCall('bgp_prefix(nodes.r2.bgp.ipv4)').args[0], ctx), '10.1.0.2');
+});

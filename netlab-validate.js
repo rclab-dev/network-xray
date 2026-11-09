@@ -22,6 +22,8 @@
  */
 'use strict';
 var fs = require('fs'), cp = require('child_process');
+/* names whose values a test result never carries (the result goes into the state file the page reads) */
+var SECRET_KEY = /pass(word|wd|phrase)?s?$|secret|token|private[_-]?key|md5|auth[_-]?key|(^|[_-])psk$|api[_-]?key|credential/i;
 
 /* ---------- a small reader for the plugin call: name(arg, ..., key=value) ---------- */
 function tokenize(s) {
@@ -100,7 +102,7 @@ function evalValue(v, ctx) {
     shown += typeof path[i] === 'string' ? '.' + key : '[' + key + ']';
     /* nx-validate-noref-secret-20261107: a test result is written to the state file the page reads: values under a password / secret / token /
        private key name are not read (the test is shown as not checked) */
-    if (typeof key === 'string' && /pass(word|wd)?$|secret|token|private[_-]?key/i.test(key)) throw Object.assign(new Error('not read: ' + shown), { unsupported: true });
+    if (typeof key === 'string' && SECRET_KEY.test(key)) throw Object.assign(new Error('not read: ' + shown), { unsupported: true });
     /* netlab 26.x moves bgp.originate into bgp.advertise ({ipv4: ...}) while building the lab, so older validate.yml
        files that say nodes.X.bgp.originate[0] would find nothing: read the advertised prefixes instead */
     if (key === 'originate' && cur && has(cur, 'advertise') && !(Array.isArray(cur.originate) && cur.originate.length)) {
@@ -143,9 +145,19 @@ var PFX_NAMES = { peer: 'BGP router ID', nh: 'BGP next hop', clusterid: 'RR clus
 function Pass(msg) { this.pass = true; this.message = msg; }
 function Fail(msg) { this.pass = false; this.message = msg; }
 function reportState(msg, ok) { throw ok ? new Pass(msg) : new Fail(msg); }
-function pyStr(v) { return v === true ? 'True' : v === false ? 'False' : Array.isArray(v) ? '[' + v.map(pyStr).join(', ') + ']' : (v && typeof v === 'object') ? JSON.stringify(v) : String(v); }
+function pyStr(v) { return v === true ? 'True' : v === false ? 'False' : Array.isArray(v) ? '[' + v.map(pyStr).join(', ') + ']' : (v && typeof v === 'object') ? JSON.stringify(hideSecrets(v)) : String(v); }
+/* a whole object given as a value (peer=nodes.x2) is written into the message: values under a password-like name are not */
+function hideSecrets(v) {
+  if (Array.isArray(v)) return v.map(hideSecrets);
+  if (!v || typeof v !== 'object') return v;
+  var o = {};
+  Object.keys(v).forEach(function (k) { o[k] = SECRET_KEY.test(k) ? '(not shown)' : hideSecrets(v[k]); });
+  return o;
+}
 
 function neighborAddr(ngb, nId, af) {
+  /* the address family names a field of the neighbor: only the families netlab knows (ipv4 / ipv6 / ...) */
+  if (!has(AF_LOOKUP, af)) throw Object.assign(new Error('not read: address family ' + af), { unsupported: true });
   for (var i = 0; i < (ngb || []).length; i++) {
     var n = ngb[i];
     if (n.name !== nId || !has(n, af)) continue;
@@ -158,7 +170,8 @@ var PLUGINS = {
   bgp_neighbor: {
     // args: (ngb, n_id, af='ipv4', *, vrf='default', state='Established', activate='', intf='')
     show: function (a, kw) {
-      var vrf = kw.vrf || 'default', act = kw.activate || '';
+      var vrf = kw.vrf || 'default', act = kw.activate || '', af = a[2] || kw.af || 'ipv4';
+      if (!has(AF_LOOKUP, af)) throw Object.assign(new Error('not read: address family ' + af), { unsupported: true });   /* before the router is asked: shown as not checked */
       if (!act) return 'bgp vrf ' + vrf + ' summary json';
       if (!has(AF_LOOKUP, act)) throw new Fail('Unsupported address family ' + act);
       if (act !== 'ipv4' && act !== 'ipv6') return 'bgp ' + AF_KW[act] + ' json';
