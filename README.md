@@ -296,7 +296,8 @@ Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in a
   certificate only (a real CA in `CML_CA_FILE` is checked as usual). `--insecure` skips the check (only on a network you trust). Some security
   software looks into HTTPS and shows its own certificate: cml-xray then says who issued what it sees. Let that software pass CML; use `--insecure` only as the last way.
 - Port / address: `--port 8710`, `--listen 127.0.0.1` (this PC only; `0.0.0.0` to open it from another machine — by its IP address: the page
-  answers to `localhost` and IP addresses only, and serves only its own files).
+  answers to `localhost` and IP addresses only, and serves only its own files). The page has no login: with `0.0.0.0` anyone who can reach
+  this PC can see the lab's state (the Pause button works from this PC only).
 
 ### Add a management network to a CML lab
 
@@ -1104,7 +1105,8 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
   HTTPS の中を見るセキュリティの道具が入っていると、その道具の証明書が見えます: cml-xray は見えた証明書の発行者を出します。その時は
   道具に CML を通してもらってください (`--insecure` は最後の手)。
 - ポート / アドレス: `--port 8710`・`--listen 127.0.0.1` (この PC だけ。ほかの機械から開くなら `0.0.0.0` にして IP アドレスで開く: 頁は
-  `localhost` と IP アドレスにだけ答え、頁のファイルしか返しません)。
+  `localhost` と IP アドレスにだけ答え、頁のファイルしか返しません)。頁にログインはありません: `0.0.0.0` にすると、この PC に届く人は
+  誰でもラボの状態を見られます (一時停止のボタンはこの PC からだけ)。
 
 ### CML のラボに管理の網を足す
 

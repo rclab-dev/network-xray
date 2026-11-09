@@ -416,7 +416,11 @@ function fillJumpKey(api, lab, jumpId, keyFile, o) {
       .then(function () { return api.put(base + '/wipe_disks'); }).then(function () { return until(['DEFINED_ON_CORE'], 30); })
       .then(function () { return api.patch(base, body); })
       .then(function () { return was === 'STOPPED' ? null : api.put(base + '/state/start'); })
-      .then(function () { log('nx-jump: key in' + (was === 'STOPPED' ? ' (it stays stopped as it was)' : ', started again')); if (was === 'STOPPED') step('stopped'); return 'restarted'; });
+      .then(function () { log('nx-jump: key in' + (was === 'STOPPED' ? ' (it stays stopped as it was)' : ', started again')); if (was === 'STOPPED') step('stopped'); return 'restarted'; },
+        function (e) {   // stopped by cml-xray and then something failed: start it again so the lab is as it was (without your key)
+          return (was === 'STOPPED' ? Promise.resolve() : api.put(base + '/state/start').then(function () { log('nx-jump: started again as it was (without your key)'); }, function () {}))
+            .then(function () { throw e; });
+        });
   }).catch(function (e) { warn('!! nx-jump: could not put your key in (' + e.message + ') - paste it into nx-jump\'s configuration by hand'); step('error', e.message); return 'error'; });
 }
 /* nx_cml_problem (2026-11-06): the lab's problem.json, as next to a containerlab topology: the page shows its band (title, text,
@@ -526,7 +530,7 @@ Console.prototype.start = function () {
   this.child.stdout.on('data', function (d) {
     var t = d.toString().replace(/\r/g, '').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
     if (!self.own && foreignChunk(t)) self.lastForeign = Date.now();   /* nx_cml_share: someone else on the line */
-    self.buf += t; if (self.buf.length > 400000) self.buf = self.buf.slice(-200000);
+    self.buf += t; if (self.buf.length > 16000000) self.buf = self.buf.slice(-8000000);   // a last guard only: Console.cmd keeps it short
   });
   this.child.stderr.on('data', function (d) { self.err = (self.err + d.toString()).slice(-400); });
   this.child.on('exit', function () { self.alive = false; self.host = null; });
@@ -580,6 +584,7 @@ Console.prototype.login = function (labTitle) {
     .then(function () { self.own = false; }, function (e) { self.own = false; throw e; });
 };
 Console.prototype.cmd = function (command) {
+  if (this.buf.length > 100000) this.buf = this.buf.slice(-4000);   // what came before this command is not needed (a long run kept growing it)
   var self = this, at = this.buf.length, was = this.own;
   this.own = true; this.send(command);
   return this.waitFor(new RegExp('\\n' + this.host + '#\\s*$'), at, this.cmdWaitMs || 30000).then(function (m) {
@@ -604,7 +609,7 @@ function sshAskpass() {
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-'));
   var js = path.join(dir, 'askpass.js'), f;
   fs.writeFileSync(js, "process.stdout.write(String(process.env.NX_IOS_PASSWORD) + '\\n');\n", { mode: 0o600 });
-  if (process.platform === 'win32') { f = path.join(dir, 'askpass.cmd'); fs.writeFileSync(f, '@"' + process.execPath + '" "' + js + '" %*\r\n'); }
+  if (process.platform === 'win32') { f = path.join(dir, 'askpass.cmd'); fs.writeFileSync(f, '@"' + process.execPath + '" "' + js + '"\r\n'); }   // the helper takes no arguments (as makeAskpass)
   else { f = path.join(dir, 'askpass.sh'); fs.writeFileSync(f, '#!/bin/sh\nexec "' + process.execPath + '" "' + js + '" "$@"\n', { mode: 0o700 }); }
   /* the host keys of this run go to a file of its own, removed with the helper (not /dev/null or NUL: one of them is a plain file
      to the other ssh on Windows) */
@@ -717,7 +722,7 @@ SshLine.prototype.start = function () {
   var ch = this.child = cp.spawn('ssh', sshArgs(this.ip, this.jump, so), Object.assign({ env: Object.assign({}, process.env, { SSH_ASKPASS: s.askpass, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || ':0',
     NX_IOS_PASSWORD: s.pass }) }, SSH_SPAWN));
   this.alive = true; s.kids.add(ch);
-  ch.stdout.on('data', function (d) { self.buf += d.toString().replace(/\r/g, '').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ''); if (self.buf.length > 400000) self.buf = self.buf.slice(-200000); });
+  ch.stdout.on('data', function (d) { self.buf += d.toString().replace(/\r/g, '').replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ''); if (self.buf.length > 16000000) self.buf = self.buf.slice(-8000000); });   // a last guard only: cmd keeps it short
   ch.stderr.on('data', function (d) { self.err = (self.err + d.toString()).slice(-600); });
   /* nx_cml_stopped: a stopped router ends the ssh; a write to it after that is an 'error' event, which without a handler
      ends the whole program (seen 11-06: r1 stopped in CML -> write after end -> the page on 8710 was gone) */
@@ -773,7 +778,7 @@ Collector.prototype.readNodeSsh = function (n) {   /* nx_cml_ssh */
     if (!line) line = self.cons[n] = new SshLine(n, plan.ip, j, s);
     return R.CMDS.reduce(function (acc, cmd) {
       // each piece starts right after the previous prompt: the first one needs the prompt in front, or the splitter cannot name it
-      return acc.then(function () { if (!raw) raw = line.host + '#'; return line.cmd(cmd[1]).then(function (t) { raw += t; }); });
+      return acc.then(function () { if (self.paused) { var pz = new Error('paused'); pz.busy = true; throw pz; }   /* Pause: nothing more is sent, also in a round that has started */ if (!raw) raw = line.host + '#'; return line.cmd(cmd[1]).then(function (t) { raw += t; }); });
     }, (line.alive && line.host) ? Promise.resolve() : line.login()).catch(function (e) { line.stop(); s.failed(); throw e; });
   }).then(function () {
     var v = self.view(), adjStr = (v.adj[n] || []).map(function (a) { return a.iface + ':' + a.peer; }).join(',');
@@ -794,7 +799,7 @@ Collector.prototype.readNodeConsole = function (n) {
   var p = logOk.then(function () { return (c.alive && c.host) ? null : (c.alive ? Promise.resolve(c.stop()) : Promise.resolve()).then(function () { return c.login(self.lab); }); });
   return R.CMDS.reduce(function (acc, cmd) {
     // each piece starts right after the previous prompt: the first one needs the prompt in front, or the splitter cannot name it
-    return acc.then(function () { if (!raw) raw = c.host + '#'; return c.cmd(cmd[1]).then(function (t) { raw += t; }); });
+    return acc.then(function () { if (self.paused) { var pz = new Error('paused'); pz.busy = true; throw pz; }   /* Pause: nothing more is sent, also in a round that has started */ if (!raw) raw = c.host + '#'; return c.cmd(cmd[1]).then(function (t) { raw += t; }); });
   }, p).then(function () {
     var texts = R.splitByPrompt(raw), v = self.view();
     var adjStr = (v.adj[n] || []).map(function (a) { return a.iface + ':' + a.peer; }).join(',');
@@ -1124,6 +1129,34 @@ function selfTest() {
   });
   A(!hostAllowed('evil.example:8710', 8710) && hostAllowed('192.0.2.5:8710', 8710) && hostAllowed('[::1]:8710', 8710) && !hostAllowed('127.0.0.1:9', 8710), 'serve: names other than localhost are refused (DNS rebinding); addresses on our port are fine');
   A(!staticAllowed('id') && !staticAllowed('id.pub') && !staticAllowed('.git/config') && !staticAllowed('x.pem') && staticAllowed('js/next.js') && staticAllowed('fonts/next-font.woff'), 'serve: key-like files and dot files are not served');
+  asyncTests = asyncTests.then(function () {   // a long run: what came before is dropped before each command, so a big answer is read whole
+    var o = Object.create(Console.prototype); o.host = 'r1'; o.alive = true; o.buf = 'x'.repeat(300000); o.cmdWaitMs = 2000;
+    o.send = function (c) { setTimeout(function () { o.buf += c + '\n' + 'y'.repeat(150000) + '\nr1#'; }, 5); };
+    return o.cmd('show ip route').then(function (t) { A(t.length > 150000 && o.buf.length < 200000, 'long run: a big answer is read whole and the buffer stays short'); },
+      function (e) { A(false, 'long run: ' + e.message); });
+  });
+  asyncTests = asyncTests.then(function () {   // Pause while a round is reading: no further show command
+    var od = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-pr-')), _l = console.log; console.log = function () {};
+    var v = { defs: { r1: 'iol-xe' }, adj: {}, pos: null }, sent = 0;
+    var s = { user: 'admin', kids: new Set(), plan: function () { return Promise.resolve({ ip: '192.0.2.11' }); }, jumpHost: function () { return Promise.resolve({ user: 'nx', host: '192.0.2.50' }); }, failed: function () {} };
+    var c = new Collector(function () { return v; }, 'L', { ssh: s, out: od });
+    c.cons.r1 = { ip: '192.0.2.11', jump: { user: 'nx', host: '192.0.2.50' }, alive: true, host: 'r1', stop: function () {},
+      cmd: function (x) { sent++; if (sent === 1) c.paused = true; return Promise.resolve(x + '\nr1#'); } };
+    return c.round().then(function () { console.log = _l; A(sent === 1, 'pause: a round that has started sends nothing more (' + sent + ' sent)'); try { fs.rmSync(od, { recursive: true, force: true }); } catch (e) {} },
+      function (e) { console.log = _l; A(false, 'pause round: ' + e.message); });
+  });
+  asyncTests = asyncTests.then(function () {   // putting the key in fails half way: nx-jump is started again, as it was
+    var kd = fs.mkdtempSync(path.join(os.tmpdir(), 'cml-xray-kf-')), kf = path.join(kd, 'id'), calls = [];
+    fs.writeFileSync(kf, 'x'); fs.writeFileSync(kf + '.pub', 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGb1example0key0000000000000000000000000000 me\n');
+    var n = { state: 'BOOTED', configuration: [{ name: 'c', content: "echo '<your public key>' > k" }] };
+    var api = { get: function () { return Promise.resolve(JSON.parse(JSON.stringify(n))); },
+      put: function (p) { var w = /\/(stop|start|wipe_disks)$/.exec(p)[1]; calls.push(w); n.state = { stop: 'STOPPED', start: 'BOOTED', wipe_disks: 'DEFINED_ON_CORE' }[w]; return Promise.resolve(); },
+      patch: function () { calls.push('patch'); return Promise.reject(new Error('CML PATCH -> HTTP 500')); } };
+    return fillJumpKey(api, { id: 'l' }, 'j', kf, { log: function () {}, warn: function () {}, pollMs: 1 }).then(function (r) {
+      A(r === 'error' && calls.join() === 'stop,wipe_disks,patch,start' && n.state === 'BOOTED', 'jumpkey: a failure half way starts nx-jump again (' + calls.join() + ')');
+      try { fs.rmSync(kd, { recursive: true, force: true }); } catch (e) {}
+    });
+  });
   var so = sshOpts('k', false).join(' ');
   A(/ServerAliveInterval=5/.test(so) && /ServerAliveCountMax=2/.test(so), 'ssh: keepalive - a stopped router ends its ssh in about 10 s');
   asyncTests = asyncTests.then(function () {   // nx_cml_stopped: stop on an ssh that has ended, twice -> nothing thrown, no 'error' event that ends the program
