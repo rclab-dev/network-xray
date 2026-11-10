@@ -1,0 +1,195 @@
+{
+ "Ethernet0/0": {
+  "enabled": true,
+  "oper_status": "up",
+  "ipv4": {
+   "172.20.20.10/24": {
+    "ip": "172.20.20.10",
+    "prefix_length": "24",
+    "secondary": false,
+    "broadcast_address": "255.255.255.255"
+   }
+  },
+  "address_determined_by": "configuration file",
+  "mtu": 1500,
+  "directed_broadcast_forwarding": false,
+  "proxy_arp": true,
+  "local_proxy_arp": false,
+  "security_level": "default",
+  "split_horizon": true,
+  "icmp": {
+   "redirects": "always sent",
+   "unreachables": "always sent",
+   "mask_replies": "never sent"
+  },
+  "ip_fast_switching": true,
+  "ip_flow_switching": false,
+  "ip_cef_switching": true,
+  "ip_cef_switching_turbo_vector": true,
+  "ip_null_turbo_vector": true,
+  "vrf": "clab-mgmt",
+  "unicast_routing_topologies": {
+   "topology": {
+    "base": {
+     "status": "up"
+    }
+   }
+  },
+  "ip_multicast_fast_switching": true,
+  "ip_multicast_distributed_fast_switching": false,
+  "ip_route_cache_flags": [
+   "CEF",
+   "Fast"
+  ],
+  "router_discovery": false,
+  "ip_output_packet_accounting": false,
+  "ip_access_violation_accounting": false,
+  "tcp_ip_header_compression": false,
+  "rtp_ip_header_compression": false,
+  "probe_proxy_name_replies": false,
+  "policy_routing": false,
+  "network_address_translation": false,
+  "bgp_policy_mapping": false,
+  "input_features": [
+   "MCI Check"
+  ],
+  "wccp": {
+   "redirect_outbound": false,
+   "redirect_inbound": false,
+   "redirect_exclude": false
+  }
+ },
+ "Ethernet0/1": {
+  "enabled": true,
+  "oper_status": "up",
+  "ipv4": {
+   "10.10.0.20/24": {
+    "ip": "10.10.0.20",
+    "prefix_length": "24",
+    "secondary": false,
+    "broadcast_address": "255.255.255.255"
+   }
+  },
+  "address_determined_by": "configuration file",
+  "mtu": 1500,
+  "directed_broadcast_forwarding": false,
+  "multicast_groups": [
+   "224.0.0.5",
+   "224.0.0.6"
+  ],
+  "proxy_arp": true,
+  "local_proxy_arp": false,
+  "security_level": "default",
+  "split_horizon": true,
+  "icmp": {
+   "redirects": "always sent",
+   "unreachables": "always sent",
+   "mask_replies": "never sent"
+  },
+  "ip_fast_switching": true,
+  "ip_flow_switching": false,
+  "ip_cef_switching": true,
+  "ip_cef_switching_turbo_vector": true,
+  "ip_null_turbo_vector": true,
+  "unicast_routing_topologies": {
+   "topology": {
+    "base": {
+     "status": "up"
+    }
+   }
+  },
+  "ip_multicast_fast_switching": true,
+  "ip_multicast_distributed_fast_switching": false,
+  "ip_route_cache_flags": [
+   "CEF",
+   "Fast"
+  ],
+  "router_discovery": false,
+  "ip_output_packet_accounting": false,
+  "ip_access_violation_accounting": false,
+  "tcp_ip_header_compression": false,
+  "rtp_ip_header_compression": false,
+  "probe_proxy_name_replies": false,
+  "policy_routing": false,
+  "network_address_translation": false,
+  "bgp_policy_mapping": false,
+  "input_features": [
+   "MCI Check"
+  ],
+  "wccp": {
+   "redirect_outbound": false,
+   "redirect_inbound": false,
+   "redirect_exclude": false
+  }
+ },
+ "Ethernet0/2": {
+  "enabled": false,
+  "oper_status": "down"
+ },
+ "Ethernet0/3": {
+  "enabled": false,
+  "oper_status": "down"
+ },
+ "Loopback0": {
+  "enabled": true,
+  "oper_status": "up",
+  "ipv4": {
+   "2.2.2.2/32": {
+    "ip": "2.2.2.2",
+    "prefix_length": "32",
+    "secondary": false,
+    "broadcast_address": "255.255.255.255"
+   }
+  },
+  "address_determined_by": "configuration file",
+  "mtu": 1514,
+  "directed_broadcast_forwarding": false,
+  "multicast_groups": [
+   "224.0.0.5"
+  ],
+  "proxy_arp": true,
+  "local_proxy_arp": false,
+  "security_level": "default",
+  "split_horizon": true,
+  "icmp": {
+   "redirects": "always sent",
+   "unreachables": "always sent",
+   "mask_replies": "never sent"
+  },
+  "ip_fast_switching": true,
+  "ip_flow_switching": false,
+  "ip_cef_switching": true,
+  "ip_cef_switching_turbo_vector": true,
+  "ip_null_turbo_vector": true,
+  "unicast_routing_topologies": {
+   "topology": {
+    "base": {
+     "status": "up"
+    }
+   }
+  },
+  "ip_multicast_fast_switching": true,
+  "ip_multicast_distributed_fast_switching": false,
+  "ip_route_cache_flags": [
+   "CEF",
+   "Fast"
+  ],
+  "router_discovery": false,
+  "ip_output_packet_accounting": false,
+  "ip_access_violation_accounting": false,
+  "tcp_ip_header_compression": false,
+  "rtp_ip_header_compression": false,
+  "probe_proxy_name_replies": false,
+  "policy_routing": false,
+  "network_address_translation": false,
+  "bgp_policy_mapping": false,
+  "input_features": [
+   "MCI Check"
+  ],
+  "wccp": {
+   "redirect_outbound": false,
+   "redirect_inbound": false,
+   "redirect_exclude": false
+  }
+ }
+}

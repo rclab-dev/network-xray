@@ -1,0 +1,19 @@
+{
+ "instance": {
+  "1": {
+   "areas": {
+    "0.0.0.0": {
+     "interfaces": {
+      "Ethernet0/1": {
+       "ip_address": "10.10.0.10/24",
+       "cost": 10,
+       "state": "DR",
+       "nbrs_full": 0,
+       "nbrs_count": 0
+      }
+     }
+    }
+   }
+  }
+ }
+}

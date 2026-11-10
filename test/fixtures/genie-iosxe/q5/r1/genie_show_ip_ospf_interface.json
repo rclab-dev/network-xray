@@ -1,0 +1,81 @@
+{
+ "vrf": {
+  "default": {
+   "address_family": {
+    "ipv4": {
+     "instance": {
+      "1": {
+       "areas": {
+        "0.0.0.0": {
+         "interfaces": {
+          "Ethernet0/1": {
+           "router_id": "10.10.0.10",
+           "interface_type": "broadcast",
+           "cost": 10,
+           "demand_circuit": false,
+           "bfd": {
+            "enable": false
+           },
+           "name": "Ethernet0/1",
+           "ip_address": "10.10.0.10/24",
+           "interface_id": 3,
+           "attached": "network statement",
+           "enable": true,
+           "line_protocol": true,
+           "topology": {
+            "0": {
+             "cost": 10,
+             "name": "Base",
+             "disabled": false,
+             "shutdown": false
+            }
+           },
+           "transmit_delay": 1,
+           "state": "dr",
+           "priority": 1,
+           "dr_router_id": "10.10.0.10",
+           "dr_ip_addr": "10.10.0.10",
+           "hello_interval": 10,
+           "dead_interval": 40,
+           "wait_interval": 40,
+           "retransmit_interval": 5,
+           "oob_resync_timeout": 40,
+           "passive": false,
+           "hello_timer": "00:00:08",
+           "lls": true,
+           "graceful_restart": {
+            "cisco": {
+             "type": "cisco",
+             "helper": true
+            },
+            "ietf": {
+             "type": "ietf",
+             "helper": true
+            }
+           },
+           "ipfrr_protected": true,
+           "ipfrr_candidate": true,
+           "ti_lfa_protected": false,
+           "index": "1/1/1",
+           "flood_queue_length": 0,
+           "next": "0x0(0)/0x0(0)/0x0(0)",
+           "last_flood_scan_length": 0,
+           "max_flood_scan_length": 0,
+           "last_flood_scan_time_msec": 0,
+           "max_flood_scan_time_msec": 0,
+           "statistics": {
+            "nbr_count": 0,
+            "adj_nbr_count": 0,
+            "num_nbrs_suppress_hello": 0
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

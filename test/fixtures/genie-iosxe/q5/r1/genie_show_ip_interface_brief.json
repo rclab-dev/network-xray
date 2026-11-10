@@ -1,0 +1,32 @@
+{
+ "interface": {
+  "Ethernet0/0": {
+   "ip_address": "172.20.20.9",
+   "interface_is_ok": "YES",
+   "method": "TFTP",
+   "status": "up",
+   "protocol": "up"
+  },
+  "Ethernet0/1": {
+   "ip_address": "10.10.0.10",
+   "interface_is_ok": "YES",
+   "method": "TFTP",
+   "status": "up",
+   "protocol": "up"
+  },
+  "Ethernet0/2": {
+   "ip_address": "unassigned",
+   "interface_is_ok": "YES",
+   "method": "unset",
+   "status": "administratively down",
+   "protocol": "down"
+  },
+  "Ethernet0/3": {
+   "ip_address": "unassigned",
+   "interface_is_ok": "YES",
+   "method": "unset",
+   "status": "administratively down",
+   "protocol": "down"
+  }
+ }
+}

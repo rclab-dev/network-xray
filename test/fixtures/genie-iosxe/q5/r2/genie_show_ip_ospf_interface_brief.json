@@ -1,0 +1,26 @@
+{
+ "instance": {
+  "1": {
+   "areas": {
+    "0.0.0.0": {
+     "interfaces": {
+      "Loopback0": {
+       "ip_address": "2.2.2.2/32",
+       "cost": 1,
+       "state": "LOOP",
+       "nbrs_full": 0,
+       "nbrs_count": 0
+      },
+      "Ethernet0/1": {
+       "ip_address": "10.10.0.20/24",
+       "cost": 10,
+       "state": "DR",
+       "nbrs_full": 0,
+       "nbrs_count": 0
+      }
+     }
+    }
+   }
+  }
+ }
+}
