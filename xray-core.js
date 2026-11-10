@@ -3073,6 +3073,21 @@ function _xrayOspfIfLines(s) {
     var st = "padding-left:1.2em" + (open ? "" : ";display:none");
     out.push({ text: '<span class="re-ospfif-head" style="cursor:pointer" onclick="window._xrayReOspfIfToggle && window._xrayReOspfIfToggle()">' +
       '<span class="re-ospfif-ind">' + (open ? "▼" : "▶") + "</span> " + _escapeHtml(ifn) + " (OSPF)</span>" });
+    /* nx_ospf_full_but: the adjacency is up (the neighbour row says Full) but a value both ends must share differs = a
+       warning (yellow), shown even when the block is folded. A network type difference lets OSPF reach Full while the two
+       routers describe the link differently in their LSAs, so routes from that neighbour can be missing. */
+    var mm = Array.isArray(r.mismatch) ? r.mismatch : [];
+    if (mm.length && r.neighbors_adjacent > 0) {
+      var lbl = { mtu: "MTU", hello: "hello", dead: "dead", network_type: "network type", area: "area", auth: ja ? "認証" : "auth", passive: "passive" };
+      var what = mm.map(function (f) { return lbl[f] || f; }).join(", ");
+      var rem = r.remote && typeof r.remote === "object" ? r.remote : {};
+      var nt = mm.indexOf("network_type") >= 0 ? " (" + _escapeHtml(_xrayOspfIfVal("network_type", r.network_type, ja)) + " ⇔ " +
+        _escapeHtml(_xrayOspfIfVal("network_type", rem.network_type, ja)) + ")" : "";
+      var peer = _escapeHtml(r.peer || (ja ? "相手" : "the neighbor"));
+      out.push({ cls: "re-ospfif-warn", style: "padding-left:1.2em;color:#ffcc00", text: ja
+        ? "⚠ Full だが " + _escapeHtml(what) + " が違う" + nt + (nt ? " — " + peer + " からの経路が入らない事がある" : "")
+        : "⚠ Full, but " + _escapeHtml(what) + (mm.length > 1 ? " differ" : " differs") + nt + (nt ? " — routes from " + peer + " can be missing" : "") });
+    }
     out.push({ cls: "re-ospfif-row", style: st, text: v("mtu", "MTU") + " · " + v("hello", "hello") + " / " + v("dead", "dead") });
     out.push({ cls: "re-ospfif-row", style: st, text: v("network_type") + " · " + v("area", "area") + " · cost " +
       _escapeHtml(_xrayOspfIfVal("cost", r.cost)) + " · " + _escapeHtml(_xrayOspfIfVal("role", r.role)) });

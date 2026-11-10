@@ -65,10 +65,30 @@ test('one block per interface: header, then MTU / timers, type / area / cost / r
 
 test('a value the router did not report is "?"; only the mismatched must-match values are red', function () {
   var ctx = sandbox('en');
-  var t = texts(ctx._xrayOspfIfLines({ ospf_ifaces: { eth1: row({ mtu: null, auth: null, passive: null, role: 'BDR', mismatch: ['hello', 'area'] }) } }));
+  var t = texts(ctx._xrayOspfIfLines({ ospf_ifaces: { eth1: row({ mtu: null, auth: null, passive: null, role: 'BDR', neighbors_adjacent: 0, mismatch: ['hello', 'area'] }) } }));
   assert.strictEqual(t[1], 'MTU ? · <span style="color:#ff4444">hello 10</span> / dead 40');
   assert.strictEqual(t[2], 'broadcast · <span style="color:#ff4444">area 0.0.0.0</span> · cost 10 · BDR');
   assert.strictEqual(t[3], 'passive ? · auth ? · nbrs 1');
+});
+
+test('adjacent (Full) but a must-match value differs: a yellow warning under the header, shown even when folded', function () {
+  var ctx = sandbox('en');
+  var nt = { peer: 'r2', network_type: 'point-to-point', mismatch: ['network_type'], remote: { network_type: 'broadcast' } };
+  var lines = ctx._xrayOspfIfLines({ ospf_ifaces: { eth3: row(nt) } });
+  assert.strictEqual(lines[1].cls, 're-ospfif-warn');
+  assert.match(lines[1].style, /#ffcc00/);
+  assert.ok(!/display:none/.test(lines[1].style));
+  assert.strictEqual(lines[1].text, '⚠ Full, but network type differs (point-to-point ⇔ broadcast) — routes from r2 can be missing');
+  ctx._reOspfIfOpen = false;
+  var folded = ctx._xrayOspfIfLines({ ospf_ifaces: { eth3: row(nt) } });
+  assert.strictEqual(folded[1].cls, 're-ospfif-warn', 'still there when folded');
+  assert.ok(!/display:none/.test(folded[1].style));
+  var ja = sandbox('ja')._xrayOspfIfLines({ ospf_ifaces: { eth3: row(nt) } });
+  assert.strictEqual(ja[1].text, '⚠ Full だが network type が違う (point-to-point ⇔ broadcast) — r2 からの経路が入らない事がある');
+  var two = ctx._xrayOspfIfLines({ ospf_ifaces: { eth1: row({ mismatch: ['mtu', 'hello'], remote: {} }) } });
+  assert.strictEqual(two[1].text, '⚠ Full, but MTU, hello differ', 'other fields: no route sentence');
+  var notUp = ctx._xrayOspfIfLines({ ospf_ifaces: { eth1: row({ neighbors_adjacent: 0, mismatch: ['mtu'] }) } });
+  assert.ok(notUp.every(function (l) { return l.cls !== 're-ospfif-warn'; }), 'not adjacent: the red values say it, no Full warning');
 });
 
 test('Japanese labels for authentication and neighbours', function () {
