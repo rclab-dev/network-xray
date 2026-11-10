@@ -52,7 +52,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 
 ## When to use
 
-- **Use it when** you run **FRR**, **Nokia SR Linux** or **Cisco IOS-XE (IOL)** routers in **containerlab** or **netlab** (or IOS routers in a **Cisco CML2** lab, with `cml-xray.js`) and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 on all three; on FRR, OSPFv3 and VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
+- **Use it when** you run **FRR**, **Nokia SR Linux** or **Cisco IOS-XE (IOL)** routers in **containerlab** or **netlab** (or IOS routers in a **Cisco CML2** lab, with `cml-xray.js` — tried on CML 2.10 with IOL) and want to see, from the routers' current state, *why* BGP chose a path or *why* an OSPF adjacency is not Full (OSPFv2 on all three; on FRR, OSPFv3 and VRFs too: the BGP table and the routing table of each VRF, one VRF at a time).
 - **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); devices other than FRR / SR Linux / Cisco IOL, or in CML the IOS node types listed in the CML section (they appear in the topology, but are not read). Not read yet, even on those three: the IPv6 BGP table, IS-IS, EVPN, and VRFs on IOL.
 - **What it reads** (read-only commands; the collector changes nothing. Only `xray.sh` / `run.sh`, right after deploying, restart FRR in a router whose FRR did not come up — see Troubleshooting):
   - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp vrf all json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command; the configuration is read only to see which protocols are configured, the BGP AS number and the configured static routes, and its text is not saved in the state or sent to the page); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. On a router with VRFs, the Routing table and the BGP Table show one VRF at a time: use the VRF buttons above them to switch (the management VRF `mgmt` gets no button). The IPv6 BGP table is not read.
@@ -88,7 +88,7 @@ It is **descriptive**, not a simulator: it draws the state your feed reports. An
 Other NOSes (Arista, Junos, …) would need their own collector that maps their `show` output to the same
 state shape (see [DATA-CONTRACT.md](./DATA-CONTRACT.md)); the IOL collector is a worked example.
 
-**Status:** network-xray supports containerlab and netlab with FRR, SR Linux and Cisco IOL (IOS-XE), and Cisco CML2 labs with `cml-xray.js`.
+**Status:** network-xray supports containerlab and netlab with FRR, SR Linux and Cisco IOL (IOS-XE), and Cisco CML2 labs with `cml-xray.js` (tried on CML 2.10 with IOL).
 
 **Not a config verifier.** network-xray reads **live state** (`show` / JSON = the state the device reports) to show *why* a
 router decided as it did — it is **not** a config checker. For pre-deployment simulation from config
@@ -176,7 +176,8 @@ the limit is the code. The exceptions, all on purpose:
 | Why it won on Cisco IOL | Worked out by the collector from the printed columns (IOS prints no reason); the panel says it is inferred |
 | eBGP over iBGP, IGP metric, router ID, cluster list | Not compared |
 
-`xray-query.js why` gives the same split in `reason_source` (`device` / `comparison` / `null`). More in
+The MCP `why_path` tool gives the same split in `reason_source` (`device` / `comparison` / `null`); the CLI `xray-query.js why`
+returns the stored `reason` with a `reason_source` that says where it came from (or `reason: null` and a `note`). More in
 [docs/dev/likely-questions.md](docs/dev/likely-questions.md) (§14).
 
 ## See it
@@ -216,7 +217,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 ![Recorded quick start (recorded with the old name demo.sh): git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
 
-**You need:** Linux (or Windows with **WSL2**, or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container).
+**You need:** Linux (or Windows with **WSL2**, or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
 
 **Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
@@ -329,7 +330,7 @@ can mix FRR, SR Linux and IOL. Example labs: `examples/q5-ospf-iol`, `examples/q
   `parse_warnings` and the page shows how many — it does not guess.
 - **Differences from FRR you will see:** IOS's `show ip route` lists only the chosen routes, so the routing table has no "candidate" rows.
   A shut-down OSPF interface is drawn red, and the OSPF heading counts only the interfaces that are up.
-- Only `cisco_iol` has been tried on a real lab; other IOS-XE kinds (`cisco_c8000v`, `cisco_csr1000v`, `cisco_cat9kv`) are not read yet.
+- In containerlab, only `cisco_iol` has been tried on a real lab; other IOS-XE kinds (`cisco_c8000v`, `cisco_csr1000v`, `cisco_cat9kv`) are not read yet. (In CML, `cml-xray.js` sends more IOS node types to the same reader — see [Cisco CML2](#cisco-cml2-cml-free-works).)
 
 ## Cisco CML2 (CML-Free works)
 
@@ -346,7 +347,7 @@ node cml-xray.js --lab "<the lab's title in CML>"
 Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in as the routers finish booting.
 
 - **What it does:** reads the lab's nodes and links from the CML REST API and serves the same graph + DeepDive page as for containerlab.
-  The IOS nodes (`iol-xe`, `ioll2-xe`, `iosv`, `csr1000v`, `cat8000v`) are read over **SSH on the lab's management network** with read-only
+  The IOS nodes (`iol-xe`, `ioll2-xe`, `iosv`, `iosvl2`, `csr1000v`, `cat8000v`) are read over **SSH on the lab's management network** with read-only
   `show` commands (the same reader as IOL in containerlab) every 10 s (`--interval`). Other nodes are drawn but not read.
 - **Your consoles stay yours:** nothing is typed on the CML consoles. Use them exactly as you would without network-xray. One SSH session per router
   stays open, so the router logs the login (`%SEC_LOGIN-5-LOGIN_SUCCESS` ...) once when cml-xray starts, not every round.
@@ -949,7 +950,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 
 ## いつ使うか
 
-- **使う時:** containerlab や netlab (Cisco CML2 のラボの IOS のルータなら `cml-xray.js`) で **FRR**・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (OSPFv2 は 3 つとも。FRR は OSPFv3 と VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
+- **使う時:** containerlab や netlab (Cisco CML2 のラボの IOS のルータなら `cml-xray.js`・試したのは CML 2.10 と IOL) で **FRR**・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** のルータを動かしていて、ルータの今の状態から、BGP が*なぜ*その経路を選んだか・OSPF の隣接が*なぜ* Full にならないかを見たい時 (OSPFv2 は 3 つとも。FRR は OSPFv3 と VRF も: VRF ごとの BGP の表と経路表を、1 つの VRF ずつ)。
 - **使わない時:** 本番の監視。デプロイ前のコンフィグの確かめ (それは [Batfish](https://www.batfish.org/) — コンフィグを読む道具。network-xray は今の状態を読む)。多くの機器の状態を集めて時間を追って問い合わせること (それは [SuzieQ](https://github.com/netenglabs/suzieq) — 状態の表。network-xray は 1 台のルータの判断を描く)。FRR / SR Linux / Cisco IOL (CML では CML の節に書いた IOS のノード) 以外の機器 (全体図には出るが、中は読まない)。この 3 つでもまだ読まない物: IPv6 の BGP の表・IS-IS・EVPN・IOL の VRF。
 - **読み取る情報** (読み取り専用コマンドのみ。collector は何も変更しません。`xray.sh` / `run.sh` だけは、deploy の直後に FRR が立ち上がらなかったルータの FRR を立て直します = トラブルシューティングを参照):
   - FRR は `docker exec <ノード> vtysh -c '…'` で: `show ip bgp vrf all json` (経路ごとの `bestpath` と `selectionReason` = 勝った経路と FRR 自身の理由。ほかに `locPrf`・`weight`・`path` (AS パス)・`origin`・`metric`・ネクストホップ。Best-Path Decision の欄はこれで候補を並べる)、`show ip bgp vrf all summary json`、`show ip ospf vrf all neighbor json`、`show ip ospf vrf all interface json`、`show ip route vrf all json`、`show interface json`、`show running-config` (`vrf all` に JSON で応答しない FRR では、通常のコマンドで読み取ります。設定は、どのプロトコルが設定されているか・BGP の AS 番号・設定した静的経路を見るためだけに読み、設定の文そのものは state に残さず、画面にも送らない)。`router ospf6` のあるルータは OSPFv3 も: `show ipv6 ospf6 vrf all neighbor json`、`show ipv6 ospf6 vrf all interface json`、`show ipv6 route vrf all json`。VRF のあるルータでは、経路表と BGP の表を 1 つの VRF ずつ出す (上の VRF のボタンで切り替え。管理用の VRF `mgmt` にはボタンを出さない)。IPv6 の BGP の表は読まない。
@@ -983,7 +984,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (混ざったラボも同じように描けます)。
 ほかの OS (Arista・Junos など) は、その `show` の出力を同じ状態の形に直す collector がそれぞれ要ります ([DATA-CONTRACT.md](./DATA-CONTRACT.md))。IOL の collector がその例です。
 
-**現状:** containerlab と netlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。Cisco CML2 のラボは `cml-xray.js` で読みます。
+**現状:** containerlab と netlab の FRR・SR Linux・Cisco IOL (IOS-XE) に対応しています。Cisco CML2 のラボは `cml-xray.js` で読みます (試したのは CML 2.10 と IOL)。
 
 **コンフィグ検証ツールではありません。** network-xray は**生きた状態**(`show` / JSON = 機器が報告する状態)を読み、
 ルータが *なぜ* そう判断したかを示します — コンフィグ(意図)からの事前シミュレーションには **Batfish** を。
@@ -1061,7 +1062,8 @@ Cisco IOL は `show`・SR Linux は `info from state` / `info from running`・im
 | Cisco IOL でなぜ勝ったか | 表示された列から collector が推し量る (IOS は理由を出さない)。パネルにも推し量った物と出ます |
 | eBGP と iBGP・IGP のメトリック・router ID・cluster list | 比べない |
 
-`xray-query.js why` も同じ区別を `reason_source` (`device` / `comparison` / `null`) で返します。詳しくは
+MCP の `why_path` も同じ区別を `reason_source` (`device` / `comparison` / `null`) で返します。CLI の `xray-query.js why` は、保存された
+`reason` と、それがどこから来たかを書いた `reason_source` を返します (理由が無ければ `reason: null` と `note`)。詳しくは
 [docs/dev/likely-questions.md](docs/dev/likely-questions.md) (§14・英語)。
 
 ## 見る
@@ -1093,7 +1095,7 @@ Cisco IOL は `show`・SR Linux は `info from state` / `info from running`・im
 
 ![記録済みのクイックスタート (前の名前 demo.sh で録った物): git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
 
-**必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)。
+**必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
 
 **どちらで始めるか:** **初めてなら下の `xray.sh` を。** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
 
@@ -1199,7 +1201,7 @@ network-xray は containerlab の **Cisco IOS-XE** のルータも読みます�
   bridge-domain の IF (`BDI`・`Ethernet0/2 (BDI500)` のように出る) の上の OSPF も読みます。**VRF はまだ読みません** — global の経路表だけを読むので、VRF の中の経路やネイバーは出ません。VRF のあるラボでは、その名前つきでそう出します (`show vrf` から・管理の VRF は数えません)。
 - **取得・解析できない場合** (`--More--` で出力が途切れた・そのイメージが対応していないコマンド・出力が空・どのパーサーでも解析できない行) は state に `parse_warnings` が付き、画面に数が出ます (推測しません)。
 - **FRR と違って見える所:** IOS の `show ip route` は選ばれた経路だけを出すので、経路表に「候補」の行は出ません。shutdown した OSPF の IF は赤で描き、OSPF の見出しは up の IF だけを数えます。
-- 実際のラボで試したのは `cisco_iol` だけです。ほかの IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) はまだ読みません。
+- containerlab で実際のラボで試したのは `cisco_iol` だけです。ほかの IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) はまだ読みません。(CML では `cml-xray.js` がもっと多くの IOS のノードを同じ読み方に回します — [Cisco CML2](#cisco-cml2-cml-free-でも) を参照。)
 
 ## Cisco CML2 (CML-Free でも)
 
@@ -1216,7 +1218,7 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
 **http://127.0.0.1:8710/** を開きます。先に CML でラボを start してください。ルータが起動し終わると図が埋まっていきます。
 
 - **何をするか:** CML の REST API からラボのノードと線を読み、containerlab の時と同じ図 + DeepDive のページを配ります。
-  IOS のノード (`iol-xe`・`ioll2-xe`・`iosv`・`csr1000v`・`cat8000v`) は **ラボの管理の網を通った SSH** で、読むだけの `show` を打って読みます
+  IOS のノード (`iol-xe`・`ioll2-xe`・`iosv`・`iosvl2`・`csr1000v`・`cat8000v`) は **ラボの管理の網を通った SSH** で、読むだけの `show` を打って読みます
   (containerlab の IOL と同じ読み取り・既定は 10 秒ごと = `--interval`)。ほかのノードは描くだけです。
 - **コンソールはあなたの物のまま:** CML のコンソールには何も打ちません。network-xray が無い時と同じに使えます。ルータ 1 台に SSH を 1 本
   つないだままにするので、ルータのログインのログ (`%SEC_LOGIN-5-LOGIN_SUCCESS` …) は cml-xray の起動の時に 1 回だけ出ます (毎回ではありません)。
