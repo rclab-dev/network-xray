@@ -302,11 +302,12 @@ test('why_path: device-reported reason, inferred reason, single path, unknown ro
   var med = inf.steps.filter(function (x) { return x.step === 'MED'; })[0];
   assert.deepStrictEqual(med, { step: 'MED', selected: 10, other: 50, result: 'win' });
 
-  var one = ok(s.byId[72]);   // IOS-XE: the stored reason is the collector's, not the router's
+  var one = ok(s.byId[72]);   // IOS-XE: the stored reason is the collector's, not the router's -> "derived", the comparison beside it
   assert.strictEqual(one.selected.next_hop, '2.2.2.2');
   assert.deepStrictEqual(one.candidates, []);
-  assert.strictEqual(one.deciding_step, 'Only path');
-  assert.strictEqual(one.reason_source, 'comparison');
+  assert.strictEqual(one.deciding_step, 'First path received');
+  assert.strictEqual(one.reason_source, 'derived');
+  assert.strictEqual(one.comparison, 'Only path');
 
   isErr(s.byId[73], /unknown router: r9 \(known: r1, r2, r3\)/);
   isErr(s.byId[74], /unknown prefix on r1: 198\.51\.100\.0\/24/);

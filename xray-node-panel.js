@@ -10,14 +10,16 @@
  *
  * `nodeState` = the object clab-collect.js emits per node (see DATA-CONTRACT.md). Fields used:
  *   routing_table [{prefix,out_iface,next_hop,protocol,selected}]   -> Routing table
- *   bgp_routes    [{prefix,next_hop,as_path,local_pref,weight,metric,origin,best,status}] -> BGP table + Best-Path
+ *   bgp_routes    [{prefix,prefixlen?,vrf?,next_hop,as_path,local_pref,weight,metric,origin,best,status,reason?}]
+ *                 -> BGP table + Best-Path (one destination = prefix/length in one VRF; `reason` = the reason the
+ *                    collector stored for the best path: FRR's selectionReason, or what the IOS-XE collector worked out)
  *   route_resolution.matched_prefix  -> highlights the forwarding-decision row in the routing table
- *   target_node / protocol / bgp_configured  -> labels & empty-state text
+ *   target_node / protocol / bgp_configured / nos  -> labels & empty-state text (nos = 'ios-xe' words the reason)
  *
  * Zero dependencies: plain DOM + one injected <style>. Nothing here reads window geometry, so the
  * output is identical no matter where the node sits in the graph. Best-Path logic is ported verbatim
- * from this gallery's xray-api.js facade (Weight -> LocPrf -> AS-Path -> Origin -> MED), so the "why
- * this path won" explanation matches the DeepDive exactly.  MIT — reuse freely.
+ * from this gallery's xray-api.js facade (Weight -> LocPrf -> AS-Path -> Origin -> MED, each step among the
+ * paths still in play), so the "why this path won" explanation matches the DeepDive exactly.  MIT — reuse freely.
  */
 (function (root) {
   'use strict';
@@ -46,21 +48,28 @@
     if (!best) return { kind: 'nobest' };
     var localOrigin = bnum(best.weight, 0) === 32768;
     if (group.length < 2) return { kind: localOrigin ? 'local' : 'single', best: best, col: null };
-    var chain = [], medSkipped = false, c;
+    // Each step compares the best only with the paths still in play after the earlier steps (a path cut at LocPrf no
+    // longer counts at AS-Path), the same as xray-api.js / xray-core.js. MED is compared only among the remaining paths
+    // of the best's neighbor AS. Before, every step compared the whole group again, so three paths where a step cut
+    // some but not all came out "no single decider".
+    var chain = [], medSkipped = false, alive = group, c;
     for (c = 0; c < BGP_CRIT.length; c++) {
-      var crit = BGP_CRIT[c], bv = crit.val(best), cohort = group;
+      var crit = BGP_CRIT[c], bv = crit.val(best), cohort = alive;
       if (crit.key === 'metric') {
-        var bAS = nbrAS(best); cohort = group.filter(function (r) { return nbrAS(r) === bAS; });
+        var bAS = nbrAS(best); cohort = alive.filter(function (r) { return nbrAS(r) === bAS; });
         if (cohort.length < 2) {
-          var anyDiff = group.some(function (r) { return r !== best && crit.val(r) !== bv; });
-          chain.push({ crit: crit, bestVal: bv, cmpVal: null, status: anyDiff ? 'skip' : 'tie' });
+          var anyDiff = alive.some(function (r) { return r !== best && crit.val(r) !== bv; });
+          chain.push({ crit: crit, bestVal: bv, cmpVal: anyDiff ? null : bv, status: anyDiff ? 'skip' : 'tie' });
           if (anyDiff) medSkipped = true; continue;
         }
       }
       var cmp = null; cohort.forEach(function (r) { if (r === best) return; var v = crit.val(r); cmp = (cmp === null) ? v : (crit.dir > 0 ? Math.max(cmp, v) : Math.min(cmp, v)); });
       if (cohort.every(function (r) { return crit.val(r) === bv; })) { chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'tie' }); continue; }
-      if (!cohort.every(function (r) { return r === best || (crit.dir > 0 ? bv > crit.val(r) : bv < crit.val(r)); })) {
+      if (!cohort.every(function (r) { return r === best || (crit.dir > 0 ? bv >= crit.val(r) : bv <= crit.val(r)); })) {   // only a better path makes it ambiguous
         chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'amb' }); return { kind: 'ambiguous', best: best, chain: chain, col: null };
+      }
+      if (cohort.some(function (r) { return r !== best && crit.val(r) === bv; })) {   // some tie, the rest fall out
+        alive = cohort.filter(function (r) { return crit.val(r) === bv; }); chain.push({ crit: crit, bestVal: bv, cmpVal: bv, status: 'tie' }); continue;
       }
       chain.push({ crit: crit, bestVal: bv, cmpVal: cmp, status: 'win' });
       return { kind: 'decided', best: best, chain: chain, criterion: crit, bestVal: bv, cmpVal: cmp, col: crit.col };
@@ -78,7 +87,15 @@
     });
     return '<div class="xnp-chain">' + parts.join(' → ') + '</div>';
   }
-  function reasonHtml(p, dec) {
+  // The reason the collector stored for the best path (DATA-CONTRACT 4.4 `reason`; `sel_reason` is read as a synonym):
+  // FRR's own selectionReason, or the step the IOS-XE collector worked out from the printed columns. "First path
+  // received" / "Nothing to select" name no step, so they are not used.
+  function storedReason(best) {
+    var r = best && (typeof best.reason === 'string' ? best.reason : (typeof best.sel_reason === 'string' ? best.sel_reason : ''));
+    r = String(r || '').trim();
+    return /^(first path received|nothing to select)$/i.test(r) ? '' : r;
+  }
+  function reasonHtml(p, dec, nos) {
     if (!dec) return '';
     if (dec.kind === 'nobest') return '<div class="xnp-reason xnp-note">◦ ' + esc(p) + ' → no valid path</div>';
     if (dec.kind === 'single') return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → <b>only path</b> (no alternatives)</div>';
@@ -89,17 +106,31 @@
       var cmp = (dec.criterion.key !== 'origin' && dec.cmpVal !== null) ? ' (' + dec.bestVal + ' ' + op + ' ' + dec.cmpVal + ')' : '';
       return '<div class="xnp-reason">★ ' + esc(p) + ' → best path by <b>' + dec.criterion.label + '</b>' + cmp + '</div>' + ch;
     }
-    if (dec.kind === 'medskip') return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → <b>MED not compared</b> (different neighbor AS) — tiebreak by Router ID</div>' + ch;
-    if (dec.kind === 'tie') return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → all attributes equal — <b>tiebreak by Router ID</b></div>' + ch;
-    return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → <b>no single decider</b> — lower-level tiebreak</div>' + ch;
+    // The visible attributes do not decide. A stored reason names the step; without one, the tie is decided by a step
+    // the table does not show (FRR: eBGP > iBGP -> IGP metric -> Older Path -> Router ID) and no single step is asserted.
+    var fr = storedReason(dec.best);
+    var by = fr ? 'best path by <b>' + esc(fr) + '</b>' + (nos === 'ios-xe' ? ' (derived by the collector from the IOS-XE table; IOS-XE reports no reason)' : ' (reported by FRR)')
+      : 'decided by <b>a step the table does not show</b> (eBGP &gt; iBGP → IGP metric → Older Path → Router ID)';
+    if (dec.kind === 'medskip') return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → <b>MED not compared</b> (different neighbor AS) — ' + by + '</div>' + ch;
+    if (dec.kind === 'tie') return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → all visible attributes equal — ' + by + '</div>' + ch;
+    return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → <b>no single decider</b> — ' + (fr ? by : 'a later step not in the data') + '</div>' + ch;
   }
-  function bgpView(routes) {
-    var order = [], groups = {};
-    routes.forEach(function (r) { var p = r.prefix || ''; if (!groups[p]) { groups[p] = []; order.push(p); } groups[p].push(r); });
+  // one destination = the prefix with its length (FRR gives `prefix` without it and `prefixlen` beside it) in one VRF
+  function destOf(r) {
+    var p = String(r.prefix || ''), len = r.prefixlen;
+    if (p.indexOf('/') < 0 && len != null && len !== '') p += '/' + len;
+    var v = r.vrf; v = (v == null || v === '' || v === 'default') ? '' : String(v);
+    return { label: p, vrf: v, key: v + '|' + p };
+  }
+  // bgpView(routes, opts?)  —  opts.nos = the node's OS ('ios-xe' words a stored reason as the collector's, not FRR's)
+  function bgpView(routes, opts) {
+    var nos = opts && opts.nos, order = [], groups = {};
+    routes.forEach(function (r) { var d = destOf(r); if (!groups[d.key]) { groups[d.key] = { dest: d, rows: [] }; order.push(d.key); } groups[d.key].rows.push(r); });
     var html = '<table class="xnp-bgp"><thead><tr><th>St</th><th>Network</th><th>Next-Hop</th><th>Metric</th><th>LocPrf</th><th>Weight</th><th>Path</th></tr></thead><tbody>';
     var reasons = '';
-    order.forEach(function (p) {
-      var grp = groups[p], dec = decide(grp), decCol = (dec && dec.kind === 'decided') ? dec.col : null;
+    order.forEach(function (k) {
+      var grp = groups[k].rows, d = groups[k].dest, dec = decide(grp), decCol = (dec && dec.kind === 'decided') ? dec.col : null;
+      var vrfTag = d.vrf ? ' <span class="xnp-vrf">[vrf ' + esc(d.vrf) + ']</span>' : '';
       grp.forEach(function (rt) {
         var best = isBest(rt), w = (rt.weight === 0 || rt.weight) ? rt.weight : '';
         var nh = rt.next_hop || rt.nexthop || '';
@@ -108,12 +139,12 @@
         function cell(name, val) { return '<td' + (best && decCol === name ? ' class="xnp-decider"' : '') + '>' + val + '</td>'; }
         html += '<tr' + (best ? ' class="xnp-best"' : '') + '>' +
           '<td><span class="xnp-st">' + esc(rt.status || (rt.best ? '*>' : '* ')) + '</span></td>' +
-          '<td>' + esc(rt.prefix || '') + '</td>' +
+          '<td>' + esc(d.label) + vrfTag + '</td>' +
           '<td>' + esc(nh) + '</td>' +
-          cell('metric', esc(rt.metric || '')) + cell('locprf', lpDisp) + cell('weight', esc(w)) + cell('path', esc(pathDisp)) +
+          cell('metric', esc(rt.metric == null || rt.metric === '' ? '' : rt.metric)) + cell('locprf', lpDisp) + cell('weight', esc(w)) + cell('path', esc(pathDisp)) +
           '</tr>';
       });
-      reasons += reasonHtml(p, dec);
+      reasons += reasonHtml(d.label + (d.vrf ? ' [vrf ' + d.vrf + ']' : ''), dec, nos);
     });
     html += '</tbody></table>';
     if (reasons) reasons += '<div class="xnp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED</div>';
@@ -240,7 +271,7 @@
       if (state.protocol !== 'bgp' && !state.bgp_configured) return '';
       return panel('BGP Table', '<div class="xnp-dim">no routes (BGP session not established)</div>');
     }
-    var v = bgpView(routes);
+    var v = bgpView(routes, { nos: state.nos });
     var tgt = state.target_node ? ' (' + state.target_node + ')' : '';
     return panel('BGP Table — show ip bgp' + tgt, v.table) +
       (v.decision ? panel('Best-Path Decision', v.decision) : '');
@@ -272,6 +303,7 @@
       '.xnp-bgp .xnp-st{color:var(--xnp-ok);font-weight:700}' +
       '.xnp-bgp td.xnp-decider{outline:1px solid var(--xnp-decider);outline-offset:-1px;border-radius:2px}' +
       '.xnp-bgp .xnp-default{color:var(--xnp-muted)}' +
+      '.xnp-bgp .xnp-vrf{color:var(--xnp-muted);font-size:10px}' +
       '.xnp-reason{color:var(--xnp-fg);margin-top:4px}.xnp-reason b{color:var(--xnp-decider-strong)}' +
       '.xnp-reason.xnp-note{color:var(--xnp-note)}' +
       '.xnp-chain{margin-top:3px;font-size:10px;color:var(--xnp-muted);line-height:1.6}' +

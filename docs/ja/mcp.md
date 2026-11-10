@@ -358,8 +358,10 @@ ECMP では、`route.nexthops` にすべてのネクストホップが入りま�
 最も長い BGP のプレフィックスに合わせます)・`vrf` (そのプレフィックスが複数の VRF にある時だけ必要)。
 
 答えには、選ばれた経路・ほかの `candidates` とその属性・`deciding_step`・`reason_source` が入ります。`reason_source` は、
-ルータがわけを報告した時 (FRR の `selectionReason`) は `"device"`、network-xray がデータの属性 (Weight・LocPrf・AS-Path・
-Origin・MED) を比べて割り出した時は `"comparison"`、どちらでもない時は `null` で note が付きます。
+ルータがわけを報告した時 (FRR の `selectionReason`) は `"device"`、collector がルータの表示から割り出した時 (Cisco IOS-XE は
+わけを出さない・`why_best_path` と同じわけ) は `"derived"`、network-xray がデータの属性 (Weight・LocPrf・AS-Path・Origin・MED)
+を比べて割り出した時は `"comparison"`、どちらでもない時は `null` で note が付きます。`"device"` と `"derived"` の時は、
+属性を比べた結果を `comparison` に添えます (突き合わせ用)。
 
 ```json
 {"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"why_path","arguments":{"path":"test/fixtures/iosxe-q15","router":"r1","prefix":"8.8.8.0/24"}}}
@@ -380,8 +382,9 @@ Origin・MED) を比べて割り出した時は `"comparison"`、どちらでも
     "best": true
   },
   "candidates": [],
-  "deciding_step": "Only path",
-  "reason_source": "comparison"
+  "deciding_step": "First path received",
+  "reason_source": "derived",
+  "comparison": "Only path"
 }
 ```
 

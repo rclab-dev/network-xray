@@ -228,10 +228,11 @@ function why(states, node, prefix, vrf) {
   if (!best) {
     out.reason = null;
     out.note = 'none of the ' + paths.length + ' path(s) is marked best in the data';
-  } else if (typeof best.reason === 'string' && best.reason) {
-    out.reason = best.reason;
-    out.reason_source = s.nos === 'ios-xe' ? 'bgp_routes[].reason (IOS-XE: derived by the collector from the printed columns)'
-      : !s.nos || s.nos === 'frr' ? 'bgp_routes[].reason (FRR selectionReason)' : 'bgp_routes[].reason (' + s.nos + ' collector)';
+  } else if (storedReason(best)) {
+    var field = typeof best.reason === 'string' && best.reason ? 'reason' : 'sel_reason';   // DATA-CONTRACT 4.4: `reason`; `sel_reason` is read as a synonym
+    out.reason = storedReason(best);
+    out.reason_source = s.nos === 'ios-xe' ? 'bgp_routes[].' + field + ' (IOS-XE: derived by the collector from the printed columns)'
+      : !s.nos || s.nos === 'frr' ? 'bgp_routes[].' + field + ' (FRR selectionReason)' : 'bgp_routes[].' + field + ' (' + s.nos + ' collector)';
   } else {
     out.reason = null;
     out.note = 'the reason is not in the data (no reason stored for the best path)';
@@ -289,10 +290,20 @@ function bgpPrefixFor(s, destination, vrf) {
   return best;
 }
 
+// the reason stored for a best path (DATA-CONTRACT 4.4 `reason`; `sel_reason` is read as a synonym), '' when none
+function storedReason(best) {
+  if (!best) return '';
+  var r = typeof best.reason === 'string' && best.reason ? best.reason : (typeof best.sel_reason === 'string' ? best.sel_reason : '');
+  return String(r).trim();
+}
+
 // router + prefix (or address) -> the selected BGP path, the other candidates, the deciding step and where it came from:
 //   reason_source "device"     - the router reported it (FRR selectionReason, stored as bgp_routes[].reason / sel_reason)
+//   reason_source "derived"    - the collector worked it out from what the router printed (IOS-XE prints no reason; the
+//                                same reason `why` returns), not the router's own word
 //   reason_source "comparison" - network-xray compared the attributes in the data (the Best-Path Decision panel's order)
 //   reason_source null         - neither says (deciding_step null + a note)
+// With "device" / "derived", `comparison` carries what the attribute comparison says when it names a step (a cross-check).
 function whyPath(states, router, destination, vrf) {
   var s = getNode(states, router);
   if (!destination) throw new QueryError('missing prefix');
@@ -338,14 +349,16 @@ function whyPath(states, router, destination, vrf) {
     return r.best && splitPrefix(r.prefix || '').net === splitPrefix(w.prefix).net && routeLen(r) === routeLen({ prefix: w.prefix }) &&
       (r.vrf || 'default') === (w.vrf || 'default');
   })[0];
-  var devReason = best && (s.nos == null || s.nos === 'frr') ? (best.sel_reason || best.reason || '') : '';
+  var stored = storedReason(best);
+  var devReason = (s.nos == null || s.nos === 'frr') ? stored : '';   // FRR reported it
+  var derived = s.nos === 'ios-xe' ? stored : '';                     // the IOS-XE collector worked it out (IOS prints none)
   if (!out.selected) {
     out.deciding_step = null;
     out.reason_source = null;
     out.note = w.note;
-  } else if (typeof devReason === 'string' && devReason) {
-    out.deciding_step = devReason;
-    out.reason_source = 'device';
+  } else if (devReason || derived) {
+    out.deciding_step = devReason || derived;
+    out.reason_source = devReason ? 'device' : 'derived';
     if (inferred) out.comparison = inferred;   // what the attribute comparison says, for a cross-check
   } else if (inferred) {
     out.deciding_step = inferred;

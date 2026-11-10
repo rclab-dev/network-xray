@@ -168,11 +168,14 @@ It depends on the part of the answer:
 - **When the comparison can't decide** (a tie, or MED skipped), the panel shows FRR's own `selectionReason` instead, labelled "(FRR)" (`xrayBgpFrrReason` / `xrayBgpReasonHtml` in `xray-core.js`). FRR's "first path received" is ignored. If nothing decides, the panel says so ("no single decider", or Older Path per RFC 5004).
 - **IOL:** prints no reason, so `clab-iosxe-collect.js` derives one from the printed columns in IOS order. That reason is inferred, and the panel says so ("inferred by network-xray from the IOS-XE table"), not "(FRR)". With a single path the collector writes FRR's wording "First path received" (nothing was compared).
 - **eBGP over iBGP, IGP metric, router-ID, cluster list:** network-xray doesn't compare these, so a path decided by one of them shows FRR's reason (FRR), on IOS-XE the collector's inferred reason, or no single decider.
-- **`xray-query.js why` labels each answer:**
-  - `reason_source: "device"`: the router said so.
+- **`xray-query.js why` labels each answer:** the stored `reason` and a `reason_source` string that says which field it came
+  from and whether FRR reported it or the IOS-XE collector derived it from the printed columns (or `reason: null` and a `note`).
+- **MCP `why_path` labels each answer:**
+  - `reason_source: "device"`: the router said so (FRR `selectionReason`).
+  - `reason_source: "derived"`: the collector worked it out from what the router printed (IOS-XE). The same reason
+    `why_best_path` returns; `comparison` adds what the attribute comparison says.
   - `reason_source: "comparison"`: inferred from the collected attributes.
   - `null`: neither source decided.
-  - For a saved IOS-XE state, `reason_source` says the reason was derived by the collector from the printed columns.
 
 ## 15. What is known to be wrong or missing?
 

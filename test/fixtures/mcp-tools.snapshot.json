@@ -160,7 +160,7 @@
   },
   {
     "name": "why_path",
-    "description": "Why one router selected its BGP path to a prefix: the selected path, the other candidates with their attributes, the deciding step, and where that reason came from: reason_source \"device\" when the router reported it (FRR selectionReason), \"comparison\" when network-xray inferred it by comparing the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or null with a note when neither says. A bare address is matched to the longest BGP prefix that contains it. Read-only.",
+    "description": "Why one router selected its BGP path to a prefix: the selected path, the other candidates with their attributes, the deciding step, and where that reason came from: reason_source \"device\" when the router reported it (FRR selectionReason), \"derived\" when the collector worked it out from what the router printed (Cisco IOS-XE prints no reason), \"comparison\" when network-xray inferred it by comparing the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or null with a note when neither says. A bare address is matched to the longest BGP prefix that contains it. Read-only.",
     "inputSchema": {
       "type": "object",
       "properties": {

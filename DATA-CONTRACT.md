@@ -320,7 +320,7 @@ Each entry in `bgp_routes[]` carries the visible attributes (`prefix`, `next_hop
 | `prefixlen` | number | Prefix length (`24` for `203.0.113.0/24`). FRR gives `prefix` without the length, so the table shows `prefix/prefixlen`; `prefix` itself is kept as FRR gives it (problem checks compare it). プレフィックス長。 |
 | `multipath` | boolean | `true` on every path FRR marks multipath (`=` in `show bgp`): with `maximum-paths`, 2+ equal paths are all installed and share the traffic (ECMP). The best keeps `status` `*>` (the representative, advertised to neighbors); the others get `*=`. Absent when the prefix has no ECMP. multipath = 一緒に転送に使う等価の経路。 |
 | `vrf` | string | The VRF of the route (`show ip bgp vrf all json`), only when it is not the default VRF. The same prefix can be in two VRFs; the DeepDive shows one VRF at a time. VRF 名 (default 以外の時だけ)。 |
-| `sel_reason` | string | **(iii) best-path reason authority.** FRR's own `show bgp … json` `paths[].bestpath.selectionReason` for the best route (e.g. `Local Pref`, `MED`, `Older Path`, `Router ID`). When present it is the FIRST authority for naming the decider. FRR 自身の選択理由。存在すれば決定理由の第一権威。 |
+| `reason` | string | **(iii) best-path reason authority.** The reason stored for the best route: FRR's own `show bgp … json` `paths[].bestpath.selectionReason` (e.g. `Local Pref`, `MED`, `Older Path`, `Router ID`), or, for Cisco IOS-XE (which prints none), the step the collector worked out from the printed columns (`state.nos = 'ios-xe'` tells the readers which). This is the field the collectors write and the panels / `xray-query.js` read; `sel_reason` is read as a synonym. When present it is the FIRST authority for naming the decider. 保存された選択理由 (FRR 自身の selectionReason、IOS-XE では collector が表示の列から割り出した段)。collector が書き、画面と `xray-query.js` が読む欄 (`sel_reason` も同じ物として読む)。存在すれば決定理由の第一権威。 |
 
 **Best-path reason: authority vs. derivation / ベストパス理由の権威と導出.**
 The Best-Path Decision panel names the deciding criterion and renders the full FRR default order
@@ -328,12 +328,14 @@ The Best-Path Decision panel names the deciding criterion and renders the full F
 Router ID → Neighbor IP; \* Older Path only between eBGP paths, skipped with `bgp bestpath compare-routerid` — FRR's
 `bgp_path_info_cmp()`).
 Two data sources are supported, in priority order:
-1. **Authority** — if a route carries `sel_reason`, that FRR string names the decider verbatim whenever the
-   visible attributes do not decide (a backend that runs `show bgp … json` supplies it). When the visible attributes
+1. **Authority** — if a route carries `reason` (or `sel_reason`), that string names the decider verbatim whenever the
+   visible attributes do not decide (a backend that runs `show bgp … json` supplies FRR's; the IOS-XE collector supplies
+   the step it worked out, and the view says it is derived, not reported). When the visible attributes
    do decide within the winner's neighbor AS (e.g. MED), the view names that step: FRR's `selectionReason` is only its
    last pairwise comparison (with three paths it can name a step against another path, e.g. `Older Path`).
-   権威: 可視属性で決まらない時は `sel_reason` (FRR の文字列) をそのまま採用。可視属性で決まる時はその段 (FRR の
-   selectionReason は最後の 1 組の比較の理由に過ぎない)。
+   `First path received` / `Nothing to select` name no step and are not used.
+   権威: 可視属性で決まらない時は `reason` (FRR の文字列・IOS-XE では collector が割り出した段 = 導出と明記) をそのまま採用。
+   可視属性で決まる時はその段 (FRR の selectionReason は最後の 1 組の比較の理由に過ぎない)。
 2. **Derivation** — with no backend (this OSS gallery: recorded demos, `show ip bgp` pastes) the
    decider is derived from the visible attributes in FRR's default comparison order. A pure
    visible-attribute tie is not attributed to one step: the view says FRR decides by a step the table does not

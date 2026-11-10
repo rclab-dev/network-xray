@@ -360,8 +360,10 @@ Input: `path`, `router`, `prefix` (a prefix such as `8.8.8.0/24`, or an address 
 longest BGP prefix that contains it), and `vrf` (needed only when the prefix is in several VRFs).
 
 The answer has the selected path, the other `candidates` with their attributes, the `deciding_step`, and `reason_source`:
-`"device"` when the router reported the reason (FRR `selectionReason`), `"comparison"` when network-xray inferred it by comparing
-the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or `null` with a note when neither says.
+`"device"` when the router reported the reason (FRR `selectionReason`), `"derived"` when the collector worked it out from what
+the router printed (Cisco IOS-XE prints no reason; the same reason `why_best_path` returns), `"comparison"` when network-xray
+inferred it by comparing the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or `null` with a note when neither
+says. With `"device"` or `"derived"`, `comparison` adds what the attribute comparison says, as a cross-check.
 
 ```json
 {"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"why_path","arguments":{"path":"test/fixtures/iosxe-q15","router":"r1","prefix":"8.8.8.0/24"}}}
@@ -382,8 +384,9 @@ the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or `null` wit
     "best": true
   },
   "candidates": [],
-  "deciding_step": "Only path",
-  "reason_source": "comparison"
+  "deciding_step": "First path received",
+  "reason_source": "derived",
+  "comparison": "Only path"
 }
 ```
 

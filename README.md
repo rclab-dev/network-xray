@@ -176,8 +176,9 @@ the limit is the code. The exceptions, all on purpose:
 | Why it won on Cisco IOL | Worked out by the collector from the printed columns (IOS prints no reason); the panel says it is inferred |
 | eBGP over iBGP, IGP metric, router ID, cluster list | Not compared |
 
-The MCP `why_path` tool gives the same split in `reason_source` (`device` / `comparison` / `null`); the CLI `xray-query.js why`
-returns the stored `reason` with a `reason_source` that says where it came from (or `reason: null` and a `note`). More in
+The MCP `why_path` tool gives the same split in `reason_source` (`device` = the router reported it, `derived` = the IOS-XE
+collector worked it out from the printed columns, `comparison` = network-xray compared the attributes, `null`); the CLI
+`xray-query.js why` returns the stored `reason` with a `reason_source` that says where it came from (or `reason: null` and a `note`). More in
 [docs/dev/likely-questions.md](docs/dev/likely-questions.md) (§14).
 
 ## See it
@@ -1089,7 +1090,8 @@ Cisco IOL は `show`・SR Linux は `info from state` / `info from running`・im
 | Cisco IOL でなぜ勝ったか | 表示された列から collector が推し量る (IOS は理由を出さない)。パネルにも推し量った物と出ます |
 | eBGP と iBGP・IGP のメトリック・router ID・cluster list | 比べない |
 
-MCP の `why_path` も同じ区別を `reason_source` (`device` / `comparison` / `null`) で返します。CLI の `xray-query.js why` は、保存された
+MCP の `why_path` も同じ区別を `reason_source` (`device` = ルータが報告・`derived` = IOS-XE の collector が表示の列から割り出した・
+`comparison` = network-xray が属性を比べた・`null`) で返します。CLI の `xray-query.js why` は、保存された
 `reason` と、それがどこから来たかを書いた `reason_source` を返します (理由が無ければ `reason: null` と `note`)。詳しくは
 [docs/dev/likely-questions.md](docs/dev/likely-questions.md) (§14・英語)。
 

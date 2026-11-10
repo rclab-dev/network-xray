@@ -16,7 +16,8 @@
  *   bgp_neighbors  { path, router? }         -> per router: peer, AS, state, prefixes received
  *   route_lookup   { path, router, destination, vrf? } -> longest-prefix match in the collected routing table
  *   why_path       { path, router, prefix, vrf? } -> selected BGP path, other candidates, deciding step and
- *                                               reason_source: "device" (router said) / "comparison" (inferred)
+ *                                               reason_source: "device" (router said) / "derived" (the IOS-XE collector
+ *                                               worked it out from the printed columns) / "comparison" (inferred) / null
  *
  * Every successful call returns the same JSON object as text content and as structuredContent; bad input
  * (missing/unknown file, unknown router, malformed argument) returns isError with {"error": "..."}.
@@ -155,9 +156,10 @@ var TOOLS = [
     name: 'why_path',
     description: 'Why one router selected its BGP path to a prefix: the selected path, the other candidates with their ' +
       'attributes, the deciding step, and where that reason came from: reason_source "device" when the router reported it ' +
-      '(FRR selectionReason), "comparison" when network-xray inferred it by comparing the attributes in the data (Weight, ' +
-      'LocPrf, AS-Path, Origin, MED), or null with a note when neither says. A bare address is matched to the longest BGP ' +
-      'prefix that contains it. Read-only.',
+      '(FRR selectionReason), "derived" when the collector worked it out from what the router printed (Cisco IOS-XE prints ' +
+      'no reason), "comparison" when network-xray inferred it by comparing the attributes in the data (Weight, LocPrf, ' +
+      'AS-Path, Origin, MED), or null with a note when neither says. A bare address is matched to the longest BGP prefix ' +
+      'that contains it. Read-only.',
     inputSchema: {
       type: 'object',
       properties: {
