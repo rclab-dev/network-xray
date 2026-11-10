@@ -141,6 +141,8 @@
     Object.keys(ifs).forEach(function (ifn) {
       var peer = '';
       Object.keys(state).forEach(function (k) { var m = /^(.+)_iface$/.exec(k); if (m && state[k] === ifn) peer = m[1]; });
+      var link = (state.peer_links || []).filter(function (l) { return l.iface === ifn; })[0];
+      if (link) peer = link.peer;
       out[ifn] = { peer: peer, ip: (ifs[ifn] && ifs[ifn].ip) || '' };
     });
     // if the collector gave no interface list, fall back to the out-ifaces seen in the routing table
@@ -295,6 +297,8 @@
     opts = opts || {};
     state = state || {};
     container.classList.add('xnp-root');
+    if (container._xnpNode !== state.target_node) container._xnpSel = '';
+    container._xnpNode = state.target_node;
     var fig = !!opts.figure;
     var sel = fig ? (container._xnpSel || defaultSel(state)) : ((state.route_resolution && state.route_resolution.matched_prefix) || '');
     if (fig) container._xnpSel = sel;

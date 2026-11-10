@@ -52,6 +52,8 @@
   }
   function peerByIface(st, iface) {   // which neighbour sits on this out-iface?  <peer>_iface === iface
     if (!st || !iface) return '';
+    var link = (st.peer_links || []).filter(function (l) { return l.iface === iface; })[0];
+    if (link) return link.peer;
     var hit = '';
     Object.keys(st).forEach(function (k) { var m = /^(.+)_iface$/.exec(k); if (m && st[k] === iface) hit = m[1]; });
     return hit;
@@ -61,14 +63,24 @@
   function deriveEdges(states) {
     var seen = {}, list = [];
     Object.keys(states).forEach(function (n) {
-      var st = states[n];
+      var st = states[n], links = (st.peer_links || []).slice();
       Object.keys(st).forEach(function (k) {
         var m = /^(.+)_iface$/.exec(k); if (!m) return;
-        var peer = m[1], iface = st[k], key = [n, peer].sort().join('|');
-        if (seen[key]) { var e = seen[key]; if (e.a === n) e.ia = iface; else e.ib = iface; return; }
-        var ne = { a: n, b: peer, ia: (n < peer ? iface : ''), ib: (n < peer ? '' : iface), key: key };
-        // store ifaces on the side they belong to regardless of a/b order
-        if (n === ne.a) ne.ia = iface; else ne.ib = iface;
+        if (!links.some(function (l) { return l.iface === st[k]; })) links.push({ peer: m[1], iface: st[k] });
+      });
+      links.forEach(function (l) {
+        var peer = l.peer, iface = l.iface, remote = states[peer];
+        var reverse = remote && (remote.peer_links || []).filter(function (r) { return r.peer === n; });
+        var ri = l.peerIface || l.peer_iface || '';
+        if (!ri && reverse) {
+          var match = reverse.filter(function (r) { return r.peerIface === iface || r.peer_iface === iface || r.iface === iface; })[0];
+          if (!match) match = reverse[links.filter(function (r) { return r.peer === peer; }).indexOf(l)];
+          if (match) ri = match.iface;
+        }
+        if (!ri && remote) ri = remote[n + '_iface'] || '';
+        var key = (n < peer ? [n, iface, peer, ri] : [peer, ri, n, iface]).join('|');
+        if (seen[key]) return;
+        var ne = { a: n, b: peer, ia: iface, ib: ri, key: key };
         seen[key] = ne; list.push(ne);
       });
     });
@@ -108,7 +120,7 @@
 
   // ---------- trace a prefix hop-by-hop from a source node ----------
   function trace(states, positions, source, prefix) {
-    var hops = [], visited = {}, cur = source, guard = 0;
+    var hops = [], visited = Object.create(null), cur = source, guard = 0;
     while (cur && guard++ < 64) {
       if (visited[cur]) { hops.push({ node: cur, loop: true }); break; }
       visited[cur] = 1;

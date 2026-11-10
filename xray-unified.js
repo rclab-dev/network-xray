@@ -252,6 +252,8 @@
     Object.keys(ifs).forEach(function (ifn) {
       if (ifn === 'lo') return;
       var peer = ''; Object.keys(state).forEach(function (k) { var m = /^(.+)_iface$/.exec(k); if (m && state[k] === ifn) peer = m[1]; });
+      var link = (state.peer_links || []).filter(function (l) { return l.iface === ifn; })[0];
+      if (link) peer = link.peer;
       var proto = (peer && state[peer + '_proto']) || state.protocol || 'ospf';
       var up = peer && state[peer + '_has_full'] != null ? !!state[peer + '_has_full'] : true;
       links.push({ iface: ifn, peer: peer, protocols: [{ proto: proto === 'bgp' ? 'bgp' : 'ospf', up: up }] });
