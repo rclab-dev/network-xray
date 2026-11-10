@@ -6,9 +6,9 @@ Pass this directly to `iosxePartsToState(parts, args, buildState)`.
 `args.mgmtIp` filters the management address, as in the text reader. Text command
 values in `args` are never used to fill missing JSON. Input JSON is not mutated.
 
-The q5 captures validate default-VRF IPv4 only. **real** means the key occurs in
+The q5 (OSPF) and q21 (BGP) captures validate default-VRF IPv4 only. **real** means the key occurs in
 these fixtures, not that every possible value or IOS release has been tested.
-**guess** means an implemented candidate schema with no q5 evidence; obtain a
+**guess** means an implemented candidate schema with no q5 / q21 evidence; obtain a
 real capture before relying on these branches. No pyATS code or runtime is used.
 
 Paths below use these abbreviations:
@@ -19,8 +19,8 @@ Paths below use these abbreviations:
 - `M` = `<iface>` (`show_ip_interface`).
 - `R` = `vrf.default.address_family.ipv4.routes.<prefix>` (`show_ip_route`).
 - `N` = `vrf.default.instance.<pid>.areas.<area>.interfaces.<iface>.neighbors.<rid>` (`show_ip_ospf_neighbor`, guess).
-- `S` = `vrf.default` (`show_ip_bgp_summary`, guess).
-- `G` = `vrf.default.address_family.<af>.routes.<prefix>.index.<index>` (`show_ip_bgp`, guess).
+- `S` = `vrf.default.neighbor.<ip>.address_family.""` (`show_ip_bgp_summary`; the top level also has `bgp_id`).
+- `G` = `vrf.default.address_family."".routes.<prefix>.index.<index>` (`show_ip_bgp`).
 
 | network-xray part field | <- Genie key path (command) | real / guess |
 | --- | --- | --- |
@@ -53,13 +53,13 @@ Paths below use these abbreviations:
 | p.routes distance, metric | R.route_preference, metric | guess |
 | p.routes nexthops[] for routed paths | R.next_hop.next_hop_list.*.{next_hop,outgoing_interface}; connected:false, fib:true | guess |
 | p.ospfNei list, byIface | N key = rid, N.address, N.state; iface from parent; IOS state/role normalization reused | guess (both captures empty) |
-| p.bgpSum routerId, localAs | S.router_id, S.local_as (summary localAs string) | guess |
-| p.bgpSum list, byIp | S.neighbor.<ip>.remote_as; address_family.*.{state_pfxrcd,up_down}; localAs numeric per neighbor | guess |
-| p.bgpSum state, established, pfxRcd | Numeric state_pfxrcd means Established; otherwise normBgpState | guess |
-| p.bgpSum ibgp, state_raw, admin_down, max_prefix | AS equality / normBgpState as in IOS reader | guess |
-| p.bgpRoutes prefix, nextHop | Prefix key, G.next_hop | guess |
-| p.bgpRoutes best, valid, ibgp, status_raw | G.status_codes (`>`, `*`, `i`) | guess |
-| p.bgpRoutes as_path, local_pref, weight, metric, origin | G.path, localpref, weight, metric, origin (`i/e/?`) | guess |
+| p.bgpSum routerId, localAs | S.route_identifier, S.local_as (top-level bgp_id = local AS) | real (q21) |
+| p.bgpSum list, byIp | neighbor key = ip; S.as = remote AS; S.{state_pfxrcd, up_down} | real (q21) |
+| p.bgpSum state, established, pfxRcd | Numeric state_pfxrcd means Established; otherwise normBgpState | real (Established only) |
+| p.bgpSum ibgp, state_raw, admin_down, max_prefix | AS equality / normBgpState as in IOS reader | real (eBGP only) |
+| p.bgpRoutes prefix, nextHop | Prefix key, G.next_hop | real (q21) |
+| p.bgpRoutes best, valid, ibgp, status_raw | G.status_codes (`>`, `*`, `i`) | real (q21: `*>`, `*`) |
+| p.bgpRoutes as_path, local_pref, weight, metric, origin | G.path, localpref (absent when not printed), weight, metric, origin_codes (`i/e/?`) | real (q21) |
 | p.bgpRoutes reason | Empty initially; iosxePartsToState derives reason | derived |
 | err | null; no traffic JSON mapping evidenced | unavailable |
 
@@ -72,7 +72,7 @@ Paths below use these abbreviations:
 | r2 OSPF detailed parameters | No helloKnown, dead, netType, priority, auth, passiveKnown fields are added to brief parts; Ethernet0/1 retains the brief-only parts Hello default 10 rather than text's 5. Final state hello/dead/network_type/priority/passive/auth are null; the 5/20 mismatch cannot be diagnosed from this JSON. |
 | r2 interface detail annotations | No ospf_area, ospf_hello, ospf_dead, ospf_net_type annotations from det. Area/IP/cost/counts in ospfIf still come from brief. |
 | Passive without evidence | Genie's initialized false alone is not evidence. Require explicit true or a running hello_timer. |
-| BGP / nonempty neighbors / routed next hops | Absent in q5; candidate mappings above are guesses. Empty neighbor JSON legitimately yields empty lists. |
+| Nonempty OSPF neighbors / routed next hops / iBGP / non-Established BGP | Not in q5 or q21; those candidate mappings are guesses. Empty neighbor JSON legitimately yields empty lists. |
 | Bridge-domain, OSPF traffic, unnumbered, BGP multipath, route subtypes | No captures; no mapping implemented. |
 | Protocols and VRF discovery | These do not feed text parts. Configuration flags remain caller args; only default VRF IPv4 is read. |
 

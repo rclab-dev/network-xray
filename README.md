@@ -849,6 +849,32 @@ More detail (which files `path` can point at, a lab running with `xray.sh`, othe
 Then ask, for example, "use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15" or "why does r1 pick
 its path to 8.8.8.0/24?" or "which route does r1 use for 8.8.8.8?". Relative paths are resolved from the server's working directory, so absolute paths are safest.
 
+### From Cisco pyATS / Genie output
+
+If you already collect `show` output with Cisco pyATS, network-xray can read Genie's parsed JSON instead of logging
+in to the routers itself. One folder per router, one file per command (`genie_` + the command with `_` for spaces):
+
+```
+<dir>/r1/genie_show_ip_bgp.json
+<dir>/r1/genie_show_ip_route.json
+<dir>/r2/genie_show_ip_bgp.json
+```
+
+It reads `show ip ospf neighbor`, `show ip ospf interface` (and `brief`), `show ip interface` (and `brief`), `show ip route`,
+`show ip bgp summary`, `show ip bgp` and `show ip protocols` (IOS-XE). The same folder works as `path` for every
+MCP tool and for `xray-query.js`:
+
+```
+node scripts/xray-query.js why test/fixtures/genie-iosxe/q21 r1 8.8.8.0/24
+node genie-to-xray.js test/fixtures/genie-iosxe/q21 --out /tmp/q21-genie     # writes xray-states.js for the graph pages
+```
+
+Links between routers come from `--topo <lab.clab.yml>`, else from interfaces in the same subnet (addresses in
+`--mgmt-subnet`, default containerlab's 172.20.20.0/24, are left out). A value Genie does not give stays unknown (`?`):
+the BGP reason is derived from the printed columns, as for IOS-XE, and marked as derived. Checked against IOS-XE
+(Cisco IOL 17.18.02) captures: OSPF and BGP, default VRF, IPv4. No pyATS code is included or needed; the key map is
+in [docs/dev/genie-mapping.md](docs/dev/genie-mapping.md).
+
 ## Embed the DeepDive in your own tool
 
 X-Ray's per-node **DeepDive** is a self-contained component you can drop into another UI —
@@ -1626,6 +1652,25 @@ Claude Code では `claude mcp add network-xray -- node /path/to/network-xray/sc
 詳しく (`path` に渡せるファイル・`xray.sh` で動かしたラボ・ほかのクライアント): [docs/ja/mcp.md](docs/ja/mcp.md)。
 
 例:「use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15」「r1 はなぜ 8.8.8.0/24 にその経路を選ぶ?」「r1 は 8.8.8.8 にどの経路を使う?」。相対パスはサーバの作業ディレクトリから解決するので、絶対パスが確実です。
+
+### Cisco pyATS / Genie の出力から
+
+Cisco pyATS で `show` の出力を集めているなら、network-xray は自分でルータに入る代わりに Genie の parse の JSON を読めます。ルータごとに 1 つのフォルダ、コマンドごとに 1 つのファイル (`genie_` + 空白を `_` にしたコマンド):
+
+```
+<dir>/r1/genie_show_ip_bgp.json
+<dir>/r1/genie_show_ip_route.json
+<dir>/r2/genie_show_ip_bgp.json
+```
+
+読むのは `show ip ospf neighbor`・`show ip ospf interface` (と `brief`)・`show ip interface` (と `brief`)・`show ip route`・`show ip bgp summary`・`show ip bgp`・`show ip protocols` (IOS-XE)。同じフォルダを MCP の道具と `xray-query.js` の `path` にそのまま渡せます:
+
+```
+node scripts/xray-query.js why test/fixtures/genie-iosxe/q21 r1 8.8.8.0/24
+node genie-to-xray.js test/fixtures/genie-iosxe/q21 --out /tmp/q21-genie     # グラフの頁用の xray-states.js を書く
+```
+
+ルータ同士のリンクは `--topo <lab.clab.yml>` から、無ければ同じサブネットの interface から決めます (`--mgmt-subnet` のアドレス・既定は containerlab の 172.20.20.0/24 は除く)。Genie が出さない値は分からないまま (`?`) です: BGP の理由は IOS-XE と同じく表示の列から導き、導いた事を印で示します。IOS-XE (Cisco IOL 17.18.02) の取り込みで確かめた範囲 = OSPF と BGP・既定の VRF・IPv4。pyATS のコードは含まず、要りません。鍵の対応表は [docs/dev/genie-mapping.md](docs/dev/genie-mapping.md)。
 
 ## 自分のツールに DeepDive を埋め込む
 
