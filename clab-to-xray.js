@@ -30,8 +30,8 @@ const fs = (typeof require === 'function') ? require('fs') : null;
 
 /* ----------------------------------------------------------------------------
  * 1. Minimal YAML loader (for the clab topology subset only)
- *    supported     : comments(#) / indented maps / "- " lists / inline flow [a, b] / quotes
- *    not supported : anchors, multi-line scalars, complex nested flow, etc. -> use --json in that case
+ *    supported     : comments(#) / indented maps / "- " lists / inline flow [a, b] and {k: v} (nested) / quotes
+ *    not supported : anchors, multi-line scalars, etc. -> use --json in that case
  * -------------------------------------------------------------------------- */
 function parseScalar(s) {
   s = s.trim();
@@ -47,8 +47,55 @@ function parseScalar(s) {
   return s;
 }
 
+// a map key stays a string (a node named 001 or 1.10 must not become the number 1 / 1.1)
+function parseKey(s) {
+  s = s.trim();
+  if ((s[0] === '"' && s.endsWith('"') && s.length > 1) || (s[0] === "'" && s.endsWith("'") && s.length > 1)) return s.slice(1, -1);
+  return s;
+}
+
+// Split the inside of an inline [..] or {..} at its own commas (not inside quotes or a nested [..] / {..})
+function splitFlow(inner) {
+  const out = [];
+  let buf = '', q = null, depth = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (q) { buf += ch; if (ch === '\\' && q === '"' && i + 1 < inner.length) { buf += inner[++i]; continue; } if (ch === q) q = null; continue; }
+    if (ch === '"' || ch === "'") { q = ch; buf += ch; continue; }
+    if (ch === '[' || ch === '{') depth++;
+    if (ch === ']' || ch === '}') depth--;
+    if (ch === ',' && depth === 0) { out.push(buf); buf = ''; continue; }
+    buf += ch;
+  }
+  if (q || depth !== 0) throw new Error('unbalanced inline value');
+  if (buf.trim() !== '') out.push(buf);
+  return out;
+}
+
+// An inline value: [a, b], {k: v, ...} (nested), or a scalar
+function parseFlowValue(s) {
+  s = s.trim();
+  if (s[0] === '[' && s.endsWith(']')) {
+    return splitFlow(s.slice(1, -1)).filter((x) => x.trim() !== '').map(parseFlowValue);
+  }
+  if (s[0] === '{' && s.endsWith('}')) {
+    const obj = {};
+    for (const ent of splitFlow(s.slice(1, -1))) {
+      if (ent.trim() === '') continue;
+      const m = ent.match(/^\s*("[^"]*"|'[^']*'|[^:"'{[]+?)\s*:(?:\s+|$)([\s\S]*)$/);
+      if (!m) throw new Error('inline map entry without key: ' + ent.trim());
+      obj[parseKey(m[1])] = m[2].trim() === '' ? null : parseFlowValue(m[2]);
+    }
+    return obj;
+  }
+  if (s[0] === '"' && s.endsWith('"') && s.length > 1) return s.slice(1, -1).replace(/\\(["\\])/g, '$1');
+  return parseScalar(s);
+}
+
 function parseFlow(s) {
-  // Split an inline list [a, b, "c:eth1"] (assumes no nesting)
+  // An inline list [a, b, "c:eth1"]; nested inline maps / lists ([{node: r1, interface: eth1}, ...]) are read too.
+  // If it cannot be read (an odd quote), fall back to the plain split this loader always used.
+  try { return parseFlowValue(s); } catch (e) { /* fall through */ }
   const inner = s.trim().replace(/^\[/, '').replace(/\]$/, '');
   if (inner.trim() === '') return [];
   const out = [];
@@ -61,6 +108,12 @@ function parseFlow(s) {
   }
   if (buf.trim() !== '') out.push(parseScalar(buf));
   return out;
+}
+
+// A value after "key:" — an inline map {..} is read as a map (kind / labels / endpoints inside it are kept);
+// one that cannot be read stays the string it was before.
+function parseInlineMap(s) {
+  try { return parseFlowValue(s); } catch (e) { return parseScalar(s); }
 }
 
 function tokenize(src) {
@@ -110,7 +163,7 @@ function parseYaml(src) {
       if (ln.text.startsWith('- ')) break;
       const m = ln.text.match(/^([^:]+):\s*(.*)$/);
       if (!m) throw new Error('YAML parse error (expected key:): ' + ln.raw);
-      const key = parseScalar(m[1]);
+      const key = parseKey(m[1]);
       const rest = m[2];
       pos++;
       if (rest === '') {
@@ -119,6 +172,8 @@ function parseYaml(src) {
         obj[key] = child;
       } else if (rest.trim().startsWith('[')) {
         obj[key] = parseFlow(rest);
+      } else if (rest.trim().startsWith('{')) {
+        obj[key] = parseInlineMap(rest);
       } else {
         obj[key] = parseScalar(rest);
       }
@@ -139,7 +194,7 @@ function parseYaml(src) {
         // "- key: val" = a list item that is a map -> build the map starting from this line
         // virtually split the line: build the map this item points to
         const item = {};
-        const key = parseScalar(m[1]);
+        const key = parseKey(m[1]);
         const rest = m[2];
         const childIndent = ln.indent + 2;
         pos++;
@@ -147,6 +202,8 @@ function parseYaml(src) {
           item[key] = (pos < lines.length && lines[pos].indent >= childIndent) ? parseBlock(childIndent) : null;
         } else if (rest.trim().startsWith('[')) {
           item[key] = parseFlow(rest);
+        } else if (rest.trim().startsWith('{')) {
+          item[key] = parseInlineMap(rest);
         } else {
           item[key] = parseScalar(rest);
         }
@@ -154,13 +211,15 @@ function parseYaml(src) {
         while (pos < lines.length && lines[pos].indent === childIndent && !lines[pos].text.startsWith('- ')) {
           const m2 = lines[pos].text.match(/^([^:]+):\s*(.*)$/);
           if (!m2) break;
-          const k2 = parseScalar(m2[1]);
+          const k2 = parseKey(m2[1]);
           const r2 = m2[2];
           pos++;
           if (r2 === '') {
             item[k2] = (pos < lines.length && lines[pos].indent > childIndent) ? parseBlock(childIndent + 1) : null;
           } else if (r2.trim().startsWith('[')) {
             item[k2] = parseFlow(r2);
+          } else if (r2.trim().startsWith('{')) {
+            item[k2] = parseInlineMap(r2);
           } else {
             item[k2] = parseScalar(r2);
           }
@@ -186,28 +245,40 @@ function extractGraph(clab) {
   const nodesRaw = topo.nodes || {};
   const linksRaw = topo.links || [];
 
-  // nodes: clab is a map {name: {kind, image, ...}}
+  // nodes: clab is a map {name: {kind, image, ...}}. kind comes from the node, else its group, else topology defaults.
+  const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+  const groups = obj(topo.groups), defaults = obj(topo.defaults);
   const nodes = Object.keys(nodesRaw).map((name) => {
-    const def = nodesRaw[name] || {};
-    return { name, kind: def.kind || '', image: def.image || '' };
+    const def = obj(nodesRaw[name]);
+    const grp = obj(groups[def.group]);
+    return { name, kind: def.kind || grp.kind || defaults.kind || '', image: def.image || grp.image || defaults.image || '' };
   });
+  const nodeSet = new Set(nodes.map((n) => n.name));
 
   // links: each item is {endpoints: ["r1:eth1", "r2:eth1"]} (the newer endpoints-map form is also handled)
-  const edges = [];
+  //  - an end on the host / mgmt-net / macvlan is not a link between two nodes: left out (dropped.special)
+  //  - a link from a node to itself: left out (dropped.self)
+  //  - an end that is not a node of the topology (a typo): left out (dropped.unknown; convert reports it)
+  const edges = [], links = [], dropped = { special: [], self: [], unknown: [] };
   for (const l of linksRaw) {
     let eps = l && l.endpoints;
-    if (!eps) continue;
+    if (!Array.isArray(eps)) continue;
     // endpoints as an array of ["node:iface", ...]
-    const pair = eps.map((e) => {
-      if (typeof e === 'string') return e.split(':')[0];
-      if (e && e.node) return e.node; // newer form {node, interface}
-      return String(e);
+    const ends = eps.map((e) => {
+      if (typeof e === 'string') { const i = e.indexOf(':'); return i < 0 ? [e, ''] : [e.slice(0, i), e.slice(i + 1)]; }
+      if (e && e.node) return [String(e.node), e.interface != null ? String(e.interface) : '']; // newer form {node, interface}
+      return [String(e), ''];
     });
-    if (pair.length === 2 && pair[0] && pair[1]) {
-      edges.push([pair[0], pair[1]]);
-    }
+    const pair = ends.map((x) => x[0]);
+    if (!(pair.length === 2 && pair[0] && pair[1])) continue;
+    const label = ends.map((x) => x[0] + (x[1] ? ':' + x[1] : '')).join(' - ');
+    if (nodeSet.size && pair.some((p) => /^(host|mgmt-net|macvlan)$/.test(p) && !nodeSet.has(p))) { dropped.special.push(label); continue; }
+    if (pair[0] === pair[1]) { dropped.self.push(label); continue; }
+    if (nodeSet.size && pair.some((p) => !nodeSet.has(p))) { dropped.unknown.push(label); continue; }
+    edges.push([pair[0], pair[1]]);
+    links.push({ a: ends[0][0], aIf: ends[0][1], b: ends[1][0], bIf: ends[1][1] });
   }
-  return { name: clab.name || 'clab', nodes, edges };
+  return { name: clab.name || 'clab', nodes, edges, links, dropped };
 }
 
 /* ----------------------------------------------------------------------------
@@ -358,25 +429,20 @@ function buildConfig(graph, cls, opts) {
 /* ----------------------------------------------------------------------------
  * 4a-bis. positions: turn containerlab graph-posX/posY labels into X-Ray positions.
  *   XrayUnified.renderSvg takes positions:{name:{x,y}} and computes per-link angles internally via atan2
- *   (real-angle radial). Note the raw-regex direct read: parseYaml does not structurally parse
- *   flow-style inline maps (labels:{graph-posX:"300"}), so we read positions from the raw text with a
- *   block-scoped regex to support both flow and block styles (label bleed is prevented by limiting the
- *   window to the node's own block). Nodes without graph-posX/posY are tiered by graph-level (spine top / leaf bottom).
+ *   (real-angle radial). The labels are read from each node's own parsed definition (block or inline
+ *   {labels: {graph-posX: "300"}}), so one node's labels never land on another node.
+ *   Nodes without graph-posX/posY are tiered by graph-level (spine top / leaf bottom).
  * -------------------------------------------------------------------------- */
-function extractPositions(text) {
-  var adj = {}, re = /endpoints:\s*\[\s*"([^:"]+):([^"\]]+)"\s*,\s*"([^:"]+):([^"\]]+)"\s*\]/g, m;
-  while ((m = re.exec(text))) { adj[m[1]] = 1; adj[m[3]] = 1; }
-  var nodes = Object.keys(adj);
-  function block(name) {
-    var s = text.search(new RegExp('(^|\\n)\\s*' + name + ':'));
-    if (s < 0) return '';
-    var rest = text.slice(s + 1);
-    var e = rest.search(/\n\s{2,}[A-Za-z0-9_-]+:\s*[\{&]|\n\s*links:/);
-    return e < 0 ? rest : rest.slice(0, e + 1);
-  }
+function extractPositions(clab, graph) {
+  var nodesRaw = (clab && clab.topology && clab.topology.nodes) || {};
+  var seen = {}, nodes = [];
+  graph.edges.forEach(function (e) { e.forEach(function (n) { if (!seen[n]) { seen[n] = 1; nodes.push(n); } }); });
   function num(name, key) {
-    var mm = block(name).match(new RegExp(key + ':\\s*"?(-?[0-9]+(?:\\.[0-9]+)?)"?'));
-    return mm ? parseFloat(mm[1]) : null;
+    var def = nodesRaw[name], lb = def && typeof def === 'object' && def.labels;
+    var v = (lb && typeof lb === 'object') ? lb[key] : null;
+    if (v === null || v === undefined || v === '') return null;
+    var f = parseFloat(String(v));
+    return Number.isFinite(f) ? f : null;
   }
   var pos = {}, level = {}, anyHint = false;
   nodes.forEach(function (n) {
@@ -404,16 +470,33 @@ function convert(text, opts) {
   opts = opts || {};
   var clab = (opts.json) ? JSON.parse(text) : parseYaml(text);
   var graph = extractGraph(clab);
+  var names = function () { return graph.nodes.map(function (n) { return n.name; }); };
+  var linkList = function () { return dedupeEdges(graph.edges).map(function (e) { return e.join('-'); }); };
+  // a link to a name that is not a node (a typo) would be drawn as a link to nowhere: stop and say which one
+  if (graph.dropped && graph.dropped.unknown.length) {
+    return { ok: false, reason: 'link end is not a node of this topology: ' + graph.dropped.unknown.join(', '),
+      nodes: names(), links: linkList() };
+  }
+  // a bridge joins several nodes on one LAN; this converter draws point-to-point links only
+  var bridges = graph.nodes.filter(function (n) { return /^(bridge|ovs-bridge)$/i.test(n.kind || ''); }).map(function (n) { return n.name; });
+  if (bridges.length) {
+    return { ok: false, reason: 'unsupported: ' + bridges.join(', ') + ' (kind bridge) joins several nodes on one LAN; only point-to-point links are drawn here',
+      nodes: names(), links: linkList() };
+  }
   var cls = classify(graph, opts);
   if (!cls.shape) {
-    return { ok: false, reason: cls.reason,
-      nodes: graph.nodes.map(function (n) { return n.name; }),
-      links: dedupeEdges(graph.edges).map(function (e) { return e.join('-'); }) };
+    return { ok: false, reason: cls.reason, nodes: names(), links: linkList() };
   }
   var config = buildConfig(graph, cls, opts);
+  // every link between two nodes with its interfaces (two links to the same peer are both here; the shape counts one)
+  if (graph.links) config.links = graph.links;
+  var extra = graph.edges.length - cls.edges.length;
+  if (extra > 0) config._warnings.push(extra + ' more link(s) between the same two nodes: drawn as one (all links are in config.links).');
+  if (graph.dropped && graph.dropped.special.length) config._warnings.push('left out (not a link between two nodes): ' + graph.dropped.special.join(', '));
+  if (graph.dropped && graph.dropped.self.length) config._warnings.push('left out (a node linked to itself): ' + graph.dropped.self.join(', '));
   // graph-posX/posY (or a graph-level tier fallback) -> attach positions:{name:{x,y}} to the config.
   // XrayUnified.renderSvg reads it (harmless: the legacy engine ignores it; it is the basis for real-angle radial).
-  var positions = (opts.json) ? {} : extractPositions(text);   // JSON paste is outside the yaml regex -> {} (renderer fan-spreads)
+  var positions = (opts.json) ? {} : extractPositions(clab, graph);   // JSON paste: none (the paste page reads graph-pos from a JSON export itself)
   if (Object.keys(positions).length) config.positions = positions;
   return { ok: true, config: config };
 }
@@ -444,20 +527,16 @@ function main(argv) {
   if (!file) { process.stderr.write(usage); process.exit(1); }
 
   const src = fs.readFileSync(file, 'utf8');
-  let clab;
-  if (opts.json || file.endsWith('.json')) clab = JSON.parse(src);
-  else clab = parseYaml(src);
-
-  const graph = extractGraph(clab);
-  const cls = classify(graph, opts);
-  if (!cls.shape) {
-    process.stderr.write('[UNSUPPORTED] ' + cls.reason + '\n');
-    process.stderr.write('  nodes: ' + graph.nodes.map((n) => n.name).join(', ') + '\n');
-    process.stderr.write('  links: ' + dedupeEdges(graph.edges).map((e) => e.join('-')).join(', ') + '\n');
+  if (file.endsWith('.json')) opts.json = true;
+  // the same checks and output as the browser (convert)
+  const r = convert(src, opts);
+  if (!r.ok) {
+    process.stderr.write('[UNSUPPORTED] ' + r.reason + '\n');
+    process.stderr.write('  nodes: ' + r.nodes.join(', ') + '\n');
+    process.stderr.write('  links: ' + r.links.join(', ') + '\n');
     process.exit(2);
   }
-  const config = buildConfig(graph, cls, opts);
-  process.stdout.write(JSON.stringify(config, null, 2) + '\n');
+  process.stdout.write(JSON.stringify(r.config, null, 2) + '\n');
 }
 
 var _api = { parseYaml: parseYaml, extractGraph: extractGraph, classify: classify, buildConfig: buildConfig, convert: convert };

@@ -219,3 +219,88 @@ test('CLI: usage, unsupported topology exit code, and JSON output', (t) => {
   assert.strictEqual(rb.status, 2);
   assert.match(rb.stderr, /\[UNSUPPORTED\]/);
 });
+
+// ---- links and labels that used to give a wrong picture without a word ----
+function y3(links, extra) {
+  return 'name: t\ntopology:\n' + (extra || '') + '  nodes:\n    r1: {kind: linux}\n    r2: {kind: linux}\n    r3: {kind: linux}\n  links:\n' +
+    links.map((l) => '    - endpoints: ' + l + '\n').join('');
+}
+
+test('convert: an end on host / mgmt-net / macvlan is left out (with a warning), not counted as a link', () => {
+  const r = c.convert(y3(['["r1:eth1", "r2:eth1"]', '["r2:eth2", "r3:eth1"]', '["r3:eth9", "host:r3-eth9"]']));
+  assert.strictEqual(r.config.topology_type, 'linear_3node');   // not a triangle
+  assert.ok(r.config.networks.every((n) => n.members.every((m) => ['r1', 'r2', 'r3'].includes(m.node))));
+  assert.ok(r.config._warnings.some((w) => /left out \(not a link between two nodes\): r3:eth9 - host:r3-eth9/.test(w)));
+  // r3 with only a mgmt-net end has no link: not drawn as the end of a chain
+  const m = c.convert(y3(['["r1:eth1", "r2:eth1"]', '["r3:eth1", "mgmt-net:r3-eth1"]']));
+  assert.strictEqual(m.ok, false);
+});
+
+test('convert: a link end that is not a node (a typo) stops with its name; a self link is left out', () => {
+  const r = c.convert(y3(['["r1:eth1", "r2:eth1"]', '["r2:eth2", "r3:eth1"]', '["r1:eth2", "rr3:eth2"]']));
+  assert.strictEqual(r.ok, false);
+  assert.match(r.reason, /not a node of this topology: r1:eth2 - rr3:eth2/);
+  const s = c.convert(y3(['["r1:eth1", "r1:eth2"]', '["r1:eth3", "r2:eth1"]', '["r2:eth2", "r3:eth1"]']));
+  assert.strictEqual(s.config.topology_type, 'linear_3node');   // not a triangle
+  assert.ok(s.config._warnings.some((w) => /a node linked to itself/.test(w)));
+});
+
+test('convert: two links between the same nodes = one in the shape, both in config.links, and a warning', () => {
+  const r = c.convert(y3(['["r1:eth1", "r2:eth1"]', '["r1:eth2", "r2:eth2"]', '["r2:eth3", "r3:eth1"]']));
+  assert.strictEqual(r.config.topology_type, 'linear_3node');
+  assert.deepStrictEqual(r.config.links, [
+    { a: 'r1', aIf: 'eth1', b: 'r2', bIf: 'eth1' }, { a: 'r1', aIf: 'eth2', b: 'r2', bIf: 'eth2' }, { a: 'r2', aIf: 'eth3', b: 'r3', bIf: 'eth1' }]);
+  assert.ok(r.config._warnings.some((w) => /^1 more link\(s\) between the same two nodes/.test(w)));
+});
+
+test('convert: inline maps are read (endpoints as {node, interface}, kind / labels inside {..})', () => {
+  const r = c.convert(y3(['["r1:eth1", "r2:eth1"]', '["r2:eth2", "r3:eth1"]', '[{node: r1, interface: eth2}, {node: r3, interface: eth2}]']));
+  assert.strictEqual(r.config.topology_type, 'triangle');
+  assert.deepStrictEqual(r.config.links[2], { a: 'r1', aIf: 'eth2', b: 'r3', bIf: 'eth2' });
+  const k = c.convert('name: t\ntopology:\n  nodes:\n    r1: {kind: linux}\n    pc1: {kind: host, image: alpine}\n  links:\n    - endpoints: ["r1:eth1", "pc1:eth1"]\n');
+  assert.strictEqual(k.config.nodes.find((n) => n.id === 'pc1').type, 'server');   // from kind, not from the name
+  // a node line with escaped quotes inside an exec string still reads (examples/q21 style)
+  const q = c.parseYaml('topology:\n  nodes:\n    r1: { kind: linux, exec: ["sh -c \'vtysh -c \\"show ip bgp\\"\'"] }\n');
+  assert.strictEqual(q.topology.nodes.r1.kind, 'linux');
+});
+
+test('convert: kind from topology defaults / groups; node names stay strings (001 is not 1)', () => {
+  const y = 'name: t\ntopology:\n  defaults:\n    kind: linux\n  groups:\n    hosts:\n      kind: host\n  nodes:\n    001: {}\n    r2: {}\n    pc1: {group: hosts}\n' +
+    '  links:\n    - endpoints: ["001:eth1", "r2:eth1"]\n    - endpoints: ["pc1:eth1", "r2:eth2"]\n';
+  const g = c.extractGraph(c.parseYaml(y));
+  assert.deepStrictEqual(g.nodes.map((n) => n.name + '=' + n.kind), ['001=linux', 'r2=linux', 'pc1=host']);
+  const r = c.convert(y);
+  assert.strictEqual(r.config.topology_type, 'linear_3node');
+  assert.deepStrictEqual(r.config.nodes.map((n) => n.id), ['pc1', 'r2', '001']);   // the host end first
+});
+
+test('convert: a bridge (kind bridge) is reported as unsupported, not drawn as a router', () => {
+  const r = c.convert('name: t\ntopology:\n  nodes:\n    r1: {kind: linux}\n    r2: {kind: linux}\n    br1: {kind: bridge}\n  links:\n' +
+    '    - endpoints: ["r1:eth1", "br1:eth1"]\n    - endpoints: ["r2:eth1", "br1:eth2"]\n');
+  assert.strictEqual(r.ok, false);
+  assert.match(r.reason, /br1 \(kind bridge\)/);
+});
+
+test('convert: graph-pos labels of one node do not land on another', () => {
+  const block = 'name: t\ntopology:\n  nodes:\n    r1:\n      kind: linux\n    r2:\n      kind: linux\n      labels:\n        graph-posX: "300"\n        graph-posY: "100"\n' +
+    '  links:\n    - endpoints: ["r1:eth1", "r2:eth1"]\n';
+  const r = c.convert(block);
+  assert.deepStrictEqual(r.config.positions.r2, { x: 300, y: 100 });
+  assert.notDeepStrictEqual(r.config.positions.r1, { x: 300, y: 100 });
+  const flow = 'name: t\ntopology:\n  nodes:\n    r1: {kind: linux}\n    r1.dc2: {kind: linux, labels: {graph-posX: "300", graph-posY: "100"}}\n' +
+    '  links:\n    - endpoints: ["r1:eth1", "r1.dc2:eth1"]\n';
+  const f = c.convert(flow);
+  assert.notDeepStrictEqual(f.config.positions.r1, { x: 300, y: 100 });
+});
+
+test('CLI and convert give the same checks (a typo end exits 2 with its name)', (t) => {
+  const os = require('os');
+  const fs = require('fs');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-c2x-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const f = path.join(dir, 'typo.clab.yml');
+  fs.writeFileSync(f, y3(['["r1:eth1", "r2:eth1"]', '["r2:eth2", "rr3:eth1"]']));
+  const r = spawnSync(process.execPath, [CLI, f], { encoding: 'utf8' });
+  assert.strictEqual(r.status, 2);
+  assert.match(r.stderr, /rr3/);
+});
