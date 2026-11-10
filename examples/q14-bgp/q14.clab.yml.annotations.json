@@ -1,0 +1,18 @@
+{
+  "nodeAnnotations": [
+    {
+      "id": "r1",
+      "position": {
+        "x": 252,
+        "y": 270
+      }
+    },
+    {
+      "id": "r2",
+      "position": {
+        "x": 588,
+        "y": 270
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "nodeAnnotations": [
+    {
+      "id": "r1",
+      "position": {
+        "x": 420,
+        "y": 270
+      }
+    },
+    {
+      "id": "inet",
+      "position": {
+        "x": 689,
+        "y": 270
+      }
+    },
+    {
+      "id": "sv",
+      "position": {
+        "x": 151,
+        "y": 270
+      }
+    }
+  ]
+}
