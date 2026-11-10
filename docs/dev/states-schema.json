@@ -98,8 +98,7 @@
         "^.+_area$": { "type": "string", "description": "<node>_area: OSPF area (r1_area, r2_area, target_area, peer_area)." },
         "^[^_]+_hello$": { "type": "number", "description": "<node>_hello: Hello interval in seconds (peer_sending_hello is a boolean, so the node part has no '_')." },
         "^.+_established$": { "type": "boolean" },
-        "^.+_proto$": { "type": "string", "enum": ["ospf", "bgp"] },
-        "^.+_ospf_mismatch$": { "type": "object", "required": ["field"], "properties": { "field": { "type": "string" }, "iface": { "type": "string" }, "peer_iface": { "type": "string" }, "also": { "type": "array" } } }
+        "^.+_proto$": { "type": "string", "enum": ["ospf", "bgp"] }
       }
     },
 

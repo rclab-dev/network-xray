@@ -126,7 +126,7 @@ function parseOspfInterfaces(text, warn) {
 //   Process ID 1, Router ID 10.255.0.3, Network Type BROADCAST, Cost: 10
 //   Timer intervals configured, Hello 10, Dead 40, Wait 40, Retransmit 5
 // The brief form has the area only; hello / dead / network type are needed to say WHY two ends do not
-// become neighbours. Area is kept as IOS prints it ("1" or "0.0.0.1"); compare with sameArea().
+// become neighbours. Area is kept as IOS prints it ("1" or "0.0.0.1").
 function parseOspfInterfaceDetail(text) {
   var out = {}, cur = null;
   var reAddr = new RegExp('Internet Address ' + IP + '/(\\d+).*?Area (\\S+?)(?:,|\\s*$)');
@@ -169,8 +169,6 @@ function parseIpInterfaceMtu(text) {
   });
   return out;
 }
-function areaNum(a) { return /\./.test(String(a)) ? String(ip2n(a)) : String(+a); }
-function sameArea(a, b) { return areaNum(a) === areaNum(b); }
 
 // ---- show ip ospf traffic (optional 8th show) ---------------------------------------------------
 //     Interface Ethernet0/1
@@ -610,7 +608,7 @@ function collectFromIosxeText(args, buildState) {
     ['state_raw', 'admin_down', 'max_prefix'].forEach(function (k) { if (r[k] != null) n[k] = r[k]; });
   });
   // Per-interface OSPF parameters, only when the optional shows were taken (additive: without them
-  // nothing changes). The cross-node comparison is annotateOspfMismatch() over all nodes' states.
+  // nothing changes). The two ends of a link are compared from state.ospf_ifaces (clab-collect.js pairOspfIfaces).
   var det = args.ospfInterfaceDetail ? parseOspfInterfaceDetail(args.ospfInterfaceDetail) : null;
   /* nx_ios_bdi (2): a link port that carries a BDI gets the BDI's per-interface OSPF values */
   if (det) Object.keys(p.ifaces).forEach(function (n) { var b = p.ifaces[n].viaBdi; if (b && det[b] && !det[n]) det[n] = det[b]; });
@@ -628,44 +626,6 @@ function collectFromIosxeText(args, buildState) {
   return st;
 }
 
-// Across nodes (the step that has every node's state, like clab-xray-collect.js): for each link
-// (adjacency = { node: [{iface, peer}] }) where BOTH ends carry ospf_area, compare area / hello / dead /
-// network type and, on a difference, set <peer>_ospf_mismatch = { field, local, remote, iface, peer_iface }
-// on both ends (further differences in also[]). Engine-neutral: new keys only.
-var OSPF_CMP = [['area', 'ospf_area', sameArea], ['hello', 'ospf_hello'], ['dead', 'ospf_dead'],
-                ['net_type', 'ospf_net_type', function (a, b) { return String(a).replace(/[^a-z]/gi, '').toLowerCase() === String(b).replace(/[^a-z]/gi, '').toLowerCase(); }]];
-function annotateOspfMismatch(states, adjacency) {
-  var subnet = function (ipp) {
-    var sp = String(ipp || '').split('/'), len = +sp[1]; if (!sp[0] || isNaN(len)) return null;
-    var mask = len === 0 ? 0 : (0xFFFFFFFF << (32 - len)) >>> 0; return ((ip2n(sp[0]) & mask) >>> 0) + '/' + len;
-  };
-  var found = [];
-  Object.keys(adjacency || {}).forEach(function (a) {
-    (adjacency[a] || []).forEach(function (e) {
-      var b = e.peer, sa = states[a], sb = states[b]; if (!sa || !sb || a >= b) return;   // each pair once
-      var lif = normIf(e.iface), ia = sa.interfaces && sa.interfaces[lif]; if (!ia || ia.ospf_area == null) return;
-      // the peer's end = an adjacency entry of b pointing back to a, on the same subnet
-      var back = (adjacency[b] || []).filter(function (x) { return x.peer === a; }).map(function (x) { return normIf(x.iface); })
-        .filter(function (ifn) { var ib = sb.interfaces && sb.interfaces[ifn]; return ib && ib.ospf_area != null && subnet(ib.ip) === subnet(ia.ip); });
-      if (!back.length) return;
-      var rif = back[0], ib = sb.interfaces[rif], diffs = [];
-      OSPF_CMP.forEach(function (c) {
-        var x = ia[c[1]], y = ib[c[1]]; if (x == null || y == null) return;
-        if (!(c[2] ? c[2](x, y) : x === y)) diffs.push(c);
-      });
-      if (!diffs.length) return;
-      var mk = function (lo, re, li, ri) {
-        var o = { field: diffs[0][0], local: lo[diffs[0][1]], remote: re[diffs[0][1]], iface: li, peer_iface: ri };
-        if (diffs.length > 1) o.also = diffs.slice(1).map(function (c) { return { field: c[0], local: lo[c[1]], remote: re[c[1]] }; });
-        return o;
-      };
-      sa[b + '_ospf_mismatch'] = mk(ia, ib, lif, rif);
-      sb[a + '_ospf_mismatch'] = mk(ib, ia, rif, lif);
-      found.push(a + ' ' + lif + ' <-> ' + b + ' ' + rif + ': ' + diffs.map(function (c) { return c[0]; }).join(','));
-    });
-  });
-  return found;
-}
 
 
 // ---------------------------------------------------------------------------
@@ -1010,7 +970,7 @@ if (typeof module !== 'undefined' && module.exports) {
     parseInterfaces: parseInterfaces, parseBridgeDomains: parseBridgeDomains, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
     parseBgpRoutes: parseBgpRoutes, explainBestPath: explainBestPath, parseAll: parseAll, collectFromIosxeText: collectFromIosxeText,
     normBgpState: normBgpState, parseOspfInterfaceDetail: parseOspfInterfaceDetail, parseOspfTraffic: parseOspfTraffic,
-    annotateOspfMismatch: annotateOspfMismatch, splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, parseVrfs: parseVrfs, CMDS: CMDS,
+    splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, parseVrfs: parseVrfs, CMDS: CMDS,
     SAFE_NAME: SAFE_NAME, SAFE_HOST: SAFE_HOST, makeAskpass: makeAskpass,
     run: run };   /* run(): a set of show outputs -> one state (the parser tests call it) */
 }
