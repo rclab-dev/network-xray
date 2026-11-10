@@ -9,6 +9,7 @@
     },
     {
       "id": "inet",
+      "icon": "cloud",
       "position": {
         "x": 689,
         "y": 270
@@ -16,6 +17,7 @@
     },
     {
       "id": "sv",
+      "icon": "server",
       "position": {
         "x": 151,
         "y": 270
