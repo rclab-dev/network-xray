@@ -86,6 +86,27 @@
     }
   },
   {
+    "name": "ospf_interfaces",
+    "description": "OSPF interface values per router as collected: MTU, hello and dead intervals, network type, area, cost, DR/BDR role, priority, passive, authentication (none / simple / md5) and neighbor counts. For a link it also gives the other end and `mismatches`: one line per value that must be equal for an adjacency but is not, e.g. \"r1 eth1 MTU 1500 ⇔ r2 eth1 MTU 1400\". A value the router did not report is null and is not compared. All routers, or one with `router`. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Same input as lab_state"
+        },
+        "router": {
+          "type": "string",
+          "description": "Only this router, e.g. r1 (default: all routers)"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
     "name": "bgp_neighbors",
     "description": "BGP neighbors per router as collected: peer address, remote AS, iBGP/eBGP, state, established, and prefixes received (null when the data has no count). All routers, or one with `router`. Read-only.",
     "inputSchema": {

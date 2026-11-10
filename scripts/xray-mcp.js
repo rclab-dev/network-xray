@@ -10,6 +10,9 @@
  *                                               (reason null + a note when the data has none; never guessed)
  *   list_routers   { path }                  -> router names, which protocols have state, row counts
  *   ospf_neighbors { path, router? }         -> per router: neighbor, address, state, interface
+ *   ospf_interfaces { path, router? }        -> per OSPF interface: MTU, hello / dead, network type, area, cost, role,
+ *                                               passive, authentication; both ends of a link and what must match but
+ *                                               does not (e.g. "r1 eth1 MTU 1500 <=> r2 eth1 MTU 1400")
  *   bgp_neighbors  { path, router? }         -> per router: peer, AS, state, prefixes received
  *   route_lookup   { path, router, destination, vrf? } -> longest-prefix match in the collected routing table
  *   why_path       { path, router, prefix, vrf? } -> selected BGP path, other candidates, deciding step and
@@ -103,6 +106,21 @@ var TOOLS = [
     annotations: READ_ONLY
   },
   {
+    name: 'ospf_interfaces',
+    description: 'OSPF interface values per router as collected: MTU, hello and dead intervals, network type, area, cost, ' +
+      'DR/BDR role, priority, passive, authentication (none / simple / md5) and neighbor counts. For a link it also gives the ' +
+      'other end and `mismatches`: one line per value that must be equal for an adjacency but is not, e.g. ' +
+      '"r1 eth1 MTU 1500 \u21d4 r2 eth1 MTU 1400". A value the router did not report is null and is not compared. ' +
+      'All routers, or one with `router`. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: { path: PATH_PROP, router: { type: 'string', description: 'Only this router, e.g. r1 (default: all routers)' } },
+      required: ['path'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
+  },
+  {
     name: 'bgp_neighbors',
     description: 'BGP neighbors per router as collected: peer address, remote AS, iBGP/eBGP, state, ' +
       'established, and prefixes received (null when the data has no count). All routers, or one with `router`. Read-only.',
@@ -186,6 +204,7 @@ function callTool(name, args) {
     var p2 = str(args, 'path', true), router = str(args, 'router', false);
     return (name === 'ospf_neighbors' ? query.ospfNeighbors : query.bgpNeighbors)(loadStates(p2), router);
   }
+  if (name === 'ospf_interfaces') return query.ospfInterfaces(loadStates(str(args, 'path', true)), str(args, 'router', false));
   if (name === 'route_lookup') {
     var p3 = str(args, 'path', true), r = str(args, 'router', true), dst = str(args, 'destination', true);
     return query.routeLookup(loadStates(p3), r, dst, str(args, 'vrf', false));

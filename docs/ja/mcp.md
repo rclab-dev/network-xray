@@ -154,6 +154,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `why_best_path` | `path`, `node`, `prefix`, `vrf?` | そのプレフィックスの BGP の最良経路と、一緒に保存されている理由 |
 | `list_routers` | `path` | ルータの名前・state のあるプロトコル・ルーティングテーブルを集めたか・行の数 |
 | `ospf_neighbors` | `path`, `router?` | ルータごと: ネイバー ID・アドレス・状態・インターフェース・DR/BDR の役割・相手のノード |
+| `ospf_interfaces` | `path`, `router?` | OSPF の interface ごと: MTU・hello / dead・network type・area・cost・役・passive・認証。リンクの向こう側と `mismatches` (合わないと隣接できないのに合っていない値を 1 行ずつ。例 `r1 eth1 MTU 1500 ⇔ r2 eth1 MTU 1400`) |
 | `bgp_neighbors` | `path`, `router?` | ルータごと: ピア・リモート AS・iBGP/eBGP・状態・受け取ったプレフィックスの数 |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | 集めたルーティングテーブルでの最長一致 |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | 選ばれた BGP の経路・ほかの候補と属性・決め手になったステップ・そのわけの出どころ |

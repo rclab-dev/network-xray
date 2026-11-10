@@ -406,6 +406,62 @@ function ospfNeighbors(states, node) {
   return { routers: routers, counts: { total: all.length, full: all.filter(function (x) { return /^full$/i.test(x.state); }).length } };
 }
 
+// ---- OSPF interfaces ---------------------------------------------------------------------------
+// state.ospf_ifaces (DATA-CONTRACT 4.3): each OSPF interface's values, and for a link the other end (remote) and the fields
+// that must be equal for an adjacency but are not (mismatch). clab-xray-collect.js pairs the ends in xray-states.js; for
+// per-node files the ends are paired here from the links. null = the router did not report it (not compared).
+var OSPF_IF_FIELDS = ['area', 'mtu', 'hello', 'dead', 'network_type', 'cost', 'role', 'priority', 'passive', 'auth', 'neighbors', 'neighbors_adjacent'];
+var OSPF_IF_LABEL = { area: 'area', mtu: 'MTU', hello: 'hello', dead: 'dead', network_type: 'network type', auth: 'auth', passive: 'passive' };
+function ospfIfValue(f, v) { return v == null ? '?' : f === 'passive' ? (v ? 'yes' : 'no') : String(v); }
+// the rows that are objects (a state with another shape here gives no rows instead of an error)
+function ospfIfRows(st) {
+  var o = st && st.ospf_ifaces, out = Object.create(null);
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
+  Object.keys(o).forEach(function (i) { if (o[i] && typeof o[i] === 'object' && !Array.isArray(o[i])) out[i] = o[i]; });
+  return out;
+}
+function pairFromLinks(states) {
+  var needs = Object.keys(states).some(function (n) {
+    var o = ospfIfRows(states[n]); return Object.keys(o).some(function (i) { return o[i].peer_iface == null; });
+  });
+  if (!needs) return;
+  var adj = Object.create(null);
+  summarize(states).links.forEach(function (l) {
+    if (!l.a_iface || !l.b_iface) return;
+    (adj[l.a] = adj[l.a] || []).push({ iface: l.a_iface, peer: l.b, peerIface: l.b_iface });
+    (adj[l.b] = adj[l.b] || []).push({ iface: l.b_iface, peer: l.a, peerIface: l.a_iface });
+  });
+  require('../clab-collect.js').pairOspfIfaces(states, adj);
+}
+function ospfInterfaces(states, node) {
+  pairFromLinks(states);
+  var names = pickNodes(states, node), seen = Object.create(null), mismatches = [];
+  var routers = names.map(function (n) {
+    var o = ospfIfRows(states[n]);
+    return { router: n, interfaces: Object.keys(o).sort().map(function (i) {
+      var x = o[i], r = { interface: i };
+      if (x.peer) r.peer = x.peer;
+      if (x.peer_iface) r.peer_interface = x.peer_iface;
+      OSPF_IF_FIELDS.forEach(function (f) { r[f] = x[f] == null ? null : x[f]; });
+      if (x.vrf) r.vrf = x.vrf;
+      if (Array.isArray(x.mismatch)) {
+        r.mismatch = x.mismatch.slice();
+        var key = [n, i, x.peer, x.peer_iface].join('\u0000'), back = [x.peer, x.peer_iface, n, i].join('\u0000');
+        if (!seen[back] && x.remote && typeof x.remote === 'object') x.mismatch.forEach(function (f) {
+          mismatches.push(n + ' ' + i + ' ' + OSPF_IF_LABEL[f] + ' ' + ospfIfValue(f, x[f]) + ' \u21d4 ' +
+            x.peer + ' ' + x.peer_iface + ' ' + OSPF_IF_LABEL[f] + ' ' + ospfIfValue(f, x.remote[f]));
+        });
+        seen[key] = true;
+      }
+      return r;
+    }) };
+  });
+  var all = [].concat.apply([], routers.map(function (r) { return r.interfaces; }));
+  return { routers: routers, mismatches: mismatches,
+    counts: { interfaces: all.length, compared: all.filter(function (x) { return x.mismatch; }).length,
+      with_mismatch: all.filter(function (x) { return x.mismatch && x.mismatch.length; }).length } };
+}
+
 function bgpNeighbors(states, node) {
   var names = pickNodes(states, node), sess = summarize(states).bgp_sessions;
   var routers = names.map(function (n) {
@@ -552,6 +608,33 @@ function textLine(s) { return clip(plain(s), MAX_LINE); }
 function ospfStyle(v) { return /^full/i.test(v) ? 'green' : /^(2-?way|-)$/i.test(v) ? null : 'yellow'; }
 function bgpStyle(v) { return /^established$/i.test(v) ? 'green' : 'red'; }
 
+function ospfIfTable(res, color) {
+  var out = [title('OSPF interfaces (' + res.counts.interfaces + ')', color)], rows = [];
+  res.routers.forEach(function (r) {
+    r.interfaces.forEach(function (i) {
+      var bad = {}; (i.mismatch || []).forEach(function (f) { bad[f] = true; });
+      var v = function (f) { return ospfIfValue(f, i[f]) + (bad[f] ? '!' : ''); };
+      var nt = { broadcast: 'bcast', 'point-to-point': 'p2p', 'point-to-multipoint': 'p2mp', nbma: 'nbma' }[i.network_type] || i.network_type;
+      rows.push({ router: r.router, iface: i.interface, peer: i.peer || null,
+        area: v('area'), mtu: v('mtu'), hello: v('hello'), dead: v('dead'), type: ospfIfValue('network_type', nt) + (bad.network_type ? '!' : ''),
+        cost: ospfIfValue('cost', i.cost),
+        role: ospfIfValue('role', i.role), passive: v('passive'), auth: v('auth'),
+        nbrs: (i.neighbors_adjacent == null ? '?' : i.neighbors_adjacent) + '/' + (i.neighbors == null ? '?' : i.neighbors) });
+    });
+  });
+  if (!rows.length) out.push('  none');
+  else out = out.concat(renderTable([{ head: 'ROUTER', key: 'router' }, { head: 'INTERFACE', key: 'iface' }, { head: 'PEER', key: 'peer' },
+    { head: 'AREA', key: 'area' }, { head: 'MTU', key: 'mtu', right: true }, { head: 'HELLO', key: 'hello', right: true },
+    { head: 'DEAD', key: 'dead', right: true }, { head: 'TYPE', key: 'type' }, { head: 'COST', key: 'cost', right: true },
+    { head: 'ROLE', key: 'role' }, { head: 'PASSIVE', key: 'passive' }, { head: 'AUTH', key: 'auth' }, { head: 'NBRS', key: 'nbrs', right: true }
+  ], rows, color, '  '));
+  out.push('', title('Must match for an adjacency, but do not (' + res.mismatches.length + ')', color));
+  if (!res.mismatches.length) out.push('  none' + (res.counts.compared ? '' : ' (no link had both ends reported)'));
+  else res.mismatches.forEach(function (m) { out.push('  ' + paint(textLine(m), 'red', color)); });
+  out.push('', textLine('? = not reported by the router (not compared); ! = differs from the other end; NBRS = adjacent/seen'));
+  return out.join('\n') + '\n';
+}
+
 function stateTable(states, color) {
   var lr = listRouters(states), on = ospfNeighbors(states), bn = bgpNeighbors(states);
   var out = [title('Routers (' + lr.count + ')', color)];
@@ -636,7 +719,7 @@ function whyTable(w, color) {
 }
 
 // ---- CLI ------------------------------------------------------------------------------------
-var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf]' +
+var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf] | ospf-if <state.json|dir> [node]' +
   ' [--format json|table] [--color]';
 
 // pull --format / --color out of argv; the rest are the positional arguments
@@ -658,13 +741,14 @@ function run(argv) {
   var cmd = argv[0];
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
   if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
+  if (cmd === 'ospf-if') { if (argv.length < 2 || argv.length > 3) throw new QueryError(USAGE); return ospfInterfaces(loadStates(argv[1]), argv[2]); }
   throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
 }
 
 // the text for --format table (same checks and errors as run())
 function runTable(argv, color) {
   var res = run(argv);
-  return argv[0] === 'state' ? stateTable(loadStates(argv[1]), color) : whyTable(res, color);
+  return argv[0] === 'state' ? stateTable(loadStates(argv[1]), color) : argv[0] === 'ospf-if' ? ospfIfTable(res, color) : whyTable(res, color);
 }
 
 if (require.main === module) {
@@ -673,6 +757,7 @@ if (require.main === module) {
     console.log(USAGE + '\n' +
       '  state <path>                        nodes, links, OSPF adjacencies, BGP sessions, counts\n' +
       '  why <path> <node> <prefix> [vrf]    BGP best path and the reason stored with it\n' +
+      '  ospf-if <path> [node]               OSPF interface values, both ends of each link, what must match but does not\n' +
       '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR show ... json files\n' +
       '  --format json|table  default: json\n' +
       '  --color              colors in table output (only on a terminal)\n' +
@@ -700,5 +785,5 @@ if (require.main === module) {
 }
 
 module.exports = { loadStates: loadStates, summarize: summarize, why: why, run: run,
-  listRouters: listRouters, ospfNeighbors: ospfNeighbors, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath,
+  listRouters: listRouters, ospfNeighbors: ospfNeighbors, ospfInterfaces: ospfInterfaces, ospfIfTable: ospfIfTable, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath,
   parseOptions: parseOptions, runTable: runTable, stateTable: stateTable, whyTable: whyTable };

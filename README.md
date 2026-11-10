@@ -811,6 +811,9 @@ This example is an IOS-XE capture with one path: IOS prints no reason, and the c
 received" because there was nothing to compare. It is not a reason the router reported.
 
 If the prefix is in more than one VRF, add the VRF name as a fifth argument (`why <dir> r1 10.0.0.0/24 red`).
+`ospf-if <path> [node]` lists each OSPF interface's values (MTU, hello / dead, network type, area, cost, role, passive,
+authentication) and, for each link, one line per value that must be equal for an adjacency but is not, e.g.
+`r1 eth1 MTU 1500 ⇔ r2 eth1 MTU 1400`. A value the router did not report is `null` (`?` in the table) and is not compared.
 Add `--format table` to print a plain-text table instead of JSON (`--color` adds colors in a terminal).
 A missing file, an unknown node, an unknown prefix or a wrong number of arguments prints `{"error": "..."}` and exits
 with code 2.
@@ -819,7 +822,7 @@ with code 2.
 
 `scripts/xray-mcp.js` serves the same questions to an MCP client (Claude Desktop, Claude Code, …) over stdio,
 with no dependencies. Tools: `lab_state` (`path`), `why_best_path` (`path`, `node`, `prefix`, optional `vrf`),
-`list_routers` (`path`), `ospf_neighbors` and `bgp_neighbors` (`path`, optional `router`), `route_lookup`
+`list_routers` (`path`), `ospf_neighbors`, `ospf_interfaces` and `bgp_neighbors` (`path`, optional `router`), `route_lookup`
 (`path`, `router`, `destination`, optional `vrf`: the longest match in the routing table the collector saved), and
 `why_path` (`path`, `router`, `prefix`, optional `vrf`: the selected BGP path, the other candidates and the deciding step).
 It is read-only: it only reads the path it is given, never runs commands on routers and never writes files.
@@ -1600,11 +1603,11 @@ node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
 }
 ```
 この例は経路が 1 本の IOS-XE の取り込み: IOS は理由を出さず、比べる相手が無いので collector が FRR の言い方「First path received」を書いている (ルータが報告した理由ではない)。
-宛先が複数の VRF にある時は 5 つ目の引数に VRF 名 (`why <dir> r1 10.0.0.0/24 red`)。`--format table` で JSON の代わりに表 (`--color` で端末に色)。ファイルが無い・ノードや宛先が不明・引数の数が違う時は `{"error": "..."}` を出して終了コード 2。
+宛先が複数の VRF にある時は 5 つ目の引数に VRF 名 (`why <dir> r1 10.0.0.0/24 red`)。`ospf-if <path> [node]` は OSPF の interface ごとの値 (MTU・hello / dead・network type・area・cost・役・passive・認証) と、リンクごとに「合わないと隣接できないのに合っていない値」を 1 行ずつ (例 `r1 eth1 MTU 1500 ⇔ r2 eth1 MTU 1400`)。ルータが報告しない値は `null` (表では `?`) で、比べません。`--format table` で JSON の代わりに表 (`--color` で端末に色)。ファイルが無い・ノードや宛先が不明・引数の数が違う時は `{"error": "..."}` を出して終了コード 2。
 
 ### MCP サーバ (stdio)
 
-`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。ツール: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors` と `bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
+`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。ツール: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors`・`ospf_interfaces`・`bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
 
 ```json
 {

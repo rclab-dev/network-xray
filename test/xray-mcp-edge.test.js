@@ -52,7 +52,7 @@ function session(lines, timeout) {
 }
 function line(id, method, params) { return JSON.stringify({ jsonrpc: '2.0', id: id, method: method, params: params }); }
 
-var ALL_TOOLS = ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'bgp_neighbors', 'route_lookup', 'why_path'];
+var ALL_TOOLS = ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'ospf_interfaces', 'bgp_neighbors', 'route_lookup', 'why_path'];
 
 // ---- unknown tool names ---------------------------------------------------------------------
 test('unknown tool names are JSON-RPC errors (-32602), including names of Object.prototype members', function () {
@@ -84,7 +84,7 @@ test('arguments that are not an object are an error for every tool', function ()
 
 test('missing required arguments are named in the error', function () {
   var required = {
-    lab_state: ['path'], list_routers: ['path'], ospf_neighbors: ['path'], bgp_neighbors: ['path'],
+    lab_state: ['path'], list_routers: ['path'], ospf_neighbors: ['path'], ospf_interfaces: ['path'], bgp_neighbors: ['path'],
     why_best_path: ['path', 'node', 'prefix'], route_lookup: ['path', 'router', 'destination'], why_path: ['path', 'router', 'prefix']
   };
   var full = { path: Q15, node: 'r1', router: 'r1', prefix: '10.0.0.0/8', destination: '10.0.0.1' };
@@ -144,7 +144,7 @@ test('missing, empty and non-state files are clear errors', function () {
   ALL_TOOLS.forEach(function (t) {
     var args = { path: missing, node: 'r1', router: 'r1', prefix: '10.0.0.0/8', destination: '10.0.0.1' };
     if (t === 'lab_state' || t === 'list_routers') args = { path: missing };
-    if (t === 'ospf_neighbors' || t === 'bgp_neighbors') args = { path: missing };
+    if (t === 'ospf_neighbors' || t === 'ospf_interfaces' || t === 'bgp_neighbors') args = { path: missing };
     if (t === 'why_best_path') { delete args.router; delete args.destination; }
     if (t === 'route_lookup') { delete args.node; delete args.prefix; }
     if (t === 'why_path') { delete args.node; delete args.destination; }
@@ -206,6 +206,14 @@ test('fields with the wrong type in the state give a clear isError result for ev
     assert.match(toolError(c[0], c[1]), /^unexpected data \(maybe a field in the lab state has the wrong type\)/, c[0]);
   });
   assert.strictEqual(toolOk('list_routers', { path: f }).count, 1);
+  // ospf_interfaces reads only state.ospf_ifaces: nothing to read here -> an empty answer, not an error
+  assert.deepStrictEqual(toolOk('ospf_interfaces', { path: f }).mismatches, []);
+  var g = tmpFile('state_oif.json', JSON.stringify({ target_node: 'r1', interfaces: {}, ospf_ifaces: { eth1: 'x', eth2: [1], eth3: { mtu: 1500, mismatch: ['mtu'], remote: 'x' } } }));
+  var res = toolOk('ospf_interfaces', { path: g });
+  assert.deepStrictEqual(res.routers[0].interfaces.map(function (i) { return i.interface; }), ['eth3'], 'rows that are not objects are left out');
+  assert.deepStrictEqual(res.mismatches, [], 'no line without the other end');
+  var h = tmpFile('state_oif2.json', JSON.stringify({ target_node: 'r1', interfaces: {}, ospf_ifaces: 'x' }));
+  assert.strictEqual(toolOk('ospf_interfaces', { path: h }).counts.interfaces, 0);
 });
 
 test('odd routing table rows are skipped; route lookups match nothing outside the table', function () {
