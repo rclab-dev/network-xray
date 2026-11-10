@@ -42,6 +42,7 @@ function mergeLikeCollector(files, nodes, adj, proto) {
     });
     st.peer_sending_hello = Object.keys(psm).some(function (k) { return psm[k]; });
   });
+  COLLECT.pairOspfIfaces(states, adj);   // nx_ospf_iface_params: as clab-xray-collect.js does
   return states;
 }
 

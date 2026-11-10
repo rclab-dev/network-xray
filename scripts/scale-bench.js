@@ -151,6 +151,7 @@ function mergeStates(lab, files, proto) {
       st.peer_sending_hello = Object.keys(psm).some(function (k) { return psm[k]; });
     });
   }
+  COLLECT.pairOspfIfaces(states, adj);   // nx_ospf_iface_params: as clab-xray-collect.js does
   return 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\n';
 }
 

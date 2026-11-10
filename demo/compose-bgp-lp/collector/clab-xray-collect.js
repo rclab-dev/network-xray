@@ -373,6 +373,7 @@ function collectAll() {
       st.peer_sending_hello = Object.keys(psm).some(function (k) { return psm[k]; });
     });
   }
+  pairOspfIfaces(nodes, states, adj);   /* nx_ospf_iface_params */
   if (kept) console.error('  kept the last good state for ' + kept + ' node(s)');
   return { states: states, ok: ok, kept: kept, unread: unread };
 }
@@ -461,6 +462,20 @@ function writeAtomic(file, body) {
     fs.writeFileSync(file, body);
   }
 }
+/* nx_ospf_iface_params: the two ends of each OSPF link side by side (clab-collect.js pairOspfIfaces), with the interface
+   names as each router prints them (SR Linux e1-1 -> ethernet-1/1.0), the same names nodeJob() passes */
+function pairOspfIfaces(nodes, states, adj) {
+  var named = {};
+  nodes.forEach(function (cn) {
+    var sv = vendorOf(cn);
+    named[cn] = (adj[cn] || []).map(function (l) {
+      var pv = vendorOf(l.peer);
+      return { iface: sv.iface ? sv.iface(l.iface, kindOf[cn]) : l.iface, peer: l.peer, peerIface: pv.iface ? pv.iface(l.peerIface, kindOf[l.peer]) : l.peerIface };
+    });
+  });
+  require(path.join(__dirname, 'clab-collect.js')).pairOspfIfaces(states, named);
+}
+
 function writeStates(states, live, sj) {   // sj: statesJson(states), when the caller already has it
   lastStates = states; lastLive = live;
   if (!sj) sj = statesJson(states);

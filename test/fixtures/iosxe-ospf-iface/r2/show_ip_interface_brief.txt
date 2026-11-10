@@ -1,0 +1,6 @@
+Interface              IP-Address      OK? Method Status                Protocol
+Ethernet0/0            172.20.20.10    YES TFTP   up                    up      
+Ethernet0/1            10.1.12.2       YES TFTP   up                    up      
+Ethernet0/2            10.2.12.2       YES TFTP   up                    up      
+Ethernet0/3            10.3.12.2       YES TFTP   up                    up      
+Loopback0              2.2.2.2         YES TFTP   up                    up      

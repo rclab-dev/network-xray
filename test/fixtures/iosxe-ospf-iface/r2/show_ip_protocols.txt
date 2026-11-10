@@ -1,0 +1,31 @@
+*** IP Routing is NSF aware ***
+
+Routing Protocol is "application"
+  Sending updates every 0 seconds
+  Invalid after 0 seconds, hold down 0, flushed after 0
+  Outgoing update filter list for all interfaces is not set
+  Incoming update filter list for all interfaces is not set
+  Maximum path: 32
+  Routing for Networks:
+  Routing Information Sources:
+    Gateway         Distance      Last Update
+  Distance: (default is 4)
+
+Routing Protocol is "ospf 1"
+  Outgoing update filter list for all interfaces is not set
+  Incoming update filter list for all interfaces is not set
+  Router ID 2.2.2.2
+  It is an area border router
+  Number of areas in this router is 2. 2 normal 0 stub 0 nssa
+  Maximum path: 4
+  Routing for Networks:
+    2.2.2.2 0.0.0.0 area 0
+    10.1.12.0 0.0.0.255 area 0
+    10.2.12.0 0.0.0.3 area 0
+    10.3.12.0 0.0.0.255 area 1
+  Passive Interface(s):
+    Ethernet0/3
+  Routing Information Sources:
+    Gateway         Distance      Last Update
+    1.1.1.1              110      00:06:37
+  Distance: (default is 110)

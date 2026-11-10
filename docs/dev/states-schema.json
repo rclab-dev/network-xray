@@ -58,6 +58,7 @@
         "iface_hellos": { "type": "object", "description": "Interface -> Hello interval (s).", "additionalProperties": { "type": "number" } },
         "peer_hellos": { "type": "object", "description": "Neighbor name -> Hello interval (s).", "additionalProperties": { "type": "number" } },
         "peer_sending_hellos": { "type": "object", "description": "Neighbor name -> its Hello is received.", "additionalProperties": { "type": "boolean" } },
+        "ospf_ifaces": { "type": "object", "description": "OSPF interface -> its values (DATA-CONTRACT 4.3). null = the router did not report it.", "additionalProperties": { "$ref": "#/$defs/ospfIfaceRow" } },
         "target_area": { "type": "string" },
         "peer_area": { "type": "string" },
         "area_match": { "type": "boolean" },
@@ -118,6 +119,29 @@
         "ospf_net_type": { "type": "string" },
         "ospf_passive": { "type": "boolean" },
         "ospf_errors": { "type": "object" }
+      }
+    },
+
+    "ospfIfaceRow": {
+      "type": "object",
+      "properties": {
+        "peer": { "type": "string" },
+        "peer_iface": { "type": "string" },
+        "area": { "type": ["string", "null"] },
+        "mtu": { "type": ["number", "null"] },
+        "hello": { "type": ["number", "null"] },
+        "dead": { "type": ["number", "null"] },
+        "network_type": { "type": ["string", "null"] },
+        "cost": { "type": ["number", "null"] },
+        "role": { "type": ["string", "null"] },
+        "priority": { "type": ["number", "null"] },
+        "passive": { "type": ["boolean", "null"] },
+        "auth": { "type": ["string", "null"] },
+        "neighbors": { "type": ["number", "null"] },
+        "neighbors_adjacent": { "type": ["number", "null"] },
+        "vrf": { "type": "string" },
+        "remote": { "type": "object", "description": "The same fields for the other end of the link (no peer / remote / mismatch)." },
+        "mismatch": { "type": "array", "items": { "type": "string", "enum": ["area", "mtu", "hello", "dead", "network_type", "auth", "passive"] } }
       }
     },
 

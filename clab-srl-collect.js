@@ -306,6 +306,36 @@ function buildState(fetch, node, adj, proto) {
       state.r1_hello = state.r2_hello = state.target_hello = state.peer_hello = tHello; state.timer_match = true;
     }
     peers.forEach(function (p) { state[p + '_neighbor_state'] = state[p + '_has_full'] ? 'Full' : (_nbWord[p] || 'None'); });
+    /* nx_ospf_iface_params: the same per-interface rows the FRR / IOS collectors give (DATA-CONTRACT 4.3 ospf_ifaces), from
+       the area's interface list SR Linux returns (mtu, hello-interval, dead-interval, interface-type, metric, priority,
+       oper-state, neighbor-count). passive and authentication are not in the state SR Linux returned in our captures
+       -> null ("?") unless the fields are there. */
+    if (state.ospf_configured) {
+      var _rows = {};
+      list(oa && oa.area).forEach(function (a) {
+        list(a.interface).forEach(function (i) {
+          var ifn = i['interface-name']; if (!ifn || /^system0|^lo/.test(ifn)) return;
+          var _nt = String(i['interface-type'] || '').toLowerCase(), _os = String(i['oper-state'] || '').toLowerCase();
+          var _nbl = list(i.neighbor);
+          _rows[ifn] = {
+            peer: adj[ifn] || '',
+            area: a['area-id'] != null ? String(a['area-id']) : null,
+            mtu: i.mtu != null ? +i.mtu : null,
+            hello: i['hello-interval'] != null ? +i['hello-interval'] : null,
+            dead: i['dead-interval'] != null ? +i['dead-interval'] : null,
+            network_type: _nt === 'broadcast' ? 'broadcast' : _nt === 'point-to-point' ? 'point-to-point' : (_nt || null),
+            cost: i.metric != null ? +i.metric : null,
+            role: { dr: 'DR', backup: 'BDR', bdr: 'BDR', 'dr-other': 'DROTHER', 'point-to-point': 'P2P', waiting: 'WAITING', down: 'DOWN', loopback: 'LOOPBACK' }[_os] || (_os ? _os.toUpperCase() : null),
+            priority: i.priority != null ? +i.priority : null,
+            passive: i.passive != null ? !!i.passive : null,
+            auth: i.authentication != null ? (i.authentication && i.authentication.keychain ? 'keychain' : 'configured') : null,
+            neighbors: i['neighbor-count'] != null ? +i['neighbor-count'] : _nbl.length,
+            neighbors_adjacent: _nbl.filter(function (n) { return /^full$/i.test(String(n['adjacency-state'] || '')); }).length
+          };
+        });
+      });
+      if (Object.keys(_rows).length) state.ospf_ifaces = _rows;
+    }
   }
 
   return state;

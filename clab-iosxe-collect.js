@@ -140,6 +140,32 @@ function parseOspfInterfaceDetail(text) {
     if ((m = /Network Type (\S+?),/.exec(l))) cur.net_type = m[1];
     if ((m = /Hello (\d+), Dead (\d+)/.exec(l))) { cur.hello = +m[1]; cur.dead = +m[2]; }
     if (/No Hellos \(Passive interface\)/.test(l)) cur.passive = true;
+    /* nx_ospf_iface_params: cost, role and priority, the neighbour counts and the authentication line. IOS prints an
+       authentication line only when one is configured on the interface, so a block without it is "none". */
+    if ((m = /Cost: (\d+)/.exec(l))) cur.cost = +m[1];
+    if ((m = /State (\S+?), Priority (\d+)/.exec(l))) { cur.role = m[1]; cur.priority = +m[2]; }
+    else if ((m = /^\s+State (\S+?)(?:,|\s*$)/.exec(l)) && cur.role == null) cur.role = m[1];
+    if ((m = /Neighbor Count is (\d+), Adjacent neighbor count is (\d+)/.exec(l))) { cur.nbrs = +m[1]; cur.nbrsAdj = +m[2]; }
+    if (/Message digest authentication enabled|Cryptographic authentication enabled/i.test(l)) cur.auth = 'md5';
+    else if (/Simple password authentication enabled/i.test(l)) cur.auth = 'simple';
+  });
+  Object.keys(out).forEach(function (k) { if (out[k].auth == null && out[k].net_type) out[k].auth = 'none'; });
+  return out;
+}
+
+// ---- show ip interface (optional: only the "MTU is N bytes" line is used) ----------------------
+// Ethernet0/1 is up, line protocol is up
+//   Internet address is 10.1.12.1/24
+//   Broadcast address is 255.255.255.255
+//   MTU is 1500 bytes
+// The IP MTU is what OSPF puts in its DBD packets and compares (RFC 2328 10.6) -> { Ethernet0/1: 1500 }
+function parseIpInterfaceMtu(text) {
+  var out = {}, cur = null;
+  lines(text).forEach(function (l) {
+    var h = /^(\S+) is (.+?), line protocol is (\S+)/.exec(l);
+    if (h) { cur = normIf(h[1]); return; }
+    var m = /^\s+MTU is (\d+) bytes/.exec(l);
+    if (m && cur) out[cur] = +m[1];
   });
   return out;
 }
@@ -510,6 +536,22 @@ function collectFromIosxeText(args, buildState) {
   if (_det0) Object.keys(p.ospfIf).forEach(function (ifn) { if (_det0[ifn] && _det0[ifn].passive) p.ospfIf[ifn].passive = true; });
   /* nx_ios_hello_secs: the Hello seconds also come from the full show (the brief one has none -> buildState fell back to 10) */
   if (_det0) Object.keys(p.ospfIf).forEach(function (ifn) { if (_det0[ifn] && _det0[ifn].hello != null) p.ospfIf[ifn].hello = _det0[ifn].hello; });
+  /* nx_ospf_iface_params: the interface panel's values, in the field names clab-collect.js parseOspfInterfaces gives FRR.
+     The brief show has cost / state / Nbrs F/C; the full one adds dead, network type, priority, passive and the
+     authentication line; show ip interface (optional) has the IP MTU. Without the full show those stay null ("?"). */
+  var _mtu0 = args.ipInterfaceDetail ? parseIpInterfaceMtu(args.ipInterfaceDetail) : {};
+  Object.keys(p.ospfIf).forEach(function (ifn) {
+    var o = p.ospfIf[ifn], d = (_det0 && _det0[ifn]) || null, src = o.viaBdi || ifn;
+    o.role = (d && d.role) || o.ospfState || null;
+    if (o.cost == null && d && d.cost != null) o.cost = d.cost;
+    o.nbrs = d && d.nbrs != null ? d.nbrs : (o.nbrCount != null ? o.nbrCount : null);
+    o.nbrsAdj = d && d.nbrsAdj != null ? d.nbrsAdj : (o.nbrFull != null ? o.nbrFull : null);
+    o.mtu = _mtu0[src] != null ? _mtu0[src] : (_mtu0[ifn] != null ? _mtu0[ifn] : null);
+    if (d) {
+      o.helloKnown = d.hello != null; o.dead = d.dead != null ? d.dead : null; o.netType = d.net_type || null;
+      o.priority = d.priority != null ? d.priority : null; o.auth = d.auth || null; o.passiveKnown = true;
+    }
+  });
   // FRR's RIB also lists OSPF's OWN networks as non-selected "O ... is directly connected" entries, and
   // buildState derives lsdb_prefixes (the router's own LSAs) from protocol=ospf routes. IOS does not
   // print those, so add the same non-selected OSPF entries for every OSPF interface's network, placed
@@ -644,6 +686,7 @@ var CMDS = [
   ['ospfInterface', 'show ip ospf interface brief'],
   ['ospfInterfaceDetail', 'show ip ospf interface'],
   ['ipInterface', 'show ip interface brief'],
+  ['ipInterfaceDetail', 'show ip interface'],   /* nx_ospf_iface_params: only the IP MTU of each interface is read (optional) */
   ['route', 'show ip route'],
   ['bgpSummary', 'show ip bgp summary'],
   ['bgp', 'show ip bgp'],
@@ -687,7 +730,7 @@ function parseWarnings(texts, opts, unparsed) {
     if (t == null) return;
     if (/--More--/.test(t)) w.push({ cmd: c[1], why: 'paging', note: 'output was cut by --More-- (terminal length 0 did not apply)' });
     var e = /^\s*% (Invalid input|Incomplete command|Ambiguous command)[^\n]*/m.exec(t);
-    if (e && c[0] !== 'bridgeDomain' && c[0] !== 'vrf') w.push({ cmd: c[1], why: 'cli_error', note: e[0].trim() });   /* nx_ios_bdi / nx_ios_vrf_detect: optional shows */
+    if (e && c[0] !== 'bridgeDomain' && c[0] !== 'vrf' && c[0] !== 'ipInterfaceDetail') w.push({ cmd: c[1], why: 'cli_error', note: e[0].trim() });   /* nx_ios_bdi / nx_ios_vrf_detect: optional shows */
     // "empty" only for commands that always print something (a header): no OSPF neighbours / no BGP routes are real answers
     // (seen on IOL 17.18 with the link shut down, 2026-10-27)
     var _alwaysPrints = c[0] === 'ipInterface' || c[0] === 'route' || (c[0] === 'bgpSummary' && opts.bgpConfigured) || (c[0] === 'ospfInterface' && opts.ospfConfigured);

@@ -250,6 +250,32 @@ scenario needs; everything is optional and defaults sensibly.
 | `is_passive` | boolean | Interface is `passive-interface` (no Hellos). IF が `passive-interface`(Hello を送らない)。 |
 | `has_redistribute` | boolean | Redistribution is configured. 再配布が設定されている。 |
 | `route_map_status` | string | Route-map result: `"permit"` / `"deny"`. ルートマップ結果。 |
+| `ospf_ifaces` | object | OSPF interface → its values (see below). Optional. OSPF の interface ごとの値(下記)。任意。 |
+
+**`ospf_ifaces` — one row per OSPFv2 interface / OSPF の interface ごとの行** (loopbacks and the management network are left
+out; the collectors fill it from `show ip ospf interface` and, on Cisco IOS, `show ip interface` for the MTU).
+**`null` means the router did not report the value** — a page shows it as `?` and never compares it.
+ループバックと管理ネットワークは除く。**`null` = ルータが報告しなかった値**(頁は `?` と出し、比べない)。
+
+| Field | Type | Meaning / 意味 |
+|---|---|---|
+| `peer` | string | Topology neighbour on this interface (`''` when the topology does not say). この IF の先の隣(トポロジに無ければ `''`)。 |
+| `area` | string \| null | Area as the router prints it (`"0"` and `"0.0.0.0"` are the same area). ルータが出すままの area。 |
+| `mtu` | number \| null | IP MTU (bytes), the value OSPF puts in its DBD packets. IP MTU。 |
+| `hello` / `dead` | number \| null | Hello / dead intervals (s). Hello / dead 間隔(秒)。 |
+| `network_type` | string \| null | `broadcast` / `point-to-point` / `nbma` / `point-to-multipoint` / … |
+| `cost` | number \| null | Interface cost. コスト。 |
+| `role` | string \| null | `DR` / `BDR` / `DROTHER` / `P2P` / `WAITING` / `DOWN` / … |
+| `priority` | number \| null | DR priority. DR 優先度。 |
+| `passive` | boolean \| null | Passive interface (sends no Hellos). passive(Hello を送らない)。 |
+| `auth` | string \| null | `none` / `simple` / `md5`, or the router's own word when it says only that one is configured. 認証。 |
+| `neighbors` / `neighbors_adjacent` | number \| null | Neighbours seen / adjacent on this interface. 見えている隣 / 隣接した隣の数。 |
+| `peer_iface` | string | The neighbour's name for its end of the link (added by `clab-xray-collect.js`). 隣側の IF 名。 |
+| `remote` | object | The neighbour's row for that end (same fields). 隣側の行(同じ欄)。 |
+| `mismatch` | string[] | Fields that must be equal for an adjacency and are not: `area` `mtu` `hello` `dead` `network_type` `auth`, plus `passive` when either end is passive. Fields one end did not report are not compared. 合わないと隣接できない欄で、合っていない物。片方が報告しない欄は比べない。 |
+
+`peer_iface`, `remote` and `mismatch` need both ends' states, so `clab-xray-collect.js` adds them (a per-node collector
+cannot see the peer). `peer_iface` / `remote` / `mismatch` は両端の状態が要るので、`clab-xray-collect.js` が足します。
 
 > **Multi-node form / 多ノード版** — for topologies with several peers (e.g. a triangle),
 > use per-node fields named `<nodeId>_<field>`: `r3_has_full`, `r2_hello`, `r3_established`, …

@@ -193,6 +193,26 @@ function parseOspfInterfaces(j) {
       hello: hello,
       passive: !!d.timerPassiveIface   /* nx_ospf_passive_no_hello: passive IF sends no Hello */
     };
+    /* nx_ospf_iface_params: the per-interface values two ends must agree on (and a few that may differ), for the
+       OSPF interface panel and the side-by-side compare. Read as FRR 8.4 / 10.7.1 print them (test/fixtures/frr-ospf-iface):
+       mtuBytes, timerDeadSecs, networkType (BROADCAST / POINTOPOINT / ...), cost, state (DR / Backup / DROther /
+       Point-To-Point / Loopback / Waiting), priority, nbrCount / nbrAdjacentCount, and "authentication" only when it is
+       configured (authenticationSimplePassword / authenticationMessageDigest). A json without these detail fields
+       (older or hand-made) gives null = not known, never a guessed value. */
+    var _detail = d.networkType != null || d.timerDeadSecs != null || d.mtuBytes != null;
+    var _o = out[ifn];
+    _o.helloKnown = d.timerMsecs != null || d.timerHelloInSecs != null || d.helloInterval != null;
+    _o.mtu = d.mtuBytes != null ? +d.mtuBytes : null;
+    _o.dead = d.timerDeadSecs != null ? +d.timerDeadSecs : null;
+    _o.netType = d.networkType || null;
+    _o.cost = d.cost != null ? +d.cost : null;
+    _o.role = d.state || null;
+    _o.priority = d.priority != null ? +d.priority : null;
+    _o.auth = d.authentication ? (/digest|crypt|md5/i.test(d.authentication) ? 'md5' : /simple/i.test(d.authentication) ? 'simple' : String(d.authentication))
+            : (_detail ? 'none' : null);
+    _o.nbrs = d.nbrCount != null ? +d.nbrCount : null;
+    _o.nbrsAdj = d.nbrAdjacentCount != null ? +d.nbrAdjacentCount : null;
+    _o.passiveKnown = _detail || d.timerPassiveIface != null;
     if (part.vrf && part.vrf !== 'default') out[ifn].vrf = part.vrf;   /* nx_vrf_all */
   });
   });
@@ -361,6 +381,56 @@ function parseBgpRoutes(j) {
 //   adjacency  [{iface, peer}]   clab link endpoints for selfName (iface -> peer NODE NAME)
 //   ospfNei / ospfIf / routes / bgpSum / bgpRoutes : parsed objects (any may be empty)
 //   proto      'ospf' | 'bgp'
+/* nx_ospf_iface_params: one spelling for the network type and the interface role, whichever router printed them
+   (FRR json: BROADCAST / POINTOPOINT, state DR / Backup / DROther / Point-To-Point; IOS: BROADCAST / POINT_TO_POINT,
+   state DR / BDR / DROTHER / P2P). Unknown -> null; a value not in the list is kept as printed (lower / upper case). */
+function _ospfNetType(v) {
+  if (v == null || v === '') return null;
+  var t = String(v).toUpperCase().replace(/[^A-Z]/g, '');
+  return { BROADCAST: 'broadcast', POINTOPOINT: 'point-to-point', POINTTOPOINT: 'point-to-point', PTP: 'point-to-point', P2P: 'point-to-point',
+           NBMA: 'nbma', NONBROADCAST: 'nbma', POINTOMULTIPOINT: 'point-to-multipoint', POINTTOMULTIPOINT: 'point-to-multipoint',
+           P2MP: 'point-to-multipoint', LOOPBACK: 'loopback', VIRTUALLINK: 'virtual-link' }[t] || String(v).toLowerCase();
+}
+function _ospfRole(v) {
+  if (v == null || v === '') return null;
+  var t = String(v).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return { DR: 'DR', BDR: 'BDR', BACKUP: 'BDR', DROTHER: 'DROTHER', DROTH: 'DROTHER', POINTTOPOINT: 'P2P', P2P: 'P2P',
+           P2MP: 'P2MP', LOOPBACK: 'LOOPBACK', LOOP: 'LOOPBACK', WAITING: 'WAITING', WAIT: 'WAITING', DOWN: 'DOWN' }[t] || String(v).toUpperCase();
+}
+
+/* nx_ospf_iface_params: put the other end of each OSPF link next to this end. adj = { node: [{iface, peer, peerIface}] } with
+   the names as each router prints them. For every ospf_ifaces row on a topology link: peer_iface (the peer's name for its end),
+   remote (the peer's row) and mismatch (the fields that must be equal for an adjacency and are not: area, MTU, hello, dead,
+   network type, authentication; plus passive when either end is passive). A field either end did not report is not
+   compared. Used by clab-xray-collect.js (and scripts/scale-bench.js), where every node's state is at hand. */
+var OSPF_MUST_MATCH = ['area', 'mtu', 'hello', 'dead', 'network_type', 'auth'];
+function _ospfAreaKey(a) {
+  var s = String(a); if (!/\./.test(s)) return String(+s);
+  var p = s.split('.'); return String((((+p[0] << 24) >>> 0) + (+p[1] << 16) + (+p[2] << 8) + (+p[3])) >>> 0);
+}
+function pairOspfIfaces(states, adj) {
+  Object.keys(adj || {}).forEach(function (cn) {
+    var st = states[cn]; if (!st || !st.ospf_ifaces) return;
+    (adj[cn] || []).forEach(function (link) {
+      var row = st.ospf_ifaces[link.iface]; if (!row || typeof row !== 'object') return;
+      delete row.peer_iface; delete row.remote; delete row.mismatch;
+      row.peer = link.peer; row.peer_iface = link.peerIface;
+      var ps = states[link.peer], rrow = ps && !ps.nx_unread && ps.ospf_ifaces && ps.ospf_ifaces[link.peerIface];
+      if (!rrow || typeof rrow !== 'object') return;
+      var remote = {};
+      Object.keys(rrow).forEach(function (k) { if (k !== 'peer' && k !== 'peer_iface' && k !== 'remote' && k !== 'mismatch') remote[k] = rrow[k]; });
+      row.remote = remote;
+      var mm = OSPF_MUST_MATCH.filter(function (f) {
+        var a = row[f], b = remote[f]; if (a == null || b == null) return false;
+        return f === 'area' ? _ospfAreaKey(a) !== _ospfAreaKey(b) : a !== b;
+      });
+      if (row.passive === true || remote.passive === true) mm.push('passive');
+      row.mismatch = mm;
+    });
+  });
+  return states;
+}
+
 function buildState(opts) {
   var selfName = opts.selfName || 'r1';
   var proto = (opts.proto || 'ospf').toLowerCase();
@@ -645,6 +715,36 @@ function buildState(opts) {
     target_on_path: false,
     cleared: routeOk && fullCount > 0
   };
+
+  /* nx_ospf_iface_params: one row per OSPFv2 interface (lo and the management network left out) with the values the
+     interface panel and the two-end compare show. A value the router did not report is null (shown as "?"), never
+     filled in. peer = the topology neighbour on that interface ('' when the topology does not say). */
+  if (s.ospf_configured) {
+    var _oip = {};
+    Object.keys(ifs).forEach(function (k) {
+      var d = ifs[k];
+      if (!d || /^lo/i.test(k) || d.ospf === false || d.af === 'v6') return;
+      if (mgmtSubnet && d.ip && _sameSubnet(mgmtSubnet, d.ip)) return;
+      var row = {
+        peer: ifaceToPeer[k] || '',
+        area: d.area != null && d.area !== '' ? String(d.area) : null,
+        mtu: d.mtu != null ? d.mtu : null,
+        hello: d.helloKnown ? d.hello : null,
+        dead: d.dead != null ? d.dead : null,
+        network_type: _ospfNetType(d.netType),
+        cost: d.cost != null ? d.cost : null,
+        role: _ospfRole(d.role),
+        priority: d.priority != null ? d.priority : null,
+        passive: d.passiveKnown ? !!d.passive : null,
+        auth: d.auth != null ? d.auth : null,
+        neighbors: d.nbrs != null ? d.nbrs : null,
+        neighbors_adjacent: d.nbrsAdj != null ? d.nbrsAdj : null
+      };
+      if (d.vrf) row.vrf = d.vrf;
+      _oip[k] = row;
+    });
+    if (Object.keys(_oip).length) s.ospf_ifaces = _oip;
+  }
 
   // Dual-link leaf: when the node has >=2 distinct link ifaces but the route did not resolve (so wan
   // fell back to the same iface as lan), split them so the DeepDive draws BOTH beams (in != out).
@@ -1581,7 +1681,7 @@ if (typeof require !== 'undefined' && require.main === module) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseOspfNeighbors: parseOspfNeighbors, parseOspfInterfaces: parseOspfInterfaces,
+  module.exports = { pairOspfIfaces: pairOspfIfaces, parseOspfNeighbors: parseOspfNeighbors, parseOspfInterfaces: parseOspfInterfaces,
     parseInterfaces: parseInterfaces, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
     parseBgpRoutes: parseBgpRoutes, buildState: buildState, collectFromJson: collectFromJson, collectLive: collectLive,
     _sameSubnet: _sameSubnet };
