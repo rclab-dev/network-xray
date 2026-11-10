@@ -1,0 +1,30 @@
+{
+ "vrf": {
+  "default": {
+   "address_family": {
+    "": {
+     "routes": {
+      "8.8.8.0/24": {
+       "index": {
+        "1": {
+         "next_hop": "10.10.0.10",
+         "origin_codes": "i",
+         "path": "65001 65003",
+         "status_codes": "*",
+         "weight": 0
+        },
+        "2": {
+         "metric": 0,
+         "next_hop": "0.0.0.0",
+         "origin_codes": "i",
+         "status_codes": "*>",
+         "weight": 32768
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

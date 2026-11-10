@@ -1,0 +1,51 @@
+{
+ "bgp_id": 65003,
+ "vrf": {
+  "default": {
+   "neighbor": {
+    "10.11.0.10": {
+     "address_family": {
+      "": {
+       "activity_paths": "1/0",
+       "activity_prefixes": "1/0",
+       "as": 65001,
+       "attribute_entries": "1/1",
+       "bgp_table_version": 2,
+       "cache_entries": {
+        "filter-list": {
+         "memory_usage": 0,
+         "total_entries": 0
+        },
+        "route-map": {
+         "memory_usage": 0,
+         "total_entries": 0
+        }
+       },
+       "input_queue": 0,
+       "local_as": 65003,
+       "msg_rcvd": 35,
+       "msg_sent": 35,
+       "output_queue": 0,
+       "path": {
+        "memory_usage": 136,
+        "total_entries": 1
+       },
+       "prefixes": {
+        "memory_usage": 248,
+        "total_entries": 1
+       },
+       "route_identifier": "3.3.3.3",
+       "routing_table_version": 2,
+       "scan_interval": 60,
+       "state_pfxrcd": "0",
+       "tbl_ver": 2,
+       "total_memory": 688,
+       "up_down": "00:01:38",
+       "version": 4
+      }
+     }
+    }
+   }
+  }
+ }
+}

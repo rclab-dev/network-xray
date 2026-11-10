@@ -18,9 +18,11 @@ var buildState = require('../clab-collect.js').buildState;
 //   | Empty detail command; final state must show null rather than invented facts.
 // r2 state interfaces.*.{ospf_area,ospf_hello,ospf_dead,ospf_net_type}
 //   | These annotations come exclusively from det, which is null.
+// q21 state routing_table row order | Genie serializes routes by prefix key; text uses IOS display order.
+//   Compare all rows and fields after sorting by prefix; no route fields are excluded.
 var DETAIL_FIELDS = ['helloKnown', 'dead', 'netType', 'priority', 'passiveKnown'];
-function capture(node) {
-  var dir = path.join(__dirname, 'fixtures/genie-iosxe/q5', node), texts = {}, json = {};
+function capture(node, fixture) {
+  var dir = path.join(__dirname, 'fixtures/genie-iosxe/' + (fixture || 'q5'), node), texts = {}, json = {};
   ios.CMDS.forEach(function (c) {
     var command = c[1].replace(/ /g, '_'), t = path.join(dir, command + '.txt'), j = path.join(dir, 'genie_' + command + '.json');
     if (fs.existsSync(t)) texts[c[0]] = fs.readFileSync(t, 'utf8');

@@ -89,3 +89,83 @@ test('query entry points and MCP use the Genie directory through the shared load
     assert.ok(result.structuredContent, name);
   });
 });
+
+var q21 = path.join(__dirname, 'fixtures/genie-iosxe/q21');
+function q21TextStates() {
+  var states = {};
+  ['r1', 'r2', 'r3'].forEach(function (node) {
+    var c = parity.capture(node, 'q21');
+    var parts = ios.iosxeTextToParts(c.texts);
+    states[node] = ios.iosxePartsToState(parts, {
+      node: node, proto: 'bgp', bgpConfigured: !!parts.p.bgpSum.routerId,
+      ospfConfigured: Object.keys(parts.p.ospfIf).length > 0,
+      mgmtSubnet: '172.20.20.0/24'
+    }, collector.buildState);
+  });
+  return states;
+}
+test('q21: all BGP neighbors, routes and RIB match the paired text captures', function () {
+  var expected = q21TextStates(), actual = query.loadStates(q21);
+  Object.keys(expected).forEach(function (node) {
+    var c = parity.capture(node, 'q21');
+    assert.deepStrictEqual(genie.genieToParts(c.json).p.bgpSum, ios.iosxeTextToParts(c.texts).p.bgpSum);
+    ['bgp_neighbors', 'bgp_routes', 'routing_table'].forEach(function (field) {
+      var a = actual[node][field], e = expected[node][field];
+      // The single exception table documents q21's route serialization order.
+      if (field === 'routing_table') {
+        var order = function (a, b) { return a.prefix.localeCompare(b.prefix); };
+        a = a.slice().sort(order); e = e.slice().sort(order);
+      }
+      assert.deepStrictEqual(a, e, node + ' ' + field);
+    });
+  });
+});
+test('q21: why derives the same Local Pref answer as text', function () {
+  var actual = query.run(['why', q21, 'r1', '8.8.8.0/24']);
+  assert.deepStrictEqual(actual, query.why(q21TextStates(), 'r1', '8.8.8.0/24'));
+  assert.match(JSON.stringify(actual), /10\.11\.0\.20/);
+  assert.match(JSON.stringify(actual), /Local Pref/);
+  assert.match(JSON.stringify(actual), /reason_source.*derived/);
+});
+test('q21: subnet discovery pairs only r1-r2 and r1-r3', function () {
+  var states = genie.collectGenieDir(q21);
+  assert.deepStrictEqual(states.r1.peer_links.map(function (l) { return l.peer; }), ['r2', 'r3']);
+  assert.deepStrictEqual(states.r2.peer_links.map(function (l) { return l.peer; }), ['r1']);
+  assert.deepStrictEqual(states.r3.peer_links.map(function (l) { return l.peer; }), ['r1']);
+  assert.equal(Object.values(states).reduce(function (n, s) {
+    assert.equal(s.ospf_configured, false); assert.equal(s.bgp_configured, true);
+    s.peer_links.forEach(function (l) { assert.ok(!l.ip.startsWith('172.20.20.')); });
+    return n + s.peer_links.length;
+  }, 0), 4);
+});
+test('management CIDR is configurable, interface names are unrestricted, and topology wins', function () {
+  var temp = fs.mkdtempSync(path.join(__dirname, '.genie-entry-'));
+  try {
+    ['a', 'b'].forEach(function (node, index) {
+      var sub = path.join(temp, node); fs.mkdirSync(sub);
+      fs.writeFileSync(path.join(sub, 'genie_show_ip_interface_brief.json'), JSON.stringify({ interface: {
+        'Ethernet0/0': { ip_address: '10.0.0.' + (index + 1), status: 'up', protocol: 'up' },
+        'Ethernet0/3': { ip_address: '172.20.20.' + (index + 1), status: 'up', protocol: 'up' },
+        Loopback0: { ip_address: '10.1.0.' + (index + 1), status: 'up', protocol: 'up' }
+      } }));
+      fs.writeFileSync(path.join(sub, 'genie_show_ip_protocols.json'), JSON.stringify({ protocols: { bgp: { instance: { default: { bgp_id: 65001 } } } } }));
+    });
+    var states = genie.collectGenieDir(temp);
+    assert.equal(states.a.protocol, 'bgp'); assert.equal(states.a.bgp_configured, true);
+    assert.deepStrictEqual(states.a.peer_links.map(function (l) { return l.iface; }), ['Ethernet0/0']);
+    states = genie.collectGenieDir(temp, { mgmtSubnet: '10.0.0.0/24' });
+    assert.deepStrictEqual(states.a.peer_links.map(function (l) { return l.iface; }), ['Ethernet0/3']);
+    var topo = path.join(temp, 'lab.yml');
+    fs.writeFileSync(topo, 'topology:\n  links:\n    - endpoints: ["a:Ethernet0/3", "b:Ethernet0/3"]\n');
+    states = genie.collectGenieDir(temp, { topo: topo });
+    assert.deepStrictEqual(states.a.peer_links.map(function (l) { return l.iface; }), ['Ethernet0/3']);
+    assert.throws(function () { genie.main([temp, '--mgmt-subnet', 'bad']); }, /invalid management subnet/);
+    assert.throws(function () { genie.main([temp, '--mgmt-subnet']); }, /missing value/);
+    var output = '', write = process.stdout.write;
+    try {
+      process.stdout.write = function (s) { output += s; return true; };
+      genie.main([temp, '--mgmt-subnet', '10.0.0.0/24']);
+    } finally { process.stdout.write = write; }
+    assert.equal(JSON.parse(output).a.peer_links[0].iface, 'Ethernet0/3');
+  } finally { fs.rmSync(temp, { recursive: true, force: true }); }
+});

@@ -21,7 +21,7 @@ function genieToParts(genieByCommand, args) {
     });
     if (r.route_preference != null) row.distance = +r.route_preference;
     if (r.metric != null) row.metric = +r.metric;
-    // Uncaptured routed next-hop schema; see docs/dev/genie-mapping.md.
+    // Routed next hops (validated by q21).
     entries((r.next_hop || {}).next_hop_list, function (nh) {
       row.nexthops.push({ ip: nh.next_hop || null, iface: nh.outgoing_interface == null ? null : ios.normIf(nh.outgoing_interface),
         connected: false, active: r.active == null ? null : r.active, fib: true });
@@ -70,7 +70,7 @@ function genieToParts(genieByCommand, args) {
     }
     p.ospfIf[name] = o;
   });
-  // The following nonempty neighbor/BGP schemas are guesses, NOT validated by q5.
+  // The nonempty OSPF neighbor schema is not validated by q5.
   // Empty commands still produce the exact empty parts from parseAll({}).
   var neighbors = ((j.show_ip_ospf_neighbor || {}).vrf || {}).default || {};
   ospfInterfaces(neighbors.instance, function (i, name) {
@@ -82,14 +82,14 @@ function genieToParts(genieByCommand, args) {
     });
   });
   var summary = (((j.show_ip_bgp_summary || {}).vrf || {}).default || {});
-  if (summary.router_id != null) p.bgpSum.routerId = summary.router_id;
-  if (summary.local_as != null) p.bgpSum.localAs = String(summary.local_as);
+  if ((j.show_ip_bgp_summary || {}).bgp_id != null) p.bgpSum.localAs = String(j.show_ip_bgp_summary.bgp_id);
   entries(summary.neighbor, function (n, ip) {
     entries(n.address_family, function (af) {
+      if (af.route_identifier != null) p.bgpSum.routerId = af.route_identifier;
       var raw = af.state_pfxrcd, established = raw == null ? null : /^\d+$/.test(String(raw));
       var ns = raw == null ? { state: null } : established ? { state: 'Established' } : ios.normBgpState(String(raw));
       var r = { ip: ip, state: ns.state, established: established, pfxRcd: established ? +raw : null,
-        remoteAs: num(n.remote_as), localAs: num(summary.local_as), upDown: af.up_down == null ? null : af.up_down };
+        remoteAs: num(af.as), localAs: num(af.local_as), upDown: af.up_down == null ? null : af.up_down };
       r.ibgp = r.remoteAs == null || r.localAs == null ? null : r.remoteAs === r.localAs;
       if (raw != null && !established && String(raw) !== ns.state) r.state_raw = String(raw);
       if (ns.admin_down) r.admin_down = true;
@@ -106,7 +106,7 @@ function genieToParts(genieByCommand, args) {
           best: status == null ? null : status.indexOf('>') >= 0, valid: status == null ? null : status.indexOf('*') >= 0,
           status_raw: status, ibgp: status == null ? null : status.indexOf('i') >= 0,
           as_path: path.path == null ? '' : path.path, local_pref: num(path.localpref), weight: num(path.weight), metric: num(path.metric),
-          origin: ({ i: 'IGP', e: 'EGP', '?': 'incomplete' })[path.origin] || '', reason: '' });
+          origin: ({ i: 'IGP', e: 'EGP', '?': 'incomplete' })[path.origin_codes] || '', reason: '' });
       });
     });
   });
@@ -122,7 +122,12 @@ function isGenieDir(dir) {
 }
 function collectGenieDir(dir, options) {
   options = options || {};
-  var parts = Object.create(null), adj = Object.create(null), states = Object.create(null);
+  var parts = Object.create(null), adj = Object.create(null), states = Object.create(null), config = Object.create(null);
+  var mgmtSubnet = options.mgmtSubnet || '172.20.20.0/24';
+  function ipNumber(ip) { return ip.split('.').reduce(function (v, octet) { return (v * 256 + +octet) >>> 0; }, 0); }
+  var mgmt = mgmtSubnet.split('/'), mgmtLen = +mgmt[1];
+  if (mgmt.length !== 2 || !/^\d+\.\d+\.\d+\.\d+$/.test(mgmt[0]) || mgmt[0].split('.').some(function (v) { return +v > 255; }) || !/^\d+$/.test(mgmt[1]) || mgmtLen > 32) throw new Error('invalid management subnet: ' + mgmtSubnet);
+  var mgmtMask = mgmtLen === 0 ? 0 : 0xFFFFFFFF << (32 - mgmtLen);
   fs.readdirSync(dir).sort().forEach(function (node) {
     var sub = path.join(dir, node);
     if (!fs.statSync(sub).isDirectory() || !isGenieDir(sub)) return;
@@ -133,6 +138,8 @@ function collectGenieDir(dir, options) {
       commands[f.slice(6, -5)] = text.trim() ? JSON.parse(text) : null;
     });
     parts[node] = genieToParts(commands, {}); adj[node] = [];
+    config[node] = { bgpConfigured: parts[node].p.bgpSum.list.length > 0 || !!((commands.show_ip_protocols || {}).protocols || {}).bgp,
+      ospfConfigured: Object.keys(parts[node].p.ospfIf).length > 0 };
   });
   var nodes = Object.keys(parts);
   if (!nodes.length) throw new Error('no Genie captures in ' + dir);
@@ -161,9 +168,10 @@ function collectGenieDir(dir, options) {
     nodes.forEach(function (n) {
       Object.keys(parts[n].p.ifaces).forEach(function (i) {
         var f = parts[n].p.ifaces[i], len = f.prefix;
-        // Match the IOS collector's IOL management-port convention; topology can explicitly use it.
-        if (!f.ip || len == null || len <= 0 || len > 31 || i === 'Ethernet0/0' || /^Loopback/i.test(i)) return;
-        var ip = f.ip.split('.').reduce(function (v, octet) { return (v * 256 + +octet) >>> 0; }, 0);
+        // Exclude management addresses regardless of interface name.
+        if (!f.ip || len == null || len <= 0 || len > 31 || /^Loopback/i.test(i)) return;
+        var ip = ipNumber(f.ip);
+        if ((ip & mgmtMask) === (ipNumber(mgmt[0]) & mgmtMask)) return;
         var key = ((ip & (0xFFFFFFFF << (32 - len))) >>> 0) + '/' + len;
         (subnets[key] = subnets[key] || []).push([n, i]);
       });
@@ -174,21 +182,21 @@ function collectGenieDir(dir, options) {
     });
   }
   nodes.forEach(function (n) {
-    states[n] = ios.iosxePartsToState(parts[n], { node: n, id: n, proto: 'ospf', adjacency: adj[n] }, collector.buildState);
+    states[n] = ios.iosxePartsToState(parts[n], Object.assign({ node: n, id: n, proto: config[n].bgpConfigured ? 'bgp' : 'ospf', adjacency: adj[n], mgmtSubnet: mgmtSubnet }, config[n]), collector.buildState);
   });
   return collector.pairOspfIfaces(states, adj);
 }
 function main(argv) {
   var dir, options = {}, out;
   for (var i = 0; i < argv.length; i++) {
-    if (argv[i] === '--topo' || argv[i] === '--out') {
+    if (argv[i] === '--topo' || argv[i] === '--out' || argv[i] === '--mgmt-subnet') {
       var flag = argv[i];
       if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new Error('missing value for ' + flag);
-      if (flag === '--topo') options.topo = argv[++i]; else out = argv[++i];
+      if (flag === '--topo') options.topo = argv[++i]; else if (flag === '--mgmt-subnet') options.mgmtSubnet = argv[++i]; else out = argv[++i];
     } else if (!dir && !argv[i].startsWith('-')) dir = argv[i];
     else throw new Error('unknown argument: ' + argv[i]);
   }
-  if (!dir) throw new Error('usage: node genie-to-xray.js <dir> [--topo <lab.clab.yml>] [--out <dir>]');
+  if (!dir) throw new Error('usage: node genie-to-xray.js <dir> [--topo <lab.clab.yml>] [--out <dir>] [--mgmt-subnet <cidr>]');
   var states = collectGenieDir(dir, options);
   if (!out) { process.stdout.write(JSON.stringify(states, null, 2) + '\n'); return; }
   fs.mkdirSync(out, { recursive: true });

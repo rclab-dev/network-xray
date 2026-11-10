@@ -1,0 +1,58 @@
+{
+ "protocols": {
+  "application": {
+   "flushed": 0,
+   "holddown": 0,
+   "incoming_filter_list": "not set",
+   "invalid": 0,
+   "maximum_path": 32,
+   "outgoing_filter_list": "not set",
+   "preference": {
+    "single_value": {
+     "all": 4
+    }
+   },
+   "update_frequency": 0
+  },
+  "bgp": {
+   "instance": {
+    "default": {
+     "bgp_id": 65001,
+     "vrf": {
+      "default": {
+       "address_family": {
+        "ipv4": {
+         "automatic_route_summarization": false,
+         "igp_sync": false,
+         "incoming_filter_list": "not set",
+         "maximum_path": 1,
+         "neighbors": {
+          "10.10.0.20": {
+           "route_map": "LOW"
+          },
+          "10.11.0.20": {}
+         },
+         "outgoing_filter_list": "not set",
+         "preference": {
+          "multi_values": {
+           "external": 20,
+           "internal": 200,
+           "local": 200
+          }
+         },
+         "routing_information_sources": {
+          "10.11.0.20": {
+           "distance": 20,
+           "last_update": "00:01:01",
+           "neighbor_id": "10.11.0.20"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
