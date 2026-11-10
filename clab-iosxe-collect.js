@@ -513,6 +513,14 @@ function explainBestPath(routes) {
 // Same call shape as clab-collect.js collectFromJson (args.ospfNeighbor etc. are TEXT here).
 // buildState is injected so this file does not hard-depend on where clab-collect.js lives.
 function collectFromIosxeText(args, buildState) {
+  return iosxePartsToState(iosxeTextToParts(args), args, buildState);
+}
+
+/* nx_ios_parts (2026-11-09): the IOS text read into the collector's parts = { p: { ospfNei, ospfIf, ifaces, routes, bgpSum,
+   bgpRoutes } (parseAll's shapes, BDI ports and the full show ip ospf interface already merged in), det (the full
+   show ip ospf interface per interface, or null), err (show ip ospf traffic header errors, or null) }. iosxePartsToState
+   turns parts into the state; a reader of the same facts in another form only has to build these parts. */
+function iosxeTextToParts(args) {
   var p = parseAll(args);
   // passive: IOS shows passive only in the full 'show ip ospf interface' (No Hellos). Mark it on the OSPF
   // interface BEFORE buildState so the heading counts it (passive counts, like FRR) and no Hello orb is drawn for it.
@@ -550,6 +558,12 @@ function collectFromIosxeText(args, buildState) {
       o.priority = d.priority != null ? d.priority : null; o.auth = d.auth || null; o.passiveKnown = true;
     }
   });
+  return { p: p, det: args.ospfInterfaceDetail ? parseOspfInterfaceDetail(args.ospfInterfaceDetail) : null,
+           err: args.ospfTraffic ? parseOspfTraffic(args.ospfTraffic) : null };
+}
+
+function iosxePartsToState(parts, args, buildState) {
+  var p = parts.p;
   // FRR's RIB also lists OSPF's OWN networks as non-selected "O ... is directly connected" entries, and
   // buildState derives lsdb_prefixes (the router's own LSAs) from protocol=ospf routes. IOS does not
   // print those, so add the same non-selected OSPF entries for every OSPF interface's network, placed
@@ -609,10 +623,10 @@ function collectFromIosxeText(args, buildState) {
   });
   // Per-interface OSPF parameters, only when the optional shows were taken (additive: without them
   // nothing changes). The two ends of a link are compared from state.ospf_ifaces (clab-collect.js pairOspfIfaces).
-  var det = args.ospfInterfaceDetail ? parseOspfInterfaceDetail(args.ospfInterfaceDetail) : null;
+  var det = parts.det || null;
   /* nx_ios_bdi (2): a link port that carries a BDI gets the BDI's per-interface OSPF values */
   if (det) Object.keys(p.ifaces).forEach(function (n) { var b = p.ifaces[n].viaBdi; if (b && det[b] && !det[n]) det[n] = det[b]; });
-  var err = args.ospfTraffic ? parseOspfTraffic(args.ospfTraffic) : null;
+  var err = parts.err || null;
   Object.keys(st.interfaces || {}).forEach(function (ifn) {
     var i = st.interfaces[ifn], d = det && det[ifn];
     if (d && d.area != null) {
@@ -968,7 +982,7 @@ if (require.main === module) main();
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { normIf: normIf, parseOspfNeighbors: parseOspfNeighbors, parseOspfInterfaces: parseOspfInterfaces,
     parseInterfaces: parseInterfaces, parseBridgeDomains: parseBridgeDomains, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
-    parseBgpRoutes: parseBgpRoutes, explainBestPath: explainBestPath, parseAll: parseAll, collectFromIosxeText: collectFromIosxeText,
+    parseBgpRoutes: parseBgpRoutes, explainBestPath: explainBestPath, parseAll: parseAll, collectFromIosxeText: collectFromIosxeText, iosxeTextToParts: iosxeTextToParts, iosxePartsToState: iosxePartsToState,
     normBgpState: normBgpState, parseOspfInterfaceDetail: parseOspfInterfaceDetail, parseOspfTraffic: parseOspfTraffic,
     splitByPrompt: splitByPrompt, parseWarnings: parseWarnings, parseVrfs: parseVrfs, CMDS: CMDS,
     SAFE_NAME: SAFE_NAME, SAFE_HOST: SAFE_HOST, makeAskpass: makeAskpass,
