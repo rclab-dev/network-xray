@@ -95,6 +95,11 @@ function loadStates(input) {
     if (st2.isDirectory() && isFrrDir(sub)) { var s2 = collectFrrDir(sub); out[nodeName(s2, f)] = s2; }
   });
   if (Object.keys(out).length) return out;
+  var genie = require('../genie-to-xray.js');
+  if (files.some(function (f) {
+    var sub = path.join(input, f);
+    try { return fs.statSync(sub).isDirectory() && genie.isGenieDir(sub); } catch (e) { return false; }
+  })) return genie.collectGenieDir(input);
   throw new QueryError('no state files (state_<node>.json, xray-states.js or FRR show_*.json) in ' + input);
 }
 
@@ -773,7 +778,7 @@ if (require.main === module) {
       '  state <path>                        nodes, links, OSPF adjacencies, BGP sessions, counts\n' +
       '  why <path> <node> <prefix> [vrf]    BGP best path and the reason stored with it\n' +
       '  ospf-if <path> [node]               OSPF interface values, both ends of each link, what must match but does not\n' +
-      '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR show ... json files\n' +
+      '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR / Genie captures\n' +
       '  --format json|table  default: json\n' +
       '  --color              colors in table output (only on a terminal)\n' +
       '  -h, --help           show this help');

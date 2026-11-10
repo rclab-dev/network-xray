@@ -96,3 +96,7 @@ node test/iosxe-ospf-states.test.js
 node test/iosxe-real.test.js
 node test/iosxe-vrf.test.js
 ```
+
+How to use: `node genie-to-xray.js <capture-dir> [--topo lab.clab.yml] [--out <output-dir>]` (otherwise prints JSON).
+How to use: `node scripts/xray-query.js state <capture-dir>` or `ospf-if <capture-dir>`; node folders contain `genie_*.json`.
+How to use: MCP tools accept the same Genie capture directory in their `path` argument.

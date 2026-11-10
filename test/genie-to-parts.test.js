@@ -51,6 +51,8 @@ function stateComparable(state, node) {
   });
   return out;
 }
+module.exports = { capture: capture, stateComparable: stateComparable };
+if (require.main === module) {
 ['r1', 'r2'].forEach(function (node) {
   test(node + ': real JSON and text parts match except the documented missing facts', function () {
     var c = capture(node), text = ios.iosxeTextToParts(c.texts), got = genieToParts(c.json, c.args);
@@ -94,3 +96,5 @@ test('passive:false without a running hello is unknown; explicit passive is pres
   assert.equal(got.p.ospfIf['Ethernet0/1'].passive, true);
   assert.equal(got.p.ospfIf['Ethernet0/1'].passiveKnown, true);
 });
+
+}

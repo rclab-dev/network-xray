@@ -112,4 +112,91 @@ function genieToParts(genieByCommand, args) {
   });
   return { p: p, det: det, err: null };
 }
-module.exports = { genieToParts: genieToParts };
+// Saved captures are converted synchronously, so query and MCP use exactly the CLI path.
+var fs = require('fs'), path = require('path');
+var collector = require('./clab-collect.js');
+function isGenieDir(dir) {
+  return fs.readdirSync(dir).some(function (f) {
+    return /^genie_.*\.json$/.test(f) && fs.statSync(path.join(dir, f)).isFile();
+  });
+}
+function collectGenieDir(dir, options) {
+  options = options || {};
+  var parts = Object.create(null), adj = Object.create(null), states = Object.create(null);
+  fs.readdirSync(dir).sort().forEach(function (node) {
+    var sub = path.join(dir, node);
+    if (!fs.statSync(sub).isDirectory() || !isGenieDir(sub)) return;
+    var commands = Object.create(null);
+    fs.readdirSync(sub).sort().forEach(function (f) {
+      if (!/^genie_.*\.json$/.test(f) || !fs.statSync(path.join(sub, f)).isFile()) return;
+      var text = fs.readFileSync(path.join(sub, f), 'utf8');
+      commands[f.slice(6, -5)] = text.trim() ? JSON.parse(text) : null;
+    });
+    parts[node] = genieToParts(commands, {}); adj[node] = [];
+  });
+  var nodes = Object.keys(parts);
+  if (!nodes.length) throw new Error('no Genie captures in ' + dir);
+  function link(a, ai, b, bi) {
+    if (!adj[a] || !adj[b] || a === b) return;
+    adj[a].push({ iface: ai, peer: b, peerIface: bi });
+    adj[b].push({ iface: bi, peer: a, peerIface: ai });
+  }
+  if (options.topo) {
+    var topo = require('./clab-to-xray.js').parseYaml(fs.readFileSync(options.topo, 'utf8'));
+    var defs = (topo.topology || {}).nodes || {};
+    function endpoint(e) {
+      var n = typeof e === 'string' ? e.split(':') : [e.node, e.interface];
+      var m = /^eth(\d+)$/.exec(n[1]);
+      var kind = (defs[n[0]] || {}).kind || ((topo.topology || {}).defaults || {}).kind || '';
+      n[1] = m && /^cisco_iol/i.test(kind) ? 'Ethernet' + Math.floor(+m[1] / 4) + '/' + (+m[1] % 4) : ios.normIf(n[1]);
+      return n;
+    }
+    ((topo.topology || {}).links || []).forEach(function (l) {
+      if (!Array.isArray(l.endpoints) || l.endpoints.length !== 2) return;
+      var a = endpoint(l.endpoints[0]), b = endpoint(l.endpoints[1]);
+      link(a[0], a[1], b[0], b[1]);
+    });
+  } else {
+    var subnets = Object.create(null);
+    nodes.forEach(function (n) {
+      Object.keys(parts[n].p.ifaces).forEach(function (i) {
+        var f = parts[n].p.ifaces[i], len = f.prefix;
+        // Match the IOS collector's IOL management-port convention; topology can explicitly use it.
+        if (!f.ip || len == null || len <= 0 || len > 31 || i === 'Ethernet0/0' || /^Loopback/i.test(i)) return;
+        var ip = f.ip.split('.').reduce(function (v, octet) { return (v * 256 + +octet) >>> 0; }, 0);
+        var key = ((ip & (0xFFFFFFFF << (32 - len))) >>> 0) + '/' + len;
+        (subnets[key] = subnets[key] || []).push([n, i]);
+      });
+    });
+    Object.keys(subnets).forEach(function (k) {
+      var ends = subnets[k];
+      if (ends.length === 2) link(ends[0][0], ends[0][1], ends[1][0], ends[1][1]);
+    });
+  }
+  nodes.forEach(function (n) {
+    states[n] = ios.iosxePartsToState(parts[n], { node: n, id: n, proto: 'ospf', adjacency: adj[n] }, collector.buildState);
+  });
+  return collector.pairOspfIfaces(states, adj);
+}
+function main(argv) {
+  var dir, options = {}, out;
+  for (var i = 0; i < argv.length; i++) {
+    if (argv[i] === '--topo' || argv[i] === '--out') {
+      var flag = argv[i];
+      if (!argv[i + 1] || argv[i + 1].startsWith('--')) throw new Error('missing value for ' + flag);
+      if (flag === '--topo') options.topo = argv[++i]; else out = argv[++i];
+    } else if (!dir && !argv[i].startsWith('-')) dir = argv[i];
+    else throw new Error('unknown argument: ' + argv[i]);
+  }
+  if (!dir) throw new Error('usage: node genie-to-xray.js <dir> [--topo <lab.clab.yml>] [--out <dir>]');
+  var states = collectGenieDir(dir, options);
+  if (!out) { process.stdout.write(JSON.stringify(states, null, 2) + '\n'); return; }
+  fs.mkdirSync(out, { recursive: true });
+  fs.writeFileSync(path.join(out, 'xray-states.js'), 'window.LIVE_STATES = ' + JSON.stringify(states) + ';\n');
+  var versions = Object.create(null); Object.keys(states).forEach(function (n) { versions[n] = 1; });
+  fs.writeFileSync(path.join(out, 'xray-states.sig.js'), 'window.LIVE_SIG = ' + JSON.stringify({ run: Date.now(), gen: 1, nodes: versions, extra: 0 }) + ';\n');
+}
+module.exports = { genieToParts: genieToParts, collectGenieDir: collectGenieDir, isGenieDir: isGenieDir, main: main };
+if (require.main === module) {
+  try { main(process.argv.slice(2)); } catch (e) { console.error(e.message); process.exitCode = 2; }
+}
