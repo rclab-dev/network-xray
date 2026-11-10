@@ -320,17 +320,23 @@ Each entry in `bgp_routes[]` carries the visible attributes (`prefix`, `next_hop
 
 **Best-path reason: authority vs. derivation / ベストパス理由の権威と導出.**
 The Best-Path Decision panel names the deciding criterion and renders the full FRR default order
-(Weight → LocPref → AS-Path → Origin → MED → eBGP&gt;iBGP → IGP metric → **Older Path (RFC 5004)** →
-Router ID\* → Neighbor IP; \* Router ID only with `bgp bestpath compare-routerid`).
+(Weight → LocPref → Local route → AS-Path → Origin → MED → eBGP&gt;iBGP → IGP metric → **Older Path\* (RFC 5004)** →
+Router ID → Neighbor IP; \* Older Path only between eBGP paths, skipped with `bgp bestpath compare-routerid` — FRR's
+`bgp_path_info_cmp()`).
 Two data sources are supported, in priority order:
-1. **Authority** — if a route carries `sel_reason`, that FRR string names the decider verbatim (a
-   backend that runs `show bgp … json` supplies it). 権威: `sel_reason` があれば FRR 文字列をそのまま採用。
+1. **Authority** — if a route carries `sel_reason`, that FRR string names the decider verbatim whenever the
+   visible attributes do not decide (a backend that runs `show bgp … json` supplies it). When the visible attributes
+   do decide within the winner's neighbor AS (e.g. MED), the view names that step: FRR's `selectionReason` is only its
+   last pairwise comparison (with three paths it can name a step against another path, e.g. `Older Path`).
+   権威: 可視属性で決まらない時は `sel_reason` (FRR の文字列) をそのまま採用。可視属性で決まる時はその段 (FRR の
+   selectionReason は最後の 1 組の比較の理由に過ぎない)。
 2. **Derivation** — with no backend (this OSS gallery: recorded demos, `show ip bgp` pastes) the
    decider is derived from the visible attributes in FRR's default comparison order. A pure
-   visible-attribute tie is attributed to **Older Path (RFC 5004)**, never to Router ID (which is a
-   default-off comparison), so the reasoning never misattributes a tie. backend が無い場合は可視属性
-   から FRR 既定順で導出。可視属性が完全に同値のタイは **Older Path (RFC 5004)** に帰属させ、
-   Router ID には帰属させない(既定オフの比較のため)。
+   visible-attribute tie is not attributed to one step: the view says FRR decides by a step the table does not
+   show (eBGP > iBGP → IGP metric → **Older Path (RFC 5004)**, only between eBGP paths → Router ID, always
+   compared — FRR's `bgp_path_info_cmp()`; recorded FRR 8.4 / 10.7.1: two equal iBGP paths → `Router ID`).
+   backend が無い場合は可視属性から FRR 既定順で導出。可視属性が完全に同値のタイは 1 つの段に帰属させず、
+   「表に出ない段 (eBGP > iBGP → IGP metric → Older Path [eBGP どうしのみ] → Router ID [常に]) で決まる」と書く。
 
 ### 4.5 Static routes / 静的経路
 

@@ -122,10 +122,10 @@ var CRITERIA = [
   { key:'origin',    label:{ja:'Origin コード',    en:'Origin Code'},      rule:{ja:'i &lt; e &lt; ?（i が最強）', en:'i &lt; e &lt; ? (IGP is best)'}, dir:'origin', fmt:function(v){return ({i:'IGP (i)',e:'EGP (e)','?':'Incomplete (?)'})[v]||v;} },
   { key:'med',       label:{ja:'MED',              en:'MED'},              rule:{ja:'小さい方が勝ち',          en:'Lower wins'},             dir:'low',    fmt:function(v){return v;} },
   { key:'ebgp',      label:{ja:'eBGP > iBGP',      en:'eBGP > iBGP'},      rule:{ja:'eBGP が勝ち',            en:'eBGP over iBGP'},         dir:'ebgp',   fmt:function(v){return v?'eBGP':'iBGP';} },
-  // (iii) Older Path (RFC 5004) is FRR's DEFAULT final tie-breaker — the first-received external path
-  //   wins. It comes BEFORE Router ID, which only applies with `bgp bestpath compare-routerid`.
-  { key:'olderpath', label:{ja:'Older Path',       en:'Older Path'},       rule:{ja:'先に受信した経路が勝ち（<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>・既定のタイブレーカ）', en:'First-received wins (<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; default tie-breaker)'}, dir:'low', fmt:function(v){return (v==null||v==='')?'—':v;} },
-  { key:'routerid',  label:{ja:'Router ID',        en:'Router ID'},        rule:{ja:'小さい方が勝ち（compare-routerid 設定時のみ）', en:'Lowest wins (only with compare-routerid)'}, dir:'low', fmt:function(v){return v;} }
+  // (iii) nx_bp_tie_order (2026-11-09, FRR bgp_path_info_cmp): Older Path (RFC 5004) = the first-received path wins, only
+  //   when BOTH paths are eBGP and `bgp bestpath compare-routerid` is off. Router ID is ALWAYS compared after it.
+  { key:'olderpath', label:{ja:'Older Path',       en:'Older Path'},       rule:{ja:'先に受信した経路が勝ち（<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>・eBGP の経路どうしのみ・compare-routerid 設定時は省く）', en:'First-received wins (<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; default tie-breaker)'}, dir:'low', fmt:function(v){return (v==null||v==='')?'—':v;} },
+  { key:'routerid',  label:{ja:'Router ID',        en:'Router ID'},        rule:{ja:'小さい方が勝ち（常に比べる）', en:'Lowest wins (always compared)'}, dir:'low', fmt:function(v){return v;} }
 ];
 
 // ── default data (representative example: A=LP200 / B=LP100, Weight tie -> decided by Local Preference) ──
@@ -156,13 +156,15 @@ routes.forEach(function(r){ if (!r.name) r.name = (r.id === 'A') ? T.routeA : (r
 
 // ── knockout-tournament simulation (same logic as the prototype) ──
 function betterSet(alive, crit){
-  // (iii) The deep tie-breakers. Older Path (RFC 5004) is FRR's DEFAULT final tie-breaker; Router ID
-  //   applies only with `bgp bestpath compare-routerid`. A `show ip bgp` snapshot carries no receive
-  //   time, so unless the caller supplies attrs.age we cannot rank Older Path, and Router ID stays
-  //   disabled by default — the tournament then ends unresolved (rendered as decided by Older Path)
-  //   rather than falsely attributing the win to Router ID.
-  if (crit.key === 'routerid' && !data.compareRouterId) return alive.slice();
-  if (crit.key === 'olderpath' && !alive.some(function(r){ return r.attrs.age != null; })) return alive.slice();
+  // (iii) nx_bp_tie_order (2026-11-09): the deep tie-breakers as FRR's bgp_path_info_cmp. Older Path applies only when all
+  //   remaining paths are eBGP and compare-routerid is off; a show-ip-bgp snapshot has no receive time, so without attrs.age
+  //   the knockout STOPS there (null) instead of going on to Router ID. Router ID is always compared, but only real ids count
+  //   (the collectors do not carry a BGP peer's Router ID) - without them it stops too. Unresolved = named, not guessed.
+  if (crit.key === 'olderpath') {
+    if (data.compareRouterId || !alive.every(function(r){ return r.attrs.ebgp; })) return alive.slice();
+    if (!alive.every(function(r){ return r.attrs.age != null; })) return null;
+  }
+  if (crit.key === 'routerid' && !alive.every(function(r){ return !!r.attrs.routerid; })) return null;
   // MED is compared only between paths from the same neighbor AS (RFC 4271 9.1.2.2 c), as the DeepDive panel does
   if (crit.key === 'med') return alive.filter(function(r){ return !alive.some(function(o){ return o.as === r.as && o.attrs.med < r.attrs.med; }); });
   function val(r){ var v = (crit.key === 'olderpath') ? r.attrs.age : r.attrs[crit.key];
@@ -174,10 +176,11 @@ function betterSet(alive, crit){
   var best = Math.max.apply(null, alive.map(val));
   return alive.filter(function(r){ return val(r) === best; });
 }
-var alive = routes.slice(), rowState = [], decidedAt = -1;
+var alive = routes.slice(), rowState = [], decidedAt = -1, stopped = false;
 for (var i=0;i<CRITERIA.length;i++){
-  if (decidedAt >= 0){ rowState.push({type:'na'}); continue; }
+  if (decidedAt >= 0 || stopped){ rowState.push({type:'na'}); continue; }
   var survivors = betterSet(alive, CRITERIA[i]);
+  if (survivors === null){ rowState.push({type:'tie'}); stopped = true; continue; }   /* nx_bp_tie_order: cannot be read from the snapshot */
   var eliminated = alive.filter(function(r){ return survivors.indexOf(r) < 0; });
   if (eliminated.length === 0){ rowState.push({type:'tie'}); }
   else {
@@ -209,7 +212,7 @@ document.getElementById('hSub').innerHTML = T.sub;
 document.getElementById('cards').innerHTML = routes.map(function(r){
   var out = (r.id in elimRow), win = (r.id === winnerId);
   return '<div class="rt '+(win?'win':'')+' '+(out?'out':'')+'"><span class="tag">'+esc(r.via)+' · '+esc(r.as)+'</span>'+
-    '<div class="name">'+esc(r.name)+'</div><span class="tag">'+T.rid+' '+esc(r.attrs.routerid)+'</span>'+
+    '<div class="name">'+esc(r.name)+'</div><span class="tag">'+T.rid+' '+esc(r.attrs.routerid || '?')+'</span>'+
     (win?'<span class="badge">🏆 WIN</span>':'')+(out?'<span class="badge">✗ OUT</span>':'')+'</div>';
 }).join('');
 
@@ -235,12 +238,10 @@ document.getElementById('body').innerHTML = CRITERIA.map(function(c,i){
 }).join('');
 
 if (decidedAt < 0) {
-  // (iii) No visible attribute separated the paths: FRR's default final tie-breaker is Older Path
-  //   (RFC 5004) — the first-received external path wins. Receive time isn't in a show-ip-bgp snapshot,
-  //   so we name the rule rather than assert A or B (and Router ID is NOT the default decider).
+  // (iii) nx_bp_tie_order: no step this page can read separated the paths. Name FRR's remaining steps rather than assert A or B.
   var _tieMsg = (LANG === 'ja')
-    ? '可視属性はすべて同値 — FRR は <b>Older Path</b>（<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>・先に受信した経路が勝ち）でタイを解消します。受信時刻は show ip bgp に出ないため、どちらが古いかは表からは決まりません（Router ID は compare-routerid 設定時のみ）。'
-    : 'All visible attributes tie — FRR breaks it by <b>Older Path</b> (<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>): the first-received external path wins. Receive time isn\'t in a show ip bgp snapshot, so the table alone can\'t say which is older (Router ID applies only with compare-routerid).';
+    ? '見える値では決まりません — FRR はこの先を、表に出ない段で決めます（IGP metric → <b>Older Path</b>（<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>・eBGP の経路どうしのみ・先に受信した経路が勝ち）→ Router ID（常に比べる））。受信時刻と相手の Router ID は show ip bgp の表に出ないため、どちらが勝つかは表からは決まりません。'
+    : 'The visible values do not decide — FRR goes on with steps the table does not show (IGP metric → <b>Older Path</b> (<a class="rfc" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; between eBGP paths only; the first-received path wins) → Router ID (always compared)). Receive time and the peer\'s Router ID are not in a show ip bgp table, so the table alone cannot say which path wins.';
   document.getElementById('winner').innerHTML =
     '<span class="trophy">⚖️</span><div><div class="wt">'+T.winnerLabel+'</div>'+
     '<div class="why" style="margin-top:4px">'+_tieMsg+'</div></div>';

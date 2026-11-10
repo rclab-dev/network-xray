@@ -32,7 +32,7 @@ var REASONS = {
   'Weight': 'Weight',
   'Local Pref': 'LocPrf',
   'Accept Own': '',
-  'Local Route': '',
+  'Local Route': 'Local route',
   'AIGP': '',
   'Confederation based AS Path': 'AS-Path',
   'AS Path': 'AS-Path',
@@ -41,8 +41,8 @@ var REASONS = {
   'Peer Type': 'eBGP&gt;iBGP',
   'Confed Peer Type': 'eBGP&gt;iBGP',
   'IGP Metric': 'IGP metric',
-  'Older Path': 'Older Path',
-  'Router ID': 'Router ID*',
+  'Older Path': 'Older Path*',
+  'Router ID': 'Router ID',   // nx_bp_tie_order (2026-11-09): FRR bgp_path_info_cmp - Router ID always, Older Path only between eBGP paths
   'Cluster length': '',
   'Path Staleness': '',
   'Locally configured route': '',
@@ -112,7 +112,7 @@ function text(html) {
   return html.replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/\s+/g, ' ').trim();
 }
 function expectTie(t, reason) {
-  if (NO_DECIDER.test(reason)) assert.match(t, /all (visible )?attributes equal — FRR breaks the tie by Older Path/, t);
+  if (NO_DECIDER.test(reason)) assert.match(t, /all (visible )?attributes equal — FRR decides by a step the table does not show \(eBGP > iBGP .*Older Path, between eBGP paths only .*Router ID\)/, t);
   else if (NO_STEP.test(reason)) {
     assert.match(t, /no step decided \(FRR: Nothing left to compare ?\)/, t);
     assert.doesNotMatch(t, /best path by|Older Path/, t);

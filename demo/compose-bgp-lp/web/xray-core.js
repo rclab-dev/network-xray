@@ -12114,9 +12114,9 @@ function _xrayAsPathLen(p) {
   var s = String(p).replace(/\([^)]*\)/g, ' ').replace(/\{[^}]*\}/g, ' {set} ');
   return s.split(/\s+/).filter(Boolean).length;
 }
-function _xrayBgpTieText() {   /* nx_bestpath_fix: same words as xray-api.js (FRR default = Older Path; IOS-XE: eBGP Older Path, iBGP Router ID) */
+function _xrayBgpTieText() {   /* nx_bestpath_fix / nx_bp_tie_order (2026-11-09): same words as xray-api.js (FRR: eBGP > iBGP -> IGP metric -> Older Path between eBGP paths only -> Router ID; IOS-XE: eBGP Older Path, iBGP Router ID) */
   var st = typeof window !== "undefined" ? window._lastXrayState : null;
-  return st && /^ios/i.test(String(st.nos || "")) ? "IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)" : "FRR breaks the tie by <b>Older Path</b>";
+  return st && /^ios/i.test(String(st.nos || "")) ? "IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)" : "FRR decides by a step the table does not show (eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID)";
 }
 function xrayBgpDecision(group) {
   if (!group || !group.length) return null;

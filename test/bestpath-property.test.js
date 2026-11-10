@@ -339,11 +339,30 @@ test('decision-bracket.html: winner and deciding row follow its documented order
   assert.strictEqual(bad.length, 0, bad.length + ' of ' + CASES + ' cases disagree; first ones:\n  ' + bad.filter(Boolean).join('\n  '));
 });
 
-test('decision-bracket.html: Router ID (dotted quad) is compared as a number, and only with compareRouterId', function () {
+test('decision-bracket.html: Router ID (dotted quad) is compared as a number; between eBGP paths Older Path comes first unless compareRouterId', function () {
   function r(id, rid) { return { id: id, as: 'AS' + id, attrs: { weight: 0, localpref: 100, aspathlen: 1, origin: 'i', med: 0, ebgp: true, routerid: rid } }; }
   var got = bracketRun({ routes: [r('A', '10.0.0.10'), r('B', '10.0.0.9')], compareRouterId: true });
   assert.strictEqual(got.winnerId, 'B');
   assert.strictEqual(got.CRITERIA[got.decidedAt].key, 'routerid');
   got = bracketRun({ routes: [r('A', '10.0.0.10'), r('B', '10.0.0.9')] });
-  assert.strictEqual(got.winnerId, null, 'without compareRouterId the tie stays unresolved (Older Path)');
+  assert.strictEqual(got.winnerId, null, 'eBGP paths without compareRouterId: Older Path applies, the snapshot has no receive time -> unresolved');
+});
+
+// nx_bp_tie_order (2026-11-09): FRR's bgp_path_info_cmp - Older Path only when both paths are eBGP (and compare-routerid is off),
+// Router ID always. Recorded FRR 8.4 and 10.7.1: two equal iBGP paths -> selectionReason "Router ID" without compare-routerid,
+// and changing one Router ID moves the best path.
+test('decision-bracket.html: two equal iBGP paths are decided by Router ID without compareRouterId (no Older Path step for iBGP)', function () {
+  function r(id, rid) { return { id: id, as: 'AS65001', attrs: { weight: 0, localpref: 100, aspathlen: 0, origin: 'i', med: 0, ebgp: false, routerid: rid } }; }
+  var got = bracketRun({ routes: [r('A', '4.4.4.4'), r('B', '3.3.3.3')] });
+  assert.strictEqual(got.winnerId, 'B');
+  assert.strictEqual(got.CRITERIA[got.decidedAt].key, 'routerid');
+  got = bracketRun({ routes: [r('A', '4.4.4.4'), r('B', '5.5.5.5')] });
+  assert.strictEqual(got.winnerId, 'A', 'the lower Router ID wins');
+});
+
+test('decision-bracket.html: without real Router IDs the knockout stops instead of using made-up ones', function () {
+  function r(id) { return { id: id, as: 'AS65001', attrs: { weight: 0, localpref: 100, aspathlen: 0, origin: 'i', med: 0, ebgp: false, routerid: '' } }; }
+  var got = bracketRun({ routes: [r('A'), r('B')] });
+  assert.strictEqual(got.winnerId, null);
+  assert.strictEqual(got.decidedAt, -1);
 });

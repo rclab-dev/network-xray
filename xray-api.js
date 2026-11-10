@@ -157,10 +157,10 @@
       // the inline chain summary follows the pop.
       return '<div class="bgp-reason">★ ' + pH + ' → best path by ' + btn + cmp + '</div>' + _bgpBracketPop(dec, href) + ch;
     }
-    // (iii) A visible-attribute tie is NOT decided by Router ID by default — FRR's real tie-breaker is
-    //   Older Path (RFC 5004); Router ID applies only with `bgp bestpath compare-routerid`. The oldest
-    //   path can't be derived from a `show ip bgp` snapshot (no receive timestamp), so we name the
-    //   FRR rule rather than assert a specific winner. (A backend that supplies selectionReason would
+    // (iii) A visible-attribute tie is decided by a step the table does not show. FRR (bgp_path_info_cmp):
+    //   Peer Type (eBGP > iBGP) -> IGP metric -> Older Path (RFC 5004; only when BOTH paths are eBGP, skipped with
+    //   `bgp bestpath compare-routerid`) -> Router ID (always). The oldest path can't be derived from a snapshot,
+    //   so we name the FRR rule rather than assert a specific winner.   /* nx_bp_tie_order (2026-11-09) */ (A backend that supplies selectionReason would
     //   state the exact reason.)
     // nx_frr_reason_small (2026-10-09): when the state carries FRR's own selectionReason for the best path
     //   (bgp_routes[].reason), name it instead of the generic tie-break rule. 'First path received' is not a decider.
@@ -173,10 +173,10 @@
       if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — ' + _frBy + '</div>' + ch;
       return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → ' + _frBy + '</div>' + ch;
     }
-    var _rfc5004 = ' (<a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; Router ID only with compare-routerid)';
+    var _rfc5004 = ' (<a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; Older Path is skipped with compare-routerid)';   /* nx_bp_tie_order */
     // nos_wording (2026-10-06): an IOS-XE node (state.nos = 'ios-xe', set by the IOS-XE collector) names
     //   IOS-XE, whose Older Path step applies only between eBGP paths (iBGP ties go to Router ID). FRR text unchanged.
-    var _tieBy = _bgpIsIos() ? 'IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)' : 'FRR breaks the tie by <b>Older Path</b>';
+    var _tieBy = _bgpIsIos() ? 'IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)' : 'FRR decides by a step the table does not show (eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID)';   /* nx_bp_tie_order */
     if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>MED not compared</b> (different neighbor AS) — ' + _tieBy + _rfc5004 + '</div>' + ch;
     if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — ' + _tieBy + _rfc5004 + '</div>' + ch;
     return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>no single decider</b> — lower-level tiebreak (Older Path / Router ID)</div>' + ch;
@@ -207,8 +207,9 @@
         return { id: String.fromCharCode(65 + i), via: 'via ' + (r.next_hop || r.nexthop || '?'), as: 'AS' + (_bNbrAS(r) || '?'),
           attrs: { weight: _bnum(r.weight, 0), localpref: _bnum(r.local_pref, 100),
             aspathlen: (typeof _xrayAsPathLen === 'function' ? _xrayAsPathLen(r.as_path) : (r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0))   /* nx_bestpath_fix */,
-            origin: _bgpOriginChar(r.origin) || 'i', med: _bnum(r.metric, 0), ebgp: false,
-            routerid: r.router_id || ('0.0.0.' + (i + 1)) } };
+            origin: _bgpOriginChar(r.origin) || 'i', med: _bnum(r.metric, 0),
+            ebgp: (r.status || '').indexOf('i') < 0,   /* nx_bp_tie_order: 'i' in the status = learned over iBGP */
+            routerid: r.router_id || '' } };   /* no made-up Router ID: the knockout stops instead */
       });
       var json = JSON.stringify({ prefix: prefix, routes: routes });
       var b64 = btoa(unescape(encodeURIComponent(json))).replace(/\+/g, '-').replace(/\//g, '_');
@@ -275,10 +276,10 @@
     if (crit) { e.preventDefault(); _bgpPanelClick({ target: crit, stopPropagation: function () {}, preventDefault: function () {} }); }
   }
   // (iii) The full FRR default best-path order, shown under the decision. It surfaces the deeper
-  //   criteria the top-5 heuristic never reaches — notably Older Path (RFC 5004) as the real
-  //   tie-breaker before Router ID (which only applies with `bgp bestpath compare-routerid`). The
+  //   criteria the top-5 heuristic never reaches — Older Path (RFC 5004; between eBGP paths only, skipped with
+  //   `bgp bestpath compare-routerid`) before Router ID (always compared). The
   //   deciding step (derived here; FRR's selectionReason when a backend supplies one) is highlighted.
-  var _BGP_FRR_ORDER = ['Weight', 'LocPrf', 'AS-Path', 'Origin', 'MED', 'eBGP&gt;iBGP', 'IGP metric', 'Older Path', 'Router ID*', 'Neighbor IP'];
+  var _BGP_FRR_ORDER = ['Weight', 'LocPrf', 'Local route', 'AS-Path', 'Origin', 'MED', 'eBGP&gt;iBGP', 'IGP metric', 'Older Path*', 'Router ID', 'Neighbor IP'];   /* nx_bp_tie_order: FRR bgp_path_info_cmp */
   // nos_wording (2026-10-06): Cisco IOS-XE best-path order (Weight → Local Pref → locally originated →
   //   AIGP → AS_PATH → Origin → MED → eBGP over iBGP → IGP metric → oldest eBGP path → Router ID → cluster list →
   //   neighbor address). Used only when the node's state says nos = 'ios-xe'; FRR nodes keep the FRR legend as-is.
@@ -286,7 +287,7 @@
   // FRR selectionReason -> the step it names in _BGP_FRR_ORDER (highlighted when the attributes alone do not decide)
   var _BGP_FRR_REASON_STEP = { 'Weight': 'Weight', 'Local Pref': 'LocPrf', 'AS Path': 'AS-Path', 'Confederation based AS Path': 'AS-Path',
     'Origin': 'Origin', 'MED': 'MED', 'Peer Type': 'eBGP&gt;iBGP', 'Confed Peer Type': 'eBGP&gt;iBGP', 'IGP Metric': 'IGP metric',
-    'Older Path': 'Older Path', 'Router ID': 'Router ID*', 'Neighbor IP': 'Neighbor IP' };
+    'Older Path': 'Older Path*', 'Router ID': 'Router ID', 'Neighbor IP': 'Neighbor IP', 'Local Route': 'Local route' };
   function _bgpFrrReasonStep(dec) {
     var b = (dec && dec.best) || {}, r = typeof b.reason === 'string' ? b.reason : (typeof b.sel_reason === 'string' ? b.sel_reason : '');
     return (!_bgpIsIos() && _BGP_FRR_REASON_STEP.hasOwnProperty(r.trim())) ? _BGP_FRR_REASON_STEP[r.trim()] : '';
@@ -305,8 +306,8 @@
         ? '* Older Path は eBGP の経路どうしのみ（`bgp bestpath compare-routerid` 設定時は省いて Router ID）'
         : '* Older Path only between eBGP paths (skipped with `bgp bestpath compare-routerid`)')
       : ((_bgpLang() === 'ja')
-        ? '* Router ID は compare-routerid 設定時のみ（既定は Older Path が先）'
-        : '* Router ID only with `bgp bestpath compare-routerid` (default prefers Older Path)');
+        ? '* Older Path は eBGP の経路どうしのみ（`bgp bestpath compare-routerid` 設定時は省いて Router ID）'
+        : '* Older Path only between eBGP paths (skipped with `bgp bestpath compare-routerid`)');   /* nx_bp_tie_order: same rule as IOS-XE (FRR bgp_path_info_cmp step 12) */
     var rfc = ' <a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc4271#section-9.1.2.2" target="_blank" rel="noopener">[RFC 4271 §9.1.2.2]</a>';
     return '<div class="bgp-legend" style="overflow-wrap:anywhere">Best-path order (' + (ios ? 'IOS-XE' : 'FRR') + ' default): ' + parts.join(' &rarr; ') + rfc
       + '<br><span style="opacity:.7">' + note + '</span></div>';

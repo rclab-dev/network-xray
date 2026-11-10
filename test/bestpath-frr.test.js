@@ -201,5 +201,5 @@ test('older-path without selectionReason: fallback text names Older Path for eBG
   assert.match(withoutReason('older-path'), /Older Path/);
 });
 test('older-path without selectionReason: same words as xray-api.js', function () {   /* nx_bestpath_fix */
-  assert.match(withoutReason('older-path'), /all attributes equal — FRR breaks the tie by Older Path/);
+  assert.match(withoutReason('older-path'), /all attributes equal — FRR decides by a step the table does not show \(eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID\)/);   /* nx_bp_tie_order */
 });
