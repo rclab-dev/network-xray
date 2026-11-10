@@ -285,6 +285,28 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 
 **Security notes:** anyone who can use the Docker socket (the `-v /var/run/docker.sock` mount, or membership in the `docker` group) can run anything as root on the host. The page has no login: with `docker run` publish it as `-p 127.0.0.1:8600:8600` (this machine only), and with `containerlab graph` use `-s 127.0.0.1:8080` unless others must see it. For Cisco IOS-XE the collector does not check SSH host keys (lab routers get new keys on every deploy) — use it on the lab's management network only; the password comes from `NX_IOS_PASSWORD` and is not printed or written to the state. The collectors take names from the topology as data only (no shell; a name that is not a plain name is left out) and write only `xray-states.js` into the output directory; their per-node temporary files are in a directory only your user can open.
 
+<!-- nx_readme_vscode (2026-11-09) -->
+### Open it from the containerlab VS Code extension
+
+The [containerlab VS Code extension](https://marketplace.visualstudio.com/items?itemName=srl-labs.vscode-containerlab) can open a running node's published port in the browser (the node's **Open Port in Browser** action). To use it, run network-xray as a one-node lab of its own next to the lab's topology file: the lab you watch is not redeployed, and its graph shows only its own nodes. Save this as `xray.clab.yml` in the lab folder (put your topology file in place of `q21.clab.yml`; the `name:` must not be the lab's own name):
+
+```yaml
+name: q21-bgp-lp-xray
+topology:
+  nodes:
+    xray:
+      kind: linux
+      image: ghcr.io/rclab-dev/network-xray:1
+      cmd: --topo /lab/q21.clab.yml
+      binds:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - .:/lab:ro
+      ports:
+        - 127.0.0.1:8600:8600
+```
+
+When the lab is up, run `sudo containerlab deploy -t xray.clab.yml`, then use **Open Port in Browser** on the node `xray` in the extension (it opens `http://localhost:8600`). `sudo containerlab destroy -t xray.clab.yml --cleanup` removes only the viewer; the lab keeps running. It is the same container as the `docker run` line above: it is given the Docker socket (root-equivalent on the host, lab machines only), and `127.0.0.1:8600:8600` keeps the page on this machine ([Security notes](#security-notes)). Checked with containerlab 0.83.0 (example q21: the page and the routers' state).
+
 <!-- nx_readme_iosxe (2026-10-29 / 2026-10-30) -->
 ## Cisco IOS-XE (IOL)
 
@@ -1134,6 +1156,27 @@ netlab を使わない場合 (動いている containerlab のラボなら何で
 **注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'`、Cisco IOS-XE (IOL) を SSH の `show` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker ソケット (ホスト上の root 権限と同等) を渡します**。ラボ用の機械でだけ使ってください。`docker run` の例はポート 8600 をこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストのすべてのインターフェースに公開します。広く公開すると、そのポートに届く人ならログインなしでラボの状態を見られます。信頼できるネットワークで使ってください。
 
 **セキュリティの注意:** Docker のソケットを使える人 (`-v /var/run/docker.sock` のマウント、または `docker` グループ) は、ホストで root として何でも動かせます。画面にはログインがありません: `docker run` なら `-p 127.0.0.1:8600:8600` (この機械だけ)、`containerlab graph` なら他の人に見せる必要がなければ `-s 127.0.0.1:8080` にしてください。Cisco IOS-XE では collector は SSH のホスト鍵を確かめません (ラボのルータは起動のたびに鍵が変わるため) — ラボの管理網の中でだけ使ってください。パスワードは `NX_IOS_PASSWORD` から取り、表示も状態ファイルへの書き込みもしません。collector はトポロジの名前をデータとしてだけ使い (シェルを通さず、普通の名前でないものは外します)、出力先には `xray-states.js` だけを書きます。ノードごとの一時ファイルは自分のユーザーだけが開けるディレクトリに置きます。
+
+### containerlab の VS Code 拡張から開く
+
+[containerlab の VS Code 拡張](https://marketplace.visualstudio.com/items?itemName=srl-labs.vscode-containerlab) は、動いているノードが公開しているポートをブラウザで開けます (ノードの **Open Port in Browser**)。これを使うには、network-xray をラボの topology の隣に置いた 1 ノードだけの別のラボとして立てます。見るラボは立て直されず、ラボの図にはラボ自身のノードだけが出ます。ラボのフォルダに `xray.clab.yml` として保存してください (`q21.clab.yml` は自分の topology のファイルに。`name:` はラボ自身の名前と別にします):
+
+```yaml
+name: q21-bgp-lp-xray
+topology:
+  nodes:
+    xray:
+      kind: linux
+      image: ghcr.io/rclab-dev/network-xray:1
+      cmd: --topo /lab/q21.clab.yml
+      binds:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - .:/lab:ro
+      ports:
+        - 127.0.0.1:8600:8600
+```
+
+ラボが動いている所で `sudo containerlab deploy -t xray.clab.yml` を実行し、拡張でノード `xray` の **Open Port in Browser** を使います (`http://localhost:8600` が開きます)。`sudo containerlab destroy -t xray.clab.yml --cleanup` で消えるのは画面の側だけで、ラボは動いたままです。上の `docker run` の 1 行と同じコンテナです: Docker ソケット (ホスト上の root 権限と同等・ラボ用の機械でだけ) を渡し、`127.0.0.1:8600:8600` で画面をこの機械の中だけに置きます ([セキュリティの注意](#security-notes-ja))。containerlab 0.83.0 で確かめました (例題 q21: 画面とルータの状態)。
 
 ## Cisco IOS-XE (IOL)
 
