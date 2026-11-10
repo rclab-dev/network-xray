@@ -195,7 +195,7 @@
     // ── (4) forwarding arrow (from inside the body -> body edge of the selected out-iface. radial = the exit side) ──
     // forwarding gate: when the route is unresolved (initial / DROP), no arrow / ping is drawn
     //   (opt.forwarding===false). Default (unspecified) = true = as before. hello is separate (adjacency), shown when OSPF is up.
-    var fwd = !(axes && axes.forwarding === false);
+    var fwd = !(axes && axes.forwarding === false) && node.forwarding !== false;
     var selL = links.filter(function (L) { return L.link.selected; })[0] || links[0];
     if (selL && fwd) {
       // stop the arrow just short of the edge IF marker (8px) to avoid overlap
@@ -247,18 +247,26 @@
   }
 
   // ── backward compat: legacy clab-collect state (single <peer>_proto) -> per-link node ──
+  //   link.up      = the interface's physical state (interfaces[ifn].up === false -> down)
+  //   protocol.up  = <peer>_has_full only (no adjacency info = not established, even on an up link)
+  //   selected     = the egress of route_resolution (out_iface, else the matched_prefix row of routing_table);
+  //   node.forwarding = false when there is no resolved egress on an up link (no arrow by default)
   function fromLegacyState(state) {
     var ifs = state.interfaces || {}, links = [];
+    var rr = state.route_resolution, oif = rr && rr.out_iface;
+    if (!oif && rr && rr.matched_prefix) { var row = (state.routing_table || []).filter(function (r) { return r.prefix === rr.matched_prefix; })[0]; oif = row && row.out_iface; }
     Object.keys(ifs).forEach(function (ifn) {
       if (ifn === 'lo') return;
       var peer = ''; Object.keys(state).forEach(function (k) { var m = /^(.+)_iface$/.exec(k); if (m && state[k] === ifn) peer = m[1]; });
       var link = (state.peer_links || []).filter(function (l) { return l.iface === ifn; })[0];
       if (link) peer = link.peer;
       var proto = (peer && state[peer + '_proto']) || state.protocol || 'ospf';
-      var up = peer && state[peer + '_has_full'] != null ? !!state[peer + '_has_full'] : true;
-      links.push({ iface: ifn, peer: peer, protocols: [{ proto: proto === 'bgp' ? 'bgp' : 'ospf', up: up }] });
+      var linkUp = !(ifs[ifn] && ifs[ifn].up === false);
+      var up = linkUp && !!(peer && state[peer + '_has_full']);
+      links.push({ iface: ifn, peer: peer, up: linkUp, selected: !!oif && ifn === oif, protocols: [{ proto: proto === 'bgp' ? 'bgp' : 'ospf', up: up }] });
     });
-    return { target: state.target_node, links: links, positions: state._positions || {} };
+    var fw = links.some(function (l) { return l.selected && l.up; });
+    return { target: state.target_node, links: links, positions: state._positions || {}, forwarding: fw };
   }
 
   function render(container, node, axes) { if (container) container.innerHTML = xrayRenderUnified(node, axes); }

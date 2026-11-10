@@ -173,10 +173,12 @@
     return ang;
   }
   // is the adjacency/session on this interface up? (OSPF Full / BGP Established -> colour the tunnel)
+  // A physically up interface alone is not an adjacency: without <peer>_has_full there is no tunnel colour.
   function adjUp(state, ifn, peer) {
-    if (peer && state[peer + '_has_full'] != null) return !!state[peer + '_has_full'];
     var i = state.interfaces && state.interfaces[ifn];
-    return i ? i.up !== false : true;
+    if (i && i.up === false) return false;
+    if (peer && state[peer + '_has_full'] != null) return !!state[peer + '_has_full'];
+    return false;
   }
   // tunnel colour is a PER-LINK property (the adjacency/session on that link), not a per-node one:
   // read <peer>_proto for this interface's neighbour, falling back to the node's overall protocol.

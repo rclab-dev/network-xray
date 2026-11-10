@@ -289,6 +289,10 @@ cannot see the peer). `peer_iface` / `remote` / `mismatch` は両端の状態が
 > (e.g. `r1.r2_proto === r2.r1_proto === "bgp"`) or the same link would be coloured differently from
 > each end. If `<peer>_proto` is absent the renderers fall back to the node's overall `protocol`.
 > トンネル色はリンク別属性。両端が同じ `<peer>_proto` を持たせること(無ければ node の `protocol` に fallback)。
+> Without `<peer>_has_full` a link gets no tunnel colour: an interface that is up is not an adjacency.
+> An interface with `interfaces.<if>.up === false` is drawn down, and a trace stops at a router whose egress is down.
+> `<peer>_has_full` が無いリンクはトンネル色を付けない (IF が up なだけでは隣接ではない)。
+> `interfaces.<if>.up === false` の IF は down で描き、出口が down のルータで経路の線は止まる。
 
 ### 4.4 BGP
 

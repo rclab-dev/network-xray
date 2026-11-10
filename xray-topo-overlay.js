@@ -44,11 +44,14 @@
     return (k === 'host' || k === 'linux' || k === 'linux-host' || /^(sv|server|host|client|pc|h\d+)$/i.test(name)) ? 'host' : 'router';
   }
   function protoOf(st) { return (st && st.protocol === 'bgp') ? 'bgp' : 'ospf'; }
-  function adjUp(st, iface, peer) {
-    if (!st) return false;
-    if (peer && st[peer + '_has_full'] != null) return !!st[peer + '_has_full'];
-    var i = st.interfaces && st.interfaces[iface];
-    return i ? i.up !== false : true;
+  function physDown(st, iface) { var i = st && st.interfaces && st.interfaces[iface]; return !!(i && i.up === false); }
+  // 'up' = adjacency Full / session Established, 'down' = link or adjacency down, 'none' = no adjacency
+  // info (a physically up link alone is not an OSPF / BGP adjacency, so no protocol colour)
+  function adjState(st, iface, peer) {
+    if (!st) return 'none';
+    if (physDown(st, iface)) return 'down';
+    if (peer && st[peer + '_has_full'] != null) return st[peer + '_has_full'] ? 'up' : 'down';
+    return 'none';
   }
   function peerByIface(st, iface) {   // which neighbour sits on this out-iface?  <peer>_iface === iface
     if (!st || !iface) return '';
@@ -86,10 +89,11 @@
     });
     return list;
   }
-  function edgeUp(states, e) {
-    var ua = adjUp(states[e.a], e.ia, e.b);
-    var ub = states[e.b] ? adjUp(states[e.b], e.ib, e.a) : ua;   // host peer w/o state: trust the router side
-    return ua && ub;
+  function edgeState(states, e) {
+    var ua = adjState(states[e.a], e.ia, e.b);
+    var ub = states[e.b] ? adjState(states[e.b], e.ib, e.a) : ua;   // host peer w/o state: trust the router side
+    if (ua === 'down' || ub === 'down') return 'down';
+    return (ua === 'up' && ub === 'up') ? 'up' : 'none';
   }
   function edgeProto(states, e) {
     // per-link protocol first (both ends carry <peer>_proto, so the edge is coloured consistently);
@@ -128,6 +132,8 @@
       if (!st) { hops.push({ node: cur, terminal: true, arrived: true }); break; }
       var row = lookup(st, prefix);
       if (!row) { hops.push({ node: cur, drop: true }); break; }
+      // the egress is physically down: the packet cannot leave here, whatever the table says
+      if (row.out_iface && row.out_iface !== 'lo' && physDown(st, row.out_iface)) { hops.push({ node: cur, out_iface: row.out_iface, next_hop: row.next_hop, protocol: row.protocol, drop: true, down: true }); break; }
       var terminal = row.out_iface === 'lo' || row.protocol === 'local' || row.protocol === 'connected';
       hops.push({ node: cur, out_iface: row.out_iface, next_hop: row.next_hop, protocol: row.protocol, terminal: terminal });
       if (terminal) break;
@@ -230,8 +236,8 @@
     // links: gray physical wire + protocol-coloured tunnel overlay when the adjacency is up
     edges.forEach(function (e) {
       var pa = positions[e.a], pb = positions[e.b]; if (!pa || !pb) return;
-      var up = edgeUp(states, e), pcol = edgeProto(states, e) === 'bgp' ? 'var(--xto-bgp)' : 'var(--xto-ospf)';
-      s += '<line x1="' + num(pa.x) + '" y1="' + num(pa.y) + '" x2="' + num(pb.x) + '" y2="' + num(pb.y) + '" stroke="var(--xto-phys)" stroke-width="5" stroke-linecap="round"' + (up ? '' : ' stroke-dasharray="2 6"') + '/>';
+      var es = edgeState(states, e), up = es === 'up', pcol = edgeProto(states, e) === 'bgp' ? 'var(--xto-bgp)' : 'var(--xto-ospf)';
+      s += '<line x1="' + num(pa.x) + '" y1="' + num(pa.y) + '" x2="' + num(pb.x) + '" y2="' + num(pb.y) + '" stroke="var(--xto-phys)" stroke-width="5" stroke-linecap="round"' + (es === 'down' ? ' stroke-dasharray="2 6"' : '') + '/>';
       if (up) s += '<line x1="' + num(pa.x) + '" y1="' + num(pa.y) + '" x2="' + num(pb.x) + '" y2="' + num(pb.y) + '" stroke="' + pcol + '" stroke-width="2.5" stroke-linecap="round"/>';
     });
 
@@ -268,7 +274,7 @@
   function hopsCaption(hops, prefix) {
     if (!hops.length) return '';
     var parts = hops.map(function (hp) {
-      if (hp.drop) return '<span class="xto-hop-drop">' + esc(hp.node) + ' ✕ no route</span>';
+      if (hp.drop) return '<span class="xto-hop-drop">' + esc(hp.node) + (hp.down ? ' ✕ ' + esc(hp.out_iface) + ' down' : ' ✕ no route') + '</span>';
       if (hp.terminal || hp.arrived) return '<span class="xto-hop-dest">' + esc(hp.node) + (hp.out_iface && hp.out_iface !== 'lo' ? '' : ' ★') + '</span>';
       if (hp.loop) return '<span class="xto-hop-drop">' + esc(hp.node) + ' ↻ loop</span>';
       return '<span class="xto-hop">' + esc(hp.node) + '<span class="xto-hop-if"> →' + esc(hp.out_iface || '?') + (hp.next_hop ? ' (' + esc(hp.next_hop) + ')' : '') + '</span></span>';

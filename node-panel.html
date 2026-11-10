@@ -46,7 +46,7 @@ var STATES = {
   'r1 (BGP · contested prefix)': {
     target_node: 'r1', protocol: 'bgp', bgp_configured: true,
     interfaces: { eth0: { ip: '10.11.0.10' }, eth1: { ip: '10.12.0.10' }, lo: { ip: '1.1.1.1' } },
-    r2_iface: 'eth0', r3_iface: 'eth1',
+    r2_iface: 'eth0', r3_iface: 'eth1', r2_has_full: true, r3_has_full: true,
     route_resolution: { matched_prefix: '8.8.8.0/24', resolved: true, out_iface: 'eth0' },
     routing_table: [
       { prefix: '1.1.1.1/32', out_iface: 'lo',   protocol: 'local' },
@@ -62,7 +62,7 @@ var STATES = {
   'r2 (OSPF · no BGP)': {
     target_node: 'r2', protocol: 'ospf',
     interfaces: { eth0: { ip: '10.11.0.20' }, eth1: { ip: '10.12.0.20' }, lo: { ip: '2.2.2.2' } },
-    r1_iface: 'eth0', r3_iface: 'eth1',
+    r1_iface: 'eth0', r3_iface: 'eth1', r1_has_full: true, r3_has_full: true,
     route_resolution: { matched_prefix: '3.3.3.3/32', resolved: true, out_iface: 'eth1' },
     routing_table: [
       { prefix: '2.2.2.2/32',  out_iface: 'lo',   protocol: 'local' },
