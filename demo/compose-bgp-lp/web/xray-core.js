@@ -2725,6 +2725,7 @@ function xrayUpdateDeepDiveIO(s) {
     });
     if ((_hasFix || _hasPerStep) && typeof xrayEnsureBgpTableBox === "function") xrayEnsureBgpTableBox(_xrCfg);
     window._lastXrayState = s;
+    if (typeof window._xrayOspfIfPopRefresh === "function") window._xrayOspfIfPopRefresh(s);   /* nx_ospf_iface_panel (B) */
     if (typeof xrayRenderBgpTableReplay === "function") xrayRenderBgpTableReplay();
   }
   try {
@@ -3044,6 +3045,154 @@ function _xrayOspfWithMissingNbrs(s) {
   var M = _xrayOspfNbrAddMissing(s); if (M === s.ospf_neighbors) return s;
   var c = {}; for (var k in s) { if (Object.prototype.hasOwnProperty.call(s, k)) c[k] = s[k]; } c.ospf_neighbors = M; return c;
 }
+/* nx_ospf_iface_panel (A): one block per OSPF interface under the interface rows, from state.ospf_ifaces (DATA-CONTRACT 4.3):
+   MTU / hello / dead, network type / area / cost / role, passive / authentication / neighbours. A value the router did not
+   report shows "?"; a value that must equal the other end's and does not (row.mismatch) is red. The blocks fold with
+   their header (the choice is kept for the page in window._reOspfIfOpen). States without ospf_ifaces: nothing. */
+function _xrayOspfIfJa() {
+  return typeof document !== "undefined" && ((document.documentElement.getAttribute("lang") || "en") === "ja" || window._xrayLang === "ja");
+}
+function _xrayOspfIfVal(f, v, ja) {
+  if (v == null || v === "") return "?";
+  if (f === "passive") return v ? "yes" : "no";
+  if (f === "auth" && v === "none") return ja ? "なし" : "none";
+  return String(v);
+}
+function _xrayOspfIfLines(s) {
+  var o = s && s.ospf_ifaces;
+  if (!o || typeof o !== "object" || Array.isArray(o)) return [];
+  /* open by default for one or two interfaces; with more the blocks start folded (the panel would push the routing table away) */
+  var ja = _xrayOspfIfJa(), open = typeof window._reOspfIfOpen === "boolean" ? window._reOspfIfOpen : Object.keys(o).length <= 2, out = [];
+  Object.keys(o).forEach(function (ifn) {
+    var r = o[ifn]; if (!r || typeof r !== "object" || Array.isArray(r)) return;
+    var bad = {}; (Array.isArray(r.mismatch) ? r.mismatch : []).forEach(function (f) { bad[f] = true; });
+    var v = function (f, label) {
+      var x = (label ? label + " " : "") + _escapeHtml(_xrayOspfIfVal(f, r[f], ja));
+      return bad[f] ? '<span style="color:#ff4444">' + x + "</span>" : x;
+    };
+    var st = "padding-left:1.2em" + (open ? "" : ";display:none");
+    out.push({ text: '<span class="re-ospfif-head" style="cursor:pointer" onclick="window._xrayReOspfIfToggle && window._xrayReOspfIfToggle()">' +
+      '<span class="re-ospfif-ind">' + (open ? "▼" : "▶") + "</span> " + _escapeHtml(ifn) + " (OSPF)</span>" });
+    out.push({ cls: "re-ospfif-row", style: st, text: v("mtu", "MTU") + " · " + v("hello", "hello") + " / " + v("dead", "dead") });
+    out.push({ cls: "re-ospfif-row", style: st, text: v("network_type") + " · " + v("area", "area") + " · cost " +
+      _escapeHtml(_xrayOspfIfVal("cost", r.cost)) + " · " + _escapeHtml(_xrayOspfIfVal("role", r.role)) });
+    out.push({ cls: "re-ospfif-row", style: st, text: v("passive", "passive") + " · " + v("auth", ja ? "認証" : "auth") +
+      " · " + (ja ? "隣 " : "nbrs ") + _escapeHtml(_xrayOspfIfVal("neighbors", r.neighbors)) });
+  });
+  return out;
+}
+if (typeof window !== "undefined" && !window._xrayReOspfIfToggle) {
+  window._xrayReOspfIfToggle = function () {
+    var ind = document.querySelector(".re-ospfif-ind");
+    window._reOspfIfOpen = !(ind && ind.textContent === "▼");   // the opposite of what is shown now
+    try {
+      document.querySelectorAll(".re-ospfif-row").forEach(function (n) { n.style.display = window._reOspfIfOpen ? "" : "none"; });
+      document.querySelectorAll(".re-ospfif-ind").forEach(function (n) { n.textContent = window._reOspfIfOpen ? "▼" : "▶"; });
+    } catch (_e) {}
+  };
+}
+
+/* nx_ospf_iface_panel (B): click a link (its "eth1 - r2" label, or its tunnel) in the DeepDive -> the two ends of that OSPF interface side by side.
+   Only the values that must be equal for an adjacency and are not (row.mismatch) are red with a cross; role / cost /
+   neighbours may differ and are never red. The close button, Esc or a click outside closes it. Tunnels take clicks only while
+   the state has ospf_ifaces (body.nx-ospfif), so pages and states without it behave as before. */
+(function () {
+  if (typeof window === "undefined" || typeof document === "undefined" || window._xrayOspfIfPopInstalled) return;
+  window._xrayOspfIfPopInstalled = true;
+  var FIELDS = ["mtu", "hello", "dead", "network_type", "area", "passive", "cost", "role", "auth", "neighbors"];
+  var open = null;   // { peer, iface } of the link shown
+  var esc = function (v) { return _escapeHtml(String(v == null ? "" : v)); };
+  function label(f, ja) {
+    return { mtu: "MTU", hello: "hello", dead: "dead", network_type: "network type", area: "area", passive: "passive", cost: "cost",
+      role: ja ? "役" : "role", auth: ja ? "認証" : "auth", neighbors: ja ? "隣" : "nbrs" }[f] || f;
+  }
+  function css() {
+    if (document.getElementById("de-ospfif-css")) return;
+    var st = document.createElement("style"); st.id = "de-ospfif-css";
+    /* on the right, below the top labels, as wide as its table (the de-panel defaults would clip the second column) */
+    st.textContent = ".xray-deep-engine .de-ospfif-pop{position:absolute;top:96px!important;bottom:auto!important;left:auto!important;right:16px!important;" +
+      "width:max-content!important;max-width:none!important;min-width:0!important;max-height:none!important;z-index:41;cursor:default}" +
+      ".de-ospfif-pop table{border-collapse:collapse;font-size:12px;margin-top:4px}" +
+      ".de-ospfif-pop td,.de-ospfif-pop th{padding:1px 10px 1px 0;text-align:left;white-space:nowrap}" +
+      ".de-ospfif-pop th{font-weight:bold}.de-ospfif-pop tr.bad td{color:#ff4444}" +
+      ".de-ospfif-pop .op-x{float:right;background:none;border:1px solid #ff8c00;color:#ff8c00;cursor:pointer;font-size:11px;padding:0 5px;margin-left:10px}" +
+      "body.nx-ospfif .xray-deep-engine .de-tunnel,body.nx-ospfif .xray-deep-engine .de-tunnel *," +
+      "body.nx-ospfif .xray-deep-engine .de-label,body.nx-ospfif .xray-deep-engine .de-sl-label,body.nx-ospfif .xray-deep-engine .de-x-label{pointer-events:auto!important;cursor:pointer}";
+    document.head.appendChild(st);
+  }
+  function popEl() { return document.getElementById("de-ospfif-pop"); }
+  function rowFor(s, p) {
+    var o = (s && s.ospf_ifaces && typeof s.ospf_ifaces === "object") ? s.ospf_ifaces : {};
+    if (p.iface && o[p.iface] && typeof o[p.iface] === "object") return { ifn: p.iface, r: o[p.iface] };
+    var k = Object.keys(o).filter(function (i) { return o[i] && typeof o[i] === "object" && o[i].peer && o[i].peer === p.peer; })[0];
+    return k ? { ifn: k, r: o[k] } : null;
+  }
+  var LINK_LABELS = ".de-x-label, .de-sl-label, .de-label";
+  function peerOf(t, s) {
+    /* the link's label chip ("eth1 - r2"): the extra links carry data-iface / data-peer, the two main sides only the text */
+    var lb = t.closest(LINK_LABELS);
+    if (lb) {
+      if (lb.getAttribute("data-peer")) return { peer: lb.getAttribute("data-peer") || "", iface: lb.getAttribute("data-iface") || "" };
+      var m = /^(\S+) - (\S+)$/.exec(String(lb.textContent || "").trim());
+      return m ? { iface: m[1], peer: m[2] } : null;
+    }
+    var x = t.closest(".de-x");
+    if (x) return { peer: x.getAttribute("data-peer") || "", iface: x.getAttribute("data-iface") || "" };
+    var tun = t.closest(".de-tunnel"); if (!tun) return null;
+    var tri = window._triNodes, peer = tri ? (tun.classList.contains("left-side") ? tri.left : tri.right) : (s.peer_node || "");
+    return { peer: peer || "", iface: peer ? (s[peer + "_iface"] || "") : "" };
+  }
+  function close() { open = null; var p = popEl(); if (p) { p.style.display = "none"; p.innerHTML = ""; } }
+  function render(s) {
+    var pop = popEl(); if (!pop || !open) return false;
+    var hit = rowFor(s, open); if (!hit) { close(); return false; }
+    var ja = _xrayOspfIfJa(), me = s.target_node || s.id || "", r = hit.r;
+    var rm = (r.remote && typeof r.remote === "object") ? r.remote : null, bad = {};
+    (Array.isArray(r.mismatch) ? r.mismatch : []).forEach(function (f) { bad[f] = true; });
+    var peer = r.peer || open.peer || "?";
+    var h = '<button class="op-x" type="button" title="Close">✕</button><div class="de-title">OSPF ' + esc(hit.ifn) + " — " +
+      esc(me) + " ⇔ " + esc(peer) + "</div><table><tr><th></th><th>" + esc(me + " " + hit.ifn) + "</th><th>" +
+      esc(peer + " " + (r.peer_iface || "?")) + "</th></tr>";
+    FIELDS.forEach(function (f) {
+      h += "<tr" + (bad[f] ? ' class="bad"' : "") + "><td>" + (bad[f] ? "✗ " : "") + esc(label(f, ja)) + "</td><td>" +
+        esc(_xrayOspfIfVal(f, r[f], ja)) + "</td><td>" + esc(rm ? _xrayOspfIfVal(f, rm[f], ja) : "?") + "</td></tr>";
+    });
+    h += "</table>";
+    if (!rm) h += '<div class="de-dim">' + (ja ? "向こう側の値はまだ読めていません" : "The other end has not been read") + "</div>";
+    pop.innerHTML = h;
+    pop.style.display = "";
+    return true;
+  }
+  function show(p, s) {
+    var host = document.querySelector(".xray-deep-engine"); if (!host) return false;
+    css();
+    var pop = popEl();
+    if (!pop || !host.contains(pop)) { if (pop) pop.remove(); pop = document.createElement("div"); pop.id = "de-ospfif-pop"; pop.className = "de-panel de-ospfif-pop"; host.appendChild(pop); }
+    open = p;
+    return render(s);
+  }
+  document.addEventListener("click", function (e) {
+    var t = e.target; if (!t || !t.closest) return;
+    var pop = popEl();
+    if (pop && open && pop.contains(t)) { if (t.closest(".op-x")) close(); return; }
+    if (document.body && document.body.classList.contains("nx-ospfif") && t.closest(".xray-deep-engine") && (t.closest(".de-tunnel") || t.closest(LINK_LABELS))) {
+      var s = window._lastXrayState || {}, p = peerOf(t, s);
+      if (p && (p.peer || p.iface) && show(p, s)) { e.stopPropagation(); return; }
+    }
+    if (open) close();
+  }, true);
+  document.addEventListener("keydown", function (e) {
+    var pop = popEl();
+    if ((e.key === "Escape" || e.key === "Esc") && open && pop && pop.isConnected && pop.style.display !== "none") { close(); e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  window._xrayOspfIfPopRefresh = function (s) {
+    try { document.body.classList.toggle("nx-ospfif", !!(s && s.ospf_ifaces && typeof s.ospf_ifaces === "object" && !Array.isArray(s.ospf_ifaces))); } catch (_e) {}
+    var pop = popEl();
+    if (open && (!pop || !pop.isConnected)) { open = null; return; }
+    if (open) render(s);
+  };
+})();
+
 function _xrayOspfRtSummaryLines(s) {
   s = _xrayOspfWithMissingNbrs(s);   /* rcl-ospf-nbr-missing-20261013 */
   var lines = [{
@@ -3156,6 +3305,7 @@ function _xrayOspfRtSummaryLines(s) {
     lines.push({ text: "> " + _escapeHtml(ifn) + (info.via ? " (" + _escapeHtml(info.via) + ")" : "") /* nx_re_via */ + ': <span style="color:' + (info.up ? "#39ff14" : "#ff4444") + '">' + (info.up ? "UP" : "DOWN") + '</span> <span class="de-dim">' + _escapeHtml(info.ip || "") + (info.unnumbered ? " (unnumbered)" : "") /* nx_re_unnumbered */ + _xrayIfTag(info) /* nx_if_tag */ + "</span>" });
   });
 
+  lines = lines.concat(_xrayOspfIfLines(s));   /* nx_ospf_iface_panel (A) */
   lines = lines.map(function (_l) { if (_l && typeof _l.text === "string") { _l.text = _l.text.replace(/^&gt; /, "\u30fb ").replace(/^> /, "\u30fb "); } return _l; });
   return lines;
 }
@@ -6762,6 +6912,7 @@ function xrayBuildApplyState(config) {
   window.applyXrayState = function applyXrayState(s) {
     if (window._xrayVrfView) { s = window._xrayVrfView(s); setTimeout(window._xrayVrfBarSync, 0); }   /* nx_vrf_view: one VRF at a time in the tables */
     window._lastXrayState = s;
+    if (typeof window._xrayOspfIfPopRefresh === "function") window._xrayOspfIfPopRefresh(s);   /* nx_ospf_iface_panel (B) */
     window._xrayProtocol = (config.xray && config.xray.protocol) ? protocol : (s.bgp_configured ? 'bgp' : (s.ospf_configured ? 'ospf' : 'static'));
     // resolve transit / bypass and publish the flags BEFORE driving the DeepDive view, so the
     //   ping-ball gate + transit arrow in _xrayDeAngleView read THIS frame's values (they were set
