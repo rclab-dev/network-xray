@@ -463,6 +463,12 @@ function ospfInterfaces(states, node) {
       if (/^(exstart|exchange)/i.test(r.neighbor_state || '') && (x.mtu == null || (rem && rem.mtu == null)))
         hints.push('hint: ' + n + ' ' + i + ' ' + r.neighbor_state.split('/')[0] + ': MTU differences stop here; MTU of ' +
           (x.mtu == null ? n + ' ' + i : x.peer + ' ' + x.peer_iface) + ' not reported');
+      // Full is not the end of it: a network type difference lets the adjacency come up, but the two routers describe the
+      // link differently in their LSAs and routes from that neighbour can be missing (the routers say nothing about it)
+      if (/^full/i.test(r.neighbor_state || '') && Array.isArray(x.mismatch) && x.mismatch.length && rem && !seen[[x.peer, x.peer_iface, n, i].join('\u0000')])
+        hints.push('hint: ' + n + ' ' + i + ' Full, but ' + x.mismatch.map(function (f) { return OSPF_IF_LABEL[f]; }).join(', ') + (x.mismatch.length > 1 ? ' differ' : ' differs') +
+          (x.mismatch.indexOf('network_type') >= 0 ? ' (' + ospfIfValue('network_type', x.network_type) + ' \u21d4 ' +
+            ospfIfValue('network_type', rem.network_type) + '): routes from ' + x.peer + ' can be missing' : ''));
       if (Array.isArray(x.mismatch)) {
         r.mismatch = x.mismatch.slice();
         var key = [n, i, x.peer, x.peer_iface].join('\u0000'), back = [x.peer, x.peer_iface, n, i].join('\u0000');

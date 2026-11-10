@@ -68,5 +68,8 @@ function lab(kind) {
       'r1 ' + i[2] + ' network type point-to-point ⇔ r2 ' + i[2] + ' network type broadcast',
       'r1 ' + i[3] + ' auth md5 ⇔ r2 ' + i[3] + ' auth none'
     ]);
+    // Full is not the end of it: the network-type link gets a hint (once per link), the MTU link the ExStart / Exchange one only
+    // when an MTU was not reported (here both were)
+    assert.deepStrictEqual(res.hints, ['hint: r1 ' + i[2] + ' Full, but network type differs (point-to-point ⇔ broadcast): routes from r2 can be missing']);
   });
 });
