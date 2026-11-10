@@ -182,8 +182,8 @@ and the netlab tool) bundles the NeXt UI Toolkit under EPL-1.0; `xray-graph.html
 
 ### Can I contribute code?
 
-Pull requests are not accepted; the project has a single maintainer and keeps a single copyright holder (released versions stay MIT). Issues are read,
-with no SLA, and forking is welcome under the licence. See [Scope & maintenance](../README.md#scope--maintenance).
+This is a small tool kept by one person. Please open an issue with the raw output and the fix is made here; pull requests
+are not merged. Released versions stay MIT, and forks are welcome. See [Scope & maintenance](../README.md#scope--maintenance).
 
 ### The picture looks wrong. How do I report it?
 

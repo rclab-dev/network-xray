@@ -182,8 +182,8 @@ MIT です (copyright RouteCrushLab)。NeXt UI の graph (`xray-graph-nextui.htm
 
 ### コードで貢献できますか?
 
-プルリクエストは受け付けていません。メンテナは 1 人で、著作権者も 1 人に保っています (公開済みの版は MIT のままです)。issue は読みますが、
-対応の SLA はありません。ライセンスの範囲での fork は歓迎です。[Scope & maintenance](../../README.md#scope--maintenance) を参照してください。
+1 人で保守している小さな道具です。生の出力を添えて issue を開いてください。修正はここで行い、プルリクエストは
+マージしません。公開済みの版は MIT のままで、fork は歓迎です。[Scope & maintenance](../../README.md#scope--maintenance) を参照してください。
 
 ### 絵がおかしい。どう報告すればいいですか?
 

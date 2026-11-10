@@ -73,8 +73,8 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 | Node.js | 18 and 24 (for `xray.sh` / the collector without the image; the tests run on both, and CI and the image use 24) |
 
 <a id="maintenance-policy"></a>
-Issues with the raw output attached are welcome and fixes are made here; pull requests are not merged.
-A single copyright holder is kept so the project can be relicensed later. Released versions stay MIT. Issues carry no SLA; forks are welcome.
+This is a small tool kept by one person. Please open an issue with the raw output and I'll make the fix here; pull requests aren't merged.
+Released versions stay MIT, and forks are welcome.
 
 **Walkthrough:** [See why BGP picked that path — a browser X-ray for your containerlab lab](https://dev.to/routecrushlab/see-why-bgp-picked-that-path-a-browser-x-ray-for-your-containerlab-lab-3e) (dev.to)
 
@@ -969,8 +969,8 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 | Node.js | 18 と 24 (`xray.sh` / イメージを使わない collector。試験は両方で流し、CI とイメージは 24) |
 
 <a id="maintenance-policy-ja"></a>
-生の出力を添えた issue を歓迎します。修正はここで行い、Pull Request はマージしません。
-将来の再ライセンスのため著作権者を単一に保ちます。公開済みの版は MIT のままです。Issue に SLA はありません。フォークは歓迎します。
+1 人で保守している小さな道具です。生の出力を添えて issue を開いてください。修正はここで行い、Pull Request はマージしません。
+公開済みの版は MIT のままで、フォークは歓迎します。
 
 **解説記事:** [network-xray の紹介 (Zenn)](https://zenn.dev/routecrushlab/articles/network-xray-oss)
 
