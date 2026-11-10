@@ -1204,7 +1204,9 @@ function collectLive(opts) {
      container name (or a socket file name) and must be plain names */
   var _safeName = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$/;
   if (!_safeName.test(String(opts.node)) || (opts.lab != null && !_safeName.test(String(opts.lab)))) throw new Error('--lab / --node must be plain names (letters, digits, _ . -)');   /* nx_review_1017 (F-06): the lab name too, also with vtysh sockets */
-  var container = (_VTY_SOCK ? opts.node : ('clab-' + opts.lab + '-' + opts.node));
+  /* nx_prefix_any: the container name can be given (the topology's prefix: makes it <node>, <lab>-<node> or <word>-<lab>-<node>) */
+  if (opts.container != null && !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,254}$/.test(String(opts.container))) throw new Error('--container must be a plain name (letters, digits, _ . -)');
+  var container = (_VTY_SOCK ? opts.node : (opts.container != null ? String(opts.container) : ('clab-' + opts.lab + '-' + opts.node)));
   var proto = (opts.proto || 'ospf').toLowerCase();
   /* nx_vrf_all (2026-10-19): read every VRF (`vrf all`), not only the default one - an OSPF/BGP/interface inside a VRF was invisible
      (VRF links drawn as "no interface" = down). Same number of vtysh runs as before; the parsers accept the plain and the per-VRF form. */
@@ -1626,9 +1628,10 @@ function selfTest() {
 // ---- main -----------------------------------------------------------------------------------
 if (typeof require !== 'undefined' && require.main === module) {
   var USAGE = 'usage: node clab-collect.js --self-test\n' +
-    '       node clab-collect.js --lab <lab> --node <n> [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
+    '       node clab-collect.js --lab <lab> --node <n> [--container <name>] [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
     '       node clab-collect.js --fixtures <dir> --node <n> [--adj ...] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
     '  --lab <lab>          read the FRR router clab-<lab>-<n> with docker exec vtysh (read-only)\n' +
+    '  --container <name>   the router\'s container name, when it is not clab-<lab>-<n>\n' +
     '  --fixtures <dir>     read saved `show ... json` files from <dir> instead\n' +
     '  --adj if:peer,...    which neighbor is on which interface\n' +
     '  --proto ospf|bgp     default: ospf\n' +
@@ -1651,7 +1654,7 @@ if (typeof require !== 'undefined' && require.main === module) {
     }
     return r;
   }
-  var _cli = _cliCheck(process.argv.slice(2), ['self-test', 'fixtures', 'lab', 'node', 'adj', 'proto', 'exclude-mgmt', 'mgmt-subnet', 'out'], ['self-test', 'exclude-mgmt']);
+  var _cli = _cliCheck(process.argv.slice(2), ['self-test', 'fixtures', 'lab', 'node', 'container', 'adj', 'proto', 'exclude-mgmt', 'mgmt-subnet', 'out'], ['self-test', 'exclude-mgmt']);
   if (_cli.help) { console.log(USAGE); process.exit(0); }   // release-check: ok (the --help text)
   if (_cli.bad) { console.error('clab-collect.js: unknown option: ' + _cli.bad + "\nTry 'node clab-collect.js --help'."); process.exit(2); }
   var a = _argMap(process.argv.slice(2));
@@ -1670,7 +1673,7 @@ if (typeof require !== 'undefined' && require.main === module) {
   }
   else if (a.lab && a.node) {
     var stl;
-    try { stl = collectLive({ lab: a.lab, node: a.node, proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: _mgmt }); }
+    try { stl = collectLive({ lab: a.lab, node: a.node, container: (a.container && a.container !== true) ? a.container : null, proto: a.proto, adjacency: _parseAdj(a.adj), mgmtSubnet: _mgmt }); }
     catch (e) { if (e && e.nxUnread) { console.error('NX_UNREAD ' + e.nxUnread + ' ' + e.message); process.exit(3); } throw e; }   /* nx_unread */
     var outl = JSON.stringify(stl, null, 2);
     if (a.out && a.out !== true) { fs.writeFileSync(a.out, outl); console.log('wrote ' + a.out); } else console.log(outl);

@@ -259,6 +259,7 @@ containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.h
 > `--static-dir` serves every file in that folder. When it is your clone, keep `-s 127.0.0.1:…`; to open the page from other machines, use `./xray.sh --bind 0.0.0.0`, which serves only the page files.
 Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `xray.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://localhost:8080/`. The path display is inferred from the routing table each router reports. To stop: Ctrl-C, then `kill %1` for the collector.
 If a `problem.json` is left in `<network-xray>` (e.g. from an older `xray.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
+Any topology `prefix:` works (no prefix, `clab`, `""`, `__lab-name` or your own word): the routers are found by the labels containerlab puts on their containers. Routers with no links are read too. <!-- nx_prefix_any -->
 
 <a id="netlab-tool"></a>
 
@@ -1163,6 +1164,7 @@ containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.h
 > `--static-dir` はそのフォルダの全部のファイルを配ります。clone をそのまま指す時は `-s 127.0.0.1:…` のままに。ほかの機械から開くなら `./xray.sh --bind 0.0.0.0` を使ってください (頁のファイルだけを配ります)。
 OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://localhost:8080/` を開きます。パス表示は各ルータが報告する経路表から推定します。OSPF と BGP の両方があるラボでは `bgp` を使ってください (OSPF の隣接も読みます。コンテナと `xray.sh` は自動で選びます)。止める時は Ctrl-C のあと `kill %1` (collector)。
 `<network-xray>` に `problem.json` が残っていたら (古い `xray.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
+topology の `prefix:` はどれでも動きます (書かない・`clab`・`""`・`__lab-name`・自分の言葉): ルータは containerlab がコンテナに付ける label で探します。リンクの無いルータも読みます。 <!-- nx_prefix_any -->
 
 <a id="netlab-tool-ja"></a>
 

@@ -130,8 +130,6 @@ if [ -n "$CHECK" ]; then
       [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) bad "topology: the lab name in $YML is not a plain name (letters, digits, _ . -) - rename it" ;;
       *) ok "topology: $YML (lab '$_ln')" ;;
     esac
-    _pfx="$(sed -n '/^prefix:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"
-    case "$_pfx" in ''|clab|'"clab"'|"'clab'") ;; *) bad "topology: prefix ($_pfx) is not supported - network-xray finds routers as clab-<lab>-<node>: remove the prefix: line (or use prefix: clab)" ;; esac
     if grep -qsE "kind:[[:space:]]*cisco_iol" "$YML"; then
       # the image under kinds: cisco_iol:, any image: on a cisco_iol node line, and image: inside a
       # cisco_iol node written over several lines (kind: and image: under the node name)
@@ -174,10 +172,15 @@ LABNAME="$(sed -n '/^name:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/[[:space:]][[
 [ -n "$LABNAME" ] || { echo "could not read 'name:' from $YML"; exit 1; }
 # nx_review_1017 (F-07): the lab name is used in container names and docker filters: plain names only
 case "$LABNAME" in [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*) echo "the lab name in $YML is not a plain name (letters, digits, _ . -)"; exit 1 ;; esac
-# containerlab_compat: the collectors look for containers named clab-<lab>-<node> (the default prefix 'clab').
-# Another prefix (prefix: "" = no prefix, __lab-name, or any other word) would make every router look stopped: stop here.
-_pfx="$(sed -n '/^prefix:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"
-case "$_pfx" in ''|clab|'"clab"'|"'clab'") ;; *) echo "the topology prefix ($_pfx) in $YML is not supported: network-xray finds routers as clab-<lab>-<node>. Remove the prefix: line (or use prefix: clab)."; exit 1 ;; esac
+# nx_prefix_any (2026-11-11): any prefix: - the collector finds the routers by containerlab's labels; CPFX is containerlab's
+# name for them (no prefix / clab -> clab-<lab>-<node>, "" -> <node>, __lab-name -> <lab>-<node>, w -> w-<lab>-<node>), for the hints below
+_pfx="$(sed -n '/^prefix:[[:space:]]*/{s///p;q;}' "$YML" | sed 's/^#.*$//; s/[[:space:]][[:space:]]*#.*$//; s/[[:space:]]*$//')"
+case "$_pfx" in
+  ''|'~'|null|clab|'"clab"'|"'clab'") CPFX="clab-$LABNAME-" ;;
+  '""'|"''") CPFX="" ;;
+  __lab-name|'"__lab-name"'|"'__lab-name'") CPFX="$LABNAME-" ;;
+  *) _pv="${_pfx#[\"\']}"; CPFX="${_pv%[\"\']}-$LABNAME-" ;;
+esac
 
 # nx_port_free_check: the graph port must be free, otherwise `containerlab graph` stops right after "==> open"
 # (checked before deploy, so nothing is left running). Same check as .devcontainer/start-demo.sh.
@@ -307,10 +310,10 @@ echo "    Click any router to open its DeepDive. Fix the lab in a router's shell
 _frrn="$(sed -n '/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*linux[^}]*image:[^,}]*frr.*/{s//\1/p;q;}' "$YML")"
 _ioln="$(sed -n '/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*cisco_iol.*/{s//\1/p;q;}' "$YML")"
 _srln="$(sed -n '/^[[:space:]]*\([A-Za-z0-9_.-]*\):[[:space:]]*{[^}]*kind:[[:space:]]*nokia_srlinux.*/{s//\1/p;q;}' "$YML")"
-[ -n "$_frrn" ] && echo "      docker exec -it clab-${LABNAME}-${_frrn} vtysh"
-[ -n "$_ioln" ] && echo "      ssh admin@clab-${LABNAME}-${_ioln}   (password: admin)"
-[ -n "$_srln" ] && echo "      docker exec -it clab-${LABNAME}-${_srln} sr_cli"
-[ -z "$_frrn$_ioln$_srln" ] && echo "      docker exec -it clab-${LABNAME}-<node> vtysh   (FRR; sr_cli on SR Linux, ssh on Cisco IOL)"
+[ -n "$_frrn" ] && echo "      docker exec -it ${CPFX}${_frrn} vtysh"
+[ -n "$_ioln" ] && echo "      ssh admin@${CPFX}${_ioln}   (password: admin)"
+[ -n "$_srln" ] && echo "      docker exec -it ${CPFX}${_srln} sr_cli"
+[ -z "$_frrn$_ioln$_srln" ] && echo "      docker exec -it ${CPFX}<node> vtysh   (FRR; sr_cli on SR Linux, ssh on Cisco IOL)"
 echo "    and the picture follows within a few seconds."
 # nx_serve_dir: the graph serves a folder of links to the page's own files only - not the whole checkout
 # (the page asks for /static/<file>; .git, examples/<lab>/clab-<name>/ and the rest are not reachable).

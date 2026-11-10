@@ -472,12 +472,13 @@ function arg(name, def) { var i = process.argv.indexOf(name); return i >= 0 ? pr
 var USAGE = 'usage: node clab-srl-collect.js --lab <lab> --node <node> --adj if:peer,... [--proto ospf|bgp] [--capture <dir>] [--out f]   (live via docker exec sr_cli, read-only)\n' +
   '       node clab-srl-collect.js --from-dir <dir> --node <node> --adj if:peer,... [--proto ospf|bgp] [--out f]                (offline replay)\n' +
   '       node clab-srl-collect.js --self-test\n' +
+  '  --container <name> the router\'s container name, when it is not clab-<lab>-<node>\n' +
   '  --capture <dir>    also save the state paths to <dir> (for --from-dir later)\n' +
   '  --proto ospf|bgp   default: ospf\n' +
   '  --out <file>       write the state JSON to <file> (default: stdout)\n' +
   '  -h, --help         show this help';
 // options that take a value always take the next word (as arg() does)
-var _valued = ['--node', '--proto', '--out', '--from-dir', '--lab', '--capture', '--adj'], _help = false, _bad = '';
+var _valued = ['--node', '--proto', '--out', '--from-dir', '--lab', '--container', '--capture', '--adj'], _help = false, _bad = '';
 for (var _i = 2; _i < process.argv.length; _i++) {
   var _s = process.argv[_i];
   if (_valued.indexOf(_s) >= 0) _i++;
@@ -503,6 +504,9 @@ arg('--adj', '').split(',').filter(Boolean).forEach(function (p) {
   adj[_ifk] = p.slice(i + 1);
 });
 if ((lab && !SAFE_NAME.test(lab)) || (node && !SAFE_NAME.test(node))) { console.error('!! --lab / --node must be plain names (letters, digits, _ . -)'); process.exit(2); }
+/* nx_prefix_any: the container name can be given (the topology's prefix: makes it <node>, <lab>-<node> or <word>-<lab>-<node>) */
+var containerArg = arg('--container');
+if (containerArg != null && !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,254}$/.test(containerArg)) { console.error('!! --container must be a plain name (letters, digits, _ . -)'); process.exit(2); }
 
 var fetchFn, nxUnread = null;   /* nx_unread: [why, message] when the router cannot be read */
 if (fromDir) {
@@ -511,7 +515,7 @@ if (fromDir) {
   fetchFn = dirFetch(fromDir);
 } else if (lab && node) {
   // live: run `sr_cli "info from state <path> | as json"` inside clab-<lab>-<node>.
-  var container = 'clab-' + lab + '-' + node;
+  var container = containerArg != null ? containerArg : 'clab-' + lab + '-' + node;
   var live = function (p) {
     if (!/^[A-Za-z0-9 *._\/-]+$/.test(p)) return null;   /* nx_no_shell: a state path is words, never a second command */
     if (nxUnread) return null;   /* nx_unread: once the router did not answer / is not there, stop asking this round */

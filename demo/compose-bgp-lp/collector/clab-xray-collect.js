@@ -115,10 +115,15 @@ if (!fs.existsSync(outDir)) {
 }
 var lab = (topo.match(/^name:\s*"?([^"\s]+)"?/m) || [])[1];
 if (!lab) { console.error('!! could not find `name:` in ' + topoPath); process.exit(1); }
-// containerlab_compat: only the default container names clab-<lab>-<node> are read (prefix: "" or another word would hide every router)
-var _pfxM = topo.match(/^prefix:[ \t]*(.*)$/m), _pfx = _pfxM ? _pfxM[1].replace(/\s+#.*$/, '').trim() : '';
-if (_pfx !== '' && !/^(clab|"clab"|'clab')$/.test(_pfx)) { console.error('!! the topology prefix (' + _pfx + ') is not supported: routers are read as clab-<lab>-<node>. Remove the prefix: line (or use prefix: clab).'); process.exit(1); }
 if (!SAFE_NAME.test(lab)) { console.error('!! the lab name ' + shown(lab) + ' is not a plain name (letters, digits, _ . -): not collecting'); process.exit(1); }   /* nx_no_shell */
+/* nx_prefix_any (2026-11-11): any topology prefix: - the routers are found by containerlab's labels (containerlab=<lab>,
+   clab-node-name=<node>, see containerOf below); a router with no container yet gets containerlab's own name for it:
+   no prefix: / prefix: clab -> clab-<lab>-<node>, prefix: "" -> <node>, prefix: __lab-name -> <lab>-<node>, prefix: w -> w-<lab>-<node> */
+var _pfxM = topo.match(/^prefix:[ \t]*(.*)$/m), _pfxRaw = _pfxM ? _pfxM[1].replace(/(^|\s+)#.*$/, '').trim() : '';
+var _pfxQ = /^(["'])(.*)\1$/.exec(_pfxRaw), _pfx = _pfxQ ? _pfxQ[2] : _pfxRaw;
+var cPrefix = (!_pfxM || (!_pfxQ && /^(|~|null)$/i.test(_pfxRaw))) ? 'clab-' + lab + '-'
+  : _pfx === '' ? '' : _pfx === '__lab-name' ? lab + '-' : _pfx + '-' + lab + '-';
+if (cPrefix && !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,190}$/.test(cPrefix)) { console.error('!! the topology prefix ' + shown(_pfxRaw) + ' is not a plain name (letters, digits, _ . -): not collecting'); process.exit(1); }
 // nx_collect_mgmt_from_topo: --exclude-mgmt uses the lab's own mgmt subnet when the topology sets one
 //   (mgmt: / ipv4-subnet: ..., e.g. netlab = 192.168.121.0/24); otherwise containerlab's default 172.20.20.0/24.
 if (mgmtArg.length === 1 && mgmtArg[0] === '--exclude-mgmt') {
@@ -193,8 +198,32 @@ var dictRx = { exec: (function () { var all = dictLinks(topo), k = 0; return fun
     (adj[b] = adj[b] || []).push({ iface: bi, peer: a, peerIface: ai2 });
   }
 });
+/* nx_isolated_nodes (2026-11-11): a router with no links is read too (it used to be left out; with no links at all the
+   collector stopped with "no links parsed") - every name under the topology's nodes:, with an empty adjacency */
+function topoNodeNames() {
+  var L = topo.split(/\r?\n/), out = [], base = -1, child = -1, i;
+  var ind = function (s) { return s.match(/^[ \t]*/)[0].length; };
+  for (i = 0; i < L.length; i++) if (/^[ \t]+nodes:[ \t]*(#.*)?$/.test(L[i])) { base = ind(L[i]); break; }
+  if (base < 0) return out;
+  for (i++; i < L.length; i++) {
+    var s = L[i]; if (!s.trim() || /^[ \t]*#/.test(s)) continue;
+    var d = ind(s); if (d <= base) break;
+    if (child < 0) child = d;
+    if (d !== child) continue;
+    var k = /^[ \t]*["']?([^"'\s:#{}]+)["']?[ \t]*:/.exec(s);
+    if (k) out.push(k[1]);
+  }
+  return out;
+}
+var linked = {};
+Object.keys(adj).forEach(function (n) { linked[n] = 1; });
+topoNodeNames().forEach(function (n) {
+  if (adj[n]) return;
+  if (!SAFE_NAME.test(n) || n in Object.prototype) { console.error('!! left out a node with a name that is not a plain name: ' + shown(n)); return; }
+  adj[n] = [];
+});
 var nodes = Object.keys(adj);
-if (!nodes.length) { console.error('!! no links parsed from ' + topoPath); process.exit(1); }
+if (!nodes.length) { console.error('!! no nodes or links parsed from ' + topoPath); process.exit(1); }
 
 // per-node kind (containerlab): dispatch nokia_srlinux nodes to clab-srl-collect.js (sr_cli), all
 // others to clab-collect.js (FRR vtysh). Both speak the same --lab/--node/--adj/--proto/--out CLI and
@@ -204,6 +233,11 @@ nodes.forEach(function (n) {
   var km = topo.match(new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':\\s*\\{?[\\s\\S]{0,180}?kind:\\s*["\']?([\\w./-]+)'));
   kindOf[n] = km ? km[1] : '';
 });
+nodes = nodes.filter(function (n) {   /* nx_isolated_nodes */
+  if (linked[n] || !/^(bridge|ovs-bridge|host)$/i.test(kindOf[n] || '')) return true;
+  delete adj[n]; return false;
+});
+if (!nodes.length) { console.error('!! no routers in ' + topoPath); process.exit(1); }
 function isSrl(kind) { return /srl|srlinux|nokia/i.test(kind || ''); }
 // containerlab short iface (e1-1) -> SR Linux routed subinterface (ethernet-1/1.0)
 function srlIface(x) {
@@ -232,14 +266,15 @@ function iosIface(x, kind) {
      iface(x, kind) - containerlab's link-side name (e1-1 / eth1) -> the name the router's own show prints
      frrArgs        - takes the FRR-collector-only flags (--exclude-mgmt)
      needsFrr       - its collector requires clab-collect.js (it builds the state with the same buildState)
-     slow           - read again only every NX_IOS_INTERVAL s (SSH + plain-text show: console and CPU cost) */
+     slow           - read again only every NX_IOS_INTERVAL s (SSH + plain-text show: console and CPU cost)
+     container      - is given the container name (--container); the IOS collector finds it by the labels itself */
 var VENDORS = [
   { name: 'srlinux', match: isSrl, script: 'clab-srl-collect.js', what: 'nokia_srlinux nodes',
-    iface: srlIface, frrArgs: false, needsFrr: false, slow: false },
+    iface: srlIface, frrArgs: false, needsFrr: false, slow: false, container: true },
   { name: 'iosxe', match: isIos, script: 'clab-iosxe-collect.js', what: 'Cisco IOS / IOS-XE nodes',
     iface: iosIface, frrArgs: false, needsFrr: true, slow: true },
   { name: 'frr', match: function () { return true; }, script: 'clab-collect.js', what: 'FRR nodes',
-    iface: null, frrArgs: true, needsFrr: true, slow: false }
+    iface: null, frrArgs: true, needsFrr: true, slow: false, container: true }
 ];
 function vendorOf(n) {
   for (var i = 0; i < VENDORS.length; i++) if (VENDORS[i].match(kindOf[n] || '')) return VENDORS[i];
@@ -252,13 +287,34 @@ if (_usedRows.some(function (v) { return v.needsFrr; }) && !fs.existsSync(collec
 _usedRows.forEach(function (v) {
   if (v.script !== 'clab-collect.js' && !fs.existsSync(path.join(outDir, v.script))) { console.error('!! ' + v.script + ' not found in ' + outDir + ' (needed for ' + v.what + ')'); process.exit(1); }
 });
+/* nx_prefix_any: node -> container name, from the labels containerlab puts on every container (any prefix:), asked again
+   at most every 15 s; a node with no container (yet) gets containerlab's name rule. Two containers for one node (the same
+   lab name deployed twice with different prefixes): the one the rule names. */
+var cMap = {}, cMapAt = 0, CNAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,254}$/;
+function refreshContainers() {
+  var now = Date.now();
+  if (cMapAt && now - cMapAt < 15000) return;
+  cMapAt = now;
+  try {
+    var o = cp.execFileSync('docker', ['ps', '-a', '--filter', 'label=containerlab=' + lab, '--format', '{{.Label "clab-node-name"}} {{.Names}}'],
+      { encoding: 'utf8', timeout: 5000, killSignal: 'SIGKILL', stdio: ['ignore', 'pipe', 'ignore'] });
+    var m2 = {};
+    o.split(/\r?\n/).forEach(function (l) {
+      var p = l.trim().split(/\s+/);
+      if (p.length !== 2 || !SAFE_NAME.test(p[0]) || p[0] in Object.prototype || !CNAME.test(p[1])) return;
+      if (!m2[p[0]] || p[1] === cPrefix + p[0]) m2[p[0]] = p[1];
+    });
+    cMap = m2;
+  } catch (e) {}   // no docker here (fixtures, tests): the name rule
+}
+function containerOf(n) { return Object.prototype.hasOwnProperty.call(cMap, n) ? cMap[n] : cPrefix + n; }
 // which collector, adjacency string and extra args for one node
 function nodeJob(n) {
   var v = vendorOf(n), k = kindOf[n];
   return {
     script: path.join(outDir, v.script),
     adjStr: adj[n].map(function (l) { return (v.iface ? v.iface(l.iface, k) : l.iface) + ':' + l.peer; }).join(','),
-    mg: v.frrArgs ? mgmtArg : [],   // --exclude-mgmt is an FRR-collector flag (IOS drops its own mgmt port)
+    mg: (v.frrArgs ? mgmtArg : []).concat(v.container ? ['--container', containerOf(n)] : []),   // --exclude-mgmt is an FRR-collector flag (IOS drops its own mgmt port)
     slow: v.slow
   };
 }
@@ -279,6 +335,7 @@ function collectAll() {
      (about one node's time instead of the sum - 3 nodes ~4 s -> ~1.5 s). Exit code / stderr of each child go to
      small files next to its state file and are read below, so the failure handling is unchanged. --serial = old way. */
   var _par = !serialCollect && nodes.length > 1, _job = {};
+  refreshContainers();   /* nx_prefix_any */
   var _cmdOf = function (n) {
     var _nj = nodeJob(n), script = _nj.script, adjStr = _nj.adjStr, mg = _nj.mg;   /* nx_ios_collect */
     var out = stateFile(n);
@@ -420,7 +477,7 @@ function validateRound(cb) {
   var nt = clabTiers || labv.tiers, tierChanged = JSON.stringify(nt) !== JSON.stringify(tierRes);   /* nx_netlab_tiers: rows for the graph */
   tierRes = nt;
   if (!labv.tests.length) return cb(tierChanged);
-  VALIDATE.run(labv, 'clab-' + lab + '-', function (res) {
+  VALIDATE.run(labv, cPrefix, function (res) {   /* nx_prefix_any */
     /* nx_validate_held (2026-10-17): "all the checks network-xray reads pass" must hold for VAL_HOLD_MS, counted here (not from
        when the page was opened). A one-shot run (no --watch) has no time to wait: no converging, no hold. */
     var c0 = res.counts || {};

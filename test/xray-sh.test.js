@@ -226,27 +226,23 @@ test('xray.sh: a trailing comment after name: is not part of the lab name', { sk
   assert.ok(calls(r, 'docker').some(function (c) { return c.join(' ').indexOf('label=containerlab=cmtlab') >= 0; }), 'docker filter uses the plain name');
 });
 
-test('xray.sh: a topology prefix other than clab is refused before deploy', { skip: SKIP }, async function () {
+test('xray.sh: any topology prefix is deployed, and the shell hint uses containerlab\'s container name', { skip: SKIP }, async function () {
   var env = setup();
-  var cases = [['""', true], ['__lab-name', true], ['mylab', true], ['clab', false], ['"clab"', false], ['', false]];
+  // [prefix: value, container name prefix] as containerlab names the containers (the collector finds them by the labels)
+  var cases = [['""', ''], ["''", ''], ['__lab-name', 'pfx2-'], ['mylab', 'mylab-pfx3-'], ['"mylab"', 'mylab-pfx4-'], ['clab', 'clab-pfx5-'], ['"clab"', 'clab-pfx6-'], ['', 'clab-pfx7-']];
   for (var i = 0; i < cases.length; i++) {
     var yml = writeLab(path.join(env.dir, 'pfx' + i), 'pfx' + i);
     fs.appendFileSync(yml, 'prefix: ' + cases[i][0] + '\n');
     var r = await run(env, 'xray.sh', [yml, String(await freePort())]);
-    if (cases[i][1]) {
-      assert.strictEqual(r.code, 1, cases[i][0]);
-      assert.match(r.stdout, /topology prefix .* is not supported/, cases[i][0]);
-      assert.deepStrictEqual(calls(r, 'sudo'), [], 'no deploy for prefix ' + cases[i][0]);
-    } else {
-      assert.strictEqual(r.code, 0, cases[i][0] + ': ' + r.stdout + r.stderr);
-    }
+    assert.strictEqual(r.code, 0, cases[i][0] + ': ' + r.stdout + r.stderr);
+    assert.ok(calls(r, 'sudo').length > 0, 'deployed with prefix ' + cases[i][0]);
+    assert.ok(r.stdout.indexOf('docker exec -it ' + cases[i][1] + 'r1 vtysh') >= 0, cases[i][0] + ': ' + r.stdout);
   }
-  // --check says it too
+  // --check does not stop on it either
   checkFakes(env);
   var y2 = writeLab(path.join(env.dir, 'pfxc'), 'pfxc'); fs.appendFileSync(y2, 'prefix: ""\n');
   var c = await run(env, 'xray.sh', ['--check', y2, String(await freePort())]);
-  assert.strictEqual(c.code, 1);
-  assert.match(c.stdout, /^FAIL {2}topology: prefix \(""\) is not supported/m);
+  assert.doesNotMatch(c.stdout, /prefix/);
 });
 
 test('xray.sh: the problem.json link is made while running and removed at the end', { skip: SKIP }, async function () {
