@@ -224,7 +224,8 @@ function checkExampleReadme(dirName, root = ROOT) {
   const text = labText(dir);
   const seen = new Set();
   for (const m of md.matchAll(/`[^`\n]*`/g)) {
-    for (const a of m[0].matchAll(/(?<![\d.])(\d{1,3}(?:\.\d{1,3}){3})(?:\/\d+)?(?![\d.])/g)) {
+    // the address after --bind is where the page listens (0.0.0.0 / 127.0.0.1), not a lab address
+    for (const a of m[0].replace(/--bind[ =]\S+/g, "").matchAll(/(?<![\d.])(\d{1,3}(?:\.\d{1,3}){3})(?:\/\d+)?(?![\d.])/g)) {
       const ip = a[1];
       if (seen.has(ip)) continue;
       seen.add(ip);

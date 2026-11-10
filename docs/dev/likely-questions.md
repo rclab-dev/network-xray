@@ -113,12 +113,12 @@ Anyone who can reach the port. There is no authentication of any kind.
 
 | How you run it | Listens on | Notes |
 |---|---|---|
-| `xray.sh` | `0.0.0.0` by default (`BIND=0.0.0.0` in `xray.sh`) | warns when you didn't pick an address; `--bind 127.0.0.1` restricts it |
+| `xray.sh` | `127.0.0.1` by default (`BIND=127.0.0.1` in `xray.sh`) | `--bind 0.0.0.0` opens it to other machines, and it then says the page has no login |
 | README `docker run` | `127.0.0.1:8600` | |
-| netlab tool | `-p 8600:8600`, every host interface | `docker/netlab-defaults.yml` |
+| netlab tool | `-p 127.0.0.1:8600:8600`, the lab host only | `docker/netlab-defaults.yml`; `-p 8600:8600` in your copy opens it to other machines |
 | compose demo | `127.0.0.1:8080:8080`, this machine only | change it to `"8080:8080"` in `compose.yml` to open it to other machines |
 
-- **Recommendation:** use `--bind 127.0.0.1` plus an SSH tunnel on shared machines.
+- **Recommendation:** keep the default and use an SSH tunnel to reach it from another machine.
 - **Escaping:** collected strings (node names, BGP fields, reasons) are HTML-escaped before rendering; `test/escape.test.js` and `test/dom-insert-escape.test.js` cover injection attempts.
 
 ## 10. How does it perform with many routers?

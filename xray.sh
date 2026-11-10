@@ -7,8 +7,8 @@
 #   lab       default: examples/q21-bgp-lp/q21.clab.yml (BGP best-path / LocalPref)
 #   port      default: 8080   -> open http://<this machine>:8080/
 #   template  default: xray-graph-nextui.html (NeXt UI overview + X-Ray DeepDive)
-#   --bind <address>      address the graph page listens on. default: 0.0.0.0 (all addresses, as before -
-#                         a lab on a server / VM is opened from your PC); --bind 127.0.0.1 = this machine only
+#   --bind <address>      address the graph page listens on. default: 127.0.0.1 (this machine only);
+#                         --bind 0.0.0.0 = all addresses (a lab on a server / VM opened from your PC; the page has no login)
 #   --interval <seconds>  how often the collector reads the routers (whole seconds). default: 1
 #   --check               only check what this run needs (docker, containerlab, node, port, topology,
 #                         IOL image) and say what to fix; nothing is started or changed. exit 0 = ready
@@ -26,7 +26,7 @@
 set -euo pipefail
 unset CDPATH   # a CDPATH from the environment would make the cd below print a path or pick another folder
 HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
-BIND=0.0.0.0; BIND_SET=""; INTERVAL=1; CHECK=""; ATTACH=""; POS=()
+BIND=127.0.0.1; BIND_SET=""; INTERVAL=1; CHECK=""; ATTACH=""; POS=()
 # containerlab's own update check asks GitHub for its latest release: off unless you set CLAB_VERSION_CHECK yourself  # nx-v1110-review-20261107
 export CLAB_VERSION_CHECK="${CLAB_VERSION_CHECK-disable}"
 usage() {
@@ -36,7 +36,7 @@ usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] 
   lab                   default: examples/q21-bgp-lp/q21.clab.yml
   port                  default: 8080
   template              default: xray-graph-nextui.html
-  --bind <address>      address the graph listens on (default: 0.0.0.0 = all; 127.0.0.1 = this machine only)
+  --bind <address>      address the graph listens on (default: 127.0.0.1 = this machine only; 0.0.0.0 = all)
   --interval <seconds>  how often the collector reads the routers, whole seconds (default: 1)
   --check               only check what this run needs and say what to fix; nothing is started
   --attach              do not deploy: graph the lab that is already running (changes made by hand are kept)
@@ -183,7 +183,7 @@ case "$_pfx" in ''|clab|'"clab"'|"'clab'") ;; *) echo "the topology prefix ($_pf
 # (checked before deploy, so nothing is left running). Same check as .devcontainer/start-demo.sh.
 if timeout 2 bash -c 'exec 3<>"/dev/tcp/127.0.0.1/$1"' _ "$PORT" 2>/dev/null; then
   echo "port ${PORT} is already in use (another graph is running there?)."
-  _opts=""; [ -n "$ATTACH" ] && _opts+="--attach "; [ "$BIND" != 0.0.0.0 ] && _opts+="--bind $(printf '%q' "$BIND") "; [ "$INTERVAL" != 1 ] && _opts+="--interval $INTERVAL "
+  _opts=""; [ -n "$ATTACH" ] && _opts+="--attach "; [ "$BIND" != 127.0.0.1 ] && _opts+="--bind $(printf '%q' "$BIND") "; [ "$INTERVAL" != 1 ] && _opts+="--interval $INTERVAL "
   echo "  add a port:  ./xray.sh ${_opts}$(printf '%q' "${1:-examples/q21-bgp-lp/q21.clab.yml}") $((PORT + 1))   - or stop the other one."
   exit 1
 fi
@@ -297,8 +297,10 @@ case "$BIND" in
   0.0.0.0|::) echo "==> open  http://<this machine>:${PORT}/   (listening on all addresses, ${BIND_HP}:${PORT}; Ctrl-C to stop)" ;;
   *) echo "==> open  http://${BIND_HP}:${PORT}/   (Ctrl-C to stop)" ;;
 esac
-# nx_bind_note (owner A, 2026-11-03): the default stays all interfaces - say so once, with the way to narrow it
-[ -z "$BIND_SET" ] && echo "    listening on all interfaces (0.0.0.0), and the page has no login - to allow only this machine, use --bind 127.0.0.1"   # nx-v1110-bindnote-20261107
+# nx_bind_note (2026-11-10): the default is this machine only - say how to open it to other machines;
+# on all addresses, say plainly that the page has no login
+[ -z "$BIND_SET" ] && echo "    this machine only (127.0.0.1) - to open it from other machines, use --bind 0.0.0.0 (the page has no login)"
+case "$BIND" in 0.0.0.0|::) echo "    !! listening on all interfaces and the page has no login: anyone who can reach this port can see the lab" ;; esac
 echo "    Click any router to open its DeepDive. Fix the lab in a router's shell, e.g.:"
 # nx_iol_demo_msgs: the shell by node kind (IOL has no vtysh: ssh with containerlab's cisco_iol default login)
 # nx_cli_msgs: an FRR node is a linux node with an frr image (alpine hosts are linux too and have no vtysh)

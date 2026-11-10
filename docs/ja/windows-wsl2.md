@@ -65,9 +65,9 @@ Windows のブラウザで **http://localhost:8080/** (やり方 A) か **http:/
 WSL2 は既定で Linux 側の `localhost` のポートを Windows に転送します (`localhostForwarding`。
 `%UserProfile%\.wslconfig` で切っていなければ有効)。**(未確認)**
 
-- やり方 A では、`xray.sh` は既定ですべてのアドレス (`0.0.0.0`) で待ち受けるので、Windows がポートを転送すると、
-  ネットワークのほかのマシンからも届くことがあります。このマシンだけにするには: `./xray.sh --bind 127.0.0.1 <lab.clab.yml>`。
-  WSL2 の中の `--bind 127.0.0.1` が Windows のブラウザから届くかは、WSL のネットワークのモードによります。**(未確認)**
+- やり方 A では、`xray.sh` は既定で `127.0.0.1` で待ち受けます。これが Windows のブラウザから届くかは WSL のネットワークの
+  モードによります。届かなければ `./xray.sh --bind 0.0.0.0 <lab.clab.yml>` を使います (Windows がポートを転送すると、ネットワークの
+  ほかのマシンからも届くことがあります)。**(未確認)**
 - やり方 B では、Docker Desktop は `-p 127.0.0.1:8600:8600` を Windows の `localhost` に出します。ディストリビューションの中の
   Docker Engine では、上の WSL2 の `localhost` の転送を通ります。**(未確認)**
 

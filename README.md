@@ -32,7 +32,7 @@ Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab
 
 ## Other ways to try it
 
-**Live example lab** — clone this repository and run `./xray.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab); `xray.sh` listens on all interfaces and has no login; see the [security notes](#security-notes)).
+**Live example lab** — clone this repository and run `./xray.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab); `xray.sh` listens on `127.0.0.1` by default and has no login; see the [security notes](#security-notes)).
 
 ### ▶ Live lab — GitHub Codespaces
 
@@ -220,7 +220,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 **Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
-> **Before you start:** use a lab machine — containerlab runs with `sudo`. `xray.sh` serves the page on all interfaces (`0.0.0.0`, port 8080 by default) with no login: anyone who can reach the machine can see the lab, so keep it on a trusted network. For this machine only: `./xray.sh --bind 127.0.0.1 examples/q21-bgp-lp/q21.clab.yml`. `--interval <seconds>` reads the routers less often (default 1). [More](#security-notes)
+> **Before you start:** use a lab machine — containerlab runs with `sudo`. `xray.sh` serves the page on this machine only (`127.0.0.1`, port 8080 by default). To open it from other machines, add `--bind 0.0.0.0`; the page has no login, so anyone who can reach the machine can then see the lab — keep it on a trusted network. `--interval <seconds>` reads the routers less often (default 1). [More](#security-notes)
 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
@@ -233,7 +233,7 @@ cd network-xray
 1. Wait for `==> open  http://<this machine>:8080/` (the first run pulls the FRR image — this can take a few minutes).
    Stuck or failing (Docker Hub rate limit, Docker permission, port in use)? See [FAQ / Troubleshooting](#faq--troubleshooting)
    and [docs/troubleshooting.md](docs/troubleshooting.md).
-2. Open **http://localhost:8080/** (from another machine: `http://<host-ip>:8080/`).
+2. Open **http://localhost:8080/** (from another machine: run it with `--bind 0.0.0.0`, then `http://<host-ip>:8080/`).
 3. The **problem** is the band at the top (English / 日本語 toggle at the top right). Below it: the **topology view** (the whole lab) — click a router to open its **DeepDive** (Routing Engine, Routing table, BGP Table / LSDB, Best-Path Decision).
 4. Fix the lab in a router's shell — the picture follows within a few seconds:
    ```bash
@@ -255,13 +255,13 @@ No git? Download one problem as a folder from the **[Releases](https://github.co
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
-> `--static-dir` serves every file in that folder. When it is your clone, keep `-s 127.0.0.1:…`; to open the page from other machines, use `./xray.sh`, which serves only the page files.
+> `--static-dir` serves every file in that folder. When it is your clone, keep `-s 127.0.0.1:…`; to open the page from other machines, use `./xray.sh --bind 0.0.0.0`, which serves only the page files.
 Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `xray.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://localhost:8080/`. The path display is inferred from the routing table each router reports. To stop: Ctrl-C, then `kill %1` for the collector.
 If a `problem.json` is left in `<network-xray>` (e.g. from an older `xray.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
 
 <a id="netlab-tool"></a>
 
-> **Before you start (netlab tool / `docker run`):** the container is given the **Docker socket (root-equivalent on the host)** — lab machines only. Its page has no login: the `docker run` example below publishes it on this machine only (`127.0.0.1`), while the netlab defaults file publishes it on all host interfaces. With netlab, `network-xray.json` holds the lab's values, passwords included, while the lab is up (with network-xray's `netlab-defaults.yml`, `netlab down` removes it). With `docker run`, `-p 127.0.0.1:8600:8600` (instead of `-p 8600:8600`) opens the page to this machine only. [More](#security-notes)
+> **Before you start (netlab tool / `docker run`):** the container is given the **Docker socket (root-equivalent on the host)** — lab machines only. Its page has no login: the `docker run` example below publishes it on this machine only (`127.0.0.1`), and the netlab defaults file does too. With netlab, `network-xray.json` holds the lab's values, passwords included, while the lab is up (with network-xray's `netlab-defaults.yml`, `netlab down` removes it). With `docker run`, `-p 127.0.0.1:8600:8600` (instead of `-p 8600:8600`) opens the page to this machine only. [More](#security-notes)
 
 **netlab tool (Docker image):** network-xray also comes as a container that **netlab starts for you** next to the lab. In your netlab topology, add <!-- nx_netlab_tool -->
 ```yaml
@@ -269,11 +269,11 @@ defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]   # the to
 tools:
   network_xray:
 ```
-The bundled defaults file publishes the page on all host interfaces (`-p 8600:8600`, so you can open it from another machine) and the page has no login — use it on a trusted network only. To keep it on the lab host only, change that `-p` line in your copy of `docker/netlab-defaults.yml` to `-p 127.0.0.1:…`. You can also pin the image there as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull) (see the [release page](https://github.com/rclab-dev/network-xray/releases/latest)). [Security notes](#security-notes)
+The bundled defaults file publishes the page on the lab host only (`-p 127.0.0.1:8600:8600`). To open it from other machines, change that `-p` line in your copy of `docker/netlab-defaults.yml` to `-p 8600:8600`; the page has no login, so use it on a trusted network only. You can also pin the image there as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull) (see the [release page](https://github.com/rclab-dev/network-xray/releases/latest)). [Security notes](#security-notes)
 
 In netlab the tool is named `network_xray` (underscore), because tool names are also used in environment variable names; the product, repository and image keep the name network-xray.
 netlab's development branch also has its own `network_xray` tool definition (merged after 26.10; not in 26.10). Once that is in a netlab release, `tools: network_xray:` alone starts network-xray (graph and DeepDive). That definition does not write `network-xray.json`: the `validate:` band below does not appear, and a `network-xray.json` you write yourself is not removed by `netlab down`. For the band, keep the `defaults.sources.extra` line above (its tool definition also removes the file on `netlab down`). <!-- nx_readme_builtin_tool -->
-(if your topology already has a `defaults.sources.extra` list — the BGP Labs do — add the file to that list instead of a second line), then `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://<host>:8600/`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR, SR Linux and Cisco IOS-XE (containerlab kind `cisco_iol`): other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
+(if your topology already has a `defaults.sources.extra` list — the BGP Labs do — add the file to that list instead of a second line), then `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://localhost:8600/ in a browser on this host`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR, SR Linux and Cisco IOS-XE (containerlab kind `cisco_iol`): other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
 Without netlab (any running containerlab lab): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (`<lab>.clab.yml` = the topology file in the current folder, e.g. `q21-bgp-lp.clab.yml`; the page opens on this machine only; use `-p 8600:8600` to open it to other machines) — the page has no login, so use a trusted network for remote access. You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull) (see the [release page](https://github.com/rclab-dev/network-xray/releases/latest)). For the example labs (`examples/`) the problem band and **✓ Solved** show too (from the `problem.json` next to the topology); a lab without one has no band. The image is built for linux/amd64 and linux/arm64.
 If `netlab up` says the lab is already running, a lab with the same name is still up from another folder (`netlab status --all`): run `netlab down` there first.
 
@@ -281,7 +281,7 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 
 **Rows in the graph:** a netlab lab opens with its routers in rows — top row = groups named like `provider` / `isp*` / `spine(s)` / `external`, bottom row = `leaf(s)` / `customer(s)` / `host(s)` …, the rest in between (`external` is looked at last: in the BGP Labs it means "pre-configured", so a customer router in it can land on top — set the rows as below). To set the rows yourself, give nodes containerlab's `graph-level` label (1 = top row; it wins over the group names): in netlab `nodes.s1.clab.labels: { graph-level: 1 }` (only with this repository's tool definition — the `defaults.sources.extra` line above — which allows `clab.labels`; without it netlab stops at that line), in a containerlab topology `labels: { graph-level: 1 }` under the node. Horizontal / Vertical re-arrange the rows; nodes you drag keep their place in this browser. <!-- nx_netlab_tiers -->
 <a id="security-notes"></a>
-**Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR, `sr_cli 'info from state …'` on SR Linux and SSH `show` commands on Cisco IOS-XE (IOL) (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The `docker run` examples publish port 8600 on this machine only (`127.0.0.1`); the netlab defaults file publishes it on all host interfaces. If you publish it more widely, anyone who can reach the port can see the lab's state without a login — use a trusted network.
+**Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR, `sr_cli 'info from state …'` on SR Linux and SSH `show` commands on Cisco IOS-XE (IOL) (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The `docker run` examples publish port 8600 on this machine only (`127.0.0.1`); the netlab defaults file does too. If you publish it more widely, anyone who can reach the port can see the lab's state without a login — use a trusted network.
 
 **Security notes:** anyone who can use the Docker socket (the `-v /var/run/docker.sock` mount, or membership in the `docker` group) can run anything as root on the host. The page has no login: with `docker run` publish it as `-p 127.0.0.1:8600:8600` (this machine only), and with `containerlab graph` use `-s 127.0.0.1:8080` unless others must see it. For Cisco IOS-XE the collector does not check SSH host keys (lab routers get new keys on every deploy) — use it on the lab's management network only; the password comes from `NX_IOS_PASSWORD` and is not printed or written to the state. The collectors take names from the topology as data only (no shell; a name that is not a plain name is left out) and write only `xray-states.js` into the output directory; their per-node temporary files are in a directory only your user can open.
 
@@ -442,7 +442,7 @@ For a message you see in the terminal or on the page and what to do about it, se
 | `permission denied` / asks for a password | containerlab needs root: `xray.sh` runs it with `sudo`. If your user is in the `clab_admins` and `docker` groups, run `SUDO= ./xray.sh …`. |
 | `cannot reach Docker: permission denied on /var/run/docker.sock` | Your user cannot use the Docker socket: `sudo usermod -aG docker "$USER"`, then log in again. See [Docker socket permission](docs/troubleshooting.md#docker-socket-permission). |
 | `address already in use` / `port 8080 is already in use` | Another graph is on 8080. Add a port: `./xray.sh <lab.clab.yml> 8081`, or stop the other one. |
-| The page does not open from another PC | Use the machine's IP (`http://<host-ip>:8080/`), and allow the port in its firewall. On WSL2, open `http://localhost:8080/` from Windows. |
+| The page does not open from another PC | Run `./xray.sh` with `--bind 0.0.0.0`, use the machine's IP (`http://<host-ip>:8080/`), and allow the port in its firewall. On WSL2, open `http://localhost:8080/` from Windows. |
 | The first start is slow | It pulls the FRR image once — **FRR 8.4** from Docker Hub `frrouting/frr`, pinned by digest so everyone runs the same build (moving to FRR 10.x from quay.io is planned). You can pull it beforehand: `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce`. |
 | The collector feels heavy on a large lab | Read the routers less often: `./xray.sh --interval 3 <lab.clab.yml>` (seconds; the default is 1). A slow or stopped router does not hold up the others: it keeps its last state (marked as not read on the default page, `xray-graph-nextui.html`) and is read again on the next round. The `docker run` / netlab container collects every 2 s by default; pass `--interval N` after `--topo …` to change it. `scripts/scale-bench.js` times the Node steps on synthetic labs of growing size. |
 | `docker pull` fails with "toomanyrequests" / rate limit | Docker Hub limits pulls without a login, counted per IP address — a classroom or office behind one connection can hit it when many people start at once. Run `docker login` first (a free Docker account raises the limit). |
@@ -548,7 +548,7 @@ Clone this repo and point `--static-dir` at it. The topology view comes from cla
 `{{ .Name }}` / `{{ .Data }}` injection (nodes + links), so there is no fixed limit on nodes or links; speed depends on lab size — X-Ray adds
 the per-node DeepDive on top.
 
-> `--static-dir` serves every file in that folder. When it is your clone, keep `-s 127.0.0.1:…`; to open the page from other machines, use `./xray.sh`, which serves only the page files.
+> `--static-dir` serves every file in that folder. When it is your clone, keep `-s 127.0.0.1:…`; to open the page from other machines, use `./xray.sh --bind 0.0.0.0`, which serves only the page files.
 
 ### Interactive topology view — `xray-graph-nextui.html`
 
@@ -929,7 +929,7 @@ netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` で
 
 ## ほかの試し方
 
-**ライブ (live) の例題ラボ** — clone して `./xray.sh examples/q21-bgp-lp/q21.clab.yml` を実行します ([クイックスタート](#クイックスタート-containerlab-で例題を動かす)。`xray.sh` は全インターフェースで待ち受け、ログインはありません。[セキュリティ](#security-notes-ja) を参照してください)。
+**ライブ (live) の例題ラボ** — clone して `./xray.sh examples/q21-bgp-lp/q21.clab.yml` を実行します ([クイックスタート](#クイックスタート-containerlab-で例題を動かす)。`xray.sh` は既定で `127.0.0.1` で待ち受け、ログインはありません。[セキュリティ](#security-notes-ja) を参照してください)。
 
 ### ▶ ライブ (live) ラボ — GitHub Codespaces
 
@@ -1097,7 +1097,7 @@ Cisco IOL は `show`・SR Linux は `info from state` / `info from running`・im
 
 **どちらで始めるか:** **初めてなら下の `xray.sh` を。** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
 
-> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`xray.sh` はすべてのインターフェース (`0.0.0.0`、既定ポート: 8080) で画面を配信し、ログイン認証はありません。その機械に届く人なら誰でもラボを見られるので、信頼できるネットワークの中で使ってください。この機械の中だけにしたい時は `./xray.sh --bind 127.0.0.1 examples/q21-bgp-lp/q21.clab.yml`。`--interval <秒>` でルータを読む間隔を延ばせます (既定 1)。[詳しく](#security-notes-ja)
+> **始める前に:** ラボ用の機械で使ってください — containerlab は `sudo` で動きます。`xray.sh` はこの機械の中だけ (`127.0.0.1`、既定ポート: 8080) で画面を配信します。ほかの機械から開く時は `--bind 0.0.0.0` を付けます。画面にログインは無いので、その機械に届く人なら誰でもラボを見られます。信頼できるネットワークの中で使ってください。`--interval <秒>` でルータを読む間隔を延ばせます (既定 1)。[詳しく](#security-notes-ja)
 
 ```bash
 git clone https://github.com/rclab-dev/network-xray.git
@@ -1110,7 +1110,7 @@ cd network-xray
 1. `==> open  http://<this machine>:8080/` が出るまで待つ (初回は FRR のイメージを取得するので数分かかることがある)。
    止まる・失敗する (Docker Hub の回数制限・Docker の権限・ポートが使用中) 時は [よくある質問 / 困ったとき](#よくある質問--困ったとき) と
    [docs/ja/troubleshooting.md](docs/ja/troubleshooting.md) を見てください。
-2. ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。
+2. ブラウザで **http://localhost:8080/** を開く (別の PC からは `--bind 0.0.0.0` を付けて動かし、`http://<このマシンの IP>:8080/`)。
 3. **問題文**は上の帯 (右上の 日本語 / English で切り替え)。その下が **全体図** (ラボ全体)。ルータをクリックすると **DeepDive** (Routing Engine・Routing table・BGP Table / LSDB・Best-Path Decision) が開く。
 4. ルータのシェルでラボを直す。数秒で図が追いかける:
    ```bash
@@ -1132,13 +1132,13 @@ git を使わない場合は **[Releases](https://github.com/rclab-dev/network-x
 node <network-xray>/clab-xray-collect.js clab.yml <network-xray> bgp --exclude-mgmt --watch &
 containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.html --static-dir <network-xray> -s 127.0.0.1:8080
 ```
-> `--static-dir` はそのフォルダの全部のファイルを配ります。clone をそのまま指す時は `-s 127.0.0.1:…` のままに。ほかの機械から開くなら `./xray.sh` を使ってください (頁のファイルだけを配ります)。
+> `--static-dir` はそのフォルダの全部のファイルを配ります。clone をそのまま指す時は `-s 127.0.0.1:…` のままに。ほかの機械から開くなら `./xray.sh --bind 0.0.0.0` を使ってください (頁のファイルだけを配ります)。
 OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://localhost:8080/` を開きます。パス表示は各ルータが報告する経路表から推定します。OSPF と BGP の両方があるラボでは `bgp` を使ってください (OSPF の隣接も読みます。コンテナと `xray.sh` は自動で選びます)。止める時は Ctrl-C のあと `kill %1` (collector)。
 `<network-xray>` に `problem.json` が残っていたら (古い `xray.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
 
 <a id="netlab-tool-ja"></a>
 
-> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker ソケット (ホスト上の root 権限と同等)** を渡します — ラボ用の機械でだけ。画面にはログインがありません。下の `docker run` の例はこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストのすべてのインターフェースに公開します。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (network-xray の `netlab-defaults.yml` を使う時は `netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
+> **始める前に (netlab の tool / `docker run`):** コンテナには **Docker ソケット (ホスト上の root 権限と同等)** を渡します — ラボ用の機械でだけ。画面にはログインがありません。下の `docker run` の例はこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルも同じです。netlab では、ラボを立てている間 `network-xray.json` にラボの値 (パスワードも) が入ります (network-xray の `netlab-defaults.yml` を使う時は `netlab down` で消えます)。`docker run` なら `-p 8600:8600` の代わりに `-p 127.0.0.1:8600:8600` で、この機械の中からだけ開けます。[詳しく](#security-notes-ja)
 
 **netlab の tool として (Docker のイメージ):** network-xray はコンテナとしても動き、**netlab がラボと一緒に起動**します。netlab の topology に次を足して
 ```yaml
@@ -1146,11 +1146,11 @@ defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]   # tool �
 tools:
   network_xray:
 ```
-同梱の defaults ファイルは画面をホストのすべてのインターフェースに公開します (`-p 8600:8600`・ほかの機械から開けます)。ログインはないため、信頼できるネットワークの中で使ってください。ラボの機械の中だけにしたい時は、手元の `docker/netlab-defaults.yml` の `-p` の行を `-p 127.0.0.1:…` に変えます。イメージもそこで `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) に固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。[セキュリティ](#security-notes-ja)
+同梱の defaults ファイルは画面をラボの機械の中だけに公開します (`-p 127.0.0.1:8600:8600`)。ほかの機械から開く時は、手元の `docker/netlab-defaults.yml` の `-p` の行を `-p 8600:8600` に変えます。ログインはないため、信頼できるネットワークの中で使ってください。イメージもそこで `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) に固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。[セキュリティ](#security-notes-ja)
 
 netlab では tool の名前は `network_xray` (下線) です。netlab の tool の名前は環境変数の名前にも使われるためです。製品・リポジトリ・イメージの名前は network-xray のままです。
 netlab の開発ブランチ (development branch) には、netlab 自身の `network_xray` の tool の定義も入っています (26.10 の後に入った・26.10 には入っていません)。それが netlab の版に入ると、`tools: network_xray:` だけで network-xray が起動します (図と DeepDive)。ただしこの定義は `network-xray.json` を書きません。下の `validate:` の帯は出ず、自分で書いた `network-xray.json` は `netlab down` で消えません。帯を出すには、上の `defaults.sources.extra` の 1 行を残してください (その tool の定義は `netlab down` でファイルも消します)。<!-- nx_readme_builtin_tool -->
-(topology に `defaults.sources.extra` の一覧が既にある時 — BGP Labs はそう — は、2 行目を作らずその一覧に足してください)。`netlab up` すると、ラボの設定が終わった後に netlab が `ghcr.io/rclab-dev/network-xray:1` を起動し、`Open http://<host>:8600/` と案内します。OSPF / BGP は自分で見分けます (後から BGP を足しても追いかけます)。`netlab down` で一緒に片付きます。`multilab` プラグイン (`plugin: [ multilab ]`・`defaults.multilab.id: N`) を使うと、ラボごとに 8600 + N の番号になります (プラグインが要ります。無いとラボどうしの管理用の IP がぶつかります)。netlab の tool として確かめたのは FRR のラボ (ipSpace の BGP Labs の 3-rr・OSPF の例)。SR Linux も読めます (containerlab で確かめ済)。network-xray が中を読むのは FRR・SR Linux・Cisco IOS-XE (containerlab の kind `cisco_iol`) です。ほかの機器 (Linux のホスト・cEOS など) は全体図に出て、DeepDive にもそう出ます。止まっている・応答の無いルータは理由を添えて灰色で出ます。応答が無くなったルータは最後に読めた状態を「古い」と印を付けて残し、ほかのルータは書き換わり続けます。
+(topology に `defaults.sources.extra` の一覧が既にある時 — BGP Labs はそう — は、2 行目を作らずその一覧に足してください)。`netlab up` すると、ラボの設定が終わった後に netlab が `ghcr.io/rclab-dev/network-xray:1` を起動し、`Open http://localhost:8600/ in a browser on this host` と案内します。OSPF / BGP は自分で見分けます (後から BGP を足しても追いかけます)。`netlab down` で一緒に片付きます。`multilab` プラグイン (`plugin: [ multilab ]`・`defaults.multilab.id: N`) を使うと、ラボごとに 8600 + N の番号になります (プラグインが要ります。無いとラボどうしの管理用の IP がぶつかります)。netlab の tool として確かめたのは FRR のラボ (ipSpace の BGP Labs の 3-rr・OSPF の例)。SR Linux も読めます (containerlab で確かめ済)。network-xray が中を読むのは FRR・SR Linux・Cisco IOS-XE (containerlab の kind `cisco_iol`) です。ほかの機器 (Linux のホスト・cEOS など) は全体図に出て、DeepDive にもそう出ます。止まっている・応答の無いルータは理由を添えて灰色で出ます。応答が無くなったルータは最後に読めた状態を「古い」と印を付けて残し、ほかのルータは書き換わり続けます。
 netlab を使わない場合 (動いている containerlab のラボなら何でも): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (画面はこの機械の中からだけ開けます。ほかの機械から開く時は `-p 8600:8600`) — ログインはないため、ほかの機械に公開する時は信頼できるネットワークで使ってください。イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) で固定できます ([リリースページ](https://github.com/rclab-dev/network-xray/releases/latest))。例題 (`examples/`) なら問題の帯と **✓ Solved** も出ます (topology の隣の `problem.json` から)。それが無いラボには帯は出ません。image は linux/amd64 と linux/arm64 です。
 `netlab up` が「already running」と言う時は、同じ名前のラボが別のフォルダで動いたままです (`netlab status --all`)。先にそこで `netlab down` してください。
 
@@ -1158,7 +1158,7 @@ netlab を使わない場合 (動いている containerlab のラボなら何で
 
 **トポロジ図の行配置:** netlab のラボでは、ルータを行ごとに並べて表示します — 上の段 = `provider` / `isp*` / `spine(s)` / `external` のような名前のグループ、下の段 = `leaf(s)` / `customer(s)` / `host(s)` など、その他は間 (`external` は最後に見ます: BGP Labs では「設定済みの機器」の意味なので、客のルータが上に来ることがあります — その時は次の指定で直せます)。段を自分で決めるには、ノードに containerlab の `graph-level` ラベルを付けます (1 = 上の段・グループ名より優先): netlab では `nodes.s1.clab.labels: { graph-level: 1 }` (この repository の tool の定義 = 上の `defaults.sources.extra` の行を使う時だけ。それが `clab.labels` を使えるようにしています。無いと netlab がその行で止まります)、containerlab の topology ではノードの下に `labels: { graph-level: 1 }`。Horizontal / Vertical で段のまま並べ直し、ドラッグした位置はこのブラウザが覚えます。 <!-- nx_netlab_tiers -->
 <a id="security-notes-ja"></a>
-**注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'`、Cisco IOS-XE (IOL) を SSH の `show` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker ソケット (ホスト上の root 権限と同等) を渡します**。ラボ用の機械でだけ使ってください。`docker run` の例はポート 8600 をこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルはホストのすべてのインターフェースに公開します。広く公開すると、そのポートに届く人ならログインなしでラボの状態を見られます。信頼できるネットワークで使ってください。
+**注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'`、Cisco IOS-XE (IOL) を SSH の `show` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker ソケット (ホスト上の root 権限と同等) を渡します**。ラボ用の機械でだけ使ってください。`docker run` の例はポート 8600 をこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルも同じです。広く公開すると、そのポートに届く人ならログインなしでラボの状態を見られます。信頼できるネットワークで使ってください。
 
 **セキュリティの注意:** Docker のソケットを使える人 (`-v /var/run/docker.sock` のマウント、または `docker` グループ) は、ホストで root として何でも動かせます。画面にはログインがありません: `docker run` なら `-p 127.0.0.1:8600:8600` (この機械だけ)、`containerlab graph` なら他の人に見せる必要がなければ `-s 127.0.0.1:8080` にしてください。Cisco IOS-XE では collector は SSH のホスト鍵を確かめません (ラボのルータは起動のたびに鍵が変わるため) — ラボの管理網の中でだけ使ってください。パスワードは `NX_IOS_PASSWORD` から取り、表示も状態ファイルへの書き込みもしません。collector はトポロジの名前をデータとしてだけ使い (シェルを通さず、普通の名前でないものは外します)、出力先には `xray-states.js` だけを書きます。ノードごとの一時ファイルは自分のユーザーだけが開けるディレクトリに置きます。
 
@@ -1312,7 +1312,7 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
 | `permission denied` / パスワードを聞かれる | containerlab は root が要る。`xray.sh` は `sudo` で動かす。ユーザが `clab_admins` と `docker` のグループにいれば `SUDO= ./xray.sh …`。 |
 | `cannot reach Docker: permission denied on /var/run/docker.sock` | 自分のユーザが Docker のソケットを使えない: `sudo usermod -aG docker "$USER"` の後、ログインし直す。[Docker のソケットの権限](docs/ja/troubleshooting.md#docker-socket-permission) を参照。 |
 | `address already in use` / `port 8080 is already in use` | 別の graph が 8080 を使っている。末尾にポート: `./xray.sh <lab.clab.yml> 8081`、または前のものを止める。 |
-| 別の PC から開けない | そのマシンの IP で開く (`http://<IP>:8080/`)・ファイアウォールでポートを許可。WSL2 なら Windows から `http://localhost:8080/`。 |
+| 別の PC から開けない | `./xray.sh` に `--bind 0.0.0.0` を付けて動かし、そのマシンの IP で開く (`http://<IP>:8080/`)・ファイアウォールでポートを許可。WSL2 なら Windows から `http://localhost:8080/`。 |
 | 初回の起動が遅い | FRR のイメージを 1 回取得している — Docker Hub の `frrouting/frr` の **FRR 8.4** を digest で固定 (誰でも同じ版で動く・quay.io の FRR 10.x への移行は今後)。先に `docker pull frrouting/frr@sha256:990e83490108b686fd6df3b1cafa6bdbb2714acb00eedb9a89693946f46f45ce` しておくと早い。 |
 | ノードの多いラボで collector が重い | ルータを読む間隔を空ける: `./xray.sh --interval 3 <ラボ>.clab.yml` (秒・既定は 1)。遅いルータや止まったルータがあっても、ほかのルータは待たされません (そのルータは前の状態のまま = 既定の頁 `xray-graph-nextui.html` では読めなかった印が付く・次の回にまた読む)。`docker run` / netlab のコンテナは既定で 2 秒ごと。変える時は `--topo …` の後に `--interval N`。`scripts/scale-bench.js` で、大きさを変えた合成のラボで Node の処理の時間を測れます。 |
 | `docker pull` が "toomanyrequests" (回数の上限) で失敗する | Docker Hub はログインなしの pull に回数の上限があり、IP アドレスごとに数える — 教室や会社など、同じ回線から大勢が一斉に始めると当たることがある。先に `docker login` しておく (無料のアカウントで上限が上がる)。 |
@@ -1414,7 +1414,7 @@ containerlab graph \
 `{{ .Name }}` / `{{ .Data }}`(nodes + links)注入から作るのでノード数・リンク数に固定上限はありません (速度はラボの規模によります) — X-Ray は
 その上に per-node DeepDive を足します。
 
-> `--static-dir` はそのフォルダの全部のファイルを配ります。clone をそのまま指す時は `-s 127.0.0.1:…` のままに。ほかの機械から開くなら `./xray.sh` を使ってください (頁のファイルだけを配ります)。
+> `--static-dir` はそのフォルダの全部のファイルを配ります。clone をそのまま指す時は `-s 127.0.0.1:…` のままに。ほかの機械から開くなら `./xray.sh --bind 0.0.0.0` を使ってください (頁のファイルだけを配ります)。
 
 ### インタラクティブな全体図 — `xray-graph-nextui.html`
 

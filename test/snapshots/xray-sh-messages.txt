@@ -4,7 +4,7 @@ usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] 
   lab                   default: examples/q21-bgp-lp/q21.clab.yml
   port                  default: 8080
   template              default: xray-graph-nextui.html
-  --bind <address>      address the graph listens on (default: 0.0.0.0 = all; 127.0.0.1 = this machine only)
+  --bind <address>      address the graph listens on (default: 127.0.0.1 = this machine only; 0.0.0.0 = all)
   --interval <seconds>  how often the collector reads the routers, whole seconds (default: 1)
   --check               only check what this run needs and say what to fix; nothing is started
   --attach              do not deploy: graph the lab that is already running (changes made by hand are kept)

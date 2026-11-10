@@ -4,7 +4,8 @@
 #   tools:
 #     network_xray:
 # netlab up then starts network-xray next to the lab once the lab is configured, and netlab down removes it:
-# open http://<host>:8600/ (8600 + the multilab id with the multilab plugin). The port is published on all host interfaces.
+# open http://localhost:8600/ on the lab host (8600 + the multilab id with the multilab plugin). The port is published on
+# 127.0.0.1 only; to open it from other machines, change -p below to "-p 8600:8600" in your copy (the page has no login).
 # network-xray reads router state with `docker exec <node> vtysh -c 'show ...'` (FRR) / sr_cli (SR Linux) /
 # SSH show (Cisco IOS-XE): read-only commands only.
 # It is given the Docker socket, which is root-equivalent on the host: run it only on a lab machine.
@@ -35,11 +36,11 @@ tools:
           --name "{name}_network_xray"
           -v /var/run/docker.sock:/var/run/docker.sock
           -v "$(pwd)":/lab:ro
-          -p { 8600 + defaults.multilab.id if defaults.multilab.id else 8600 }:8600
+          -p 127.0.0.1:{ 8600 + defaults.multilab.id if defaults.multilab.id else 8600 }:8600
           ghcr.io/rclab-dev/network-xray:1
           --topo /lab/clab.yml
       message: >-
-        Open http://{sys.ipurl}:{ 8600 + defaults.multilab.id if defaults.multilab.id else 8600 }/ in your browser
+        Open http://localhost:{ 8600 + defaults.multilab.id if defaults.multilab.id else 8600 }/ in a browser on this host
         (network-xray only runs 'show' commands, but it is given the Docker socket)
       down:   # nx_unread (2026-10-17): network-xray.json (written by netlab create, holds the lab's passwords too) goes with the lab
       - rm -f network-xray.json

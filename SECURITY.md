@@ -43,9 +43,9 @@ These are how the tool works, not vulnerabilities:
   Access to the Docker socket is root-equivalent: anyone who can use it can run anything as root on the host.
   **Run the collector on lab machines only**, never on a machine that holds anything you need to protect.
 - **The page has no login.** Anyone who can reach the port can see the lab's state. Keep it on this machine
-  (`-p 127.0.0.1:8600:8600`, `./xray.sh --bind 127.0.0.1`, `containerlab graph -s 127.0.0.1:8080`)
-  or on a trusted network. `./xray.sh` listens on all interfaces by default (so a lab on a server or VM can be opened
-  from your PC) and says so when it starts; the container example publishes the port on `127.0.0.1` only.
+  (`-p 127.0.0.1:8600:8600`, `./xray.sh`, `containerlab graph -s 127.0.0.1:8080`)
+  or on a trusted network. `./xray.sh`, the netlab tool and the container example listen on `127.0.0.1` by default;
+  `./xray.sh --bind 0.0.0.0` (or `-p 8600:8600`) opens the page to other machines, and `./xray.sh` says so when it starts.
 - **SSH host keys are not checked for Cisco IOS-XE.** Lab routers get new keys on every deploy, so use the collector
   on the lab's management network only. The password is taken from `NX_IOS_PASSWORD` and is not printed or written
   to the state files.

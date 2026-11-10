@@ -67,10 +67,9 @@ Open **http://localhost:8080/** (Option A) or **http://localhost:8600/** (Option
 WSL2 forwards `localhost` ports from the Linux side to Windows by default (`localhostForwarding`, on unless turned
 off in `%UserProfile%\.wslconfig`). **(not verified)**
 
-- With Option A, `xray.sh` listens on all addresses (`0.0.0.0`) by default, so other machines on the network may
-  reach it too if Windows forwards the port. To keep it on this machine: `./xray.sh --bind 127.0.0.1 <lab.clab.yml>`.
-  Whether `--bind 127.0.0.1` inside WSL2 is still reachable from the Windows browser depends on the WSL
-  networking mode. **(not verified)**
+- With Option A, `xray.sh` listens on `127.0.0.1` by default. Whether that is reachable from the Windows browser
+  depends on the WSL networking mode; if it is not, use `./xray.sh --bind 0.0.0.0 <lab.clab.yml>` (other machines on the
+  network may then reach it too if Windows forwards the port). **(not verified)**
 - With Option B, Docker Desktop publishes `-p 127.0.0.1:8600:8600` on Windows `localhost`; with Docker Engine inside
   the distribution it goes through the WSL2 `localhost` forwarding above. **(not verified)**
 

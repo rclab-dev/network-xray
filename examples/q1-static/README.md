@@ -20,7 +20,7 @@ From the repository root (`git clone https://github.com/rclab-dev/network-xray.g
 ```bash
 ./xray.sh examples/q1-static/q1.clab.yml      # deploy -> keep collecting -> serve the graph
 ```
-Open **http://localhost:8080/** (from another machine: `http://<host-ip>:8080/`). Port in use? add a port: `./xray.sh examples/q1-static/q1.clab.yml 8081`.
+Open **http://localhost:8080/** (from another machine: run it with `--bind 0.0.0.0`, then `http://<host-ip>:8080/`). Port in use? add a port: `./xray.sh examples/q1-static/q1.clab.yml 8081`.
 The solved version (to compare): `./xray.sh examples/q1-static-solved/q1.clab.yml` (stop this one first).
 From a release package (one folder per problem): run `./run.sh` in that folder and open `:50080`.
 
@@ -81,7 +81,7 @@ This package gives you the broken lab and the X-Ray view. **Hints and the explan
 ```bash
 ./xray.sh examples/q1-static/q1.clab.yml      # deploy → 状態を集め続ける → graph を配信
 ```
-ブラウザで **http://localhost:8080/** を開く (別の PC からは `http://<このマシンの IP>:8080/`)。ポートが使用中なら末尾にポート: `./xray.sh examples/q1-static/q1.clab.yml 8081`。
+ブラウザで **http://localhost:8080/** を開く (別の PC からは `--bind 0.0.0.0` を付けて動かし、`http://<このマシンの IP>:8080/`)。ポートが使用中なら末尾にポート: `./xray.sh examples/q1-static/q1.clab.yml 8081`。
 直した版と比べるなら: `./xray.sh examples/q1-static-solved/q1.clab.yml` (先にこちらを止めてから)。
 リリースのパッケージ (1 問ずつのフォルダ) なら、そのフォルダで `./run.sh` を実行して `:50080` を開く。
 

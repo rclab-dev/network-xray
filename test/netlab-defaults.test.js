@@ -112,10 +112,10 @@ test('tools.network_xray: docker runtime, up / message / down', () => {
   assert.ok(up.includes('--name "{name}_network_xray"'), 'container name {name}_network_xray');
   assert.ok(up.includes('-v /var/run/docker.sock:/var/run/docker.sock'), 'docker socket mount');
   assert.ok(up.includes('-v "$(pwd)":/lab:ro'), 'lab directory mounted read-only at /lab');
-  assert.ok(up.includes('-p ' + PORT + ':8600'), 'port 8600 (+ multilab id)');
+  assert.ok(up.includes('-p 127.0.0.1:' + PORT + ':8600'), 'port 8600 (+ multilab id)');
   assert.match(up, / ghcr\.io\/rclab-dev\/network-xray(:[0-9][\w.-]*|@sha256:[0-9a-f]{64}) /, 'image');
   assert.match(up, /--topo \/lab\/clab\.yml$/, 'netlab clab provider writes clab.yml');
-  assert.ok(d.message.includes('http://{sys.ipurl}:' + PORT + '/'), 'message points at the same port');
+  assert.ok(d.message.includes('http://localhost:' + PORT + '/'), 'message points at the same port');
   const down = asList(d.down);
   assert.ok(down.includes('rm -f network-xray.json'));
   assert.ok(down.includes("docker kill '{name}_network_xray'"));

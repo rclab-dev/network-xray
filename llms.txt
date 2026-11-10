@@ -7,7 +7,7 @@
 1. A lab that is already running: do NOT run `./xray.sh <lab.clab.yml>` on it. It redeploys the lab (`containerlab deploy --reconfigure`), which wipes changes made by hand (it prints one warning and does not ask). Use `./xray.sh --attach <lab.clab.yml>` or the `docker run … --topo /lab/<lab>.clab.yml` line below.
 2. Read-only by default: do not change router configuration. `scripts/demo-locpref-flip.sh` deploys its own lab, changes r1's running configuration and destroys the lab afterwards: run it only when the user asks for that demo.
 3. `docker run -v /var/run/docker.sock:…` gives the container root-equivalent access to the host: confirm the user is on a lab machine first.
-4. Keep the page on this machine: `-p 127.0.0.1:8600:8600`, `./xray.sh --bind 127.0.0.1`. `./xray.sh` listens on all addresses by default: say so. Open it to the network (`-p 8600:8600`, `--bind 0.0.0.0`) only when the user asks, and say that the page has no login.
+4. Keep the page on this machine: `./xray.sh`, the netlab tool and `-p 127.0.0.1:8600:8600` listen on 127.0.0.1 by default. Open it to the network (`--bind 0.0.0.0`, `-p 8600:8600`) only when the user asks, and say that the page has no login.
 5. Never print or send the contents of `network-xray.json` (it holds the lab's passwords) or the value of `NX_IOS_PASSWORD`. You may name the IOL image's default login (containerlab `cisco_iol`: admin / admin); never print a login the user set.
 6. Do not invent values. Image digest: https://github.com/rclab-dev/network-xray/releases — from v1.1.10 on, the release notes start with a line `Image: ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the sha256 shown for `frrouting/frr` in the README is the FRR image, not network-xray). If a value is not in these documents, ask the user or say it is not known.
 7. Do not remove labs (`containerlab destroy`, `netlab down`) unless the user asks.
@@ -21,7 +21,7 @@
 - Windows: everything inside WSL2, in the Linux shell (https://github.com/rclab-dev/network-xray/blob/main/docs/windows-wsl2.md).
 - Cisco IOL nodes: login from `NX_IOS_USER` / `NX_IOS_PASSWORD` (default admin / admin); with the image, pass them with `-e`. Only the global table is read (no VRFs). The image reads IOL with the plain `docker run` line too: on the default bridge network it reaches the lab's management network over SSH (checked with containerlab 0.82 and IOL 17.18.02). IOL takes about a minute to boot; until then the node shows "not ready yet".
 - Open it from the containerlab VS Code extension: run network-xray as its own one-node lab next to the lab topology (`xray.clab.yml`: kind linux, image ghcr.io/rclab-dev/network-xray:1, `cmd: --topo /lab/<lab>.clab.yml`, binds the Docker socket and `.:/lab:ro`, ports `127.0.0.1:8600:8600`; the README has the file), `sudo containerlab deploy -t xray.clab.yml`, then the node's Open Port in Browser. It does not redeploy the lab; destroying it removes only the viewer.
-- Open the page from another machine: `./xray.sh` already listens on all addresses; with the image use `-p 8600:8600`. The page has no login (rule 4).
+- Open the page from another machine: `./xray.sh --bind 0.0.0.0`; with the image use `-p 8600:8600`. The page has no login (rule 4).
 - Show why a best path changes after one Local Preference change: `bash scripts/demo-locpref-flip.sh` (rule 2; it shows the answer of example q21).
 - Read the state from a script or an AI assistant: `node scripts/xray-query.js state|why <path> …` or the MCP server (see Query). `xray-states.js` is JavaScript: `window.LIVE_STATES = { "<node>": {…}, … };` (one JSON object per node), sometimes followed by `window.LIVE_WATCH` / `window.XRAY_PROBLEM` / `window.XRAY_VALIDATE` lines. The per-node format is DATA-CONTRACT.md.
 - MCP clients: Claude Code `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js`; Claude Desktop and other clients use an `mcpServers` entry: `{"mcpServers": {"network-xray": {"command": "node", "args": ["/path/to/network-xray/scripts/xray-mcp.js"]}}}` (Claude Desktop: `claude_desktop_config.json`, Settings → Developer → Edit Config; other clients, e.g. Cursor, use their own file: check that client's documentation, do not guess the path). See docs/mcp.md. With `./xray.sh` the live state is `<repository>/xray-states.js`; with the image, save it with `curl -s http://localhost:8600/static/xray-states.js -o <dir>/xray-states.js` and give that file.
@@ -76,9 +76,9 @@
 ## Start
 - No install (recorded demo): https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html
 - GitHub Codespaces (real 3-router FRR lab, needs a GitHub login): https://codespaces.new/rclab-dev/network-xray?quickstart=1
-- containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./xray.sh examples/q21-bgp-lp/q21.clab.yml` (deploys the lab; needs containerlab and Node.js; usage `./xray.sh [--attach] [--check] [--bind <address>] [--interval <seconds>] [lab.clab.yml] [port] [template.html]`, port default 8080, listens on all addresses unless `--bind`) then open http://localhost:8080/ (from another machine: http://<host-ip>:8080/)
+- containerlab: `git clone https://github.com/rclab-dev/network-xray.git && cd network-xray && ./xray.sh examples/q21-bgp-lp/q21.clab.yml` (deploys the lab; needs containerlab and Node.js; usage `./xray.sh [--attach] [--check] [--bind <address>] [--interval <seconds>] [lab.clab.yml] [port] [template.html]`, port default 8080, listens on 127.0.0.1 unless `--bind`) then open http://localhost:8080/ (from another machine: add `--bind 0.0.0.0`, then http://<host-ip>:8080/)
 - Any running containerlab lab: `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` then open http://localhost:8600/ (run it from the lab folder; `-p 8600:8600` opens it to other machines; options after `--topo`: `--port`, `--proto auto|ospf|bgp|static`, `--interval <s>`)
-- netlab: add `defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]` and `tools: { network_xray: }` to the topology, then `netlab up`; open http://<host>:8600/
+- netlab: add `defaults.sources.extra: [ <network-xray>/docker/netlab-defaults.yml ]` and `tools: { network_xray: }` to the topology, then `netlab up`; open http://localhost:8600/ on the lab host
 
 ## Query from scripts and AI assistants (read-only, no router contacted)
 - Input `<path>`: a `state_<node>.json` or a directory of them (e.g. `test/fixtures/iosxe-q15`), the `xray-states.js` written by clab-xray-collect.js, or a directory of saved FRR `show … json` files (`frr-collect.js --from-dir` layout, e.g. `fixtures/frr-collect-sample/r1`).
@@ -91,7 +91,7 @@
 
 ## Limits and cautions
 - The container is given the Docker socket (root-equivalent on the host): use it on lab machines only.
-- The page has no login and listens on all interfaces: keep it on a trusted network.
+- The page has no login. It listens on 127.0.0.1 by default; when it is opened to other machines, keep it on a trusted network.
 - With netlab, `network-xray.json` in the lab folder holds the lab's values (passwords included) while the lab is up; `netlab down` removes it.
 - Not for production monitoring. For checking configs before deployment, use Batfish. For collecting and querying state across many devices over time, use SuzieQ.
 - Single maintainer; pull requests are not accepted (forks are welcome).

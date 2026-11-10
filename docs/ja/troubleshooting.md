@@ -42,11 +42,11 @@ Windows では、先に [Windows (WSL2) で動かす](windows-wsl2.md) を見て
 **開くアドレス。**
 
 - `xray.sh`: 画面の準備ができた時に出すアドレス `==> open  http://<this machine>:8080/` (またはポートを渡した時はそのポート)。
-  `--bind` を渡さなければ、すべてのアドレスで待ち受けます。
+  `--bind` を渡さなければ、このマシンだけ (`127.0.0.1`) で待ち受けます。別のマシンから開くなら `--bind 0.0.0.0` を付けて動かします。
 - `docker run` (README の最初の行): それを動かしているマシンで `http://localhost:8600/`。この行はポートを `127.0.0.1` だけに
   公開するので、別のマシンからは開けません。`-p 8600:8600` にするか、SSH のトンネル
   (`ssh -L 8600:localhost:8600 <ラボのホスト>` の後、自分のマシンで `http://localhost:8600/`) を使います。
-- netlab のツール: `netlab up` が出すアドレス `Open http://<host>:8600/` (`multilab` のプラグインでは 8600 + N)。
+- netlab のツール: `netlab up` が出すアドレス `Open http://localhost:8600/ in a browser on this host` (`multilab` のプラグインでは 8600 + N)。
 - 自分で動かした `containerlab graph` (README の「Labs started another way」): `-s` で渡したアドレス。README の例
   `-s 127.0.0.1:8080` なら、そのマシンだけで `http://localhost:8080/` で開きます。
 

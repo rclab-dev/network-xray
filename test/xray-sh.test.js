@@ -146,7 +146,7 @@ function writeLab(dir, name, opts) {
   return yml;
 }
 
-test('xray.sh: default lab and port deploy q21, start the collector and serve the graph on 0.0.0.0:8080', { skip: SKIP }, async function (t) {
+test('xray.sh: default lab and port deploy q21, start the collector and serve the graph on 127.0.0.1:8080', { skip: SKIP }, async function (t) {
   if (await portInUse(8080)) { t.skip('port 8080 is in use on this machine'); return; }
   var env = setup();
   var r = await run(env, 'xray.sh', []);
@@ -158,8 +158,8 @@ test('xray.sh: default lab and port deploy q21, start the collector and serve th
   assert.deepStrictEqual(calls(r, 'docker')[1], ['ps', '--filter', 'label=containerlab=q21-bgp-lp', '--format', '{{.Names}}']);
   assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
-    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '0.0.0.0:8080']);
-  assert.match(r.stdout, /open {2}http:\/\/<this machine>:8080\/ {3}\(listening on all addresses, 0\.0\.0\.0:8080/);
+    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '127.0.0.1:8080']);
+  assert.match(r.stdout, /open {2}http:\/\/127\.0\.0\.1:8080\/ {3}\(Ctrl-C to stop\)/);
   assert.match(r.stdout, /docker exec -it clab-q21-bgp-lp-r1 vtysh/);
   assert.match(r.stdout, /stopped\. remove the lab with: {2}sudo containerlab destroy -t .*q21\.clab\.yml --cleanup/);
 });
@@ -175,9 +175,9 @@ test('xray.sh: a given lab and port (relative path, OSPF, no sudo with SUDO=)', 
   assert.deepStrictEqual(calls(r, 'sudo'), []);
   var cl = calls(r, 'containerlab');
   assert.deepStrictEqual(cl[0], ['deploy', '-t', yml, '--reconfigure']);
-  assert.deepStrictEqual(cl[cl.length - 1].slice(-2), ['-s', '0.0.0.0:' + port]);
+  assert.deepStrictEqual(cl[cl.length - 1].slice(-2), ['-s', '127.0.0.1:' + port]);
   assert.strictEqual(calls(r, 'node')[0][3], 'ospf');
-  assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
+  assert.match(r.stdout, new RegExp('open {2}http://127\\.0\\.0\\.1:' + port + '/ {3}\\(Ctrl-C to stop\\)'));
   assert.ok(!fs.existsSync(path.join(env.here, 'problem.json')), 'no problem.json for a lab without one');
 });
 
@@ -309,7 +309,7 @@ test('demo.sh: forwards all arguments to xray.sh', { skip: SKIP }, async functio
   assert.match(r.stderr, /demo\.sh is now xray\.sh - running \.\/xray\.sh/);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
     ['graph', '--topo', path.join(env.here, 'examples', 'q21-bgp-lp', 'q21.clab.yml'), '--template', tpl,
-      '--static-dir', SERVED, '-s', '0.0.0.0:' + port]);
+      '--static-dir', SERVED, '-s', '127.0.0.1:' + port]);
 });
 
 test('demo.sh: forwards --bind and --interval to xray.sh', { skip: SKIP }, async function () {
@@ -321,16 +321,17 @@ test('demo.sh: forwards --bind and --interval to xray.sh', { skip: SKIP }, async
   assert.deepStrictEqual(calls(r, 'containerlab').pop().slice(-2), ['-s', '0.0.0.0:' + port]);
 });
 
-test('xray.sh: with no options the graph listens on 0.0.0.0 (as before) and the collector reads every second', { skip: SKIP }, async function () {
+test('xray.sh: with no options the graph listens on 127.0.0.1 (this machine only) and the collector reads every second', { skip: SKIP }, async function () {
   var env = setup();
   var port = await freePort();
   var r = await run(env, 'xray.sh', ['examples/q21-bgp-lp/q21.clab.yml', String(port)]);
   assert.strictEqual(r.code, 0, r.stdout + r.stderr);
   assert.deepStrictEqual(calls(r, 'node')[0].slice(-3), ['--watch', '--interval', '1']);
-  assert.deepStrictEqual(calls(r, 'containerlab').pop().slice(-2), ['-s', '0.0.0.0:' + port]);
+  assert.deepStrictEqual(calls(r, 'containerlab').pop().slice(-2), ['-s', '127.0.0.1:' + port]);
   assert.match(r.stdout, /==> collecting router state every second /);
-  assert.match(r.stdout, /listening on all interfaces \(0\.0\.0\.0\), and the page has no login - to allow only this machine, use --bind 127\.0\.0\.1/);   // nx_bind_note: the default says how to narrow it
-  assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
+  assert.match(r.stdout, /this machine only \(127\.0\.0\.1\) - to open it from other machines, use --bind 0\.0\.0\.0 \(the page has no login\)/);   // nx_bind_note: the default says how to open it
+  assert.doesNotMatch(r.stdout, /!! listening on all interfaces/);
+  assert.match(r.stdout, new RegExp('open {2}http://127\\.0\\.0\\.1:' + port + '/ {3}\\(Ctrl-C to stop\\)'));
 });
 
 test('xray.sh: --bind and --interval go to the graph server and the collector, in any position', { skip: SKIP }, async function () {
@@ -345,7 +346,8 @@ test('xray.sh: --bind and --interval go to the graph server and the collector, i
     ['graph', '--topo', yml, '--template', tpl, '--static-dir', SERVED, '-s', '0.0.0.0:' + port]);
   assert.match(r.stdout, /==> collecting router state every 5 s /);
   assert.match(r.stdout, new RegExp('open {2}http://<this machine>:' + port + '/ {3}\\(listening on all addresses, 0\\.0\\.0\\.0:' + port));
-  assert.doesNotMatch(r.stdout, /to allow only this machine, use --bind/);   // nx_bind_note: only when --bind was not given
+  assert.doesNotMatch(r.stdout, /to open it from other machines, use --bind/);   // nx_bind_note: only when --bind was not given
+  assert.match(r.stdout, /!! listening on all interfaces and the page has no login/);   // --bind 0.0.0.0 says there is no login
 
   // --opt=value form
   port = await freePort();
@@ -428,7 +430,7 @@ test('xray.sh --check: all OK exits 0 and starts nothing', { skip: SKIP }, async
   assert.match(r.stdout, /^OK {4}docker: reachable \(no sudo needed\)$/m);
   assert.match(r.stdout, /^OK {4}containerlab: 0\.62\.2$/m);
   assert.match(r.stdout, new RegExp('^OK {4}node: ' + process.versions.node.replace(/\./g, '\\.') + '$', 'm'));
-  assert.match(r.stdout, new RegExp('^OK {4}port ' + port + ': free on 0\\.0\\.0\\.0$', 'm'));
+  assert.match(r.stdout, new RegExp('^OK {4}port ' + port + ': free on 127\\.0\\.0\\.1$', 'm'));
   assert.match(r.stdout, /^OK {4}topology: .*q21\.clab\.yml \(lab 'q21-bgp-lp'\)$/m);
   assert.doesNotMatch(r.stdout, /FAIL|IOL/);
   assert.match(r.stdout, /all checks passed/);
@@ -549,7 +551,7 @@ test('xray.sh: --attach collects from and graphs a running lab without deploying
     'only the Docker check and the running check: no FRR wait / restart');
   assert.deepStrictEqual(calls(r, 'node'), [[path.join(env.here, 'clab-xray-collect.js'), yml, env.here, 'bgp', '--exclude-mgmt', '--watch', '--interval', '1']]);
   assert.deepStrictEqual(calls(r, 'containerlab').pop(),
-    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '0.0.0.0:' + port]);
+    ['graph', '--topo', yml, '--template', path.join(env.here, 'xray-graph-nextui.html'), '--static-dir', SERVED, '-s', '127.0.0.1:' + port]);
   assert.match(r.stdout, /stopped \(the lab is still running\)\. remove the lab with:/);
 });
 

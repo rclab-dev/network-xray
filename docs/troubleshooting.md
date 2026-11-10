@@ -41,11 +41,11 @@ On Windows, see [Running on Windows (WSL2)](windows-wsl2.md) first.
 **Which address.**
 
 - `xray.sh`: the address it prints once the page is up, `==> open  http://<this machine>:8080/` (or the port you gave).
-  It listens on all addresses unless you pass `--bind`.
+  It listens on `127.0.0.1` (this machine) unless you pass `--bind`; from another machine, run it with `--bind 0.0.0.0`.
 - `docker run` (the line at the top of the README): `http://localhost:8600/` on the machine that runs it. That line
   publishes the port on `127.0.0.1` only, so another machine cannot open it: use `-p 8600:8600` instead, or an SSH tunnel
   (`ssh -L 8600:localhost:8600 <lab host>`, then open `http://localhost:8600/` on your own machine).
-- netlab tool: the address `netlab up` prints, `Open http://<host>:8600/` (8600 + N with the `multilab` plugin).
+- netlab tool: the address `netlab up` prints, `Open http://localhost:8600/ in a browser on this host` (8600 + N with the `multilab` plugin).
 - `containerlab graph` you started yourself (the README's "Labs started another way"): the address you gave with `-s`;
   the README example `-s 127.0.0.1:8080` opens at `http://localhost:8080/` on that machine only.
 
