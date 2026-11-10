@@ -1,0 +1,6 @@
+Interface    PID   Area            IP Address/Mask    Cost  State Nbrs F/C
+Lo0          1     0               2.2.2.2/32         1     LOOP  0/0
+Et1/0        1     0               10.4.12.2/24       10    DR    0/0
+Et0/3        1     0               10.3.12.2/24       10    DR    1/1
+Et0/2        1     0               10.2.12.2/24       10    DR    0/0
+Et0/1        1     0               10.1.12.2/24       10    DR    0/1

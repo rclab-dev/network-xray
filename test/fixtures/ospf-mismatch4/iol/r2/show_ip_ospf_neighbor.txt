@@ -1,0 +1,4 @@
+
+Neighbor ID     Pri   State           Dead Time   Address         Interface
+1.1.1.1           1   FULL/BDR        00:00:35    10.3.12.1       Ethernet0/3
+1.1.1.1           1   EXSTART/BDR     00:00:37    10.1.12.1       Ethernet0/1
