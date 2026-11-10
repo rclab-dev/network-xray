@@ -30,6 +30,39 @@ var DIRS = [];
 test.after(function () { DIRS.forEach(function (d) { fs.rmSync(d, { recursive: true, force: true }); }); });
 function frrDir() { var d = stateDir('clab-collect.js', 'frr', ['eth1', 'eth2', 'eth3']); DIRS.push(d); return d; }
 function iolDir() { var d = stateDir('clab-iosxe-collect.js', 'iol', ['Ethernet0/1', 'Ethernet0/2', 'Ethernet0/3']); DIRS.push(d); return d; }
+// the 2026-11-05 IOL capture where r2 has `ip mtu 1400` on Ethernet0/2: EXCHANGE / EXSTART, and no show ip interface (MTU unknown)
+function exstartDir() {
+  var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-oif-')); DIRS.push(dir);
+  ['r1', 'r2'].forEach(function (n) {
+    var r = cp.spawnSync(process.execPath, [path.join(ROOT, 'clab-iosxe-collect.js'), '--from-dir', path.join(ROOT, 'test', 'fixtures', 'iosxe-real-ospf', 'exstart', n),
+      '--node', n, '--adj', 'Ethernet0/1:' + (n === 'r1' ? 'r2' : 'r1') + ',Ethernet0/2:' + (n === 'r1' ? 'r2' : 'r1'), '--proto', 'ospf'], { encoding: 'utf8', timeout: 60000 });
+    assert.strictEqual(r.status, 0, r.stderr);
+    fs.writeFileSync(path.join(dir, 'state_' + n + '.json'), r.stdout);
+  });
+  return dir;
+}
+
+test('neighbour state per interface, and the must-match fields an end did not report', function () {
+  var res = query.run(['ospf-if', iolDir(), 'r1']);
+  var e1 = res.routers[0].interfaces.filter(function (i) { return i.interface === 'Ethernet0/1'; })[0];
+  assert.strictEqual(e1.neighbor_state, 'Full');
+  assert.deepStrictEqual(e1.unknown, []);
+  var e3 = res.routers[0].interfaces.filter(function (i) { return i.interface === 'Ethernet0/3'; })[0];
+  assert.strictEqual(e3.neighbor_state, null, 'no neighbour listed there');
+});
+
+test('stuck in ExStart / Exchange with the MTU not reported: a hint line names it, MTU is in unknown', function () {
+  var res = query.run(['ospf-if', exstartDir()]);
+  var e2 = res.routers[0].interfaces.filter(function (i) { return i.interface === 'Ethernet0/2'; })[0];
+  assert.strictEqual(e2.neighbor_state, 'Exchange');
+  assert.ok(e2.unknown.indexOf('mtu') >= 0);
+  assert.deepStrictEqual(e2.mismatch, [], 'nothing reported differs');
+  assert.deepStrictEqual(res.hints, [
+    'hint: r1 Ethernet0/2 Exchange: MTU differences stop here; MTU of r1 Ethernet0/2 not reported',
+    'hint: r2 Ethernet0/2 ExStart: MTU differences stop here; MTU of r2 Ethernet0/2 not reported'
+  ]);
+  query.runTable(['ospf-if', exstartDir()], false).split('\n').forEach(function (l) { assert.ok(l.length < 100, l); });
+});
 
 test('FRR: per-node files are paired from the links; hello / dead, area, auth and passive differences are named', function () {
   var res = query.run(['ospf-if', frrDir()]);

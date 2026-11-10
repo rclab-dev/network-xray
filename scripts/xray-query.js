@@ -433,9 +433,16 @@ function pairFromLinks(states) {
   });
   require('../clab-collect.js').pairOspfIfaces(states, adj);
 }
+// the OSPF neighbour state the router reports on that interface (the first row; null when no neighbour is listed there)
+function ospfIfNbrState(st, iface) {
+  var l = Array.isArray(st && st.ospf_neighbors) ? st.ospf_neighbors : [];
+  for (var k = 0; k < l.length; k++) { var x = l[k]; if (x && x.iface === iface && x.state) return String(x.state); }
+  return null;
+}
+var OSPF_MUST_MATCH_Q = ['area', 'mtu', 'hello', 'dead', 'network_type', 'auth'];
 function ospfInterfaces(states, node) {
   pairFromLinks(states);
-  var names = pickNodes(states, node), seen = Object.create(null), mismatches = [];
+  var names = pickNodes(states, node), seen = Object.create(null), mismatches = [], hints = [];
   var routers = names.map(function (n) {
     var o = ospfIfRows(states[n]);
     return { router: n, interfaces: Object.keys(o).sort().map(function (i) {
@@ -444,6 +451,13 @@ function ospfInterfaces(states, node) {
       if (x.peer_iface) r.peer_interface = x.peer_iface;
       OSPF_IF_FIELDS.forEach(function (f) { r[f] = x[f] == null ? null : x[f]; });
       if (x.vrf) r.vrf = x.vrf;
+      r.neighbor_state = ospfIfNbrState(states[n], i);
+      var rem = x.remote && typeof x.remote === 'object' ? x.remote : null;
+      if (rem) r.unknown = OSPF_MUST_MATCH_Q.filter(function (f) { return x[f] == null || rem[f] == null; });
+      // ExStart / Exchange is where an MTU difference stops two routers; say so when the MTU of an end is not known
+      if (/^(exstart|exchange)/i.test(r.neighbor_state || '') && (x.mtu == null || (rem && rem.mtu == null)))
+        hints.push('hint: ' + n + ' ' + i + ' ' + r.neighbor_state.split('/')[0] + ': MTU differences stop here; MTU of ' +
+          (x.mtu == null ? n + ' ' + i : x.peer + ' ' + x.peer_iface) + ' not reported');
       if (Array.isArray(x.mismatch)) {
         r.mismatch = x.mismatch.slice();
         var key = [n, i, x.peer, x.peer_iface].join('\u0000'), back = [x.peer, x.peer_iface, n, i].join('\u0000');
@@ -457,7 +471,7 @@ function ospfInterfaces(states, node) {
     }) };
   });
   var all = [].concat.apply([], routers.map(function (r) { return r.interfaces; }));
-  return { routers: routers, mismatches: mismatches,
+  return { routers: routers, mismatches: mismatches, hints: hints,
     counts: { interfaces: all.length, compared: all.filter(function (x) { return x.mismatch; }).length,
       with_mismatch: all.filter(function (x) { return x.mismatch && x.mismatch.length; }).length } };
 }
@@ -631,6 +645,7 @@ function ospfIfTable(res, color) {
   out.push('', title('Must match for an adjacency, but do not (' + res.mismatches.length + ')', color));
   if (!res.mismatches.length) out.push('  none' + (res.counts.compared ? '' : ' (no link had both ends reported)'));
   else res.mismatches.forEach(function (m) { out.push('  ' + paint(textLine(m), 'red', color)); });
+  (res.hints || []).forEach(function (h) { out.push('  ' + paint(textLine(h), 'yellow', color)); });
   out.push('', textLine('? = not reported by the router (not compared); ! = differs from the other end; NBRS = adjacent/seen'));
   return out.join('\n') + '\n';
 }

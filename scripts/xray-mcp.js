@@ -110,7 +110,7 @@ var TOOLS = [
     description: 'OSPF interface values per router as collected: MTU, hello and dead intervals, network type, area, cost, ' +
       'DR/BDR role, priority, passive, authentication (none / simple / md5) and neighbor counts. For a link it also gives the ' +
       'other end and `mismatches`: one line per value that must be equal for an adjacency but is not, e.g. ' +
-      '"r1 eth1 MTU 1500 \u21d4 r2 eth1 MTU 1400". A value the router did not report is null and is not compared. ' +
+      '"r1 eth1 MTU 1500 \u21d4 r2 eth1 MTU 1400". A value the router did not report is null and is not compared; each interface also has the neighbor state there, and `hints` names a link stuck in ExStart / Exchange whose MTU was not reported. ' +
       'All routers, or one with `router`. Read-only.',
     inputSchema: {
       type: 'object',
