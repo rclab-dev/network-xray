@@ -2,6 +2,19 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.3.0 — 2026-11-11
+
+- **Listening address:** `xray.sh`, the netlab tool and the `run.sh` in each release folder now listen on `127.0.0.1` by default, so the page is on this machine only. To open it from other machines as before, use `./xray.sh --bind 0.0.0.0` (or publish `-p 8600:8600`, or start `BIND=0.0.0.0 ./run.sh`); the page has no login, and `xray.sh` and `run.sh` say so when they start.
+- Any topology `prefix:` works (no prefix, `clab`, `""`, `__lab-name` or your own word): the collectors find the routers by containerlab's labels. Routers with no links are read too.
+- OSPF interfaces: the collectors record MTU, hello / dead, network type, area, cost, role, passive and authentication per interface and compare both ends of each link. `xray-query.js ospf-if` and the MCP tool `ospf_interfaces` show the values, the fields that do not match, the neighbor state, and a hint when the neighbor is Full but a value that must match differs. DeepDive shows the same rows in the Routing Engine panel, with a warning line for the Full-but-different case.
+- Cisco pyATS / Genie: `genie-to-xray.js` reads Genie parsed output (IOS-XE), and `xray-query.js` and the MCP tools accept a Genie folder.
+- Best path: the node panel compares each step only among the paths still in play, names a stored reason when the visible attributes tie (instead of saying Router ID), keeps one destination per prefix length and VRF, and shows MED 0. The Best-Path panel decides a tie between iBGP paths by Router ID, as FRR does. The MCP tool `why_path` returns `reason_source: "derived"` for a reason the IOS-XE collector worked out (the same reason `why` returns), and `why` / `why_path` read `sel_reason` too.
+- Topology and node panels: a path stops at a down exit interface, a down interface is drawn down, an adjacency is not taken from an interface being up, two links to the same neighbor stay two links, switching nodes resets the chosen prefix, and any node name is traced.
+- `clab-to-xray.js`: endpoints outside the node list, more than one link between two nodes, flow-style mappings, self links, bridges and kinds from defaults / groups are read correctly.
+- Example labs: each topology has a `.clab.yml.annotations.json`, so the containerlab Web app and VS Code extension open it in the same layout. The README (en / ja) says how to open the page from the VS Code extension and the Web app.
+- README and FAQ (en / ja): how issues and pull requests are handled, `reason_source` as the CLI and MCP return it, CML tried on CML 2.10 with IOL, the `docker` group, and who restarts FRR after a deploy.
+- Removed an unused IOS-only OSPF comparison and its `<peer>_ospf_mismatch` field from the states schema (nothing wrote it).
+
 ## v1.2.2 — 2026-11-10
 
 - `cml-xray.js` (Cisco CML2): long runs keep reading the routers, Pause also stops a round already in progress, an interrupted key setup on the jump host is cleaned up, and the askpass helper on Windows takes no arguments. The README says that `--listen` other than `127.0.0.1` has no login.
