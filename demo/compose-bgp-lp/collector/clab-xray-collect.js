@@ -257,11 +257,11 @@ function nodeLabels(n) {   // the text of the node's labels: (nested block, or t
   var m = /^([ \t]+)labels:[ \t]*\r?\n((?:\1[ \t]+.*\r?\n?|[ \t]*\r?\n)*)/m.exec(d) || /(^|[\s{,])labels:[ \t]*(\{[^}]*\})/.exec(d);
   return m ? m[m.length - 1] : '';
 }
-/* nx_graph_hide: a node whose labels: has graph-hide: yes / true / on / 1 (nrx's graphite web view, which containerlab's own
-   graph hides too) and that has no links is not a router: left out, like a bridge, instead of being shown as a node
-   network-xray cannot read. With links it is a device of the lab and is read as before. The whole value must be one of
-   the four words (quotes and a trailing comment allowed). */
-function isHidden(n) { return /(^|[\s{,])["']?graph-hide["']?[ \t]*:[ \t]*["']?(yes|true|on|1)["']?[ \t]*(#.*)?(\r?$|[,}])/im.test(nodeLabels(n)); }
+/* nx_graph_hide: a node whose labels: has graph-hide: yes / y / true (the values graphite itself hides a node for - nrx's
+   graphite web view carries this label on its own node) and that has no links is not a router: left out, like a bridge,
+   instead of being shown as a node network-xray cannot read. With links it is a device of the lab and is read as before.
+   The whole value must be one of the three words, any case (quotes and a trailing comment allowed). */
+function isHidden(n) { return /(^|[\s{,])["']?graph-hide["']?[ \t]*:[ \t]*["']?(yes|y|true)["']?[ \t]*(#.*)?(\r?$|[,}])/im.test(nodeLabels(n)); }
 var hidden = [];
 nodes = nodes.filter(function (n) {   /* nx_isolated_nodes + nx_graph_hide */
   if (linked[n]) return true;

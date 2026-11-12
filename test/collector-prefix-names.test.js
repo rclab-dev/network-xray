@@ -102,8 +102,8 @@ test('a lab with no links at all is read (it used to stop with "no links parsed"
   assert.strictEqual(r.calls.r1.container, 'clab-pf-r1');
 });
 
-/* nx_graph_hide (2026-11-12): a node labelled graph-hide (nrx's graphite web view: kind linux, no links; containerlab's own
-   graph hides it too) is left out instead of being listed as a node network-xray cannot read. */
+/* nx_graph_hide (2026-11-12): a node labelled graph-hide (nrx's graphite web view: kind linux, no links; graphite itself
+   hides a node with this label from its own picture) is left out instead of being listed as a node network-xray cannot read. */
 // nrx's containerlab template, 4-space indent (netreplica/templates clab/topology.j2): graphite first, routers with graph-level
 var NRX = 'name: DM-Albany\ntopology:\n    nodes:\n        graphite:\n            kind: linux\n            image: netreplica/graphite:latest\n' +
   '            env:\n                HOST_CONNECTION: ${SSH_CONNECTION}\n            binds:\n                - __clabDir__/topology-data.json:/htdocs/default/default.json:ro\n' +
@@ -121,25 +121,27 @@ test('nrx: the graphite node (label graph-hide, no links) is left out; the route
   assert.strictEqual(JSON.stringify(r.tiers), JSON.stringify({ r1: 1, r2: 0 }), 'graph-level rows (8 above 9) still come from each router\'s own labels');   // the object is from the vm context: compare its text
 });
 
-test('graph-hide forms: yes / "yes" / true / on / 1 hide a node with no links; no / false / another label / links keep it', { skip: SKIP }, function () {
+test('graph-hide forms: yes / "yes" / true / y / TRUE (the values graphite hides for) hide a node with no links; no / false / on / 1 / another label / links keep it', { skip: SKIP }, function () {
   var r = collectOnce(lab(null,
     '    g1:\n      kind: linux\n      labels:\n        graph-hide: "yes"\n' +
     '    g2:\n      kind: linux\n      labels: {graph-hide: true}\n' +
-    '    g3: {kind: linux, labels: {graph-hide: on}}\n' +
-    '    g4:\n      kind: linux\n      labels:\n        graph-hide: 1  # hidden\n' +
+    '    g3: {kind: linux, labels: {graph-hide: y}}\n' +
+    '    g4:\n      kind: linux\n      labels:\n        graph-hide: TRUE  # hidden\n' +
     '    k1:\n      kind: linux\n      labels:\n        graph-hide: no\n' +
     '    k2:\n      kind: linux\n      labels:\n        graph-hide: false\n' +
     '    k3:\n      kind: linux\n      labels:\n        graph-hidex: yes\n' +
     '    k4:\n      kind: linux\n      labels:\n        graph-level: 1\n' +
     '    r3:\n      kind: linux\n    g5:\n      kind: linux\n      labels:\n        graph-hide: yes\n' +
     '    "g6":\n      kind: linux\n      labels:\n        graph-hide: yes\n' +                               // a quoted node name
-    '    k5:\n      kind: linux\n      labels:\n        graph-hide: yes-please\n' +                          // the whole value must be one of the four words
+    '    k5:\n      kind: linux\n      labels:\n        graph-hide: yes-please\n' +                          // the whole value must be one of graphite's words
     '    k6:\n      kind: linux\n      labels:\n        graph-hide: 1.5\n' +
     '    k7:\n      kind: linux\n      labels:\n        do-not-graph-hide: yes\n' +                          // another key
     '    k8:\n      kind: linux\n      env:\n        graph-hide: yes\n' +                                    // not under labels:
     '    k9:\n      kind: linux\n      env:\n        k10:\n          graph-hide: yes\n' +                     // a key deeper inside k9 is not the node k10
-    '    k10:\n      kind: linux\n'));
-  assert.deepStrictEqual(Object.keys(r.states).sort(), ['k1', 'k10', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7', 'k8', 'k9', 'r1', 'r2', 'r3'], 'g1-g6 left out; r3 (the node just before g5) and k1-k10 are not');
+    '    k10:\n      kind: linux\n' +
+    '    k11:\n      kind: linux\n      labels:\n        graph-hide: on\n' +                                      // not a value graphite hides for
+    '    k12:\n      kind: linux\n      labels:\n        graph-hide: 1\n'));
+  assert.deepStrictEqual(Object.keys(r.states).sort(), ['k1', 'k10', 'k11', 'k12', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7', 'k8', 'k9', 'r1', 'r2', 'r3'], 'g1-g6 left out; r3 (the node just before g5) and k1-k12 are not');
   assert.match(r.stderr, /left out \(label graph-hide, no links\): "g1", "g2", "g3", "g4", "g5", "g6"/);
   // a graph-hide node with links is a device of the lab: read as before
   var yml = 'name: pf\ntopology:\n  nodes:\n    r1:\n      kind: linux\n    h1:\n      kind: linux\n      labels:\n        graph-hide: yes\n' +

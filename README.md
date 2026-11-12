@@ -261,7 +261,7 @@ containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.h
 Use `ospf` instead of `bgp` for an OSPF-only lab. For a lab with both OSPF and BGP, use `bgp`: it reads the OSPF neighbors too (the container and `xray.sh` choose this by themselves). `--exclude-mgmt` takes the management subnet from `clab.yml`. `<network-xray>` is the folder you cloned. Then open `http://localhost:8080/`. The path display is inferred from the routing table each router reports. To stop: Ctrl-C, then `kill %1` for the collector.
 If a `problem.json` is left in `<network-xray>` (e.g. from an older `xray.sh`), remove it first (`rm -f <network-xray>/problem.json`): otherwise the previous problem's band shows on this lab. A lab without a problem has no band. <!-- nx_demo_pj_cleanup -->
 Any topology `prefix:` works (no prefix, `clab`, `""`, `__lab-name` or your own word): the routers are found by the labels containerlab puts on their containers. Routers with no links are read too. <!-- nx_prefix_any -->
-A node labelled `graph-hide` with no links (nrx's graphite web view, which containerlab's own graph hides too) is left out, not shown as a node network-xray cannot read. <!-- nx_graph_hide -->
+A node labelled `graph-hide` with no links (nrx's graphite web view, which hides itself from its own picture with this label) is left out, not shown as a node network-xray cannot read. <!-- nx_graph_hide -->
 
 <a id="netlab-tool"></a>
 
@@ -1169,7 +1169,7 @@ containerlab graph --topo clab.yml --template <network-xray>/xray-graph-nextui.h
 OSPF だけのラボは `bgp` を `ospf` に。`--exclude-mgmt` は管理網を `clab.yml` から読みます。`<network-xray>` は clone したフォルダです。`http://localhost:8080/` を開きます。パス表示は各ルータが報告する経路表から推定します。OSPF と BGP の両方があるラボでは `bgp` を使ってください (OSPF の隣接も読みます。コンテナと `xray.sh` は自動で選びます)。止める時は Ctrl-C のあと `kill %1` (collector)。
 `<network-xray>` に `problem.json` が残っていたら (古い `xray.sh` の残りなど)、先に消してください (`rm -f <network-xray>/problem.json`)。残っていると、前の例題の帯がこのラボに出ます。問題文の無いラボには帯は出ません。
 topology の `prefix:` はどれでも動きます (書かない・`clab`・`""`・`__lab-name`・自分の言葉): ルータは containerlab がコンテナに付ける label で探します。リンクの無いルータも読みます。 <!-- nx_prefix_any -->
-`graph-hide` の label が付いたリンクの無いノード (nrx の graphite = トポロジの Web 表示。containerlab 自身の graph も隠します) は、読めないノードとして出さず、図にも出しません。 <!-- nx_graph_hide -->
+`graph-hide` の label が付いたリンクの無いノード (nrx の graphite = トポロジの Web 表示。graphite はこの label で自分を図から隠します) は、読めないノードとして出さず、図にも出しません。 <!-- nx_graph_hide -->
 
 <a id="netlab-tool-ja"></a>
 
