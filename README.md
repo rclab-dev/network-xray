@@ -172,7 +172,7 @@ the limit is the code. The exceptions, all on purpose:
 | Neighbors, sessions, routes, the routing table | Reported by the router (`show … json`, `info from state`, IOS `show`) |
 | Which BGP path won | Reported by the router (its `>` mark or `best: true`); network-xray never picks one |
 | Why it won: Weight, LocPref, AS path, Origin, MED | Worked out by network-xray from the collected attributes |
-| A tie past MED | FRR's own `selectionReason`, marked "(FRR)" |
+| A tie past MED | FRR's own `selectionReason`, marked "(FRR)"; with no stored reason, "a step the table does not show", without naming one |
 | Why it won on Cisco IOL | Worked out by the collector from the printed columns (IOS prints no reason); the panel says it is inferred |
 | eBGP over iBGP, IGP metric, router ID, cluster list | Not compared |
 
@@ -187,7 +187,7 @@ collector worked it out from the printed columns, `comparison` = network-xray co
 gives each path a different Local Preference on the way in (an inbound route-map on r1). Open r1: the BGP table shows both candidates and a **Best-Path
 Decision** panel that explains *why* the winner won (LocPref) — then change the LocPref on the running
 lab and the best path flips **in place, no reload** (in the GIF below, recorded on the q21 example: via r3 at 100 ⇄ via r2 at 150). X-Ray re-reads the
-real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path the router itself marked best** (FRR's `bestpath`, the `*>` line on Cisco IOL, SR Linux's `best-route`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`. The later steps (eBGP over iBGP, IGP cost to the next hop, router ID, cluster list) are not compared, and MED only between paths from the same neighbor AS. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
+real FRR state and redraws — it's *descriptive*, not a simulator. **The winner is always the path the router itself marked best** (FRR's `bestpath`, the `*>` line on Cisco IOL, SR Linux's `best-route`); the panel finds the reason by lining the candidates up on the attributes in order (Weight, Local Preference, AS path, origin, MED), and where those do not decide it shows FRR's own `selectionReason`; when no reason is stored, it says a step the table does not show decided it and does not name one. The later steps (eBGP over iBGP, IGP cost to the next hop, router ID, cluster list) are not compared, and MED only between paths from the same neighbor AS. network-xray never re-runs the decision or picks a different winner. Or open the recorded, no-install
 version: [Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
 ![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
@@ -288,6 +288,19 @@ If `netlab up` says the lab is already running, a lab with the same name is stil
 **Note:** the container reads the routers with `docker exec … vtysh -c 'show …'` on FRR, `sr_cli 'info from state …'` on SR Linux and SSH `show` commands on Cisco IOS-XE (IOL) (read-only commands, it changes nothing), but it is given the **Docker socket, which is root-equivalent on the host** — run it only on a lab machine. The `docker run` examples publish port 8600 on this machine only (`127.0.0.1`); the netlab defaults file does too. If you publish it more widely, anyone who can reach the port can see the lab's state without a login — use a trusted network.
 
 **Security notes:** anyone who can use the Docker socket (the `-v /var/run/docker.sock` mount, or membership in the `docker` group) can run anything as root on the host. The page has no login: with `docker run` publish it as `-p 127.0.0.1:8600:8600` (this machine only), and with `containerlab graph` use `-s 127.0.0.1:8080` unless others must see it. For Cisco IOS-XE the collector does not check SSH host keys (lab routers get new keys on every deploy) — use it on the lab's management network only; the password comes from `NX_IOS_PASSWORD` and is not printed or written to the state. The collectors take names from the topology as data only (no shell; a name that is not a plain name is left out) and write only `xray-states.js` into the output directory; their per-node temporary files are in a directory only your user can open.
+
+<a id="where-the-page-listens"></a>
+**Where the page listens.** Every way of starting it keeps the page on this machine unless you open it, and none has a login:
+
+| Started with | Port | Listens on by default | To open it to other machines |
+|---|---|---|---|
+| `./xray.sh <lab.clab.yml>` or `./xray.sh --attach <lab.clab.yml>` | 8080 (the second argument changes it) | `127.0.0.1` | `--bind 0.0.0.0` |
+| `docker run … -p 127.0.0.1:8600:8600` (also `xray.clab.yml` for the VS Code extension) | 8600 | `127.0.0.1` (the `-p` / `ports:` line) | `-p 8600:8600` |
+| The netlab tool (`docker/netlab-defaults.yml`) | 8600, plus the multilab id | `127.0.0.1` | change `-p` in your copy to `-p 8600:8600` |
+| `./run.sh` in a release folder | 50080 (`PORT=`) | `127.0.0.1` | `BIND=0.0.0.0 ./run.sh` |
+| `containerlab graph … -s 127.0.0.1:8080` by hand | the one you give `-s` | the one you give `-s` | `-s 0.0.0.0:8080` |
+| CML: `node cml-xray.js` | 8710 (`--port`) | `127.0.0.1` | `--listen 0.0.0.0` |
+| The compose demos (`demo/compose-*`) | 8080 | `127.0.0.1` | `"8080:8080"` in `compose.yml` |
 
 <!-- nx_readme_vscode (2026-11-09) -->
 ### Open it from the containerlab VS Code extension
@@ -1088,7 +1101,7 @@ Cisco IOL は `show`・SR Linux は `info from state` / `info from running`・im
 | ネイバー・セッション・経路・ルーティングテーブル | ルータが報告 (`show … json`・`info from state`・IOS の `show`) |
 | どの BGP の経路が勝ったか | ルータが報告 (`>` の印か `best: true`)。network-xray が選ぶことはありません |
 | なぜ勝ったか: Weight・LocPref・AS パス・Origin・MED | 集めた属性から network-xray が推し量る |
-| MED まで同じ時 | FRR 自身の `selectionReason`・「(FRR)」の印 |
+| MED まで同じ時 | FRR 自身の `selectionReason`・「(FRR)」の印。理由が保存されていなければ「表に出ない段」とだけ書き、どの段かは言い切らない |
 | Cisco IOL でなぜ勝ったか | 表示された列から collector が推し量る (IOS は理由を出さない)。パネルにも推し量った物と出ます |
 | eBGP と iBGP・IGP のメトリック・router ID・cluster list | 比べない |
 
@@ -1099,7 +1112,7 @@ MCP の `why_path` も同じ区別を `reason_source` (`device` = ルータが�
 
 ## 見る
 
-**BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** r1 は `8.8.8.0/24` を 2 つの上流 (r2・r3) から受け、受ける時に経路ごとに違う Local Preference を付けます (r1 の受信側の route-map)。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常にルータ自身が best にした経路です** (FRR の `bestpath`・Cisco IOL の `*>` の行・SR Linux の `best-route`)。 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。その後の段 (iBGP より eBGP・next hop までの IGP のコスト・router ID・cluster list) は比べません。MED は同じ隣の AS から来た経路の間だけで比べます。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
+**BGP の経路が 1 つ勝つ理由 — 図はライブで追いかけます。** r1 は `8.8.8.0/24` を 2 つの上流 (r2・r3) から受け、受ける時に経路ごとに違う Local Preference を付けます (r1 の受信側の route-map)。r1 を開くと、BGP の表に 2 つの候補が並び、**Best-Path Decision** の欄が勝った理由 (LocPref) を示します。動いているラボで LocPref を変えると、最良経路が**再読み込みなしでその場で**切り替わります (下の GIF・q21 の例題で録った物: r3 経由 100 ⇄ r2 経由 150)。X-Ray は本物の FRR の状態を読み直して描き直すだけで、シミュレータではありません。**勝つのは常にルータ自身が best にした経路です** (FRR の `bestpath`・Cisco IOL の `*>` の行・SR Linux の `best-route`)。 欄は候補を属性の順 (Weight・Local Preference・AS パス・origin・MED) に並べて理由を探し、それで決まらない時は FRR 自身の `selectionReason` を出します。理由が保存されていない時は、表に出ない段で決まったと書き、どの段かは言い切りません。その後の段 (iBGP より eBGP・next hop までの IGP のコスト・router ID・cluster list) は比べません。MED は同じ隣の AS から来た経路の間だけで比べます。network-xray が判断をやり直したり、別の勝者を選んだりすることはありません。インストール不要の記録版: [Best-Path Decision デモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html):
 
 ![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
 
@@ -1196,6 +1209,19 @@ netlab を使わない場合 (動いている containerlab のラボなら何で
 **注意:** コンテナは FRR を `docker exec … vtysh -c 'show …'`、SR Linux を `sr_cli 'info from state …'`、Cisco IOS-XE (IOL) を SSH の `show` で読むだけ (読む命令だけで、何も変えません) ですが、**Docker ソケット (ホスト上の root 権限と同等) を渡します**。ラボ用の機械でだけ使ってください。`docker run` の例はポート 8600 をこの機械の中だけ (`127.0.0.1`) に公開し、netlab の defaults ファイルも同じです。広く公開すると、そのポートに届く人ならログインなしでラボの状態を見られます。信頼できるネットワークで使ってください。
 
 **セキュリティの注意:** Docker のソケットを使える人 (`-v /var/run/docker.sock` のマウント、または `docker` グループ) は、ホストで root として何でも動かせます。画面にはログインがありません: `docker run` なら `-p 127.0.0.1:8600:8600` (この機械だけ)、`containerlab graph` なら他の人に見せる必要がなければ `-s 127.0.0.1:8080` にしてください。Cisco IOS-XE では collector は SSH のホスト鍵を確かめません (ラボのルータは起動のたびに鍵が変わるため) — ラボの管理網の中でだけ使ってください。パスワードは `NX_IOS_PASSWORD` から取り、表示も状態ファイルへの書き込みもしません。collector はトポロジの名前をデータとしてだけ使い (シェルを通さず、普通の名前でないものは外します)、出力先には `xray-states.js` だけを書きます。ノードごとの一時ファイルは自分のユーザーだけが開けるディレクトリに置きます。
+
+<a id="where-the-page-listens-ja"></a>
+**画面が待ち受ける所。** どの始め方でも、開かない限り画面はこの機械の中だけにあり、ログインはどれにもありません:
+
+| 始め方 | ポート | 既定の待ち受け | ほかの機械から開く時 |
+|---|---|---|---|
+| `./xray.sh <lab.clab.yml>` または `./xray.sh --attach <lab.clab.yml>` | 8080 (2 つ目の引数で変わる) | `127.0.0.1` | `--bind 0.0.0.0` |
+| `docker run … -p 127.0.0.1:8600:8600` (VS Code 拡張の `xray.clab.yml` も) | 8600 | `127.0.0.1` (`-p` / `ports:` の行) | `-p 8600:8600` |
+| netlab のツール (`docker/netlab-defaults.yml`) | 8600 (multilab の id を足す) | `127.0.0.1` | 写しの `-p` を `-p 8600:8600` に |
+| リリースのフォルダの `./run.sh` | 50080 (`PORT=`) | `127.0.0.1` | `BIND=0.0.0.0 ./run.sh` |
+| 手で `containerlab graph … -s 127.0.0.1:8080` | `-s` に渡した物 | `-s` に渡した物 | `-s 0.0.0.0:8080` |
+| CML: `node cml-xray.js` | 8710 (`--port`) | `127.0.0.1` | `--listen 0.0.0.0` |
+| compose のデモ (`demo/compose-*`) | 8080 | `127.0.0.1` | `compose.yml` を `"8080:8080"` に |
 
 ### containerlab の VS Code 拡張から開く
 

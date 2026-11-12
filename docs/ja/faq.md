@@ -37,7 +37,8 @@ Cisco IOL は SSH で文字の `show` コマンドを使って読みます。コ
 
 違います。勝者は必ず、ルータ自身が best と印を付けた経路 (FRR の `bestpath`) です。パネルは候補を
 Weight・Local Preference・AS path・origin・MED で比べてわけを説明し、それで決まらない時は FRR 自身の
-`selectionReason` を出します。Cisco IOL では、`show ip bgp` に出る列からわけを割り出します。
+`selectionReason` を出します。理由が保存されていない時は、表に出ない段 (iBGP より eBGP・IGP のメトリック・
+Older Path・Router ID) で決まったと書き、どの段かは言い切りません。Cisco IOL では、`show ip bgp` に出る列からわけを割り出します。
 [See it](../../README.md#see-it) と [Query from a script or an AI assistant](../../README.md#query-from-a-script-or-an-ai-assistant) を参照してください。
 
 ## ほかのツールとの違い
@@ -60,6 +61,20 @@ Batfish は設定を読んで、ネットワークがどう動くかをモデル
 SuzieQ は多くの機器の状態を継続的に集め、表として問い合わせられるようにします。network-xray はラボの各ルータの
 最新の状態だけを持ち、1 台のルータの判断を描きます。履歴は残しません。
 [When to use](../../README.md#when-to-use) を参照してください。
+
+### 手で `show` の出力を読むのとどう違いますか?
+
+読むのは同じ出力 (`show ip bgp`・`show ip route` など) なので、ルータが出さない事は分かりません。足すのは次の 3 つです:
+1 つの宛先の候補を並べて、勝者を決めた段に印を付ける事・ラボのルータを全部 1 枚の図に描く事・ラボを変えるたびに
+描き直す事。`show ip bgp` をすらすら読める人には、判断をほかの人に説明する時に一番役に立ちます。
+[Why](../../README.md#why) と [What the router reports, and what network-xray works out](../../README.md#what-the-router-reports-and-what-network-xray-works-out) を参照してください。
+
+### Cisco pyATS / Genie との関係は?
+
+pyATS は機器にログインし、Genie は `show` の出力を解析します。network-xray はルータに届くのに pyATS を使いません。
+pyATS で既に出力を集めているなら、`genie-to-xray.js` が Genie の解析済みの JSON を読んで描きます。pyATS のコードは
+含んでおらず、要りません (IOS-XE: OSPF と BGP・既定の VRF・IPv4)。
+[From Cisco pyATS / Genie output](../../README.md#from-cisco-pyats--genie-output) を参照してください。
 
 ### シミュレータですか? 監視ツールですか?
 
@@ -130,11 +145,20 @@ Cisco IOL では、パーサーが分からない行を `parse_warnings` に記�
 `/var/run/docker.sock` を渡します。このソケットを使える人はホストの上で何でも root で動かせるので、ラボ用の
 マシンでだけ動かしてください。[Security notes](../../README.md#security-notes) を参照してください。
 
+### Docker のソケットを渡さずに動かせますか?
+
+はい、3 つの道があります。イメージの代わりにホストで `./xray.sh` を動かす: ソケットはマウントしませんが、自分の
+ユーザで `docker` の CLI を動かすので、そのユーザに同じ権限 (`docker` グループ) が要ります。ホストで collector と
+`containerlab graph` を手で動かす (同じ権限が要ります)。または compose のデモ (`demo/compose-ospf`・
+`demo/compose-bgp-lp`) を試す: FRR を共有した vty のソケットで読むので、Docker のソケットは要りません。Docker に
+読むだけのソケットは無いので、マウントした時の守りは決まった命令の一覧で、技術的な境目ではありません。詳しくは
+[docs/dev/likely-questions.md](../dev/likely-questions.md) (§8)。
+
 ### 画面を自分のマシンだけに絞るには?
 
 `docker run` では、ポートを `-p 127.0.0.1:8600:8600` で公開します (README のコマンドは既にそうなっています)。`-p 8600:8600`
-にすると、ほかのマシンからも開けます。`containerlab graph` では `-s 127.0.0.1:8080` を使います。
-[Security notes](../../README.md#security-notes) を参照してください。
+にすると、ほかのマシンからも開けます。`containerlab graph` では `-s 127.0.0.1:8080` を使います。どの始め方のポートと
+開き方も 1 つの表にあります: [画面が待ち受ける所](../../README.md#where-the-page-listens-ja)。
 
 ### パスワードはどこかに保存されますか?
 
@@ -172,6 +196,12 @@ FRR のようなコンテナのノードだけです。
 コンテナのイメージ (`docker run … ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml`)、netlab のツール、
 またはこのリポジトリのクローンと Node.js 18 以降・Docker・containerlab (Linux か WSL2) のどれかです。
 [Quick start](../../README.md#quick-start-run-a-lab-in-containerlab) と [netlab tool](../../README.md#netlab-tool) の節を参照してください。
+
+### macOS で動きますか?
+
+macOS では試していません。試したのは Linux と、Windows の WSL2 です。containerlab は Linux が要るので、Mac では
+ラボを Linux の VM で動かすことになりますが、それも試していません。記録版のデモと貼り付けの頁は静的なファイルなので、
+どのブラウザでも開けます。
 
 ## プロジェクト
 

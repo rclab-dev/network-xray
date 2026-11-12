@@ -58,7 +58,7 @@
 
 ## What it is
 - A descriptive renderer of live router state, not a simulator and not a config checker.
-- Input: live state, read-only commands only. FRR: `docker exec <node> vtysh -c '<show command>'`. SR Linux: `docker exec <node> sr_cli 'info from state … | as json'`. Cisco IOL: SSH, `terminal length 0` and `terminal width 0` (for that session only), then plain-text `show ip ospf neighbor`, `show ip ospf interface [brief]`, `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show ip protocols`, `show bridge-domain` (login `NX_IOS_USER` / `NX_IOS_PASSWORD`, default admin / admin).
+- Input: live state, read-only commands only. FRR: `docker exec <node> vtysh -c '<show command>'`. SR Linux: `docker exec <node> sr_cli 'info from state … | as json'`. Cisco IOL: SSH, `terminal length 0` and `terminal width 0` (for that session only), then plain-text `show ip ospf neighbor`, `show ip ospf interface [brief]`, `show ip interface brief`, `show ip route`, `show ip bgp summary`, `show ip bgp`, `show ip protocols`, `show bridge-domain`, `show vrf` (login `NX_IOS_USER` / `NX_IOS_PASSWORD`, default admin / admin).
 - Output: a web page (topology + per-router DeepDive) that updates every few seconds while the lab runs.
 
 ## Supported
@@ -91,7 +91,7 @@
 
 ## Limits and cautions
 - The container is given the Docker socket (root-equivalent on the host): use it on lab machines only.
-- The page has no login. It listens on 127.0.0.1 by default; when it is opened to other machines, keep it on a trusted network.
+- The page has no login. It listens on 127.0.0.1 by default; when it is opened to other machines, keep it on a trusted network. Each way of starting it, its port and how to open it: README "Where the page listens".
 - With netlab, `network-xray.json` in the lab folder holds the lab's values (passwords included) while the lab is up; `netlab down` removes it.
 - Not for production monitoring. For checking configs before deployment, use Batfish. For collecting and querying state across many devices over time, use SuzieQ.
 - Single maintainer; pull requests are not accepted (forks are welcome).

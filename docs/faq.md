@@ -38,7 +38,8 @@ comes from a change you made yourself in the lab.
 
 No. The winner is always the path the router itself marked best (FRR's `bestpath`). The panel explains the reason by
 comparing the candidates on Weight, Local Preference, AS path, origin and MED, and, where those do not decide it, shows
-FRR's own `selectionReason`. For Cisco IOL the reason is worked out from the printed `show ip bgp` columns. See
+FRR's own `selectionReason`. When no reason is stored, it says a step the table does not show (eBGP over iBGP, IGP
+metric, Older Path, Router ID) decided it, and does not name one. For Cisco IOL the reason is worked out from the printed `show ip bgp` columns. See
 [See it](../README.md#see-it) and [Query from a script or an AI assistant](../README.md#query-from-a-script-or-an-ai-assistant).
 
 ## How it compares
@@ -61,6 +62,21 @@ different question. See [When to use](../README.md#when-to-use).
 SuzieQ collects state from many devices over time and lets you query it as tables. network-xray keeps only the latest
 state of each router in a lab and draws one router's decision; it does not store history. See
 [When to use](../README.md#when-to-use).
+
+### How is it different from reading `show` output by hand?
+
+It reads the same output (`show ip bgp`, `show ip route`, …), so it knows nothing the router does not print. What it adds:
+the candidates for one prefix side by side with the step that decided the winner, every router of the lab on one
+picture, and a redraw after each change you make in the lab. If you read `show ip bgp` fluently, it helps most when you
+explain a decision to someone else. See [Why](../README.md#why) and
+[What the router reports, and what network-xray works out](../README.md#what-the-router-reports-and-what-network-xray-works-out).
+
+### How does it relate to Cisco pyATS / Genie?
+
+pyATS logs in to devices and Genie parses their `show` output. network-xray does not use pyATS to reach the routers;
+if you already collect output with pyATS, `genie-to-xray.js` reads Genie's parsed JSON and draws it, with no pyATS code
+included or needed (IOS-XE: OSPF and BGP, default VRF, IPv4). See
+[From Cisco pyATS / Genie output](../README.md#from-cisco-pyats--genie-output).
 
 ### Is it a simulator or a monitoring tool?
 
@@ -131,11 +147,20 @@ The `docker run` / netlab container reads FRR and SR Linux with `docker exec`, s
 `/var/run/docker.sock`. Anyone who can use that socket can run anything as root on the host, so run the container only on a lab
 machine. See [Security notes](../README.md#security-notes).
 
+### Can I run it without giving it the Docker socket?
+
+Yes, in three ways. Run `./xray.sh` on the host instead of the image: it does not mount the socket, but it runs the
+`docker` CLI as your user, so that user needs the same access (the `docker` group). Run the collector and
+`containerlab graph` by hand on the host, with the same access. Or try the compose demos (`demo/compose-ospf`,
+`demo/compose-bgp-lp`): they read FRR through shared vty sockets and need no Docker socket at all. Docker has no
+read-only socket, so when it is mounted the safeguard is the fixed command list, not a technical boundary. More in
+[docs/dev/likely-questions.md](dev/likely-questions.md) (§8).
+
 ### How do I keep the page to my own machine?
 
 With `docker run`, publish the port as `-p 127.0.0.1:8600:8600` (the README's command already does this); `-p 8600:8600`
-opens it to other machines. With `containerlab graph`, use `-s 127.0.0.1:8080`. See
-[Security notes](../README.md#security-notes).
+opens it to other machines. With `containerlab graph`, use `-s 127.0.0.1:8080`. Every way of starting it, with its port
+and how to open it, is in one table: [Where the page listens](../README.md#where-the-page-listens).
 
 ### Are passwords stored anywhere?
 
@@ -172,6 +197,12 @@ router contacted. See [containerlab graph template](../README.md#containerlab-gr
 Either the container image (`docker run … ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml`), the netlab tool,
 or a clone of this repository with Node.js 18+, Docker and containerlab on Linux or WSL2. See
 [Quick start](../README.md#quick-start-run-a-lab-in-containerlab) and the [netlab tool](../README.md#netlab-tool) section.
+
+### Does it run on macOS?
+
+It has not been tried on macOS. What has been tried is Linux and Windows with WSL2. containerlab needs Linux, so on a
+Mac the lab would run in a Linux VM, which has not been tried either. The recorded demo and the paste pages are static
+files and open in any browser.
 
 ## Project
 
