@@ -511,14 +511,31 @@ You control it with a few calls through the `xrayCore` API.
 It runs **on top of your execution engine** — paste a **containerlab** topology, replay a recorded lab,
 or point it at live FRR / SR Linux / Cisco IOS-XE (IOL) — the **"why"** layer above the "what".
 
+**On someone else's page (yours, a tool, a dashboard): use the iframe.** The engine's CSS and the classes it puts on
+`<body>` style the whole page it runs in (while X-Ray is on, the page gets a dark background and light text, and class names it shares with the engine are restyled).
+`xray-embed.js` puts the view in an iframe (`embed.html`, served from the same place as `xray-core.js`), so it stays
+in its frame and your page's CSS does not reach it either. The calls are the same as the facade below:
+
+```html
+<div id="xray"></div>
+<script src="xray-embed.js"></script>
+```
+
+```js
+var x = xrayEmbed.mount('#xray', { src: 'embed.html', height: 520 });   // autoHeight: true follows the content
+x.render(config, { topology, trace });
+x.applyState(state);                                                     // or x.startPolling(fetcher, 3000)
+x.openDeepDive();  x.on('deepdive', e => console.log(e.open));          // also 'ready', 'size', 'error'
+```
+
+Messages go only to the frame's origin and are taken only from it. A working page: `embed-example.html`. <!-- nx_embed_iframe -->
+
+**On a page of its own (only X-Ray on it):** load the engine and the facade directly.
+
 ```html
 <script src="xray-core.js"></script>   <!-- the engine (self-injects its CSS) -->
 <script src="xray-api.js"></script>    <!-- the xrayCore facade -->
 ```
-
-> **On a page of your own only, for now.** The engine's CSS and the classes it puts on `<body>` style the whole page:
-> while X-Ray is on, the page gets a dark background and its other links and buttons cannot be clicked. Give it a page
-> of its own (or put that page in an iframe); a ready-made iframe embed is being prepared. <!-- nx_embed_note -->
 
 ```js
 var view = xrayCore.renderTopology('#topo', config, { topology, trace });
@@ -544,6 +561,7 @@ Open `index.html` for the gallery, or open a page directly:
 | **`bgp-session.html`** | Step the eBGP FSM (Idle→Established) between two ASes. DeepDive shows the BGP processor and the session tunnel; at Established it learns `203.0.113.0/24`. (RFC 4271 §8.) |
 | **`noc-live.html`** | Demo: wire `startPolling()` to a state feed; the view redraws when it changes. |
 | **`failover.html`** | A redundant OSPF triangle: cut the shortest path → detour, cut the backup → isolation. |
+| **`embed-example.html`** | The same triangle inside an iframe on an ordinary light page (`xray-embed.js` + `embed.html`): the page keeps its own look. |
 
 ## containerlab graph template
 
@@ -1427,14 +1445,31 @@ OSPF/BGP プロセス、hello とネイバー状態から出す LSDB 同期の�
 **実行エンジンの"上"に乗ります** — containerlab のトポロジを貼る／記録したラボを再生する／ライブの
 FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に立つ「なぜ(why)」の層です。
 
+**よその頁 (あなたの頁・道具・ダッシュボード) には iframe で入れてください。** エンジンの CSS と、エンジンが `<body>` に
+付ける印は、動いている頁全体に効きます (X-Ray を開いている間、頁は黒地に明るい文字になり、エンジンと同じ名前の class を使う部品も見た目が変わります)。
+`xray-embed.js` は画面を iframe (`embed.html`・`xray-core.js` と同じ所に置く) の中に入れるので、効き目は枠の中に留まり、
+あなたの頁の CSS も画面に届きません。呼び方は下のファサードと同じです:
+
+```html
+<div id="xray"></div>
+<script src="xray-embed.js"></script>
+```
+
+```js
+var x = xrayEmbed.mount('#xray', { src: 'embed.html', height: 520 });   // autoHeight: true で中身の高さに合わせる
+x.render(config, { topology, trace });
+x.applyState(state);                                                     // または x.startPolling(fetcher, 3000)
+x.openDeepDive();  x.on('deepdive', e => console.log(e.open));          // ほかに 'ready'・'size'・'error'
+```
+
+メッセージは枠の origin にだけ送り、枠からの物だけを受けます。動く頁: `embed-example.html`。 <!-- nx_embed_iframe -->
+
+**X-Ray だけの頁なら:** エンジンとファサードを直接読み込みます。
+
 ```html
 <script src="xray-core.js"></script>   <!-- エンジン本体(CSS を自己注入) -->
 <script src="xray-api.js"></script>    <!-- xrayCore ファサード -->
 ```
-
-> **今は X-Ray だけの頁で使ってください。** エンジンの CSS と、エンジンが `<body>` に付ける印は頁全体に効きます:
-> X-Ray を開いている間、頁は黒地になり、ほかのリンクとボタンは押せなくなります。専用の頁を用意してください (その頁を
-> iframe で入れるのは可)。そのまま使える iframe の組み込みを準備中です。 <!-- nx_embed_note -->
 
 ```js
 var view = xrayCore.renderTopology('#topo', config, { topology, trace });
@@ -1460,6 +1495,7 @@ view.openDeepDive();                                      // ルータの中へ
 | **`bgp-session.html`** | eBGP の FSM(Idle→Established)を2つの AS 間で1歩ずつ。DeepDive で BGP プロセッサとセッショントンネルを表示し、Established で `203.0.113.0/24` を学習(RFC 4271 §8)。 |
 | **`noc-live.html`** | 見本: `startPolling()` を状態の入力に繋ぐと、変わった時にビューが描き直す。 |
 | **`failover.html`** | 冗長 OSPF 三角形:最短路を切る→迂回、バックアップも切る→孤立。 |
+| **`embed-example.html`** | 同じ三角形を、普通の明るい頁の iframe の中に (`xray-embed.js` + `embed.html`)。頁は自分の見た目のまま。 |
 
 ## containerlab graph テンプレート
 

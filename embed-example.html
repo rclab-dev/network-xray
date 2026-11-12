@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Embed network-xray in your page (iframe) — network-xray gallery</title>
+<style>
+  /* An ordinary light page: it keeps its own look while the X-Ray view runs in the iframe below. */
+  body{margin:0;background:#fff;color:#1f2933;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 18px 60px}
+  a{color:#0b6bcb}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+  button{padding:8px 14px;border:1px solid #c5ced6;border-radius:6px;background:#f5f7f9;cursor:pointer;font-size:14px}
+  pre{background:#f5f7f9;border:1px solid #dde3e8;border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:12.5px;line-height:1.55}
+  #state{font-size:13px;color:#52606d}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p><a href="index.html">← Gallery</a></p>
+  <h1>Your page, with network-xray in an iframe</h1>
+  <p>This page keeps its own light look: the X-Ray view runs in its own frame
+    (<code>embed.html</code>), so its CSS does not reach this page and this page's CSS does not reach it.</p>
+  <div class="controls">
+    <button id="b-normal">Normal</button>
+    <button id="b-detour">Cut shortest r1–r3</button>
+    <button id="b-dead">Cut r2–r3 too</button>
+    <button id="b-deep">Open the router (r2)</button>
+    <span id="state"></span>
+  </div>
+  <div id="xray"></div>
+<pre>&lt;div id="xray"&gt;&lt;/div&gt;
+&lt;script src="xray-embed.js"&gt;&lt;/script&gt;
+var x = xrayEmbed.mount('#xray', { src: 'embed.html', height: 520 });
+x.render(config, { topology: topo, trace: trace });   // DATA-CONTRACT.md
+x.applyState(state);
+x.openDeepDive();   // and x.closeDeepDive()
+x.on('deepdive', function (e) { /* e.open */ });</pre>
+</div>
+<script src="data.js"></script>
+<script src="xray-embed.js"></script>
+<script>
+(function () {
+  var x = xrayEmbed.mount('#xray', { src: 'embed.html', height: 520 });
+  var deepOpen = false;
+  function show(key) {
+    var scene = window.DEMO[key];
+    x.setTopology(scene.topo); x.setTrace(scene.trace); x.applyState(scene.state);
+    document.getElementById('state').textContent = key;
+  }
+  x.render(window.DEMO_CONFIG, { topology: window.DEMO.normal.topo, trace: window.DEMO.normal.trace });
+  show('normal');
+  document.getElementById('b-normal').onclick = function () { show('normal'); };
+  document.getElementById('b-detour').onclick = function () { show('detour'); };
+  document.getElementById('b-dead').onclick = function () { show('dead'); };
+  document.getElementById('b-deep').onclick = function () { if (deepOpen) x.closeDeepDive(); else x.openDeepDive(); };
+  x.on('deepdive', function (e) {
+    deepOpen = !!e.open;
+    document.getElementById('b-deep').textContent = deepOpen ? 'Back to topology view' : 'Open the router (r2)';
+  });
+})();
+</script>
+</body>
+</html>

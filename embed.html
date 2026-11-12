@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzBmMTMxOCIvPgogIDxlbGxpcHNlIGN4PSIxNiIgY3k9IjguNSIgcng9IjcuNSIgcnk9IjIuOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxsaW5lIHgxPSI4LjUiIHkxPSI4LjUiIHgyPSI4LjUiIHkyPSIyMy41IiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGxpbmUgeDE9IjIzLjUiIHkxPSI4LjUiIHgyPSIyMy41IiB5Mj0iMjMuNSIgc3Ryb2tlPSIjNGRkMGUxIiBzdHJva2Utd2lkdGg9IjEuNyIvPgogIDxwYXRoIGQ9Ik04LjUgMjMuNSBhNy41IDIuOCAwIDAgMCAxNSAwIiBmaWxsPSJub25lIiBzdHJva2U9IiM0ZGQwZTEiIHN0cm9rZS13aWR0aD0iMS43Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMy40IiBmaWxsPSIjMzlmZjE0Ii8+Cjwvc3ZnPgo=">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>network-xray — embedded view</title>
+<!-- The page that xray-embed.js puts in an iframe. Load it from the same place as xray-core.js. -->
+<script src="xray-core.js"></script>
+<script src="xray-api.js"></script><script src="xray-i18n.js"></script><script src="xray-skin.js"></script>
+<script src="xray-embed-frame.js"></script>
+<style>
+  :root {
+    --rc-accent:#4dd0e1; --rc-border:#26c6da; --rc-bg:#0f1318;
+    --rc-header-bg:#1c2736; --rc-btn:#00acc1; --rc-btn-hover:#00838f;
+    --rc-target:#e74c3c; --rc-topo-bg:#1e2a38; --rc-topo-box-bg:#141b24;
+    --rc-topo-box-border:#455a64; --rc-topo-iface-bg:#0f1318;
+    --rc-topo-iface-color:#b0bec5; --rc-topo-ip:#80deea;
+    --rc-topo-link-line:linear-gradient(90deg,#37474f,#607d8b,#37474f);
+  }
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .topology{position:relative;margin-top:6px;padding:18px;background:var(--rc-topo-bg);border-radius:10px}
+  .topo-diagram{display:flex;align-items:center;justify-content:center;gap:0;padding:24px 10px;overflow-x:auto}
+  .topo-node{display:flex;flex-direction:column;align-items:center;min-width:120px}
+  .topo-box{background:var(--rc-topo-box-bg);border:2px solid var(--rc-topo-box-border);border-radius:8px;padding:12px 16px;text-align:center;min-width:100px}
+  .topo-box.router{border-color:var(--rc-accent)}
+  .topo-box.router.target{border-color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,0.4)}
+  .topo-box h4{margin:0 0 5px 0;font-size:16px}
+  .topo-box.router h4{color:var(--rc-accent)}.topo-box.router.target h4{color:#ef5350}
+  .topo-box .role{font-size:11px;color:#90a4ae;margin-bottom:8px}
+  a.topo-box-link{text-decoration:none;color:inherit}
+  .topo-iface{font-family:monospace;font-size:11px;color:var(--rc-topo-iface-color);margin:3px 0;padding:3px 6px;background:var(--rc-topo-iface-bg);border-radius:3px}
+  .topo-iface .label{color:#78909c}.topo-iface .ip{color:var(--rc-topo-ip)}
+  .topo-link{display:flex;flex-direction:column;align-items:center;padding:0 5px}
+  .topo-link-line{width:60px;height:3px;background:var(--rc-topo-link-line)}
+  .topo-link-label{font-size:10px;color:#78909c}.topo-link-subnet{font-family:monospace;font-size:10px;color:#90a4ae}
+  .topo-target-label{color:#ef5350;font-size:11px;margin-top:8px;font-weight:bold}
+  .terminal-hint{display:none}
+
+  .topology{margin-top:0}
+</style>
+</head>
+<body>
+<div class="topology is-xray-mode">
+  <div class="topo-diagram" id="topo"></div>
+  <div class="xray-deep-engine"></div>
+</div>
+</body>
+</html>
