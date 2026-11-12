@@ -516,6 +516,10 @@ or point it at live FRR / SR Linux / Cisco IOS-XE (IOL) — the **"why"** layer 
 <script src="xray-api.js"></script>    <!-- the xrayCore facade -->
 ```
 
+> **On a page of your own only, for now.** The engine's CSS and the classes it puts on `<body>` style the whole page:
+> while X-Ray is on, the page gets a dark background and its other links and buttons cannot be clicked. Give it a page
+> of its own (or put that page in an iframe); a ready-made iframe embed is being prepared. <!-- nx_embed_note -->
+
 ```js
 var view = xrayCore.renderTopology('#topo', config, { topology, trace });
 view.applyState(state);                                   // one snapshot
@@ -1427,6 +1431,10 @@ FRR・SR Linux・Cisco IOS-XE (IOL) に向ける。「何が(what)」の上に�
 <script src="xray-core.js"></script>   <!-- エンジン本体(CSS を自己注入) -->
 <script src="xray-api.js"></script>    <!-- xrayCore ファサード -->
 ```
+
+> **今は X-Ray だけの頁で使ってください。** エンジンの CSS と、エンジンが `<body>` に付ける印は頁全体に効きます:
+> X-Ray を開いている間、頁は黒地になり、ほかのリンクとボタンは押せなくなります。専用の頁を用意してください (その頁を
+> iframe で入れるのは可)。そのまま使える iframe の組み込みを準備中です。 <!-- nx_embed_note -->
 
 ```js
 var view = xrayCore.renderTopology('#topo', config, { topology, trace });
