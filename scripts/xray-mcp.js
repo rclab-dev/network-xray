@@ -146,6 +146,8 @@ var TOOLS = [
     description: 'Look up a destination address in one router\'s collected routing table (installed rows only) ' +
       'by longest prefix match: the matching route, its protocol, next hop and outgoing interface (all next hops ' +
       'for ECMP). next_hop is null for a directly connected route; route is null with a note when nothing matches. ' +
+      'A recursive next hop carries resolved_via (what the router resolved it through; via_mgmt when that is the lab\'s ' +
+      'management network, i.e. not reachable inside the lab topology) and a note says so. ' +
       'This reads the table the collector saved; it does not compute routing. Read-only.',
     inputSchema: {
       type: 'object',

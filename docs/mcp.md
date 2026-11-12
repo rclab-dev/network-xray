@@ -374,6 +374,9 @@ With ECMP, `route.nexthops` lists every next hop (`test/fixtures/iosxe-ecmp`):
 Only installed rows of the routing table the collector saved are searched. The server does not compute routing.
 `next_hop` is `null` for a directly connected route. If nothing matches, `route` is `null` and a `note` says so. If
 the router has no collected routing table, the `note` says there is no routing table in the data.
+When the next hop is recursive (FRR: `via 10.0.12.1 (recursive)`, for example a BGP next hop), `resolved_via` gives the next
+hop the router resolved it through, and a `note` says so. `resolved_via.via_mgmt` is `true` when that is the containerlab
+management network (left out of the view with `--exclude-mgmt`): inside the lab topology the next hop is not reachable.
 
 ### why_path
 

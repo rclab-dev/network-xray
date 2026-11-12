@@ -292,3 +292,43 @@ test('MCP route_lookup: same answers and errors through the tool', function () {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ---- nx_resolved_via: a recursive next hop says what the router resolved it through -----------------------------
+var clab = require('../clab-collect.js');
+// test/fixtures/frr-recursive-mgmt/route.json = a real FRR 10.7.1 `show ip route 198.51.100.0/24 json` on r3 after next-hop-self
+// was removed on r2: via 10.0.12.1 (recursive), installed through 172.20.20.1 on eth0 = the containerlab management network
+var RECURSIVE = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'frr-recursive-mgmt', 'route.json'), 'utf8'));
+function recState(mgmt) { return clab.collectFromJson({ node: 'r3', proto: 'bgp', bgpConfigured: true, route: RECURSIVE, mgmtSubnet: mgmt }); }
+test('collector: a recursive next hop carries resolved_via (real FRR, management network -> via_mgmt)', function () {
+  var row = recState('172.20.20.0/24').routing_table.filter(function (r) { return r.prefix === '198.51.100.0/24'; })[0];
+  assert.strictEqual(row.next_hop, '10.0.12.1');
+  assert.deepStrictEqual(row.resolved_via, { ip: '172.20.20.1', iface: 'eth0', via_mgmt: true });
+});
+test('collector: without a management subnet the resolving next hop is still named, not marked', function () {
+  var row = recState('').routing_table.filter(function (r) { return r.prefix === '198.51.100.0/24'; })[0];
+  assert.deepStrictEqual(row.resolved_via, { ip: '172.20.20.1', iface: 'eth0' });
+});
+test('route_lookup: recursive via the management network -> resolved_via and a note that it is not reachable in the lab', function () {
+  var r = query.routeLookup({ r3: recState('172.20.20.0/24') }, 'r3', '198.51.100.1');
+  assert.strictEqual(r.route.prefix, '198.51.100.0/24');
+  assert.strictEqual(r.next_hop, '10.0.12.1');
+  assert.deepStrictEqual(r.resolved_via, { ip: '172.20.20.1', iface: 'eth0', via_mgmt: true });
+  assert.strictEqual(r.note, 'next hop 10.0.12.1 is recursive; FRR resolves it via 172.20.20.1 on eth0 (the management network, left out of this view) - inside the lab topology it is not reachable');
+});
+test('route_lookup: recursive inside the lab -> resolved_via and a plain note', function () {
+  var t = [row('198.51.100.0/24', 'bgp', '2.2.2.2', '', { resolved_via: { ip: '10.0.23.2', iface: 'eth1' } })];
+  var r = lookup(t, '198.51.100.1');
+  assert.deepStrictEqual(r.route.resolved_via, { ip: '10.0.23.2', iface: 'eth1' });
+  assert.strictEqual(r.note, 'next hop 2.2.2.2 is recursive; FRR resolves it via 10.0.23.2 on eth1');
+});
+test('route_lookup: a next hop that is not recursive gets no resolved_via and no note', function () {
+  var r = lookup([row('198.51.100.0/24', 'bgp', '10.0.23.2', 'eth1')], '198.51.100.1');
+  assert.strictEqual(r.resolved_via, undefined);
+  assert.strictEqual(r.note, undefined);
+});
+test('collector: an ordinary (non-recursive) FRR route gets no resolved_via', function () {
+  var route = { '10.0.23.0/24': [{ prefix: '10.0.23.0/24', protocol: 'ospf', selected: true, installed: true,
+    nexthops: [{ ip: '10.0.13.1', interfaceName: 'eth2', active: true, fib: true }] }] };
+  var st = clab.collectFromJson({ node: 'r3', proto: 'ospf', route: route });
+  assert.ok(!('resolved_via' in st.routing_table[0]));
+});

@@ -294,8 +294,10 @@ function parseRoutes(j, _vrf) {
       if (!r || typeof r !== 'object') return;
       /* nexthops not an array / null entries (broken output) -> skipped, not a crash */
       var nhs = (Array.isArray(r.nexthops) ? r.nexthops : []).filter(function (nh) { return nh && typeof nh === 'object'; }).map(function (nh) {
-        return { ip: _str(nh.ip) || null, iface: _str(nh.interfaceName) || _str(nh.interface), connected: !!nh.directlyConnected, active: nh.active !== false,
+        var _o = { ip: _str(nh.ip) || null, iface: _str(nh.interfaceName) || _str(nh.interface), connected: !!nh.directlyConnected, active: nh.active !== false,
                  fib: nh.fib === true };   /* nx_ecmp: installed in the FIB (FRR sets fib:true only on the next-hops it uses) */
+        if (nh.recursive === true) _o.recursive = true;   /* nx_resolved_via: FRR lists the resolving next hop right after a recursive one */
+        return _o;
       });
       var _rr = {
         prefix: String(r.prefix || prefix),
@@ -865,6 +867,16 @@ function buildState(opts) {
     var _row = { prefix: r.prefix, out_iface: nh.iface || _resolveIface(nh.ip) || '', next_hop: nh.ip || '',
              protocol: r.protocol, selected: _sel };
     if (r.vrf) _row.vrf = r.vrf;   /* nx_vrf_all */
+    /* nx_resolved_via (2026-11-12): a recursive next hop (`via 10.0.12.1 (recursive)`) is forwarded by the next hop FRR resolved
+       it through (the `*` line under it, fib:true). Say which; when that is the containerlab management network (dropped from
+       this view by --exclude-mgmt) mark it - inside the lab topology the next hop is then not reachable. */
+    if (nh.recursive) {
+      var _rv = (r.nexthops || []).filter(function (h) { return h && h.fib && !h.recursive && (h.ip || h.iface); })[0];
+      if (_rv) {
+        _row.resolved_via = { ip: _rv.ip || '', iface: _rv.iface || '' };
+        if (mgmtSubnet && _rv.ip && _sameSubnet(mgmtSubnet, _rv.ip)) _row.resolved_via.via_mgmt = true;
+      }
+    }
     /* nx_ecmp (2026-10-23): an installed route with 2+ active next-hops (ECMP) carries them all; out_iface / next_hop stay the
        first one, so problem.json checks that read them are unchanged */
     var _act = (r.nexthops || []).filter(function (h) { return h && h.fib && (h.ip || h.iface); });

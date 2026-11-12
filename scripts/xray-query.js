@@ -593,6 +593,7 @@ function routeLookup(states, node, destination, vrf) {
   }
   var rowOut = function (r) {
     var o = { prefix: r.prefix, protocol: r.protocol || '', next_hop: r.next_hop || '', out_iface: r.out_iface || '' };
+    if (r.resolved_via && typeof r.resolved_via === 'object') o.resolved_via = r.resolved_via;   /* nx_resolved_via */
     if (Array.isArray(r.nexthops)) o.nexthops = r.nexthops.map(function (h) { return { ip: h.ip || '', iface: h.iface || '' }; });
     return o;
   };
@@ -600,6 +601,13 @@ function routeLookup(states, node, destination, vrf) {
   out.next_hop = out.route.next_hop || null;   // null: directly connected (no gateway)
   out.out_iface = out.route.out_iface || null;
   if (best.length > 1) out.also = best.slice(1).map(rowOut);   // more than one installed row with the same prefix length
+  /* nx_resolved_via (2026-11-12): a recursive next hop is reached through what FRR resolved it to; via the management network = not inside the lab */
+  var rv = out.route.resolved_via;
+  if (rv) {
+    out.resolved_via = rv;
+    out.note = 'next hop ' + (out.route.next_hop || '?') + ' is recursive; FRR resolves it via ' + (rv.ip || '?') + (rv.iface ? ' on ' + rv.iface : '') +
+      (rv.via_mgmt ? ' (the management network, left out of this view) - inside the lab topology it is not reachable' : '');
+  }
   return out;
 }
 
