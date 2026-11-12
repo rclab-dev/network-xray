@@ -173,7 +173,7 @@ If the assistant does not know which lab you mean, give the path again.
 
 | Tool | Input | Returns |
 |---|---|---|
-| `lab_state` | `path` | nodes and interfaces, links, OSPF adjacencies, BGP sessions, counts |
+| `lab_state` | `path` | `wrong` first (what is wrong, one `text` line each), then nodes and interfaces, links, OSPF adjacencies, BGP sessions, counts |
 | `why_best_path` | `path`, `node`, `prefix`, `vrf?` | BGP best path for the prefix and the reason stored with it |
 | `list_routers` | `path` | router names, which protocols have state, whether a routing table was collected, row counts |
 | `ospf_neighbors` | `path`, `router?` | per router: neighbor ID, address, state, interface, DR/BDR role, peer node |
@@ -207,6 +207,7 @@ Input: `path`.
 
 ```json
 {
+  "wrong": [],
   "nodes": [
     { "name": "r1", "nos": "ios-xe", "protocol": "bgp", "interfaces": [
       { "name": "Loopback0", "up": true, "ip": "1.1.1.1/32" },
@@ -233,11 +234,13 @@ Input: `path`.
     { "node": "r2", "peer_ip": "10.11.0.20", "remote_as": 65002, "type": "eBGP", "state": "Established", "established": true, "pfx_rcvd": 1 },
     { "node": "r3", "peer_ip": "10.11.0.10", "remote_as": 65001, "type": "eBGP", "state": "Established", "established": true, "pfx_rcvd": 0 }
   ],
-  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "bgp_established": 4, "bgp_total": 4 }
+  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "ospf_ifaces_expected": 0, "ospf_ifaces_full": 0, "ospf_ifaces_without_adjacency": 0, "bgp_established": 4, "bgp_total": 4 }
 }
 ```
 
 The r2–r3 link has `ospf_state: "Down"` because OSPF is not running toward r3. Only eBGP runs on that link.
+
+`wrong` comes first in `lab_state`, `ospf_interfaces`, `ospf_neighbors` and `bgp_neighbors`: an interface that is down, an OSPF interface that faces a neighbor (not passive) and has no adjacency, with the values both ends must share and do not (e.g. `"r1 eth1 ⇔ r2 eth1: OSPF no adjacency — hello 2 ⇔ 3"`), a Full adjacency whose ends still differ, and a BGP session that is not Established. It is empty when nothing is wrong (as here). An adjacency that never came up is not in a neighbor table, so `ospf_full` / `ospf_total` alone can read "all Full": `ospf_ifaces_expected`, `ospf_ifaces_full` and `ospf_ifaces_without_adjacency` count the OSPF interfaces (from `ospf_ifaces`; this capture has none, hence 0).
 
 ### why_best_path
 

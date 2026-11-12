@@ -169,7 +169,7 @@ test('missing, empty and non-state files are clear errors', function () {
 test('a state from an older collector (only target_node) gives empty results, not errors', function () {
   var f = tmpFile('state_old.json', JSON.stringify({ target_node: 'r1' }));
   var s = toolOk('lab_state', { path: f });
-  assert.deepStrictEqual(s.counts, { nodes: 1, links: 0, ospf_full: 0, ospf_total: 0, bgp_established: 0, bgp_total: 0 });
+  assert.deepStrictEqual(s.counts, { nodes: 1, links: 0, ospf_full: 0, ospf_total: 0, ospf_ifaces_expected: 0, ospf_ifaces_full: 0, ospf_ifaces_without_adjacency: 0, bgp_established: 0, bgp_total: 0 });
   assert.deepStrictEqual(toolOk('list_routers', { path: f }).routers[0].protocols, []);
   assert.deepStrictEqual(toolOk('ospf_neighbors', { path: f, router: 'r1' }).routers, [{ router: 'r1', neighbors: [] }]);
   assert.deepStrictEqual(toolOk('bgp_neighbors', { path: f }).routers, [{ router: 'r1', peers: [] }]);

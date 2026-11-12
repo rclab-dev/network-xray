@@ -59,8 +59,10 @@ var PATH_PROP = { type: 'string', description: 'Same input as lab_state' };
 var TOOLS = [
   {
     name: 'lab_state',
-    description: 'Read a network-xray lab state (read-only) and summarize it: nodes and interfaces, links, ' +
-      'OSPF adjacencies, BGP sessions and counts. No router is contacted.',
+    description: 'Read a network-xray lab state (read-only) and summarize it. ' + 'Starts with `wrong`: what is wrong, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ, a BGP session not Established); empty when nothing is. ' +
+      'Then nodes and interfaces, links, OSPF adjacencies, BGP sessions and counts. An adjacency that never came up is not in a ' +
+      'neighbor table, so counts also has ospf_ifaces_expected (OSPF interfaces that face a neighbor, not passive), ospf_ifaces_full and ' +
+      'ospf_ifaces_without_adjacency. No router is contacted.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -104,7 +106,7 @@ var TOOLS = [
   },
   {
     name: 'ospf_neighbors',
-    description: 'OSPF neighbors per router as collected: neighbor router ID, address, state (e.g. Full), ' +
+    description: 'Starts with `wrong`: what is wrong, for OSPF and interfaces, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ); empty when nothing is. ' + 'Then OSPF neighbors per router as collected: neighbor router ID, address, state (e.g. Full), ' +
       'interface, and DR/BDR role and peer node name when known. All routers, or one with `router`. Read-only.',
     inputSchema: {
       type: 'object',
@@ -116,7 +118,7 @@ var TOOLS = [
   },
   {
     name: 'ospf_interfaces',
-    description: 'OSPF interface values per router as collected: MTU, hello and dead intervals, network type, area, cost, ' +
+    description: 'Starts with `wrong`: what is wrong, for OSPF and interfaces, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ); empty when nothing is. ' + 'Then `mismatches` and `hints` (below), then the OSPF interface values per router as collected: MTU, hello and dead intervals, network type, area, cost, ' +
       'DR/BDR role, priority, passive, authentication (none / simple / md5) and neighbor counts. For a link it also gives the ' +
       'other end and `mismatches`: one line per value that must be equal for an adjacency but is not, e.g. ' +
       '"r1 eth1 MTU 1500 \u21d4 r2 eth1 MTU 1400". A value the router did not report is null and is not compared; each interface also has the neighbor state there, and `hints` names a link stuck in ExStart / Exchange whose MTU was not reported. ' +
@@ -131,7 +133,8 @@ var TOOLS = [
   },
   {
     name: 'bgp_neighbors',
-    description: 'BGP neighbors per router as collected: peer address, remote AS, iBGP/eBGP, state, ' +
+    description: 'Starts with `wrong`: each BGP session that is not Established, with a `text` line (empty when none). ' +
+      'Then BGP neighbors per router as collected: peer address, remote AS, iBGP/eBGP, state, ' +
       'established, and prefixes received (null when the data has no count). All routers, or one with `router`. Read-only.',
     inputSchema: {
       type: 'object',

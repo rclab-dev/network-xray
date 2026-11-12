@@ -104,6 +104,74 @@ function loadStates(input) {
 }
 
 // ---- state ----------------------------------------------------------------------------------
+// ---- what is wrong -------------------------------------------------------------------------
+// The first key of lab_state / ospf_interfaces / ospf_neighbors / bgp_neighbors: an interface that is down, an OSPF interface
+// that faces a neighbour and has no adjacency (with the values both ends must share and do not), a Full adjacency whose ends
+// still differ, a BGP session that is not Established. Same reading as the page's "What's wrong". Rows keep the node-name order.
+var OSPF_WRONG_LABEL = { area: 'area', mtu: 'MTU', hello: 'hello', dead: 'dead', network_type: 'network type', auth: 'auth', passive: 'passive' };
+function ospfFullOn(st, iface) {
+  return (Array.isArray(st.ospf_neighbors) ? st.ospf_neighbors : []).some(function (x) { return x && x.iface === iface && /^full/i.test(x.state || ''); });
+}
+// the neighbour on an OSPF interface: the row says it, else the link rows (peer_links) of that interface
+function ospfPeer(st, iface, r) {
+  if (r && r.peer) return r.peer;
+  var l = (Array.isArray(st.peer_links) ? st.peer_links : []).filter(function (x) { return x && x.iface === iface && x.peer; })[0];
+  return l ? l.peer : '';
+}
+function ospfFacing(st, iface, r) { return !!(r && r.passive !== true && ospfPeer(st, iface, r)); }
+function ospfExpected(states) {
+  var out = { expected: 0, full: 0 };
+  Object.keys(states).forEach(function (n) {
+    var o = ospfIfRows(states[n]);
+    Object.keys(o).forEach(function (i) { if (!ospfFacing(states[n], i, o[i])) return; out.expected++; if (ospfFullOn(states[n], i)) out.full++; });
+  });
+  return out;
+}
+function wrongList(states, names) {
+  var out = [], seen = Object.create(null);
+  names.forEach(function (n) {
+    var st = states[n], ifs = st.interfaces && typeof st.interfaces === 'object' ? st.interfaces : {}, down = Object.create(null);
+    Object.keys(ifs).sort().forEach(function (i) {
+      if (/^lo/i.test(i) || !ifs[i] || ifs[i].up !== false) return;
+      down[i] = true;
+      out.push({ kind: 'down', protocol: 'interface', node: n, iface: i, text: n + ' ' + i + ': interface down' });
+    });
+    var o = ospfIfRows(st);
+    Object.keys(o).sort().forEach(function (i) {
+      var r = o[i];
+      if (!ospfFacing(st, i, r) || down[i]) return;
+      var peer = ospfPeer(st, i, r);
+      var mm = Array.isArray(r.mismatch) ? r.mismatch : [], full = ospfFullOn(st, i);
+      if (!mm.length && full) return;
+      var back = [peer, r.peer_iface || '', n, i].join('\u0000');
+      if (seen[back]) return;
+      seen[[n, i, peer, r.peer_iface || ''].join('\u0000')] = true;
+      var rem = r.remote && typeof r.remote === 'object' ? r.remote : {};
+      var pairs = mm.map(function (f) { return (OSPF_WRONG_LABEL[f] || f) + ' ' + ospfIfValue(f, r[f]) + ' \u21d4 ' + ospfIfValue(f, rem[f]); }).join(', ');
+      var ends = n + ' ' + i + (r.peer_iface ? ' \u21d4 ' + peer + ' ' + r.peer_iface : ' \u2192 ' + peer);
+      var nst = ospfIfNbrState(st, i);
+      var row = { kind: mm.length && full ? 'warn' : 'down', protocol: 'ospf', node: n, iface: i, peer: peer };
+      if (r.peer_iface) row.peer_iface = r.peer_iface;
+      if (mm.length) row.mismatch = mm.slice();
+      row.text = ends + ': OSPF ' + (mm.length && full ? 'Full, but ' + pairs + (mm.length > 1 ? ' differ' : ' differs')
+        : 'no adjacency' + (nst ? ' (' + nst.split('/')[0] + ')' : '') + (pairs ? ' \u2014 ' + pairs : ''));
+      out.push(row);
+    });
+    (Array.isArray(st.bgp_neighbors) ? st.bgp_neighbors : []).forEach(function (x) {
+      if (!x || /^established$/i.test(x.state || '')) return;
+      var row = { kind: 'down', protocol: 'bgp', node: n, peer_ip: x.ip || '', state: x.state || '' };
+      if (x.remote_as != null) row.remote_as = x.remote_as;
+      if (x.vrf) row.vrf = x.vrf;
+      row.text = n + ' \u2192 ' + (x.ip || '?') + (x.remote_as != null ? ' (AS ' + x.remote_as + ')' : '') + ': BGP ' + (x.state || 'not established');
+      out.push(row);
+    });
+  });
+  return out;
+}
+function wrongFor(list, protocols, node) {
+  return list.filter(function (w) { return protocols.indexOf(w.protocol) >= 0 && (!node || w.node === node); });
+}
+
 function summarize(states) {
   var names = Object.keys(states).sort();
   var nodes = names.map(function (n) {
@@ -138,6 +206,7 @@ function summarize(states) {
     });
   });
 
+  pairOspfEnds(states, links);   // the two ends of each OSPF interface (remote / mismatch) for the wrong list below
   var ospf = [], bgp = [];
   names.forEach(function (n) {
     var s = states[n], peerOf = Object.create(null);   // interface names are data (an interface named "constructor")
@@ -158,11 +227,15 @@ function summarize(states) {
       bgp.push(o);
     });
   });
+  var exp = ospfExpected(states);
   return {
-    nodes: nodes, links: links, ospf_adjacencies: ospf, bgp_sessions: bgp,
+    wrong: wrongList(states, names), nodes: nodes, links: links, ospf_adjacencies: ospf, bgp_sessions: bgp,
     counts: {
       nodes: nodes.length, links: links.length,
       ospf_full: ospf.filter(function (x) { return /^full$/i.test(x.state); }).length, ospf_total: ospf.length,
+      // an adjacency that never came up is not in the neighbour table, so ospf_full / ospf_total alone can read "all Full":
+      // these count the OSPF interfaces that face a neighbour (not passive) and those of them with a Full neighbour
+      ospf_ifaces_expected: exp.expected, ospf_ifaces_full: exp.full, ospf_ifaces_without_adjacency: exp.expected - exp.full,
       bgp_established: bgp.filter(function (x) { return x.established; }).length, bgp_total: bgp.length
     }
   };
@@ -421,7 +494,9 @@ function ospfNeighbors(states, node) {
     }) };
   });
   var all = [].concat.apply([], routers.map(function (r) { return r.neighbors; }));
-  return { routers: routers, counts: { total: all.length, full: all.filter(function (x) { return /^full$/i.test(x.state); }).length } };
+  var sm = summarize(states);
+  return { wrong: wrongFor(sm.wrong, ['ospf', 'interface'], node), routers: routers, counts: { total: all.length, full: all.filter(function (x) { return /^full$/i.test(x.state); }).length,
+    ifaces_expected: sm.counts.ospf_ifaces_expected, ifaces_without_adjacency: sm.counts.ospf_ifaces_without_adjacency } };
 }
 
 // ---- OSPF interfaces ---------------------------------------------------------------------------
@@ -438,13 +513,14 @@ function ospfIfRows(st) {
   Object.keys(o).forEach(function (i) { if (o[i] && typeof o[i] === 'object' && !Array.isArray(o[i])) out[i] = o[i]; });
   return out;
 }
-function pairFromLinks(states) {
+function pairFromLinks(states) { pairOspfEnds(states, null); }
+function pairOspfEnds(states, links) {
   var needs = Object.keys(states).some(function (n) {
     var o = ospfIfRows(states[n]); return Object.keys(o).some(function (i) { return o[i].peer_iface == null; });
   });
   if (!needs) return;
   var adj = Object.create(null);
-  summarize(states).links.forEach(function (l) {
+  (links || summarize(states).links).forEach(function (l) {
     if (!l.a_iface || !l.b_iface) return;
     (adj[l.a] = adj[l.a] || []).push({ iface: l.a_iface, peer: l.b, peerIface: l.b_iface });
     (adj[l.b] = adj[l.b] || []).push({ iface: l.b_iface, peer: l.a, peerIface: l.a_iface });
@@ -495,7 +571,8 @@ function ospfInterfaces(states, node) {
     }) };
   });
   var all = [].concat.apply([], routers.map(function (r) { return r.interfaces; }));
-  return { routers: routers, mismatches: mismatches, hints: hints,
+  // only ospf_ifaces / interfaces / neighbours are read here (not the whole lab_state), so an odd field elsewhere is not an error
+  return { wrong: wrongFor(wrongList(states, Object.keys(states).sort()), ['ospf', 'interface'], node), mismatches: mismatches, hints: hints, routers: routers,
     counts: { interfaces: all.length, compared: all.filter(function (x) { return x.mismatch; }).length,
       with_mismatch: all.filter(function (x) { return x.mismatch && x.mismatch.length; }).length } };
 }
@@ -511,7 +588,7 @@ function bgpNeighbors(states, node) {
     }) };
   });
   var all = [].concat.apply([], routers.map(function (r) { return r.peers; }));
-  return { routers: routers, counts: { total: all.length, established: all.filter(function (x) { return x.established; }).length } };
+  return { wrong: wrongFor(summarize(states).wrong, ['bgp'], node), routers: routers, counts: { total: all.length, established: all.filter(function (x) { return x.established; }).length } };
 }
 
 // ---- route lookup ---------------------------------------------------------------------------
@@ -654,8 +731,15 @@ function textLine(s) { return clip(plain(s), MAX_LINE); }
 function ospfStyle(v) { return /^full/i.test(v) ? 'green' : /^(2-?way|-)$/i.test(v) ? null : 'yellow'; }
 function bgpStyle(v) { return /^established$/i.test(v) ? 'green' : 'red'; }
 
+// what is wrong, first, when there is something (an all-good lab prints the tables as before)
+function wrongTable(list, color) {
+  if (!list || !list.length) return [];
+  return [title("What's wrong (" + list.length + ")", color)].concat(list.map(function (w) {
+    return textLine('  ' + paint(w.kind === 'warn' ? '!' : 'x', w.kind === 'warn' ? 'yellow' : 'red', color) + ' ' + w.text);
+  })).concat(['']);
+}
 function ospfIfTable(res, color) {
-  var out = [title('OSPF interfaces (' + res.counts.interfaces + ')', color)], rows = [];
+  var out = wrongTable(res.wrong, color).concat([title('OSPF interfaces (' + res.counts.interfaces + ')', color)]), rows = [];
   res.routers.forEach(function (r) {
     r.interfaces.forEach(function (i) {
       var bad = {}; (i.mismatch || []).forEach(function (f) { bad[f] = true; });
@@ -684,7 +768,7 @@ function ospfIfTable(res, color) {
 
 function stateTable(states, color) {
   var lr = listRouters(states), on = ospfNeighbors(states), bn = bgpNeighbors(states);
-  var out = [title('Routers (' + lr.count + ')', color)];
+  var out = wrongTable(summarize(states).wrong, color).concat([title('Routers (' + lr.count + ')', color)]);
   var rrows = lr.routers.map(function (r) {
     var ifs = states[r.name].interfaces || {}, names = Object.keys(ifs);
     var up = names.filter(function (i) { return ifs[i] && ifs[i].up; }).length;

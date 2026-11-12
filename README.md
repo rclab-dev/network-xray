@@ -822,11 +822,12 @@ node scripts/xray-query.js state test/fixtures/iosxe-q15
 node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
 ```
 
-`state` lists nodes, links, OSPF adjacencies and BGP sessions (trimmed here):
+`state` starts with `wrong` (what is wrong: an interface down, an OSPF interface with no adjacency and the values both ends must share and do not, a BGP session not Established; empty here), then nodes, links, OSPF adjacencies and BGP sessions (trimmed here):
 
 ```json
 {
-  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "bgp_established": 4, "bgp_total": 4 },
+  "wrong": [],
+  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "ospf_ifaces_expected": 0, "ospf_ifaces_full": 0, "ospf_ifaces_without_adjacency": 0, "bgp_established": 4, "bgp_total": 4 },
   "ospf_adjacencies": [ { "node": "r1", "neighbor_id": "2.2.2.2", "iface": "Ethernet0/1", "state": "Full", "role": "DR", "peer": "r2" } ],
   "bgp_sessions": [ { "node": "r1", "peer_ip": "2.2.2.2", "remote_as": 65001, "type": "iBGP", "state": "Established", "established": true } ]
 }
@@ -1687,11 +1688,12 @@ ping/パケットのアニメはこれらのデモでは非表示(通信内容�
 node scripts/xray-query.js state test/fixtures/iosxe-q15
 node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
 ```
-`state` はノード・リンク・OSPF の隣接・BGP のセッション (ここでは一部省略):
+`state` は最初に `wrong` (問題のある所: down の interface・隣接の無い OSPF の interface と両端で食い違う値・確立していない BGP。ここでは空)、続いてノード・リンク・OSPF の隣接・BGP のセッション (ここでは一部省略):
 
 ```json
 {
-  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "bgp_established": 4, "bgp_total": 4 },
+  "wrong": [],
+  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "ospf_ifaces_expected": 0, "ospf_ifaces_full": 0, "ospf_ifaces_without_adjacency": 0, "bgp_established": 4, "bgp_total": 4 },
   "ospf_adjacencies": [ { "node": "r1", "neighbor_id": "2.2.2.2", "iface": "Ethernet0/1", "state": "Full", "role": "DR", "peer": "r2" } ],
   "bgp_sessions": [ { "node": "r1", "peer_ip": "2.2.2.2", "remote_as": 65001, "type": "iBGP", "state": "Established", "established": true } ]
 }

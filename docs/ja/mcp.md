@@ -167,7 +167,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 
 | ツール | 入力 | 返す物 |
 |---|---|---|
-| `lab_state` | `path` | ノードとインターフェース・リンク・OSPF の隣接・BGP のセッション・件数 |
+| `lab_state` | `path` | 最初に `wrong` (問題のある所・1 件 1 行の `text`)、続いて ノードとインターフェース・リンク・OSPF の隣接・BGP のセッション・件数 |
 | `why_best_path` | `path`, `node`, `prefix`, `vrf?` | そのプレフィックスの BGP の最良経路と、一緒に保存されている理由 |
 | `list_routers` | `path` | ルータの名前・state のあるプロトコル・ルーティングテーブルを集めたか・行の数 |
 | `ospf_neighbors` | `path`, `router?` | ルータごと: ネイバー ID・アドレス・状態・インターフェース・DR/BDR の役割・相手のノード |
@@ -201,6 +201,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 
 ```json
 {
+  "wrong": [],
   "nodes": [
     { "name": "r1", "nos": "ios-xe", "protocol": "bgp", "interfaces": [
       { "name": "Loopback0", "up": true, "ip": "1.1.1.1/32" },
@@ -227,11 +228,13 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
     { "node": "r2", "peer_ip": "10.11.0.20", "remote_as": 65002, "type": "eBGP", "state": "Established", "established": true, "pfx_rcvd": 1 },
     { "node": "r3", "peer_ip": "10.11.0.10", "remote_as": 65001, "type": "eBGP", "state": "Established", "established": true, "pfx_rcvd": 0 }
   ],
-  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "bgp_established": 4, "bgp_total": 4 }
+  "counts": { "nodes": 3, "links": 2, "ospf_full": 2, "ospf_total": 2, "ospf_ifaces_expected": 0, "ospf_ifaces_full": 0, "ospf_ifaces_without_adjacency": 0, "bgp_established": 4, "bgp_total": 4 }
 }
 ```
 
 r2–r3 のリンクが `ospf_state: "Down"` なのは、r3 に向けて OSPF が動いていないからです。このリンクでは eBGP だけが動いています。
+
+`lab_state`・`ospf_interfaces`・`ospf_neighbors`・`bgp_neighbors` は最初に `wrong` を返します: down の interface、隣に面していて (passive でない) 隣接の無い OSPF の interface と両端で食い違う値 (例 `"r1 eth1 ⇔ r2 eth1: OSPF no adjacency — hello 2 ⇔ 3"`)、Full でも両端が食い違う隣接、確立していない BGP。何も無ければ空です (この例)。一度も上がらなかった隣接は neighbor の表に載らないので、`ospf_full` / `ospf_total` だけでは「全部 Full」に見えることがあります: `ospf_ifaces_expected`・`ospf_ifaces_full`・`ospf_ifaces_without_adjacency` が OSPF の interface を数えます (`ospf_ifaces` から・この取り込みには無いので 0)。
 
 ### why_best_path
 

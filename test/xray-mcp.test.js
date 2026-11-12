@@ -163,7 +163,9 @@ test('ospf_neighbors: per router neighbor, state, interface', function () {
   assert.deepStrictEqual(all.routers[0].neighbors[0],
     { neighbor: '2.2.2.2', address: '10.10.0.20', state: 'Full', interface: 'Ethernet0/1', role: 'DR', peer: 'r2' });
   assert.deepStrictEqual(all.routers[2].neighbors, []);
-  assert.deepStrictEqual(all.counts, { total: 2, full: 2 });
+  assert.deepStrictEqual(all.counts, { total: 2, full: 2, ifaces_expected: 0, ifaces_without_adjacency: 0 });
+  assert.deepStrictEqual(all.wrong, [], 'nothing wrong in q15: wrong is the first key and empty');
+  assert.strictEqual(Object.keys(all)[0], 'wrong');
   var one = ok(s.byId[31]);
   assert.strictEqual(one.routers.length, 1);
   assert.deepStrictEqual(one.routers[0].neighbors.map(function (n) { return n.neighbor + '@' + n.interface; }),

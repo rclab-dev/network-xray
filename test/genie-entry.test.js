@@ -29,9 +29,18 @@ function comparable(states) {
     r2: [{ iface: 'Ethernet0/1', peer: 'r1', peerIface: 'Ethernet0/1' }]
   });
 }
+// lab_state starts with `wrong`, derived from ospf_ifaces: the values one route has and the other does not (the exception
+// table) show up there as the mismatch list and the "— hello … ⇔ …" tail of the text. Same lines otherwise.
+function withoutMismatchValues(sum) {
+  sum.wrong.forEach(function (w) { delete w.mismatch; w.text = w.text.split(' — ')[0]; });
+  return sum;
+}
 test('Genie loader and text route answer state and ospf-if equally within the exception table', function () {
   var actual = query.loadStates(dir), expected = textStates();
-  assert.deepStrictEqual(query.summarize(actual), query.summarize(expected));
+  var sa = query.summarize(actual), se = query.summarize(expected);
+  assert.deepStrictEqual(sa.wrong.map(function (w) { return w.text.split(' — ')[0]; }), ['r1 Ethernet0/1 ⇔ r2 Ethernet0/1: OSPF no adjacency'],
+    'both routes name the q5 adjacency that does not come up');
+  assert.deepStrictEqual(withoutMismatchValues(sa), withoutMismatchValues(se));
   assert.deepStrictEqual(query.ospfInterfaces(comparable(actual)), query.ospfInterfaces(comparable(expected)));
 });
 test('without topology the shared Ethernet subnet is paired in both directions', function () {

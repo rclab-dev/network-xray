@@ -202,7 +202,7 @@ test('state: an empty router state prints zero counts and "none" sections', func
   var r = assertStateTableMatchesJson(dir);
   assert.deepStrictEqual(r.json.nodes, [{ name: 'r1', interfaces: [] }]);
   assert.deepStrictEqual(r.json.links, []);
-  assert.deepStrictEqual(r.json.counts, { nodes: 1, links: 0, ospf_full: 0, ospf_total: 0, bgp_established: 0, bgp_total: 0 });
+  assert.deepStrictEqual(r.json.counts, { nodes: 1, links: 0, ospf_full: 0, ospf_total: 0, ospf_ifaces_expected: 0, ospf_ifaces_full: 0, ospf_ifaces_without_adjacency: 0, bgp_established: 0, bgp_total: 0 });
   assert.strictEqual(r.table, [
     'Routers (1)',
     '  ROUTER  NOS  PROTOCOLS  IFACES UP  OSPF NBRS  BGP PEERS  BGP ROUTES  RIB ROUTES',
