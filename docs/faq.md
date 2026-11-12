@@ -96,6 +96,7 @@ is asked again about 10 seconds later, while the rest of the picture keeps updat
 The node still appears in the topology, drawn grey, and its DeepDive says that network-xray does not read inside this device. The
 other routers are read as usual. Other Cisco IOS-XE kinds (`cisco_c8000v`, `cisco_csr1000v`, `cisco_cat9kv`) are not read
 either. See [When to use](../README.md#when-to-use) and [Cisco IOS-XE (IOL)](../README.md#cisco-ios-xe-iol).
+A node labelled `graph-hide` with no links (nrx's graphite web view) is not a device of the lab: it is left out, not drawn grey.
 
 ### Are VRFs supported?
 

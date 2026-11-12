@@ -233,10 +233,43 @@ nodes.forEach(function (n) {
   var km = topo.match(new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':\\s*\\{?[\\s\\S]{0,180}?kind:\\s*["\']?([\\w./-]+)'));
   kindOf[n] = km ? km[1] : '';
 });
-nodes = nodes.filter(function (n) {   /* nx_isolated_nodes */
-  if (linked[n] || !/^(bridge|ovs-bridge|host)$/i.test(kindOf[n] || '')) return true;
-  delete adj[n]; return false;
+/* nx_graph_hide (2026-11-12): the text of one node's own definition - the entry directly under nodes: with that name
+   (quoted or not, at the indentation of the entries under nodes:), its nested block (blank lines allowed) or its one-line
+   {…} form - and the text of its labels:. One node's labels never land on another node, and a key deeper inside another
+   node (an env: or exec: that happens to contain the name) is not a node. */
+var _nodesInd = null;   // the indentation of the entries under nodes: (from the first one); '' = no nodes: section
+function nodeDef(n) {
+  if (_nodesInd === null) {
+    var L = topo.split(/\r?\n/), base = -1, i, w = function (s) { return s.match(/^[ \t]*/)[0]; };
+    _nodesInd = '';
+    for (i = 0; i < L.length; i++) if (/^[ \t]*nodes:[ \t]*(#.*)?$/.test(L[i])) { base = w(L[i]).length; break; }
+    if (base >= 0) for (i++; i < L.length; i++) { if (!L[i].trim() || /^[ \t]*#/.test(L[i])) continue; if (w(L[i]).length > base) _nodesInd = w(L[i]); break; }
+  }
+  if (!_nodesInd) return '';
+  var nm = /^[ \t]*nodes:[ \t]*(#.*)?$/m.exec(topo), body = topo.slice(nm.index);   /* under nodes: only */
+  var esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), key = '["\']?' + esc + '["\']?:';
+  var m = new RegExp('^(' + _nodesInd + ')' + key + '[ \\t]*\\r?\\n((?:\\1[ \\t]+.*\\r?\\n?|[ \\t]*\\r?\\n)*)', 'm').exec(body)
+       || new RegExp('^' + _nodesInd + key + '[ \\t]*(\\{.*)$', 'm').exec(body);
+  return m ? m[m.length - 1] : '';
+}
+function nodeLabels(n) {   // the text of the node's labels: (nested block, or the {…} form in either node form)
+  var d = nodeDef(n);
+  var m = /^([ \t]+)labels:[ \t]*\r?\n((?:\1[ \t]+.*\r?\n?|[ \t]*\r?\n)*)/m.exec(d) || /(^|[\s{,])labels:[ \t]*(\{[^}]*\})/.exec(d);
+  return m ? m[m.length - 1] : '';
+}
+/* nx_graph_hide: a node whose labels: has graph-hide: yes / true / on / 1 (nrx's graphite web view, which containerlab's own
+   graph hides too) and that has no links is not a router: left out, like a bridge, instead of being shown as a node
+   network-xray cannot read. With links it is a device of the lab and is read as before. The whole value must be one of
+   the four words (quotes and a trailing comment allowed). */
+function isHidden(n) { return /(^|[\s{,])["']?graph-hide["']?[ \t]*:[ \t]*["']?(yes|true|on|1)["']?[ \t]*(#.*)?(\r?$|[,}])/im.test(nodeLabels(n)); }
+var hidden = [];
+nodes = nodes.filter(function (n) {   /* nx_isolated_nodes + nx_graph_hide */
+  if (linked[n]) return true;
+  if (/^(bridge|ovs-bridge|host)$/i.test(kindOf[n] || '')) { delete adj[n]; return false; }
+  if (isHidden(n)) { hidden.push(n); delete adj[n]; return false; }
+  return true;
 });
+if (hidden.length) console.error('   left out (label graph-hide, no links): ' + hidden.map(shown).join(', '));
 if (!nodes.length) { console.error('!! no routers in ' + topoPath); process.exit(1); }
 function isSrl(kind) { return /srl|srlinux|nokia/i.test(kind || ''); }
 // containerlab short iface (e1-1) -> SR Linux routed subinterface (ethernet-1/1.0)
@@ -448,12 +481,9 @@ function readProblem() {
    Any lab (netlab: clab.labels: { graph-level: 1 } on a node, with the network-xray netlab defaults). It wins over the
    netlab group rule; nodes without the label go below the labelled ones. No label anywhere -> null. */
 function graphLevels() {
-  var lv = {}, any = false, nm = /^[ \t]*nodes:[ \t]*$/m.exec(topo), body = nm ? topo.slice(nm.index) : topo;   /* under nodes: only */
+  var lv = {}, any = false;
   nodes.forEach(function (n) {
-    var esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    var m = new RegExp('^([ \\t]+)' + esc + ':[ \\t]*\\r?\\n((?:\\1[ \\t]+.*\\r?\\n?|[ \\t]*\\r?\\n)*)', 'm').exec(body)
-         || new RegExp('^[ \\t]+' + esc + ':[ \\t]*(\\{.*)$', 'm').exec(body);   /* nested block (blank lines allowed) or the one-line form */
-    var g = m && /graph-level['"]?[ \t]*:[ \t]*['"]?(\d+)/.exec(m[m.length - 1]);
+    var g = /graph-level['"]?[ \t]*:[ \t]*['"]?(\d+)/.exec(nodeLabels(n));   /* nx_graph_hide: the node's own labels: (nodeLabels) */
     if (g) { lv[n] = +g[1]; any = true; }
   });
   if (!any) return null;

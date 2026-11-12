@@ -95,6 +95,7 @@ SuzieQ は多くの機器の状態を継続的に集め、表として問い合�
 ノードはトポロジに灰色で描かれ、DeepDive には network-xray が読むルータではないと出ます。ほかのルータは
 いつもどおり読みます。ほかの Cisco IOS-XE の kind (`cisco_c8000v`・`cisco_csr1000v`・`cisco_cat9kv`) もまだ読みません。
 [When to use](../../README.md#when-to-use) と [Cisco IOS-XE (IOL)](../../README.md#cisco-ios-xe-iol) を参照してください。
+`graph-hide` の label が付いたリンクの無いノード (nrx の graphite = トポロジの Web 表示) はラボの機器ではないので、灰色で描かず、図から外します。
 
 ### VRF には対応していますか?
 
