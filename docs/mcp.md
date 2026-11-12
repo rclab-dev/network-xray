@@ -155,8 +155,8 @@ from a project's `.mcp.json`. Until you approve it, `claude mcp get network-xray
 ```
 
 Many clients also ask before each tool call, or the first
-time a tool is called. All seven tools are marked read-only (`readOnlyHint: true`, `destructiveHint: false`), and they
-only read the `path` you give them. A file that does not hold network-xray state is refused with
+time a tool is called. The eight default tools are marked read-only (`readOnlyHint: true`, `destructiveHint: false`), and they
+only read the `path` you give them (the opt-in `collect` is marked `readOnlyHint: false`, `destructiveHint: false`). A file that does not hold network-xray state is refused with
 `not a network-xray state file`; the error never quotes the file.
 
 ## Ask

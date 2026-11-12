@@ -149,8 +149,8 @@ Claude Desktop では `claude_desktop_config.json` に書きます (Settings →
   Status: ⏸ Pending approval (run `claude` to approve)
 ```
 
-多くのクライアントは、ツールを呼ぶたび、または初めてツールを呼ぶ時にも確認します。7 つのツールはすべて読むだけと
-印が付いており (`readOnlyHint: true`・`destructiveHint: false`)、渡した `path` だけを読みます。network-xray の state を
+多くのクライアントは、ツールを呼ぶたび、または初めてツールを呼ぶ時にも確認します。既定の 8 つのツールはすべて読むだけと
+印が付いており (`readOnlyHint: true`・`destructiveHint: false`)、渡した `path` だけを読みます (選んで使う `collect` の印は `readOnlyHint: false`・`destructiveHint: false`)。network-xray の state を
 持たないファイルは `not a network-xray state file` で断り、エラーにファイルの中身は出しません。
 
 ## 聞く
