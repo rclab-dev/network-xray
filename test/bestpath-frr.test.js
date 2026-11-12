@@ -203,3 +203,11 @@ test('older-path without selectionReason: fallback text names Older Path for eBG
 test('older-path without selectionReason: same words as xray-api.js', function () {   /* nx_bestpath_fix */
   assert.match(withoutReason('older-path'), /all attributes equal — FRR decides by a step the table does not show \(eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID\)/);   /* nx_bp_tie_order */
 });
+test('IOS-XE node without a reason: the tie is put on the unshown steps too, not asserted as Older Path', function () {   /* nx_ios_tie_unasserted */
+  ctx.window._lastXrayState = { nos: 'ios-xe' };
+  try {
+    var t = withoutReason('older-path');
+    assert.match(t, /IOS-XE decides by a step the table does not show \(eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID\)/, t);
+    assert.doesNotMatch(t, /breaks the tie/, t);
+  } finally { delete ctx.window._lastXrayState; }
+});

@@ -175,11 +175,12 @@
     }
     var _rfc5004 = ' (<a class="bgp-rfc-link" href="https://www.rfc-editor.org/rfc/rfc5004" target="_blank" rel="noopener">RFC 5004</a>; Older Path is skipped with compare-routerid)';   /* nx_bp_tie_order */
     // nos_wording (2026-10-06): an IOS-XE node (state.nos = 'ios-xe', set by the IOS-XE collector) names
-    //   IOS-XE, whose Older Path step applies only between eBGP paths (iBGP ties go to Router ID). FRR text unchanged.
-    var _tieBy = _bgpIsIos() ? 'IOS-XE breaks the tie by <b>Older Path</b> (eBGP paths; iBGP → Router ID)' : 'FRR decides by a step the table does not show (eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID)';   /* nx_bp_tie_order */
+    //   IOS-XE. IOS-XE also runs eBGP > iBGP and IGP metric before Older Path, so it is worded like FRR:
+    //   a step the table does not show, no single step asserted.   /* nx_ios_tie_unasserted (2026-11-12) */
+    var _tieBy = _bgpIsIos() ? 'IOS-XE decides by a step the table does not show (eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID)' : 'FRR decides by a step the table does not show (eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID)';   /* nx_bp_tie_order */
     if (dec.kind === 'medskip') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>MED not compared</b> (different neighbor AS) — ' + _tieBy + _rfc5004 + '</div>' + ch;
     if (dec.kind === 'tie') return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → all visible attributes equal — ' + _tieBy + _rfc5004 + '</div>' + ch;
-    return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>no single decider</b> — lower-level tiebreak (Older Path / Router ID)</div>' + ch;
+    return '<div class="bgp-reason bgp-reason-note">★ ' + pH + ' → <b>no single decider</b> — lower-level tiebreak (a step the table does not show)</div>' + ch;
   }
   // --- Interactive decider: Tier2 popover (all decision steps) + Tier3 full-bracket link. ---
   // gallery is IIFE-private, so no inline onclick — the decision panel gets ONE delegated handler
