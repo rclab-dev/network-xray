@@ -10929,7 +10929,7 @@ function _xrayDeepDeconflict() {
         });
       }
     }
-    var fwd = !(axes && axes.forwarding === false);
+    var fwd = !(axes && axes.forwarding === false) && node.forwarding !== false;
     var selL = links.filter(function(L) {
       return L.link.selected;
     })[0] || links[0];
@@ -11047,6 +11047,13 @@ function _xrayDeepDeconflict() {
   }
   function fromLegacyState(state) {
     var ifs = state.interfaces || {}, links = [];
+    var rr = state.route_resolution, oif = rr && rr.out_iface;
+    if (!oif && rr && rr.matched_prefix) {
+      var row = (state.routing_table || []).filter(function(r) {
+        return r.prefix === rr.matched_prefix;
+      })[0];
+      oif = row && row.out_iface;
+    }
     Object.keys(ifs).forEach(function(ifn) {
       if (ifn === "lo") return;
       var peer = "";
@@ -11054,21 +11061,32 @@ function _xrayDeepDeconflict() {
         var m = /^(.+)_iface$/.exec(k);
         if (m && state[k] === ifn) peer = m[1];
       });
+      var link = (state.peer_links || []).filter(function(l) {
+        return l.iface === ifn;
+      })[0];
+      if (link) peer = link.peer;
       var proto = peer && state[peer + "_proto"] || state.protocol || "ospf";
-      var up = peer && state[peer + "_has_full"] != null ? !!state[peer + "_has_full"] : true;
+      var linkUp = !(ifs[ifn] && ifs[ifn].up === false);
+      var up = linkUp && !!(peer && state[peer + "_has_full"]);
       links.push({
         iface: ifn,
         peer: peer,
+        up: linkUp,
+        selected: !!oif && ifn === oif,
         protocols: [ {
           proto: proto === "bgp" ? "bgp" : "ospf",
           up: up
         } ]
       });
     });
+    var fw = links.some(function(l) {
+      return l.selected && l.up;
+    });
     return {
       target: state.target_node,
       links: links,
-      positions: state._positions || {}
+      positions: state._positions || {},
+      forwarding: fw
     };
   }
   function render(container, node, axes) {
