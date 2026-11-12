@@ -27,6 +27,7 @@
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+  function attr(s) { return esc(s).replace(/'/g, '&#39;'); }   // an attribute value: quotes of both kinds escaped
   function panel(title, bodyHtml) {
     return '<div class="xnp-panel"><div class="xnp-title">' + esc(title) + '</div>' + bodyHtml + '</div>';
   }
@@ -158,12 +159,20 @@
     var rows = rt.map(function (r) {
       var on = sel && r.prefix === sel;
       var dst = r.out_iface || r.next_hop || '—';
-      return '<tr' + (on ? ' class="xnp-sel"' : '') + (clickable ? ' data-prefix="' + esc(r.prefix) + '"' : '') + '>' +
+      return '<tr' + (on ? ' class="xnp-sel"' : '') + (clickable ? ' data-prefix="' + esc(r.prefix) + '"' : '') +
+        ' data-find="' + attr([r.prefix, dst, r.protocol || ''].join(' ').toLowerCase()) + '">' +
         '<td>' + esc(r.prefix) + '</td>' +
         '<td>→ ' + esc(dst) + '</td>' +
         '<td class="xnp-proto">' + esc(r.protocol || '') + '</td></tr>';
     }).join('');
-    return panel('Routing table', '<table class="xnp-rt' + (clickable ? ' xnp-click' : '') + '"><tbody>' + rows + '</tbody></table>');
+    // a filter (prefix / interface / protocol, typed text kept across re-renders) and the count per exit interface
+    var byIf = {}; rt.forEach(function (r) { var k = r.out_iface || r.next_hop || '—'; byIf[k] = (byIf[k] || 0) + 1; });
+    var counts = Object.keys(byIf).sort(function (a, b) { return byIf[b] - byIf[a] || (a < b ? -1 : 1); })
+      .map(function (k) { return '<span class="xnp-cnt" data-find="' + attr(k.toLowerCase()) + '">' + esc(k) + ' ' + byIf[k] + '</span>'; }).join(' ');
+    var tools = rt.length > 8 ? '<div class="xnp-tools"><input class="xnp-find" type="search" placeholder="filter: prefix, interface, protocol" aria-label="filter the routing table">' +
+      '<div class="xnp-counts">' + rt.length + ' routes · ' + counts + '</div></div>' : '';
+    // the table scrolls inside its own box (as in the Full DeepDive): a long table never pushes the figure out of view
+    return panel('Routing table', tools + '<div class="xnp-scroll xnp-rt-box"><table class="xnp-rt' + (clickable ? ' xnp-click' : '') + '"><tbody>' + rows + '</tbody></table></div>');
   }
 
   // ---------- Node figure (position-INDEPENDENT: own fan layout, never reads graph coords) ----------
@@ -264,6 +273,33 @@
     return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
 
+  function wrongHtml(state) {
+    var ifs = state.interfaces || {}, o = state.ospf_ifaces, nb = Array.isArray(state.bgp_neighbors) ? state.bgp_neighbors : null;
+    var hasO = !!(o && typeof o === 'object' && !Array.isArray(o));
+    if (!hasO && !nb) return '';
+    var items = [];
+    Object.keys(ifs).forEach(function (k) { if (!/^lo/i.test(k) && ifs[k] && ifs[k].up === false) items.push(['down', esc(k) + ': interface down']); });
+    var nbrState = function (ifn) { var l = Array.isArray(state.ospf_neighbors) ? state.ospf_neighbors : []; for (var i = 0; i < l.length; i++) if (l[i] && l[i].iface === ifn && l[i].state) return String(l[i].state).split('/')[0]; return ''; };
+    var lbl = { mtu: 'MTU', hello: 'hello', dead: 'dead', network_type: 'network type', area: 'area', auth: 'auth', passive: 'passive' };
+    var val = function (f, v) { return v == null || v === '' ? '?' : f === 'passive' ? (v ? 'yes' : 'no') : String(v); };
+    if (hasO) Object.keys(o).forEach(function (ifn) {
+      var r = o[ifn]; if (!r || typeof r !== 'object' || Array.isArray(r) || (ifs[ifn] && ifs[ifn].up === false)) return;
+      var mm = Array.isArray(r.mismatch) ? r.mismatch : [], st = nbrState(ifn), adj = r.neighbors_adjacent > 0 || /^full/i.test(st);
+      var rem = r.remote && typeof r.remote === 'object' ? r.remote : {};
+      var pairs = mm.map(function (f) { return (lbl[f] || f) + ' ' + val(f, r[f]) + ' \u21d4 ' + val(f, rem[f]); }).join(' · ');
+      var head = esc(ifn) + (r.peer ? ' \u2192 ' + esc(r.peer) : '') + ': OSPF ';
+      if (mm.length && adj) items.push(['warn', head + 'Full, but ' + esc(pairs)]);
+      else if (mm.length) items.push(['down', head + 'no adjacency \u2014 ' + esc(pairs)]);
+      else if (!adj && r.peer && r.passive !== true && (r.neighbors_adjacent === 0 || (st && !/^full/i.test(st)))) items.push(['down', head + 'no adjacency' + (st ? ' (' + esc(st) + ')' : '')]);
+    });
+    (nb || []).forEach(function (b) {
+      if (!b || /^established/i.test(String(b.state || ''))) return;
+      items.push(['down', 'BGP ' + esc(b.ip || b.peer_ip || '?') + (b.remote_as ? ' (AS ' + esc(b.remote_as) + ')' : '') + ': ' + esc(b.state || 'not established')]);
+    });
+    var body = items.length ? items.map(function (it) { return '<div class="xnp-wrong-' + it[0] + '">' + (it[0] === 'warn' ? '\u26a0 ' : '\u2715 ') + it[1] + '</div>'; }).join('')
+      : '<div class="xnp-wrong-none">\u2713 No mismatch or down adjacency</div>';
+    return panel("What's wrong", body);
+  }
   function bgpHtml(state) {
     var routes = state.bgp_routes;
     if (!routes || !routes.length) {
@@ -273,7 +309,7 @@
     }
     var v = bgpView(routes, { nos: state.nos });
     var tgt = state.target_node ? ' (' + state.target_node + ')' : '';
-    return panel('BGP Table — show ip bgp' + tgt, v.table) +
+    return panel('BGP Table — show ip bgp' + tgt, '<div class="xnp-scroll xnp-bgp-box">' + v.table + '</div>') +
       (v.decision ? panel('Best-Path Decision', v.decision) : '');
   }
 
@@ -310,12 +346,45 @@
       '.xnp-chain .xnp-step-tie{color:var(--xnp-muted)}.xnp-chain .xnp-step-win{color:var(--xnp-decider-strong);font-weight:700}.xnp-chain .xnp-step-amb{color:var(--xnp-decider);font-weight:700}' +
       '.xnp-legend{margin-top:6px;font-size:10px;color:var(--xnp-muted)}' +
       '.xnp-dim{color:var(--xnp-muted)}' +
-      '.xnp-figpanel{padding:6px 8px}.xnp-fig{display:block;max-height:360px}' +
+      '.xnp-figpanel{padding:6px 8px;position:sticky;top:0;z-index:2}.xnp-fig{display:block;max-height:360px}' +
+      // the scroll bar is always shown (overflow-y: scroll = the browser's own bar, dark with color-scheme; Firefox: thin), and a soft
+      // shade at the top / bottom edge says there is more (also where the system hides the bar until touched: macOS, phones)
+      '.xnp-scroll{max-height:var(--xnp-scroll-h,240px);overflow-y:scroll;overscroll-behavior:contain;color-scheme:dark;' +
+        'background:linear-gradient(var(--xnp-bg) 30%,rgba(11,20,28,0)) center top,linear-gradient(rgba(11,20,28,0),var(--xnp-bg) 70%) center bottom,' +
+        'radial-gradient(farthest-side at 50% 0,rgba(77,208,225,.35),rgba(0,0,0,0)) center top,radial-gradient(farthest-side at 50% 100%,rgba(77,208,225,.35),rgba(0,0,0,0)) center bottom;' +
+        'background-repeat:no-repeat;background-size:100% 28px,100% 28px,100% 10px,100% 10px;background-attachment:local,local,scroll,scroll}' +
+      '@supports (-moz-appearance:none){.xnp-scroll{scrollbar-width:thin;scrollbar-color:#3a9aa8 #12232e}}' +
+      '.xnp-tools{margin:0 0 6px 0}.xnp-find{width:100%;box-sizing:border-box;background:var(--xnp-bg);color:var(--xnp-fg);border:1px solid var(--xnp-border);border-radius:4px;padding:3px 6px;font:inherit}' +
+      '.xnp-counts{margin-top:4px;font-size:10px;color:var(--xnp-muted);line-height:1.6}.xnp-cnt{cursor:pointer;white-space:nowrap}.xnp-cnt:hover{color:var(--xnp-accent)}' +
+      '.xnp-wrong-down{color:#ff6b6b}.xnp-wrong-warn{color:var(--xnp-decider-strong)}.xnp-wrong-none{color:var(--xnp-ok)}' +
       '.xnp-rt.xnp-click tr[data-prefix]{cursor:pointer}' +
       '.xnp-rt.xnp-click tr[data-prefix]:hover td{background:var(--xnp-sel-bg)}';
     document.head.appendChild(s);
   }
 
+  // the routing table filter: hide the rows that do not contain the text; a count (an exit interface) fills the box
+  function applyFind(container, text) {
+    var t = String(text || '').trim().toLowerCase();
+    var rows = container.querySelectorAll('.xnp-rt tr[data-find]');
+    Array.prototype.forEach.call(rows, function (tr) { tr.style.display = !t || tr.getAttribute('data-find').indexOf(t) >= 0 ? '' : 'none'; });
+  }
+  function wireFind(container, focus) {
+    var inp = container.querySelector('.xnp-find'); if (!inp) return;
+    inp.value = container._xnpFind || '';
+    applyFind(container, inp.value);
+    inp.addEventListener('input', function () { container._xnpFind = inp.value; applyFind(container, inp.value); });
+    Array.prototype.forEach.call(container.querySelectorAll('.xnp-cnt'), function (c) {
+      c.addEventListener('click', function () { inp.value = c.getAttribute('data-find'); container._xnpFind = inp.value; applyFind(container, inp.value); });
+    });
+    if (focus) { try { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e) {} }
+  }
+  // scroll only the box (not the page or the host) so that the row is inside it; scrollIntoView would move every scroller
+  function boxShow(box, row) {
+    if (!box || !row || !box.getBoundingClientRect) return;
+    var b = box.getBoundingClientRect(), r = row.getBoundingClientRect();
+    if (r.top < b.top) box.scrollTop -= (b.top - r.top);
+    else if (r.bottom > b.bottom) box.scrollTop += (r.bottom - b.bottom);
+  }
   function defaultSel(state) {
     if (state.route_resolution && state.route_resolution.matched_prefix) return state.route_resolution.matched_prefix;
     var rt = state.routing_table || [];
@@ -336,7 +405,15 @@
     var fig = !!opts.figure;
     var sel = fig ? (container._xnpSel || defaultSel(state)) : ((state.route_resolution && state.route_resolution.matched_prefix) || '');
     if (fig) container._xnpSel = sel;
-    container.innerHTML = (fig ? figureSvg(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
+    var keep = {}, same = container._xnpBoxNode === state.target_node;   // the boxes are rebuilt below: keep where the reader had scrolled them (same node only)
+    ['.xnp-rt-box', '.xnp-bgp-box'].forEach(function (q) { var b = container.querySelector(q); if (b && same) keep[q] = b.scrollTop; });
+    container._xnpBoxNode = state.target_node;
+    var _f0 = container.querySelector('.xnp-find'), _hadFocus = !!(_f0 && typeof document !== 'undefined' && document.activeElement === _f0);
+    if (!same) container._xnpFind = ''; else if (_f0) container._xnpFind = _f0.value;
+    container.innerHTML = wrongHtml(state) + (fig ? figureSvg(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
+    wireFind(container, _hadFocus);
+    Object.keys(keep).forEach(function (q) { var b = container.querySelector(q); if (b) b.scrollTop = keep[q]; });
+    boxShow(container.querySelector('.xnp-rt-box'), container.querySelector('.xnp-rt tr.xnp-sel'));
     if (fig) {   // click a routing row -> move the arrow to that prefix's out-iface (interactive)
       var rows = container.querySelectorAll('.xnp-rt.xnp-click tr[data-prefix]');
       Array.prototype.forEach.call(rows, function (tr) {

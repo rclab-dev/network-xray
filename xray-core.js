@@ -2179,8 +2179,22 @@ function xrayUpdateLsdb(s, opts) {
     if (visible) div.style.color = "#39ff14";
     lsdbEl.appendChild(div);
   });
+  _xrayRtFindApply();   /* nx_rt_find */
 }
 
+/* nx_rt_find: hide the routing table rows and LSDB rows that do not contain the filter text */
+function _xrayRtFindApply() {
+  if (typeof document === "undefined") return;
+  var t = String((typeof window !== "undefined" && window._xrayRtFind) || "").trim().toLowerCase();
+  try {
+    var hit = function (r) { return !t || String(r.textContent || "").toLowerCase().indexOf(t) >= 0; };
+    document.querySelectorAll("#de-routing-panel .de-rt-tbl tr").forEach(function (r) { r.style.display = hit(r) ? "" : "none"; });
+    /* the LSDB rows are prefixes only: narrowed when the text is found there (a prefix), left whole for an interface or a protocol */
+    var lsdb = Array.prototype.slice.call(document.querySelectorAll("#de-lsdb .lsdb-row"));
+    var any = lsdb.some(hit);
+    lsdb.forEach(function (r) { r.style.display = !any || hit(r) ? "" : "none"; });
+  } catch (_e) {}
+}
 function xraySetLogicBlock(elementId, lines) {
   var el = document.getElementById(elementId);
   if (!el) return;
@@ -2448,7 +2462,34 @@ function _xrayPaintRoutingPanel(s) {
     return '<div class="de-rt-note' + (v.via_mgmt ? ' de-rt-note-warn' : '') + '">' + _esc(r.prefix || '') + ': next hop ' + _esc(r.next_hop || '?') + ' is recursive, resolved via ' + by +
       (v.via_mgmt ? ' — the management network, not the lab topology (inside the lab it is not reachable)' : '') + '</div>';
   }).join('');
-  el.innerHTML = '<div class="de-rt-hd">Routing table</div><table class="de-rt-tbl"><tbody>' + rowsHtml + "</tbody></table>" + _rvHtml;
+  /* nx_rt_find (2026-11-12): with many routes, a filter box (prefix / interface / protocol; it also narrows the LSDB list) and the
+     count per exit interface (click = filter on it). The typed text and the focus survive the re-render on every collect. */
+  var _fOld = el.querySelector(".de-rt-find"), _fFocus = !!(_fOld && document.activeElement === _fOld);
+  var _fNode = typeof xrayDeepTargetRouter === "function" ? String(xrayDeepTargetRouter() || "") : "";
+  if (_fOld) window._xrayRtFind = _fOld.value;
+  if (window._xrayRtFindNode !== _fNode) { window._xrayRtFind = ""; window._xrayRtFindNode = _fNode; }
+  var _fTools = "";
+  if (rtRows.length > 12) {
+    var _byIf = {}; rtRows.forEach(function (r) { if (!r || r._cand) return; var k = r.out_iface || r.next_hop || "—"; _byIf[k] = (_byIf[k] || 0) + 1; });
+    var _cnt = Object.keys(_byIf).sort(function (a, b) { return _byIf[b] - _byIf[a] || (a < b ? -1 : 1); }).map(function (k) {
+      return '<span class="de-rt-cnt" style="cursor:pointer;white-space:nowrap" data-find="' + _escapeHtml(k.toLowerCase()) + '">' + _esc(k) + " " + _byIf[k] + "</span>";
+    }).join(" ");
+    _fTools = '<input class="de-rt-find" type="search" placeholder="filter: prefix, interface, protocol" aria-label="filter the routing table" ' +
+      'style="width:100%;box-sizing:border-box;margin:0 0 4px 0;background:rgba(0,8,16,0.9);color:inherit;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:3px;padding:2px 5px;font:inherit;font-size:11px">' +
+      '<div class="de-rt-counts" style="font-size:10px;opacity:.75;margin:0 0 5px 0;line-height:1.6">' + rtRows.filter(function (r) { return r && !r._cand; }).length + " routes · " + _cnt + "</div>";
+  }
+  el.innerHTML = '<div class="de-rt-hd">Routing table</div>' + _fTools + '<table class="de-rt-tbl"><tbody>' + rowsHtml + "</tbody></table>" + _rvHtml;
+  var _fIn = el.querySelector(".de-rt-find");
+  if (_fIn) {
+    _fIn.value = window._xrayRtFind || "";
+    _fIn.addEventListener("input", function () { window._xrayRtFind = _fIn.value; _xrayRtFindApply(); });
+    _fIn.addEventListener("click", function (e) { e.stopPropagation(); });
+    el.querySelectorAll(".de-rt-cnt").forEach(function (c) {
+      c.addEventListener("click", function (e) { e.stopPropagation(); _fIn.value = c.getAttribute("data-find"); window._xrayRtFind = _fIn.value; _xrayRtFindApply(); });
+    });
+    if (_fFocus) { try { _fIn.focus(); _fIn.setSelectionRange(_fIn.value.length, _fIn.value.length); } catch (_e) {} }
+  } else window._xrayRtFind = "";
+  _xrayRtFindApply();
   if (window._xrayVrfBarSync) window._xrayVrfBarSync();   /* nx_vrf_view */
   if (window._xrayEcmpPaintBeams) setTimeout(window._xrayEcmpPaintBeams, 0);   /* nx_ecmp: beams of ECMP interfaces in their colours */
   // arrow visibility follows the current selection: shown only for a non-local selected out-iface.
@@ -2567,6 +2608,7 @@ function xraySetDeepDive(selector, lines) {
     var tag = "<div";
     if (l.style) tag += ' style="' + l.style + '"';
     if (l.cls) tag += ' class="' + l.cls + '"';
+    if (l.attr) tag += " " + l.attr;   /* nx_re_wrong_first: data-ospfif="<n>" on the rows of one interface block (built in this file, numbers only) */
     tag += ">" + (_reBullet && typeof l.text === "string" ? l.text.replace(/^&gt; /, "\u30fb ").replace(/^> /, "\u30fb ") : l.text) + "</div>";
     return tag;
   }).join("");
@@ -3064,21 +3106,99 @@ function _xrayOspfIfVal(f, v, ja) {
   if (f === "auth" && v === "none") return ja ? "なし" : "none";
   return String(v);
 }
+/* nx_re_wrong_first (2026-11-12): the OSPF interface rows in the order the panel draws them, and what is wrong with each.
+   A problem = no adjacency on a link to a neighbour (not passive on purpose), or a value both ends must share that differs. */
+function _xrayOspfIfList(s) {
+  var o = s && s.ospf_ifaces, out = [];
+  if (!o || typeof o !== "object" || Array.isArray(o)) return out;
+  Object.keys(o).forEach(function (ifn) { var r = o[ifn]; if (r && typeof r === "object" && !Array.isArray(r)) out.push([ifn, r]); });
+  return out;
+}
+function _xrayOspfIfNbrState(s, ifn) {
+  var l = s && Array.isArray(s.ospf_neighbors) ? s.ospf_neighbors : [];
+  for (var i = 0; i < l.length; i++) { if (l[i] && l[i].iface === ifn && l[i].state) return String(l[i].state).split("/")[0]; }
+  return "";
+}
+function _xrayOspfIfProblem(s, ifn, r, ja) {
+  var mm = Array.isArray(r.mismatch) ? r.mismatch : [];
+  var nst = _xrayOspfIfNbrState(s, ifn);
+  var adj = r.neighbors_adjacent > 0 || /^full/i.test(nst);
+  var lbl = { mtu: "MTU", hello: "hello", dead: "dead", network_type: "network type", area: "area", auth: ja ? "認証" : "auth", passive: "passive" };
+  var rem = r.remote && typeof r.remote === "object" ? r.remote : {};
+  var pairs = mm.map(function (f) { return (lbl[f] || f) + " " + _xrayOspfIfVal(f, r[f], ja) + " ⇔ " + _xrayOspfIfVal(f, rem[f], ja); }).join(" · ");
+  if (mm.length && adj) return { kind: "warn", what: (ja ? "Full だが " : "Full, but ") + pairs };
+  if (mm.length) return { kind: "down", what: (ja ? "隣接なし — " : "no adjacency — ") + pairs };
+  if (!adj && r.peer && r.passive !== true && (r.neighbors_adjacent === 0 || (nst && !/^full/i.test(nst))))
+    return { kind: "down", what: (ja ? "隣接なし" : "no adjacency") + (nst ? " (" + nst + ")" : "") };
+  return null;
+}
+/* the first lines of the live Routing Engine panel: the interfaces / sessions that are wrong, each a link to its block */
+function _xrayWrongLines(s) {
+  if (!s) return [];
+  var ja = _xrayOspfIfJa(), items = [];
+  var ifs = s.interfaces && typeof s.interfaces === "object" ? s.interfaces : {};
+  var hasOspfIfs = !!(s.ospf_ifaces && typeof s.ospf_ifaces === "object" && !Array.isArray(s.ospf_ifaces));
+  var nbrs = Array.isArray(s.bgp_neighbors) ? s.bgp_neighbors : null;
+  if (!hasOspfIfs && !nbrs) return [];
+  Object.keys(ifs).forEach(function (ifn) {
+    if (/^lo/i.test(ifn) || !ifs[ifn] || ifs[ifn].up !== false) return;
+    items.push({ kind: "down", n: -1, text: _escapeHtml(ifn) + ": " + (ja ? "インターフェースが down" : "interface down") });
+  });
+  _xrayOspfIfList(s).forEach(function (e, n) {
+    var p = _xrayOspfIfProblem(s, e[0], e[1], ja); if (!p) return;
+    if (ifs[e[0]] && ifs[e[0]].up === false) return;   // said above
+    items.push({ kind: p.kind, n: n, text: _escapeHtml(e[0]) + (e[1].peer ? " → " + _escapeHtml(e[1].peer) : "") + ": OSPF " + _escapeHtml(p.what) });
+  });
+  (nbrs || []).forEach(function (b) {
+    if (!b || /^established/i.test(String(b.state || ""))) return;
+    items.push({ kind: "down", n: -1, text: "BGP " + _escapeHtml(b.ip || b.peer_ip || "?") + (b.remote_as ? " (AS " + _escapeHtml(b.remote_as) + ")" : "") + ": " + _escapeHtml(b.state || (ja ? "未確立" : "not established")) });
+  });
+  var out = [{ cls: "re-wrong-title", style: "color:#e0a84d;font-weight:700", text: ja ? "問題のある所" : "What's wrong" }];
+  if (!items.length) { out.push({ cls: "re-wrong-none", style: "padding-left:1.2em;color:#39ff14", text: ja ? "✓ 食い違い・落ちた隣接は無し" : "✓ No mismatch or down adjacency" }); return out; }
+  items.forEach(function (it) {
+    var col = it.kind === "warn" ? "#ffcc00" : "#ff4444", mark = it.kind === "warn" ? "⚠ " : "✕ ";
+    var go = it.n >= 0 ? ' style="cursor:pointer;text-decoration:underline dotted" onclick="window._xrayReGoIf && window._xrayReGoIf(' + it.n + ')"' : "";
+    out.push({ cls: "re-wrong", style: "padding-left:1.2em;color:" + col, text: "<span" + go + ">" + mark + it.text + "</span>" });
+  });
+  return out;
+}
+if (typeof window !== "undefined" && !window._xrayReGoIf) {
+  /* a "What's wrong" line was clicked: open that interface block and bring it into view inside the panel (the page does not move) */
+  window._xrayReGoIf = function (n) {
+    try {
+      window._xrayReOspfIfToggle(n, true);
+      var panel = document.getElementById("de-re-panel"), head = panel && panel.querySelector('.re-ospfif-ind[data-ospfif="' + n + '"]');
+      if (!panel || !head) return;
+      var b = panel.getBoundingClientRect(), r = head.getBoundingClientRect();
+      if (r.top < b.top || r.bottom > b.bottom) panel.scrollTop += r.top - b.top - 8;
+    } catch (_e) {}
+  };
+}
 function _xrayOspfIfLines(s) {
   var o = s && s.ospf_ifaces;
   if (!o || typeof o !== "object" || Array.isArray(o)) return [];
   /* open by default for one or two interfaces; with more the blocks start folded (the panel would push the routing table away) */
-  var ja = _xrayOspfIfJa(), open = typeof window._reOspfIfOpen === "boolean" ? window._reOspfIfOpen : Object.keys(o).length <= 2, out = [];
-  Object.keys(o).forEach(function (ifn) {
-    var r = o[ifn]; if (!r || typeof r !== "object" || Array.isArray(r)) return;
+  /* nx_re_wrong_first: per interface - one you opened / closed stays so; otherwise an interface with a problem is open and the
+     healthy ones are folded when there are three or more (one line each: name, neighbour, adjacency) */
+  var ja = _xrayOspfIfJa(), list = _xrayOspfIfList(s), out = [];
+  var _map = window._reOspfIfOpenMap || (window._reOspfIfOpenMap = {}), _keys = window._reOspfIfKeys = [];
+  list.forEach(function (e, n) {
+    var ifn = e[0], r = e[1];
+    var _key = String(s.target_node || "") + "|" + ifn; _keys[n] = _key;
+    var _prob = _xrayOspfIfProblem(s, ifn, r, ja);
+    var open = Object.prototype.hasOwnProperty.call(_map, _key) ? !!_map[_key]
+      : typeof window._reOspfIfOpen === "boolean" ? window._reOspfIfOpen : (!!_prob || list.length <= 2);
+    var _nst = _xrayOspfIfNbrState(s, ifn) || (r.neighbors_adjacent > 0 ? "Full" : r.passive ? "passive" : r.peer ? (ja ? "隣接なし" : "no adjacency") : "");
+    var _sum = (r.peer || _nst) ? ' <span class="re-ospfif-sum" style="color:' + (_prob ? (_prob.kind === "warn" ? "#ffcc00" : "#ff4444") : "#7facc9") + '">' +
+      (r.peer ? "→ " + _escapeHtml(r.peer) : "") + (r.peer && _nst ? " · " : "") + _escapeHtml(_nst) + "</span>" : "";
     var bad = {}; (Array.isArray(r.mismatch) ? r.mismatch : []).forEach(function (f) { bad[f] = true; });
     var v = function (f, label) {
       var x = (label ? label + " " : "") + _escapeHtml(_xrayOspfIfVal(f, r[f], ja));
       return bad[f] ? '<span style="color:#ff4444">' + x + "</span>" : x;
     };
     var st = "padding-left:1.2em" + (open ? "" : ";display:none");
-    out.push({ text: '<span class="re-ospfif-head" style="cursor:pointer" onclick="window._xrayReOspfIfToggle && window._xrayReOspfIfToggle()">' +
-      '<span class="re-ospfif-ind">' + (open ? "▼" : "▶") + "</span> " + _escapeHtml(ifn) + " (OSPF)</span>" });
+    out.push({ text: '<span class="re-ospfif-head" style="cursor:pointer" onclick="window._xrayReOspfIfToggle && window._xrayReOspfIfToggle(' + n + ')">' +
+      '<span data-ospfif="' + n + '" class="re-ospfif-ind">' + (open ? "▼" : "▶") + "</span> " + _escapeHtml(ifn) + " (OSPF)" + _sum + "</span>" });
     /* nx_ospf_full_but: the adjacency is up (the neighbour row says Full) but a value both ends must share differs = a
        warning (yellow), shown even when the block is folded. A network type difference lets OSPF reach Full while the two
        routers describe the link differently in their LSAs, so routes from that neighbour can be missing. */
@@ -3094,16 +3214,26 @@ function _xrayOspfIfLines(s) {
         ? "⚠ Full だが " + _escapeHtml(what) + " が違う" + nt + (nt ? " — " + peer + " からの経路が入らない事がある" : "")
         : "⚠ Full, but " + _escapeHtml(what) + (mm.length > 1 ? " differ" : " differs") + nt + (nt ? " — routes from " + peer + " can be missing" : "") });
     }
-    out.push({ cls: "re-ospfif-row", style: st, text: v("mtu", "MTU") + " · " + v("hello", "hello") + " / " + v("dead", "dead") });
-    out.push({ cls: "re-ospfif-row", style: st, text: v("network_type") + " · " + v("area", "area") + " · cost " +
+    out.push({ cls: "re-ospfif-row", style: st, attr: 'data-ospfif="' + n + '"', text: v("mtu", "MTU") + " · " + v("hello", "hello") + " / " + v("dead", "dead") });
+    out.push({ cls: "re-ospfif-row", style: st, attr: 'data-ospfif="' + n + '"', text: v("network_type") + " · " + v("area", "area") + " · cost " +
       _escapeHtml(_xrayOspfIfVal("cost", r.cost)) + " · " + _escapeHtml(_xrayOspfIfVal("role", r.role)) });
-    out.push({ cls: "re-ospfif-row", style: st, text: v("passive", "passive") + " · " + v("auth", ja ? "認証" : "auth") +
+    out.push({ cls: "re-ospfif-row", style: st, attr: 'data-ospfif="' + n + '"', text: v("passive", "passive") + " · " + v("auth", ja ? "認証" : "auth") +
       " · " + (ja ? "隣 " : "nbrs ") + _escapeHtml(_xrayOspfIfVal("neighbors", r.neighbors)) });
   });
   return out;
 }
 if (typeof window !== "undefined" && !window._xrayReOspfIfToggle) {
-  window._xrayReOspfIfToggle = function () {
+  window._xrayReOspfIfToggle = function (n, forceOpen) {
+    if (typeof n === "number") {   /* nx_re_wrong_first: one interface block */
+      try {
+        var _ind = document.querySelector('.re-ospfif-ind[data-ospfif="' + n + '"]');
+        var _open = forceOpen === true ? true : !(_ind && _ind.textContent === "▼");
+        var _k = (window._reOspfIfKeys || [])[n]; if (_k) (window._reOspfIfOpenMap || (window._reOspfIfOpenMap = {}))[_k] = _open;
+        document.querySelectorAll('.re-ospfif-row[data-ospfif="' + n + '"]').forEach(function (r) { r.style.display = _open ? "" : "none"; });
+        if (_ind) _ind.textContent = _open ? "▼" : "▶";
+      } catch (_e) {}
+      return;
+    }
     var ind = document.querySelector(".re-ospfif-ind");
     window._reOspfIfOpen = !(ind && ind.textContent === "▼");   // the opposite of what is shown now
     try {
@@ -3219,7 +3349,7 @@ function _xrayOspfRtSummaryLines(s) {
   var lines = [{
     text: "[Routing Engine]",
     cls: "de-title"
-  }];
+  }].concat(_xrayWrongLines(s));   /* nx_re_wrong_first */
   var ospfActive = s.ospf_active_on_interface !== undefined ? !!s.ospf_active_on_interface : s.ospf_configured !== false;
 
   var _osFullAny = (Array.isArray(s.ospf_neighbors) && s.ospf_neighbors.some(function (_n) { return _n.full || _n.state === "Full"; })) || !!s.ospf_neighbor_full;
@@ -3700,6 +3830,7 @@ function xrayBgpDeepLines(s, opts) {
     text: "[Routing Engine]",
     cls: "de-title"
   });
+  if ((typeof window !== "undefined" && window.xrayCore) || (s.routing_table && s.routing_table.length)) lines = lines.concat(_xrayWrongLines(s));   /* nx_re_wrong_first: live pages only */
 
   var _nbAgg = (function () { if (!Array.isArray(s.bgp_neighbors) || !s.bgp_neighbors.length) return ""; var _c = {}, _any = false; s.bgp_neighbors.forEach(function (_n) { if (_n.state) { _any = true; _c[_n.state] = (_c[_n.state] || 0) + 1; } }); if (!_any) return ""; return Object.keys(_c).map(function (_k) { /* oss_nbagg_per_state_color */ return '<span style="color:' + (/establ/i.test(_k) ? '#a855f7' : '#ffb74d') + '">' + _escapeHtml(_k) + " " + _c[_k] + '</span>'; }).join(", "); })();
   if (s.r2_established !== undefined || s.r3_established !== undefined) {
