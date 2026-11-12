@@ -203,6 +203,17 @@ scenario needs; everything is optional and defaults sensibly.
 `show` コマンドダンプに相当します。シナリオに必要なフィールドだけ渡せばよく、すべて任意で
 妥当な既定値を持ちます。
 
+<a id="fields-the-bundled-collectors-do-not-fill"></a>
+**Fields the bundled collectors do not fill / 同梱の collector が埋めない欄.** The collectors in this repository
+(`clab-collect.js`, `clab-srl-collect.js`, `clab-iosxe-collect.js`, `frr-collect.js`, `genie-to-xray.js`) do not write
+`sv_link_up`, `r1_ping_ok`, `rid_duplicate`, `dr_rid` / `bdr_rid`, `has_redistribute`, `route_map_status`, `config_next_hop`, `bgp_next_hop`, `has_next_hop_self`, `has_update_source`, `r2_lp` / `r3_lp`, `best_path_via`, `max_prefix_limit`, `prefix_list_deny`, `neighbor_ip` and the §4.5 static fields. The engine reads them when an adapter provides them, so on a live lab read by these collectors the page does
+not report a duplicate Router ID, `update-source`, `next-hop-self`, a route-map result or a prefix-list deny.
+
+このリポジトリの collector (`clab-collect.js`・`clab-srl-collect.js`・`clab-iosxe-collect.js`・`frr-collect.js`・
+`genie-to-xray.js`) は、`sv_link_up`・`r1_ping_ok`・`rid_duplicate`・`dr_rid` / `bdr_rid`・`has_redistribute`・`route_map_status`・`config_next_hop`・`bgp_next_hop`・`has_next_hop_self`・`has_update_source`・`r2_lp` / `r3_lp`・`best_path_via`・`max_prefix_limit`・`prefix_list_deny`・`neighbor_ip`・§4.5 の静的経路の欄 を書きません。
+adapter が渡せばエンジンは読みますが、これらの collector で読んだ生きたラボでは、Router ID の重複・`update-source`・
+`next-hop-self`・route-map の結果・prefix-list の拒否を画面は出しません。
+
 ### 4.1 L0 — Interfaces / インターフェース
 
 | Field | Type | Meaning / 意味 |
@@ -479,7 +490,9 @@ Nokia SR Linux。`clab-srl-collect.js` が `sr_cli "info from state … | as jso
 読み、FRR collector と同一の `state` を吐きます(実機 OSPF+BGP で live 検証済・`clab-xray-collect.js` が
 `nokia_srlinux` を自動 dispatch)。「小さな adapter を書く」の end-to-end 参照実装です。
 
-**Where each field comes from / 各フィールドの出どころ**
+**Where each field comes from / 各フィールドの出どころ** (for an adapter you write; several of these fields are not filled by the bundled
+collectors: [the list](#fields-the-bundled-collectors-do-not-fill) / 自分で書く adapter 向け。同梱の collector が埋めない欄は
+[一覧](#fields-the-bundled-collectors-do-not-fill))
 
 | Engine field | FRRouting | Cisco IOS |
 |---|---|---|
