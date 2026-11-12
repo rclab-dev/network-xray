@@ -2,6 +2,13 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.3.1 — 2026-11-12
+
+- MCP: an opt-in `collect` tool (start the server with `--allow-collect`) reads a running containerlab lab's routers again and returns a new state path, so an assistant can change a router, `collect`, and ask `why_path` without leaving MCP. It takes only `topology` and `proto`, runs one collection at a time (at most 120 s), and writes into a directory of its own. Without the flag the tool is not listed. `docs/mcp.md` (en / ja) says which of the tools are read-only (the eight default ones) and how `collect` is marked.
+- Collector: a node labelled `graph-hide` with no links (nrx's graphite web view) is left out, not listed as a node network-xray cannot read; a `graph-hide` node with links is read as before. `graph-level` is read from the node's own `labels:`. README and FAQ (en / ja) say so.
+- The XrayUnified copy in the pages: `fromLegacyState` keeps link state, the resolved exit interface and forwarding, as the standalone `xray-unified.js` does (a test holds the two together).
+- README (en / ja): the containerlab VS Code extension opens the page on `localhost` for a lab on this machine; the Web app, and the extension on a remote connection, open it on the lab host's name, so with `127.0.0.1:8600:8600` the page opens only on the lab host itself. Checked with containerlab 0.83.0.
+
 ## v1.3.0 — 2026-11-11
 
 - **Listening address:** `xray.sh`, the netlab tool and the `run.sh` in each release folder now listen on `127.0.0.1` by default, so the page is on this machine only. To open it from other machines as before, use `./xray.sh --bind 0.0.0.0` (or publish `-p 8600:8600`, or start `BIND=0.0.0.0 ./run.sh`); the page has no login, and `xray.sh` and `run.sh` say so when they start.
