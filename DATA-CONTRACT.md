@@ -206,11 +206,11 @@ scenario needs; everything is optional and defaults sensibly.
 <a id="fields-the-bundled-collectors-do-not-fill"></a>
 **Fields the bundled collectors do not fill / 同梱の collector が埋めない欄.** The collectors in this repository
 (`clab-collect.js`, `clab-srl-collect.js`, `clab-iosxe-collect.js`, `frr-collect.js`, `genie-to-xray.js`) do not write
-`sv_link_up`, `r1_ping_ok`, `rid_duplicate`, `dr_rid` / `bdr_rid`, `has_redistribute`, `route_map_status`, `config_next_hop`, `bgp_next_hop`, `has_next_hop_self`, `has_update_source`, `r2_lp` / `r3_lp`, `best_path_via`, `max_prefix_limit`, `prefix_list_deny`, `neighbor_ip` and the §4.5 static fields. The engine reads them when an adapter provides them, so on a live lab read by these collectors the page does
+`sv_link_up`, `r1_ping_ok`, `target_rid` / `r1_rid` / `r2_rid`, `rid_duplicate`, `dr_rid` / `bdr_rid`, `has_redistribute`, `route_map_status`, `config_next_hop`, `bgp_next_hop`, `has_next_hop_self`, `has_update_source`, `r2_lp` / `r3_lp`, `best_path_via`, `max_prefix_limit`, `prefix_list_deny`, `neighbor_ip` and the §4.5 static fields. The engine reads them when an adapter provides them, so on a live lab read by these collectors the page does
 not report a duplicate Router ID, `update-source`, `next-hop-self`, a route-map result or a prefix-list deny.
 
 このリポジトリの collector (`clab-collect.js`・`clab-srl-collect.js`・`clab-iosxe-collect.js`・`frr-collect.js`・
-`genie-to-xray.js`) は、`sv_link_up`・`r1_ping_ok`・`rid_duplicate`・`dr_rid` / `bdr_rid`・`has_redistribute`・`route_map_status`・`config_next_hop`・`bgp_next_hop`・`has_next_hop_self`・`has_update_source`・`r2_lp` / `r3_lp`・`best_path_via`・`max_prefix_limit`・`prefix_list_deny`・`neighbor_ip`・§4.5 の静的経路の欄 を書きません。
+`genie-to-xray.js`) は、`sv_link_up`・`r1_ping_ok`・`target_rid` / `r1_rid` / `r2_rid`・`rid_duplicate`・`dr_rid` / `bdr_rid`・`has_redistribute`・`route_map_status`・`config_next_hop`・`bgp_next_hop`・`has_next_hop_self`・`has_update_source`・`r2_lp` / `r3_lp`・`best_path_via`・`max_prefix_limit`・`prefix_list_deny`・`neighbor_ip`・§4.5 の静的経路の欄 を書きません。
 adapter が渡せばエンジンは読みますが、これらの collector で読んだ生きたラボでは、Router ID の重複・`update-source`・
 `next-hop-self`・route-map の結果・prefix-list の拒否を画面は出しません。
 
@@ -266,13 +266,15 @@ adapter が渡せばエンジンは読みますが、これらの collector で�
 | `target_hello` / `r1_hello` / `r2_hello` | number | Hello timer (seconds) per node. ノード別 Hello タイマ(秒)。 |
 | `timer_match` | boolean | Hello/Dead timers match between peers. 両端で Hello/Dead タイマが一致。 |
 | `target_area` / `r1_area` / `r2_area` | string | OSPF area id, e.g. `"0.0.0.0"`. OSPF エリア id。 |
-| `area_match` | boolean | Areas match between peers. 両端でエリア一致。 |
+| `area_match` | boolean | Areas match between peers. The bundled collectors set `true` only when the node has a Full OSPF neighbour (Full implies the same area) and leave it out otherwise; with two or more links it does not say which one. The comparison per link is `ospf_ifaces[].mismatch` (below). 両端でエリア一致。同梱の collector は Full の隣が在る時だけ `true` を付け (Full なら area は同じ)、それ以外は付けない。リンクが 2 本以上でもどのリンクかは言わない。リンクごとの比べは `ospf_ifaces[].mismatch` (下記)。 |
 | `target_rid` / `r1_rid` / `r2_rid` | string | OSPF Router ID per node. ノード別 Router ID。 |
 | `rid_duplicate` | boolean | Duplicate Router ID detected. Router ID 重複を検出。 |
 | `dr_rid` / `bdr_rid` | string | DR / BDR Router ID (broadcast networks). DR / BDR の Router ID(broadcast ネットワーク)。 |
 | `is_passive` | boolean | Interface is `passive-interface` (no Hellos). IF が `passive-interface`(Hello を送らない)。 |
 | `has_redistribute` | boolean | Redistribution is configured. 再配布が設定されている。 |
 | `route_map_status` | string | Route-map result: `"permit"` / `"deny"`. ルートマップ結果。 |
+| `lsdb_prefixes` | array | `[{ text, own, via }]` — the prefixes the DeepDive's LSDB panel lists. **Not the same on every collector**: `clab-collect.js`, `frr-collect.js` and `clab-iosxe-collect.js` take them from the routing table (the OSPF rows of `show ip route`, selected or not = the routes OSPF computed, not the LSAs: a prefix whose LSA is in the database but which OSPF has no route for is not listed, and the advertising router is not known); `clab-srl-collect.js` takes the stub networks of the router LSAs (`via` = the advertising router) and falls back to the routing table when the read has no LSDB. DeepDive の LSDB の板が出す prefix。**collector で中身が違う**: `clab-collect.js`・`frr-collect.js`・`clab-iosxe-collect.js` は経路表から (`show ip route` の OSPF の行・選ばれていない行も含む = OSPF が計算した経路で LSA ではない。LSA が在っても OSPF の経路が無い prefix は出ず、広告元も分からない)・`clab-srl-collect.js` は router LSA の stub network から (`via` = 広告元・LSDB が読めない時は経路表から)。 |
+| `ospf_lsdb` | array | `[{ type, ls_id, adv_router, age, seq, area }]` — a summary of the router's LSAs from `show ip ospf database json`. Only `frr-collect.js` (saved show output) writes it; the live collectors do not, and the page does not read it. `show ip ospf database json` の LSA の要約。`frr-collect.js` (保存した show を読む) だけが書く。生きたラボの collector は書かず、頁は読まない。 |
 | `ospf_ifaces` | object | OSPF interface → its values (see below). Optional. OSPF の interface ごとの値(下記)。任意。 |
 
 **`ospf_ifaces` — one row per OSPFv2 interface / OSPF の interface ごとの行** (loopbacks and the management network are left
