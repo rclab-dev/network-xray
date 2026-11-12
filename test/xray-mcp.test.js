@@ -39,7 +39,7 @@ test('initialize and tools/list', function () {
   assert.ok(init.result.capabilities.tools);
   var tools = s.byId[2].result.tools;
   assert.deepStrictEqual(tools.map(function (t) { return t.name; }),
-    ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'ospf_interfaces', 'bgp_neighbors', 'route_lookup', 'why_path']);
+    ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'ospf_interfaces', 'bgp_neighbors', 'route_lookup', 'why_path', 'state_diff']);
   tools.forEach(function (t) {
     assert.strictEqual(t.inputSchema.type, 'object');
     assert.strictEqual(t.annotations.readOnlyHint, true);

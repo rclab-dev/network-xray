@@ -828,7 +828,12 @@ directory of saved FRR `show … json` files (`frr-collect.js --from-dir` layout
 ```
 node scripts/xray-query.js state test/fixtures/iosxe-q15
 node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
+node scripts/xray-query.js diff demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json
 ```
+
+`diff` shows what changed from a baseline state you kept to the state now, heaviest first (an interface down, an
+adjacency lost, a best path that moved, routes removed or moved), and says `none` when nothing changed; the MCP tool
+`state_diff` gives the same answer ([docs/mcp.md](docs/mcp.md#state_diff)). <!-- nx_state_diff -->
 
 `state` starts with `wrong` (what is wrong: an interface down, an OSPF interface with no adjacency and the values both ends must share and do not, a BGP session not Established; empty here), then nodes, links, OSPF adjacencies and BGP sessions (trimmed here):
 
@@ -1703,7 +1708,12 @@ ping/パケットのアニメはこれらのデモでは非表示(通信内容�
 ```
 node scripts/xray-query.js state test/fixtures/iosxe-q15
 node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
+node scripts/xray-query.js diff demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json
 ```
+
+`diff` は、取っておいた基準の state から今までに変わった所を重い順に出します (落ちた interface・消えた隣接・動いた最良経路・
+消えた / 変わった経路)。何も変わっていなければ `none` と言います。MCP の `state_diff` も同じ答えです ([docs/ja/mcp.md](docs/ja/mcp.md#state_diff))。 <!-- nx_state_diff -->
+
 `state` は最初に `wrong` (問題のある所: down の interface・隣接の無い OSPF の interface と両端で食い違う値・確立していない BGP。ここでは空)、続いてノード・リンク・OSPF の隣接・BGP のセッション (ここでは一部省略):
 
 ```json

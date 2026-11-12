@@ -66,7 +66,7 @@ not listed and a call to it is refused.
 claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect
 ```
 
-- `collect` takes only `topology` (the running lab's `*.clab.yml`, absolute path) and an optional `proto` (`bgp`, the
+- `collect` takes only `topology` (the running lab's `*.clab.yml`, absolute path), an optional `keep_previous` and an optional `proto` (`bgp`, the
   default, which reads OSPF too, or `ospf` for an OSPF-only lab). It runs `clab-xray-collect.js` once on that lab.
 - This tool reads the local Docker: it runs the same read-only commands as the page's collector (`docker exec … vtysh`
   / `sr_cli` `show`, SSH `show` on Cisco IOS). It changes nothing on the routers, but it needs the access the collector
@@ -77,6 +77,8 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 - It writes `xray-states.js` into a directory of its own (removed when the server exits), never into the repo, so a
   page that `xray.sh` serves keeps its own state. The answer is the `lab_state` summary plus `path` (that file):
   give that `path` to the other tools.
+- With `keep_previous: true` it keeps the state this run replaces and returns it as `previous`, so you can ask
+  `state_diff` with `before: previous, after: path` (change → `collect` → `state_diff`). Without it nothing older is kept.
 - One run at a time (a second call while one runs is refused), and at most 120 s.
 
 ## Start it
@@ -171,7 +173,7 @@ from a project's `.mcp.json`. Until you approve it, `claude mcp get network-xray
 ```
 
 Many clients also ask before each tool call, or the first
-time a tool is called. The eight default tools are marked read-only (`readOnlyHint: true`, `destructiveHint: false`), and they
+time a tool is called. The nine default tools are marked read-only (`readOnlyHint: true`, `destructiveHint: false`), and they
 only read the `path` you give them (the opt-in `collect` is marked `readOnlyHint: false`, `destructiveHint: false`). A file that does not hold network-xray state is refused with
 `not a network-xray state file`; the error never quotes the file.
 
@@ -197,6 +199,7 @@ If the assistant does not know which lab you mean, give the path again.
 | `bgp_neighbors` | `path`, `router?` | per router: peer, remote AS, iBGP/eBGP, state, prefixes received |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | longest-prefix match in the collected routing table |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | the selected BGP path, the other candidates with their attributes, the deciding step and where that reason came from |
+| `state_diff` | `before`, `after`, `router?` | what changed from a baseline state to now, heaviest first (`none` when nothing changed) |
 
 `why_best_path` gives only the reason stored in the data (`null` with a note when there is none). `why_path` also lists
 the other candidates, and when the router gave no reason it compares their attributes itself (`reason_source`).
@@ -433,6 +436,34 @@ says. With `"device"` or `"derived"`, `comparison` adds what the attribute compa
 }
 ```
 
+### state_diff
+
+What changed from a baseline you kept to the state now. The baseline is any path you pass as `before`: a state you
+saved, or `previous` from `collect` with `keep_previous: true`. The changes come first, heaviest first; `none` is
+`true` when nothing changed. Here the recorded q21 lab before and after one Local Preference changed on r1:
+
+```
+{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"state_diff","arguments":{"before":"demo/bgp-lp/frameA.json","after":"demo/bgp-lp/frameB.json"}}}
+```
+
+```json
+{
+  "changes": [
+    { "kind": "best_path_changed", "node": "r1", "item": "8.8.8.0/24", "before": "via 10.11.0.20", "after": "via 10.10.0.20", "reason": "Local Pref" },
+    { "kind": "route_changed", "node": "r1", "item": "8.8.8.0/24", "before": "bgp 10.11.0.20 on eth2", "after": "bgp 10.10.0.20 on eth1" }
+  ],
+  "none": false,
+  "counts": { "changes": 2, "by_kind": { "best_path_changed": 1, "route_changed": 1 }, "nodes": 3 },
+  "unchanged": ["r2", "r3"]
+}
+```
+
+Kinds, causes before what they broke: `node_removed`, `node_unread`, `iface_down`, `ospf_if_left`, `ospf_if_value`,
+`bgp_peer_removed`, `ospf_adjacency_lost`, `bgp_session_down`, `best_path_changed`, `route_removed`, `route_changed`,
+`ospf_adjacency_state`, then what came back or was added. A route now resolved through the containerlab management network
+(`via_mgmt: true`) comes just before the best-path changes: inside the lab topology its next hop is not reachable. A route carries `originated_by`: the router where that prefix is directly connected (on its
+loopback when there is one). Uptimes, counters and the management network are not compared. The same answer comes from
+`node scripts/xray-query.js diff <before> <after> [router]` (`--format table` for people).
 ## Errors
 
 If a tool call has bad input (a missing or unknown file, an unknown router, a missing argument, an argument that is

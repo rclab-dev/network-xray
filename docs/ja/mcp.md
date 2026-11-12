@@ -63,7 +63,7 @@ MCP のツールだけで新しい状態を見られます (変える → `colle
 claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect
 ```
 
-- `collect` が受けるのは `topology` (動いているラボの `*.clab.yml`・絶対パス) と、任意の `proto` (既定の `bgp` = OSPF も読む /
+- `collect` が受けるのは `topology` (動いているラボの `*.clab.yml`・絶対パス)・任意の `keep_previous`・任意の `proto` (既定の `bgp` = OSPF も読む /
   OSPF だけのラボは `ospf`) だけ。そのラボに `clab-xray-collect.js` を 1 回走らせます。
 - このツールは手元の Docker を読みます: 画面の collector と同じ読むだけのコマンド (`docker exec … vtysh` / `sr_cli` の
   `show`・Cisco IOS は SSH の `show`)。ルータは何も変わりませんが、collector と同じ権限 (Docker・IOS は `NX_IOS_PASSWORD`) が要ります。
@@ -72,6 +72,8 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
   リモートの Docker (`DOCKER_HOST`)。
 - `xray-states.js` は自分のディレクトリ (サーバが終わると消す) に書き、repo には書きません。`xray.sh` の画面の状態はそのままです。
   答えは `lab_state` と同じ形 + `path` (そのファイル)。ほかのツールにはその `path` を渡してください。
+- `keep_previous: true` を付けると、この回で置き換わる state を残して `previous` で返します。`state_diff` に
+  `before: previous, after: path` を渡せば、変えた所が分かります (変える → `collect` → `state_diff`)。付けなければ古い物は残しません。
 - 同時に 1 本 (走っている間の 2 本目は断る)・最大 120 秒。
 
 ## 起動する
@@ -165,7 +167,7 @@ Claude Desktop では `claude_desktop_config.json` に書きます (Settings →
   Status: ⏸ Pending approval (run `claude` to approve)
 ```
 
-多くのクライアントは、ツールを呼ぶたび、または初めてツールを呼ぶ時にも確認します。既定の 8 つのツールはすべて読むだけと
+多くのクライアントは、ツールを呼ぶたび、または初めてツールを呼ぶ時にも確認します。既定の 9 つのツールはすべて読むだけと
 印が付いており (`readOnlyHint: true`・`destructiveHint: false`)、渡した `path` だけを読みます (選んで使う `collect` の印は `readOnlyHint: false`・`destructiveHint: false`)。network-xray の state を
 持たないファイルは `not a network-xray state file` で断り、エラーにファイルの中身は出しません。
 
@@ -191,6 +193,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `bgp_neighbors` | `path`, `router?` | ルータごと: ピア・リモート AS・iBGP/eBGP・状態・受け取ったプレフィックスの数 |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | 集めたルーティングテーブルでの最長一致 |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | 選ばれた BGP の経路・ほかの候補と属性・決め手になったステップ・そのわけの出どころ |
+| `state_diff` | `before`, `after`, `router?` | 基準の state から今までに変わった所 (重い順・何も変わっていなければ `none`) |
 
 `why_best_path` は、データに保存されているわけだけを返します (無ければ `null` と注記)。`why_path` はほかの候補も並べ、
 ルータがわけを出していない時は、属性を自分で比べます (`reason_source`)。
@@ -427,6 +430,33 @@ ECMP では、`route.nexthops` にすべてのネクストホップが入りま�
 }
 ```
 
+### state_diff
+
+取っておいた基準から今の状態までに変わった所。基準は `before` に渡した物なら何でも (保存した state、または
+`keep_previous: true` を付けた `collect` の `previous`)。変わった所を先に、重い順に返し、何も変わっていなければ `none` が
+`true` です。例は、記録した q21 のラボで r1 の Local Preference を 1 つ変えた前と後です:
+
+```
+{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"state_diff","arguments":{"before":"demo/bgp-lp/frameA.json","after":"demo/bgp-lp/frameB.json"}}}
+```
+
+```json
+{
+  "changes": [
+    { "kind": "best_path_changed", "node": "r1", "item": "8.8.8.0/24", "before": "via 10.11.0.20", "after": "via 10.10.0.20", "reason": "Local Pref" },
+    { "kind": "route_changed", "node": "r1", "item": "8.8.8.0/24", "before": "bgp 10.11.0.20 on eth2", "after": "bgp 10.10.0.20 on eth1" }
+  ],
+  "none": false,
+  "counts": { "changes": 2, "by_kind": { "best_path_changed": 1, "route_changed": 1 }, "nodes": 3 },
+  "unchanged": ["r2", "r3"]
+}
+```
+
+種類 (原因を先に、それで壊れた物を後に): `node_removed`・`node_unread`・`iface_down`・`ospf_if_left`・`ospf_if_value`・
+`bgp_peer_removed`・`ospf_adjacency_lost`・`bgp_session_down`・`best_path_changed`・`route_removed`・`route_changed`・
+`ospf_adjacency_state`、その後に戻った物・足された物。containerlab の管理の網で解くようになった経路 (`via_mgmt: true`) は
+最良経路の変化のすぐ前に来ます (ラボのトポロジの中では、その次の段に届かないので)。経路には `originated_by` (その prefix を直結で持つルータ・loopback があればそれ) が付きます。uptime・
+カウンタ・管理の網は比べません。同じ答えは `node scripts/xray-query.js diff <before> <after> [router]` でも (人向けは `--format table`)。
 ## エラー
 
 ツールの呼び出しの入力が悪い時 (ファイルが無い・知らないファイル・知らないルータ・引数が足りない・引数が文字列でない・

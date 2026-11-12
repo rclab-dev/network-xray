@@ -188,5 +188,31 @@
       ],
       "additionalProperties": false
     }
+  },
+  {
+    "name": "state_diff",
+    "description": "What changed from a baseline state you kept to the state now, heaviest first: routers gone or not read, interfaces down, OSPF adjacencies lost, OSPF interface values both ends must share that changed, BGP sessions down, best paths that moved (with the router's reason), routes removed or moved (with originated_by: the router where that prefix is directly connected), then what came back or was added. none is true when nothing changed. Uptimes, counters and the management network are not compared. The baseline is whatever path you pass as before (a state you saved, or collect's previous). Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "before": {
+          "type": "string",
+          "description": "The baseline state (same input as lab_state)"
+        },
+        "after": {
+          "type": "string",
+          "description": "The state now (same input as lab_state)"
+        },
+        "router": {
+          "type": "string",
+          "description": "Only this router (default: all)"
+        }
+      },
+      "required": [
+        "before",
+        "after"
+      ],
+      "additionalProperties": false
+    }
   }
 ]

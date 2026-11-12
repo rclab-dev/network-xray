@@ -46,17 +46,17 @@ test('collect is not offered without --allow-collect (the default tool list is u
   assert.match(s[2].error.message, /Unknown tool: collect/);
 });
 
-test('with --allow-collect it is listed, not read-only, and takes only topology and ospf|bgp', function () {
+test('with --allow-collect it is listed, not read-only, and takes only topology, ospf|bgp and keep_previous', function () {
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-mc-'));
   try {
     var yml = path.join(dir, 'a.clab.yml'); fs.writeFileSync(yml, 'name: a\n');
     var s = session(['--allow-collect'], [req(1, 'tools/list', {}),
       call(2, 'collect', {}), call(3, 'collect', { topology: path.join(dir, 'a.txt') }), call(4, 'collect', { topology: path.join(dir, 'none.clab.yml') }),
       call(5, 'collect', { topology: yml, proto: 'isis' }), call(6, 'collect', { topology: yml, cmd: 'rm -rf /' }), call(7, 'collect', { topology: dir + '.yml' }),
-      call(8, 'collect', 'x')]);
+      call(8, 'collect', 'x'), call(9, 'collect', { topology: yml, keep_previous: 'yes' })]);
     var t = s[1].result.tools.filter(function (x) { return x.name === 'collect'; })[0];
     assert.ok(t, 'listed');
-    assert.deepStrictEqual(Object.keys(t.inputSchema.properties).sort(), ['proto', 'topology']);
+    assert.deepStrictEqual(Object.keys(t.inputSchema.properties).sort(), ['keep_previous', 'proto', 'topology']);
     assert.deepStrictEqual(t.inputSchema.properties.proto.enum, ['bgp', 'ospf']);
     assert.strictEqual(t.annotations.readOnlyHint, false);
     assert.strictEqual(t.annotations.destructiveHint, false);
@@ -65,9 +65,10 @@ test('with --allow-collect it is listed, not read-only, and takes only topology 
     assert.match(err(3), /containerlab topology file/);
     assert.match(err(4), /topology not found/);
     assert.match(err(5), /proto must be bgp or ospf/);
-    assert.match(err(6), /only topology and proto, not: cmd/);
+    assert.match(err(6), /only topology, proto and keep_previous, not: cmd/);
     assert.match(err(7), /topology not found|not a file/);
     assert.match(err(8), /arguments must be an object/);
+    assert.match(err(9), /keep_previous must be true or false/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -120,4 +121,31 @@ test('a second collect while one runs is refused', { skip: SKIP }, function () {
     assert.strictEqual(s[2].result.isError, true);
     assert.match(payload(s[2]).error, /already running/);
   } finally { fs.rmSync(L.dir, { recursive: true, force: true }); }
+});
+
+test('keep_previous: only when asked, the state a collect replaces is kept and returned as previous; state_diff reads both', { skip: SKIP }, async function () {
+  var L = lab(), env = L.env(0), keep = {};
+  ['PATH', 'NX_DLOG', 'NX_SLEEP'].forEach(function (k) { keep[k] = process.env[k]; process.env[k] = env[k]; });
+  try {
+    var mcp = require(SERVER);
+    mcp.setAllowCollect(true);
+    var go = async function (id, a) { var r = await mcp.handle(JSON.parse(call(id, 'collect', a))); assert.ok(!r.result.isError, JSON.stringify(r)); return r.result.structuredContent; };
+    var first = await go(1, { topology: L.yml, keep_previous: true });
+    assert.strictEqual(first.previous, null, 'nothing earlier for this lab yet');
+    var second = await go(2, { topology: L.yml, keep_previous: true });
+    assert.strictEqual(path.basename(second.previous), 'xray-states.previous.js');
+    assert.strictEqual(path.dirname(second.previous), path.dirname(second.path), 'in the same own directory');
+    assert.ok(fs.existsSync(second.previous) && fs.existsSync(second.path));
+    var d = await mcp.handle(JSON.parse(call(3, 'state_diff', { before: second.previous, after: second.path })));
+    assert.ok(!d.result.isError, JSON.stringify(d));
+    assert.strictEqual(d.result.structuredContent.none, true, 'the fake lab did not change between the two reads');
+    var third = await go(4, { topology: L.yml });
+    assert.ok(!('previous' in third), 'without keep_previous nothing is said about an older state');
+    assert.ok(!fs.existsSync(second.previous), 'and nothing older is kept');
+    mcp.setAllowCollect(false);
+    fs.rmSync(path.dirname(path.dirname(third.path)), { recursive: true, force: true });
+  } finally {
+    Object.keys(keep).forEach(function (k) { if (keep[k] == null) delete process.env[k]; else process.env[k] = keep[k]; });
+    fs.rmSync(L.dir, { recursive: true, force: true });
+  }
 });

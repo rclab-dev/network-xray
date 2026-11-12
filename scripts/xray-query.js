@@ -7,6 +7,7 @@
  *
  *   node scripts/xray-query.js state <input>
  *   node scripts/xray-query.js why   <input> <node> <prefix>
+ *   node scripts/xray-query.js diff  <before> <after> [node]   (what changed from a baseline you kept, heaviest first)
  *
  * <input> is one of:
  *   - a per-node state JSON (frr-collect.js / clab-collect.js --out, test/fixtures/<lab>/state_<node>.json)
@@ -850,7 +851,32 @@ function whyTable(w, color) {
 }
 
 // ---- CLI ------------------------------------------------------------------------------------
+// ---- diff ------------------------------------------------------------------------------------
+// What changed between a baseline the user kept and the state now (xray-diff.js: the same answer as the MCP tool
+// state_diff and the page). The changes come first; when nothing changed, `none: true` and a note say so.
+function diff(before, after, node) {
+  if (node && !before[node] && !after[node]) throw new QueryError('unknown node: ' + node + ' (in neither state)');
+  var d = require('../xray-diff.js').diffStates(before, after, { node: node });
+  var out = { changes: d.changes, none: d.none, counts: d.counts, unchanged: d.unchanged };
+  if (d.none) out.note = 'no change from the baseline' + (node ? ' on ' + node : '');
+  return out;
+}
+function diffTable(res, color) {
+  var out = [title('Changed from the baseline (' + res.counts.changes + ')', color)];
+  if (res.none) out.push('  (none) - no change from the baseline');
+  else out = out.concat(renderTable([{ head: 'ROUTER', key: 'node' }, { head: 'WHAT', key: 'kind' }, { head: 'ITEM', key: 'item' },
+    { head: 'BASELINE', key: 'before' }, { head: 'NOW', key: 'after' }, { head: 'FROM', key: 'from' }],
+    res.changes.map(function (c) {
+      return { node: c.node, kind: c.kind.replace(/_/g, ' '), item: c.item, before: c.before == null ? '-' : String(c.before),
+        after: c.after == null ? '-' : String(c.after), from: (c.originated_by || []).join(',') || (c.reason || '') };
+    }), color, '  '));
+  if (res.unchanged.length) out.push('', textLine('unchanged: ' + res.unchanged.join(', ')));
+  out.push('', textLine('FROM = where the prefix is directly connected, or the reason given for a best path'));
+  return out.join('\n') + '\n';
+}
+
 var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf] | ospf-if <state.json|dir> [node]' +
+  ' | diff <before> <after> [node]' +
   ' [--format json|table] [--color]';
 
 // pull --format / --color out of argv; the rest are the positional arguments
@@ -872,6 +898,7 @@ function run(argv) {
   var cmd = argv[0];
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
   if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
+  if (cmd === 'diff') { if (argv.length < 3 || argv.length > 4) throw new QueryError(USAGE); return diff(loadStates(argv[1]), loadStates(argv[2]), argv[3]); }
   if (cmd === 'ospf-if') { if (argv.length < 2 || argv.length > 3) throw new QueryError(USAGE); return ospfInterfaces(loadStates(argv[1]), argv[2]); }
   throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
 }
@@ -879,6 +906,7 @@ function run(argv) {
 // the text for --format table (same checks and errors as run())
 function runTable(argv, color) {
   var res = run(argv);
+  if (argv[0] === 'diff') return diffTable(res, color);
   return argv[0] === 'state' ? stateTable(loadStates(argv[1]), color) : argv[0] === 'ospf-if' ? ospfIfTable(res, color) : whyTable(res, color);
 }
 
@@ -889,6 +917,7 @@ if (require.main === module) {
       '  state <path>                        nodes, links, OSPF adjacencies, BGP sessions, counts\n' +
       '  why <path> <node> <prefix> [vrf]    BGP best path and the reason stored with it\n' +
       '  ospf-if <path> [node]               OSPF interface values, both ends of each link, what must match but does not\n' +
+      '  diff <before> <after> [node]        what changed from a state you kept (the baseline) to now, heaviest first\n' +
       '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR / Genie captures\n' +
       '  --format json|table  default: json\n' +
       '  --color              colors in table output (only on a terminal)\n' +
@@ -915,6 +944,6 @@ if (require.main === module) {
   process.exitCode = code;
 }
 
-module.exports = { loadStates: loadStates, summarize: summarize, why: why, run: run,
+module.exports = { diff: diff, loadStates: loadStates, summarize: summarize, why: why, run: run,
   listRouters: listRouters, ospfNeighbors: ospfNeighbors, ospfInterfaces: ospfInterfaces, ospfIfTable: ospfIfTable, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath,
   parseOptions: parseOptions, runTable: runTable, stateTable: stateTable, whyTable: whyTable };

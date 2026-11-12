@@ -185,6 +185,26 @@ var TOOLS = [
       additionalProperties: false
     },
     annotations: READ_ONLY
+  },
+  {
+    name: 'state_diff',
+    description: 'What changed from a baseline state you kept to the state now, heaviest first: routers gone or not read, ' +
+      'interfaces down, OSPF adjacencies lost, OSPF interface values both ends must share that changed, BGP sessions down, ' +
+      'best paths that moved (with the router\'s reason), routes removed or moved (with originated_by: the router where ' +
+      'that prefix is directly connected), then what came back or was added. none is true when nothing changed. ' +
+      'Uptimes, counters and the management network are not compared. The baseline is whatever path you pass as before ' +
+      '(a state you saved, or collect\'s previous). Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        before: { type: 'string', description: 'The baseline state (same input as lab_state)' },
+        after: { type: 'string', description: 'The state now (same input as lab_state)' },
+        router: { type: 'string', description: 'Only this router (default: all)' }
+      },
+      required: ['before', 'after'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
   }
 ];
 
@@ -197,12 +217,14 @@ var COLLECT_TOOL = {
     'collector once (the same read-only show commands as the page: docker exec vtysh / sr_cli, SSH show on Cisco IOS; ' +
     'nothing on the routers changes). Returns the lab_state summary plus `path`, the xray-states.js it wrote into a ' +
     'directory of its own: give that `path` to the other tools. Use it after you changed a router\'s configuration. ' +
-    'Available only when the server was started with --allow-collect. One run at a time, at most 120 s.',
+    'With keep_previous: true the state it replaces is kept and returned as `previous` (give both to state_diff); ' +
+    'without it nothing older is kept. Available only when the server was started with --allow-collect. One run at a time, at most 120 s.',
   inputSchema: {
     type: 'object',
     properties: {
       topology: { type: 'string', description: 'The running lab\'s containerlab topology file (*.clab.yml), absolute path' },
-      proto: { type: 'string', enum: ['bgp', 'ospf'], description: 'bgp (default: reads OSPF too) or ospf (an OSPF-only lab)' }
+      proto: { type: 'string', enum: ['bgp', 'ospf'], description: 'bgp (default: reads OSPF too) or ospf (an OSPF-only lab)' },
+      keep_previous: { type: 'boolean', description: 'Keep the state this run replaces and return it as previous (default: false)' }
     },
     required: ['topology'],
     additionalProperties: false
@@ -233,8 +255,10 @@ function ownCollectDir(topo) {
 function collectTool(args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = args || {};
-  var extra = Object.keys(args).filter(function (k) { return k !== 'topology' && k !== 'proto'; });
-  if (extra.length) throw new Error('collect takes only topology and proto, not: ' + extra.join(', ').slice(0, 100));
+  var extra = Object.keys(args).filter(function (k) { return k !== 'topology' && k !== 'proto' && k !== 'keep_previous'; });
+  if (extra.length) throw new Error('collect takes only topology, proto and keep_previous, not: ' + extra.join(', ').slice(0, 100));
+  if (args.keep_previous != null && typeof args.keep_previous !== 'boolean') throw new Error('keep_previous must be true or false');
+  var keep = args.keep_previous === true;
   var topo = str(args, 'topology', true), proto = str(args, 'proto', false) || 'bgp';
   if (proto !== 'bgp' && proto !== 'ospf') throw new Error('proto must be bgp or ospf');
   if (!/\.ya?ml$/i.test(topo)) throw new Error('topology must be a containerlab topology file (*.clab.yml)');
@@ -242,9 +266,11 @@ function collectTool(args) {
   var st; try { st = fs.statSync(topo); } catch (e) { throw new Error('topology not found: ' + topo); }
   if (!st.isFile()) throw new Error('topology is not a file: ' + topo);
   if (collecting) throw new Error('a collect is already running - try again when it has finished');
-  var dir = ownCollectDir(topo), out = path.join(dir, 'xray-states.js');
+  var dir = ownCollectDir(topo), out = path.join(dir, 'xray-states.js'), prev = path.join(dir, 'xray-states.previous.js');
   collecting = true;
   return new Promise(function (resolve) {
+    try { fs.unlinkSync(prev); } catch (e) {}   // only the one state this run replaces is ever kept
+    if (keep && fs.existsSync(out)) fs.renameSync(out, prev);
     try { fs.unlinkSync(out); } catch (e) {}
     cp.execFile(process.execPath, [path.join(ROOT, 'clab-xray-collect.js'), topo, dir, proto, '--exclude-mgmt'],
       { cwd: path.dirname(topo), timeout: COLLECT_MS, killSignal: 'SIGKILL', maxBuffer: 4 * 1024 * 1024, windowsHide: true },
@@ -259,7 +285,9 @@ function collectTool(args) {
         }
         try {
           var sum = query.summarize(loadStates(out));
-          resolve(Object.assign({ path: out, topology: topo, proto: proto }, sum));
+          var res = { path: out, topology: topo, proto: proto };
+          if (keep) res.previous = fs.existsSync(prev) ? prev : null;   // null: there was no earlier collect of this lab
+          resolve(Object.assign(res, sum));
         } catch (e) { resolve({ error: (e && e.message) || String(e) }); }
       });
   });
@@ -300,6 +328,10 @@ function callTool(name, args) {
   if (name === 'route_lookup') {
     var p3 = str(args, 'path', true), r = str(args, 'router', true), dst = str(args, 'destination', true);
     return query.routeLookup(loadStates(p3), r, dst, str(args, 'vrf', false));
+  }
+  if (name === 'state_diff') {
+    var b5 = str(args, 'before', true), a5 = str(args, 'after', true);
+    return query.diff(loadStates(b5), loadStates(a5), str(args, 'router', false));
   }
   if (name === 'why_path') {
     var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);
