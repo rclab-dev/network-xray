@@ -10,6 +10,19 @@
 **読むだけ**です。collector が既に書いた state のファイルから答えます。ルータにログインせず、コマンドを打たず、
 ファイルを書かず、ネットワークのソケットも開きません (例外は使う時だけ: `--allow-collect` を付けた時の `collect` は collector を 1 回走らせます。[ラボを読み直す](#ラボを読み直す-collect-使う時だけ))。`scripts/xray-query.js` と同じ関数を使うので、答えも同じです。
 
+## よくある使い方 <!-- nx_mcp_usual -->
+
+`./xray.sh` でラボを動かしているなら、サーバを足して、`xray.sh` が最新に保つ state のファイルを渡します:
+
+```
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+```
+
+聞き方の例: 「/path/to/network-xray/xray-states.js で lab_state を使って。どのリンクが落ちている?」
+
+`docker run` や netlab の tool の時は state がコンテナの中にあります: 先に `curl` で写しを取り、そのファイルを
+`path` に渡してください (コマンドは [state はどこから来るか](#state-はどこから来るか) にあります)。
+
 ## state はどこから来るか
 
 どのツールも引数 `path` を取ります。`path` には次のどれでも渡せます:
@@ -54,6 +67,9 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
   OSPF だけのラボは `ospf`) だけ。そのラボに `clab-xray-collect.js` を 1 回走らせます。
 - このツールは手元の Docker を読みます: 画面の collector と同じ読むだけのコマンド (`docker exec … vtysh` / `sr_cli` の
   `show`・Cisco IOS は SSH の `show`)。ルータは何も変わりませんが、collector と同じ権限 (Docker・IOS は `NX_IOS_PASSWORD`) が要ります。
+- つまり `--allow-collect` には Docker を使う権限が要ります: MCP のクライアントを起動するユーザが `docker` を打てること
+  (Linux では root か `docker` グループ。どちらもホストの root と同等)。試していない物: macOS の Docker Desktop・
+  リモートの Docker (`DOCKER_HOST`)。
 - `xray-states.js` は自分のディレクトリ (サーバが終わると消す) に書き、repo には書きません。`xray.sh` の画面の状態はそのままです。
   答えは `lab_state` と同じ形 + `path` (そのファイル)。ほかのツールにはその `path` を渡してください。
 - 同時に 1 本 (走っている間の 2 本目は断る)・最大 120 秒。

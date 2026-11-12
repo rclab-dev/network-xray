@@ -30,6 +30,11 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
 
 Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab-defaults.yml` through `defaults.sources.extra`: [netlab tool](#netlab-tool).
 
+<!-- nx_readme_not_shown -->
+**What the page does not show on a live lab:** a route-map result, a prefix-list deny, `next-hop-self`,
+`update-source` or a duplicate Router ID. The bundled collectors do not fill those fields
+([the list](DATA-CONTRACT.md#fields-the-bundled-collectors-do-not-fill)); an adapter you write can.
+
 ## Other ways to try it
 
 **Live example lab** — clone this repository and run `./xray.sh examples/q21-bgp-lp/q21.clab.yml` ([Quick start](#quick-start-run-a-lab-in-containerlab); `xray.sh` listens on `127.0.0.1` by default and has no login; see the [security notes](#security-notes)).
@@ -993,6 +998,11 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
    イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) で固定できます。[リリースページ](https://github.com/rclab-dev/network-xray/releases/latest) を参照してください。
 
 netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` での `docker/netlab-defaults.yml` の読み込みが必要です。[netlab tool](#netlab-tool-ja) を参照してください。
+
+<!-- nx_readme_not_shown -->
+**生きたラボで画面が出さない物:** route-map の結果・prefix-list の拒否・`next-hop-self`・`update-source`・
+Router ID の重複。同梱の collector はこれらの欄を埋めません ([一覧](DATA-CONTRACT.md#fields-the-bundled-collectors-do-not-fill))。
+自分で書く adapter なら渡せます。
 
 ## ほかの試し方
 

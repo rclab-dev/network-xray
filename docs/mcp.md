@@ -12,6 +12,19 @@ never runs a command, never writes a file and opens no network socket. (The one 
 only with `--allow-collect`, runs the collector once: see [Read the lab again](#read-the-lab-again-collect-opt-in).) It uses the same functions as
 `scripts/xray-query.js`, so it gives the same answers.
 
+## The usual setup <!-- nx_mcp_usual -->
+
+With a lab running under `./xray.sh`, add the server, then give it the state file `xray.sh` keeps up to date:
+
+```
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+```
+
+Then ask, for example: "Use lab_state on /path/to/network-xray/xray-states.js. Which links are down?"
+
+With `docker run` or the netlab tool the state is inside the container: save a copy with `curl` first and give that
+file as `path` (the command is under [Where the state comes from](#where-the-state-comes-from)).
+
 ## Where the state comes from
 
 Each tool takes a `path` argument, which can be any of these:
@@ -58,6 +71,9 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 - This tool reads the local Docker: it runs the same read-only commands as the page's collector (`docker exec … vtysh`
   / `sr_cli` `show`, SSH `show` on Cisco IOS). It changes nothing on the routers, but it needs the access the collector
   needs (Docker; `NX_IOS_PASSWORD` for IOS).
+- So `--allow-collect` needs the right to use Docker: the user who starts the MCP client must be able to run `docker`
+  (on Linux: root, or a member of the `docker` group, which is root-equivalent on the host). Not tested: Docker Desktop
+  on macOS, and a remote Docker (`DOCKER_HOST`).
 - It writes `xray-states.js` into a directory of its own (removed when the server exits), never into the repo, so a
   page that `xray.sh` serves keeps its own state. The answer is the `lab_state` summary plus `path` (that file):
   give that `path` to the other tools.
