@@ -308,9 +308,9 @@ topology:
         - 127.0.0.1:8600:8600
 ```
 
-When the lab is up, run `sudo containerlab deploy -t xray.clab.yml`, then use **Open Port in Browser** on the node `xray` in the extension (it opens `http://localhost:8600`). `sudo containerlab destroy -t xray.clab.yml --cleanup` removes only the viewer; the lab keeps running. It is the same container as the `docker run` line above: it is given the Docker socket (root-equivalent on the host, lab machines only), and `127.0.0.1:8600:8600` keeps the page on this machine ([Security notes](#security-notes)). Checked with containerlab 0.83.0 (example q21: the page and the routers' state).
+When the lab is up, run `sudo containerlab deploy -t xray.clab.yml`, then use **Open Port in Browser** on the node `xray` in the extension (for a lab on this machine it opens `http://localhost:8600`; over Remote SSH, VS Code forwards it). `sudo containerlab destroy -t xray.clab.yml --cleanup` removes only the viewer; the lab keeps running. It is the same container as the `docker run` line above: it is given the Docker socket (root-equivalent on the host, lab machines only), and `127.0.0.1:8600:8600` keeps the page on this machine ([Security notes](#security-notes)). Checked with containerlab 0.83.0 (example q21: the page and the routers' state).
 
-The containerlab Web app has the same action (the node's **Open Browser** in its explorer), but it opens the port on the name of the lab host it is connected to (`http://<lab host>:8600`), so with `127.0.0.1:8600:8600` the page opens only in a browser on the lab host itself. To open it from another machine, publish `8600:8600` instead (the page has no login: a trusted network only).
+The containerlab Web app has the same action (the node's **Open Browser** in its explorer), and so does the extension when it is connected to a remote lab host, but they open the port on the name of the lab host they are connected to (`http://<lab host>:8600`), so with `127.0.0.1:8600:8600` the page opens only in a browser on the lab host itself. To open it from another machine, publish `8600:8600` instead (the page has no login: a trusted network only).
 
 <!-- nx_readme_iosxe (2026-10-29 / 2026-10-30) -->
 ## Cisco IOS-XE (IOL)
@@ -1214,9 +1214,9 @@ topology:
         - 127.0.0.1:8600:8600
 ```
 
-ラボが動いている所で `sudo containerlab deploy -t xray.clab.yml` を実行し、拡張でノード `xray` の **Open Port in Browser** を使います (`http://localhost:8600` が開きます)。`sudo containerlab destroy -t xray.clab.yml --cleanup` で消えるのは画面の側だけで、ラボは動いたままです。上の `docker run` の 1 行と同じコンテナです: Docker ソケット (ホスト上の root 権限と同等・ラボ用の機械でだけ) を渡し、`127.0.0.1:8600:8600` で画面をこの機械の中だけに置きます ([セキュリティの注意](#security-notes-ja))。containerlab 0.83.0 で確かめました (例題 q21: 画面とルータの状態)。
+ラボが動いている所で `sudo containerlab deploy -t xray.clab.yml` を実行し、拡張でノード `xray` の **Open Port in Browser** を使います (この機械のラボなら `http://localhost:8600` が開きます。Remote SSH では VS Code が転送します)。`sudo containerlab destroy -t xray.clab.yml --cleanup` で消えるのは画面の側だけで、ラボは動いたままです。上の `docker run` の 1 行と同じコンテナです: Docker ソケット (ホスト上の root 権限と同等・ラボ用の機械でだけ) を渡し、`127.0.0.1:8600:8600` で画面をこの機械の中だけに置きます ([セキュリティの注意](#security-notes-ja))。containerlab 0.83.0 で確かめました (例題 q21: 画面とルータの状態)。
 
-containerlab の Web app にも同じ操作 (explorer のノードの **Open Browser**) がありますが、Web app が繋いでいるラボのホストの名前でポートを開きます (`http://<ラボのホスト>:8600`)。`127.0.0.1:8600:8600` だと、ラボのホスト自身のブラウザでだけ開けます。ほかの機械から開く時は `8600:8600` で公開してください (画面にログインは無いので、信頼できるネットワークでだけ)。
+containerlab の Web app にも同じ操作 (explorer のノードの **Open Browser**) があり、拡張も遠くのラボのホストに繋いでいる時は同じですが、繋いでいるラボのホストの名前でポートを開きます (`http://<ラボのホスト>:8600`)。`127.0.0.1:8600:8600` だと、ラボのホスト自身のブラウザでだけ開けます。ほかの機械から開く時は `8600:8600` で公開してください (画面にログインは無いので、信頼できるネットワークでだけ)。
 
 ## Cisco IOS-XE (IOL)
 
