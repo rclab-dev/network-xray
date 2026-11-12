@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * xray-mcp.js - a minimal Model Context Protocol (MCP) server over stdio, read-only.
+ * xray-mcp.js - a minimal Model Context Protocol (MCP) server over stdio, read-only (one opt-in tool reads the routers again).
  *
  * Lets an AI assistant ask network-xray about a lab. It answers from files the collectors already wrote,
  * with the same functions as scripts/xray-query.js:
@@ -29,6 +29,13 @@
  *
  * It only reads the given path. It never runs commands on routers, never writes files, opens no network sockets.
  *
+ * The one exception is opt-in: started with --allow-collect, the server also lists
+ *   collect        { topology, proto? }      -> runs clab-xray-collect.js once on that running containerlab lab (the
+ *                                               same read-only show commands as the page's collector; nothing on the
+ *                                               routers changes), writes xray-states.js into a directory of its own
+ *                                               (never the repo's) and returns the lab_state summary plus that `path`.
+ *                                               Only a topology path and ospf|bgp are taken; one run at a time, 120 s.
+ *
  * Transport: JSON-RPC 2.0, one message per line on stdin/stdout (MCP stdio). Logs go to stderr.
  * Protocol: the initialize-based MCP revisions (2024-11-05 to 2025-11-25). The stateless 2026-07-28 revision
  * (per-request _meta, server/discover) is not implemented.
@@ -36,6 +43,7 @@
  */
 'use strict';
 var readline = require('readline');
+var fs = require('fs'), os = require('os'), path = require('path'), cp = require('child_process');
 var query = require('./xray-query.js');
 
 var SERVER_INFO = { name: 'network-xray', version: '1' };   // the image's major tag (ghcr.io/rclab-dev/network-xray:1): no full version kept in a file
@@ -175,6 +183,83 @@ var TOOLS = [
   }
 ];
 
+/* nx_mcp_collect (2026-11-11): read the routers again from the MCP client - off unless the server is started with
+   --allow-collect (then tools/list has it too). It runs the existing collector once with fixed arguments; the client
+   gives only the topology file and ospf|bgp. */
+var COLLECT_TOOL = {
+  name: 'collect',
+  description: 'Read the routers of a running containerlab lab again and return the new state: runs network-xray\'s ' +
+    'collector once (the same read-only show commands as the page: docker exec vtysh / sr_cli, SSH show on Cisco IOS; ' +
+    'nothing on the routers changes). Returns the lab_state summary plus `path`, the xray-states.js it wrote into a ' +
+    'directory of its own: give that `path` to the other tools. Use it after you changed a router\'s configuration. ' +
+    'Available only when the server was started with --allow-collect. One run at a time, at most 120 s.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      topology: { type: 'string', description: 'The running lab\'s containerlab topology file (*.clab.yml), absolute path' },
+      proto: { type: 'string', enum: ['bgp', 'ospf'], description: 'bgp (default: reads OSPF too) or ospf (an OSPF-only lab)' }
+    },
+    required: ['topology'],
+    additionalProperties: false
+  },
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
+};
+var COLLECT_MS = 120000, ROOT = path.join(__dirname, '..');
+var allowCollect = false, collecting = false, collectDir = null;
+function tools() { return allowCollect ? TOOLS.concat([COLLECT_TOOL]) : TOOLS; }
+
+/* the collector needs its per-vendor collectors next to the output: a directory only this user can open (made once),
+   with one sub-directory per topology holding copies of them - a lab page served from the repo keeps its own
+   xray-states.js, and the path returned for one lab is not overwritten by a collect of another lab */
+var topoDirs = {};
+function ownCollectDir(topo) {
+  if (!collectDir || !fs.existsSync(collectDir)) { collectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'network-xray-mcp-')); topoDirs = {}; }
+  if (!topoDirs[topo]) {
+    var d = path.join(collectDir, 'lab' + (Object.keys(topoDirs).length + 1));
+    fs.mkdirSync(d, { mode: 0o700 });
+    ['clab-collect.js', 'clab-srl-collect.js', 'clab-iosxe-collect.js'].forEach(function (f) {
+      if (fs.existsSync(path.join(ROOT, f))) fs.copyFileSync(path.join(ROOT, f), path.join(d, f));
+    });
+    topoDirs[topo] = d;
+  }
+  return topoDirs[topo];
+}
+
+function collectTool(args) {
+  if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
+  args = args || {};
+  var extra = Object.keys(args).filter(function (k) { return k !== 'topology' && k !== 'proto'; });
+  if (extra.length) throw new Error('collect takes only topology and proto, not: ' + extra.join(', ').slice(0, 100));
+  var topo = str(args, 'topology', true), proto = str(args, 'proto', false) || 'bgp';
+  if (proto !== 'bgp' && proto !== 'ospf') throw new Error('proto must be bgp or ospf');
+  if (!/\.ya?ml$/i.test(topo)) throw new Error('topology must be a containerlab topology file (*.clab.yml)');
+  topo = path.resolve(topo);
+  var st; try { st = fs.statSync(topo); } catch (e) { throw new Error('topology not found: ' + topo); }
+  if (!st.isFile()) throw new Error('topology is not a file: ' + topo);
+  if (collecting) throw new Error('a collect is already running - try again when it has finished');
+  var dir = ownCollectDir(topo), out = path.join(dir, 'xray-states.js');
+  collecting = true;
+  return new Promise(function (resolve) {
+    try { fs.unlinkSync(out); } catch (e) {}
+    cp.execFile(process.execPath, [path.join(ROOT, 'clab-xray-collect.js'), topo, dir, proto, '--exclude-mgmt'],
+      { cwd: path.dirname(topo), timeout: COLLECT_MS, killSignal: 'SIGKILL', maxBuffer: 4 * 1024 * 1024, windowsHide: true },
+      function (err, stdout, stderr) {
+        collecting = false;
+        if (err || !fs.existsSync(out)) {
+          // the collector's own "!! ..." lines say why (lab name, no links, a collector missing); no file contents
+          var why = String(stderr || '').split(/\r?\n/).filter(function (l) { return /^!! /.test(l); }).slice(0, 3).join(' / ');
+          var msg = err && err.killed ? 'the collector did not finish in ' + (COLLECT_MS / 1000) + ' s'
+            : 'the collector failed' + (why ? ': ' + why.slice(0, 600) : (err ? ' (exit ' + err.code + ')' : ''));
+          return resolve({ error: msg });
+        }
+        try {
+          var sum = query.summarize(loadStates(out));
+          resolve(Object.assign({ path: out, topology: topo, proto: proto }, sum));
+        } catch (e) { resolve({ error: (e && e.message) || String(e) }); }
+      });
+  });
+}
+
 function str(args, k, required) {
   var v = args[k];
   if (v == null || v === '') { if (required) throw new Error('missing argument: ' + k); return undefined; }
@@ -238,19 +323,27 @@ function handle(msg) {
         protocolVersion: PROTOCOL_VERSIONS.indexOf(params.protocolVersion) >= 0 ? params.protocolVersion : PROTOCOL_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
-        instructions: 'Read-only questions about a network-xray lab from saved state files. No router is contacted.'
+        instructions: allowCollect
+          ? 'Questions about a network-xray lab from saved state files. The collect tool reads a running lab\'s routers again (read-only show commands) and returns a new path for the other tools.'
+          : 'Read-only questions about a network-xray lab from saved state files. No router is contacted.'
       };
       break;
     case 'ping':
       result = {};
       break;
     case 'tools/list':
-      result = { tools: TOOLS };
+      result = { tools: tools() };
       break;
     case 'tools/call':
-      if (!TOOLS.some(function (t) { return t.name === params.name; })) {
+      if (!tools().some(function (t) { return t.name === params.name; })) {
         error = { code: -32602, message: 'Unknown tool: ' + params.name };
         break;
+      }
+      if (params.name === 'collect') {   /* nx_mcp_collect: the one tool that answers later (a Promise of the response) */
+        var p;
+        try { p = collectTool(params.arguments); } catch (e) { result = toolResult({ error: (e && e.message) || String(e) }, true); break; }
+        if (isNotification) return null;
+        return p.then(function (obj) { return { jsonrpc: '2.0', id: msg.id, result: toolResult(obj, !!obj.error) }; });
       }
       try { result = toolResult(callTool(params.name, params.arguments), false); }
       catch (e) {
@@ -277,20 +370,26 @@ function handleLine(line) {
 if (require.main === module) {
   var _cli = process.argv.slice(2);
   if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) {
-    process.stdout.write('usage: node scripts/xray-mcp.js\n' +
+    process.stdout.write('usage: node scripts/xray-mcp.js [--allow-collect]\n' +
       '  read-only MCP server over stdio (JSON-RPC, one message per line); start it from an MCP client\n' +
       '  tools: ' + TOOLS.map(function (t) { return t.name; }).join(', ') + '\n' +
-      '  -h, --help  show this help\n');
+      '  --allow-collect  also offer collect: read a running containerlab lab\'s routers again (read-only show commands)\n' +
+      '  -h, --help       show this help\n');
     process.exitCode = 0;
     return;
   }
+  _cli = _cli.filter(function (a) { if (a === '--allow-collect') { allowCollect = true; return false; } return true; });
   if (_cli.length) { console.error('xray-mcp.js: unknown option: ' + _cli[0] + "\nTry 'node scripts/xray-mcp.js --help'."); process.exit(2); }
   var rl = readline.createInterface({ input: process.stdin, terminal: false });
+  var write = function (res) { if (res) process.stdout.write(JSON.stringify(res) + '\n'); };
   rl.on('line', function (line) {
     var res = handleLine(line);
-    if (res) process.stdout.write(JSON.stringify(res) + '\n');
+    if (res && typeof res.then === 'function') res.then(write); else write(res);
   });
+  // the private collect directory goes with the server
+  process.on('exit', function () { if (collectDir) try { fs.rmSync(collectDir, { recursive: true, force: true }); } catch (e) {} });
   // when stdin closes, the process exits on its own once pending output is flushed
 }
 
-module.exports = { handle: handle, handleLine: handleLine, TOOLS: TOOLS };
+module.exports = { handle: handle, handleLine: handleLine, TOOLS: TOOLS, COLLECT_TOOL: COLLECT_TOOL,
+  setAllowCollect: function (on) { allowCollect = !!on; } };

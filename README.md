@@ -829,6 +829,7 @@ with no dependencies. Tools: `lab_state` (`path`), `why_best_path` (`path`, `nod
 (`path`, `router`, `destination`, optional `vrf`: the longest match in the routing table the collector saved), and
 `why_path` (`path`, `router`, `prefix`, optional `vrf`: the selected BGP path, the other candidates and the deciding step).
 It is read-only: it only reads the path it is given, never runs commands on routers and never writes files.
+Started with `--allow-collect`, it also offers `collect` (`topology`, optional `proto`): it reads a running containerlab lab's routers again with the collector's read-only commands (this tool reads the local Docker) and returns a new `path` for the other tools ([docs/mcp.md](docs/mcp.md#read-the-lab-again-collect-opt-in)). <!-- nx_mcp_collect -->
 It speaks the initialize-based MCP revisions (2024-11-05 to 2025-11-25), which current MCP clients use over stdio;
 the stateless 2026-07-28 revision is not implemented.
 
@@ -1639,7 +1640,7 @@ node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
 
 ### MCP サーバ (stdio)
 
-`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。ツール: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors`・`ospf_interfaces`・`bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
+`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。ツール: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors`・`ospf_interfaces`・`bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。`--allow-collect` を付けて起動した時だけ `collect` (`topology`・任意で `proto`) も出ます: 動いている containerlab のラボのルータを collector の読むだけのコマンドで読み直し (このツールは手元の Docker を読みます)、ほかのツールに渡す新しい `path` を返します ([docs/ja/mcp.md](docs/ja/mcp.md))。<!-- nx_mcp_collect -->initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
 
 ```json
 {

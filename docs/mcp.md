@@ -8,7 +8,8 @@ which routers are up, what their OSPF and BGP neighbors are, which BGP path a ro
 it uses for an address.
 
 It is **read-only**. It answers from state files the collectors have already written. It never logs in to a router,
-never runs a command, never writes a file and opens no network socket. It uses the same functions as
+never runs a command, never writes a file and opens no network socket. (The one exception is opt-in: `collect`, offered
+only with `--allow-collect`, runs the collector once: see [Read the lab again](#read-the-lab-again-collect-opt-in).) It uses the same functions as
 `scripts/xray-query.js`, so it gives the same answers.
 
 ## Where the state comes from
@@ -41,6 +42,26 @@ mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/
 ```
 
 This is a snapshot: run `curl` again for the current state.
+
+## Read the lab again: collect (opt-in) <!-- nx_mcp_collect -->
+
+Started with `--allow-collect`, the server offers one more tool, `collect`, so an assistant can change a router and
+then see the new state without leaving the MCP tools (change → `collect` → `why_path`). Without the flag the tool is
+not listed and a call to it is refused.
+
+```
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect
+```
+
+- `collect` takes only `topology` (the running lab's `*.clab.yml`, absolute path) and an optional `proto` (`bgp`, the
+  default, which reads OSPF too, or `ospf` for an OSPF-only lab). It runs `clab-xray-collect.js` once on that lab.
+- This tool reads the local Docker: it runs the same read-only commands as the page's collector (`docker exec … vtysh`
+  / `sr_cli` `show`, SSH `show` on Cisco IOS). It changes nothing on the routers, but it needs the access the collector
+  needs (Docker; `NX_IOS_PASSWORD` for IOS).
+- It writes `xray-states.js` into a directory of its own (removed when the server exits), never into the repo, so a
+  page that `xray.sh` serves keeps its own state. The answer is the `lab_state` summary plus `path` (that file):
+  give that `path` to the other tools.
+- One run at a time (a second call while one runs is refused), and at most 120 s.
 
 ## Start it
 

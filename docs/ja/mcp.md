@@ -8,7 +8,7 @@
 あるアドレスにどの経路を使うか、などです。
 
 **読むだけ**です。collector が既に書いた state のファイルから答えます。ルータにログインせず、コマンドを打たず、
-ファイルを書かず、ネットワークのソケットも開きません。`scripts/xray-query.js` と同じ関数を使うので、答えも同じです。
+ファイルを書かず、ネットワークのソケットも開きません (例外は使う時だけ: `--allow-collect` を付けた時の `collect` は collector を 1 回走らせます。[ラボを読み直す](#ラボを読み直す-collect-使う時だけ))。`scripts/xray-query.js` と同じ関数を使うので、答えも同じです。
 
 ## state はどこから来るか
 
@@ -40,6 +40,23 @@ mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/
 ```
 
 これはその時の写しです。今の状態にするには `curl` をもう一度動かします。
+
+## ラボを読み直す: collect (使う時だけ) <!-- nx_mcp_collect -->
+
+`--allow-collect` を付けて起動すると、ツールが 1 つ増えます (`collect`)。AI アシスタントがルータの設定を変えた後、
+MCP のツールだけで新しい状態を見られます (変える → `collect` → `why_path`)。旗が無い時は一覧に出ず、呼んでも断ります。
+
+```
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect
+```
+
+- `collect` が受けるのは `topology` (動いているラボの `*.clab.yml`・絶対パス) と、任意の `proto` (既定の `bgp` = OSPF も読む /
+  OSPF だけのラボは `ospf`) だけ。そのラボに `clab-xray-collect.js` を 1 回走らせます。
+- このツールは手元の Docker を読みます: 画面の collector と同じ読むだけのコマンド (`docker exec … vtysh` / `sr_cli` の
+  `show`・Cisco IOS は SSH の `show`)。ルータは何も変わりませんが、collector と同じ権限 (Docker・IOS は `NX_IOS_PASSWORD`) が要ります。
+- `xray-states.js` は自分のディレクトリ (サーバが終わると消す) に書き、repo には書きません。`xray.sh` の画面の状態はそのままです。
+  答えは `lab_state` と同じ形 + `path` (そのファイル)。ほかのツールにはその `path` を渡してください。
+- 同時に 1 本 (走っている間の 2 本目は断る)・最大 120 秒。
 
 ## 起動する
 
