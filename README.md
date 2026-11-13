@@ -32,7 +32,7 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
-   **Before you run it:** memory — about 20 MB per FRR router, plus about 100 MB for network-xray with 3 routers (260 MB with 12); Windows — in WSL2 ([WSL2 guide](docs/windows-wsl2.md)); routers it reads — FRR, Nokia SR Linux, Cisco IOL ([the table](#when-to-use)); your `.clab.yml` is not changed (the folder is mounted read-only).
+   **Before you run it:** memory — about 20 MB per FRR router, plus network-xray — up to about 100 MB in its first minute, then about 50 MB (3 or 10 routers); Windows — in WSL2 ([WSL2 guide](docs/windows-wsl2.md)); routers it reads — FRR, Nokia SR Linux, Cisco IOL ([the table](#when-to-use)); your `.clab.yml` is not changed (the folder is mounted read-only).
    It only runs `show` commands, but the container is given the Docker socket (root-equivalent on the host) — lab machines only. [More](#security-notes)
    Rather not give it the socket? Ways 1 and 2 need none on your machine (the recorded demo, the paste pages, Codespaces).
    Why it needs the socket (to run `show` in each router's container), and three more ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
@@ -245,7 +245,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 ![Recorded quick start (recorded with the old name demo.sh): git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
 
-**You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container; measured with `docker stats` on FRR 8.4: about 20 MB per router, and the network-xray container about 100 MB with 3 routers and 260 MB with 12) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
+**You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container; measured with `docker stats` on FRR 8.4: about 20 MB per router, and the network-xray container up to about 100 MB in its first minute and about 50 MB after that, with 3 or with 10 routers) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
 
 **Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
@@ -1030,7 +1030,7 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
-   **動かす前に:** メモリ — FRR のルータ 1 台 20 MB ほど + network-xray がルータ 3 台で 100 MB ほど (12 台で 260 MB ほど)。Windows — WSL2 の中で ([WSL2 の手引き](docs/ja/windows-wsl2.md))。読めるルータ — FRR・Nokia SR Linux・Cisco IOL ([表](#いつ使うか))。`.clab.yml` は変えません (フォルダは読むだけでマウント)。
+   **動かす前に:** メモリ — FRR のルータ 1 台 20 MB ほど + network-xray が起動して 1 分ほどは最大 100 MB ほど・その後は 50 MB ほど (ルータ 3 台でも 10 台でも)。Windows — WSL2 の中で ([WSL2 の手引き](docs/ja/windows-wsl2.md))。読めるルータ — FRR・Nokia SR Linux・Cisco IOL ([表](#いつ使うか))。`.clab.yml` は変えません (フォルダは読むだけでマウント)。
    読む命令だけですが、Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
    ソケットを渡したくない時は、1 と 2 (記録済みのデモ・貼る頁・Codespaces) なら手元の機械にソケットは要りません。
    ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使うほかの 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
@@ -1223,7 +1223,7 @@ MCP の `why_path` も同じ区別を `reason_source` (`device` = ルータが�
 
 ![記録済みのクイックスタート (前の名前 demo.sh で録った物): git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
 
-**必要なもの:** Linux (または Windows の **WSL2** ([WSL2 の手引き](docs/ja/windows-wsl2.md))・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ。FRR 8.4 で `docker stats` で測った値: ルータ 1 台 20 MB ほど・network-xray のコンテナはルータ 3 台で 100 MB ほど・12 台で 260 MB ほど)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
+**必要なもの:** Linux (または Windows の **WSL2** ([WSL2 の手引き](docs/ja/windows-wsl2.md))・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ。FRR 8.4 で `docker stats` で測った値: ルータ 1 台 20 MB ほど・network-xray のコンテナは起動して 1 分ほどは最大 100 MB ほど・その後は 50 MB ほど (ルータ 3 台でも 10 台でも))・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
 
 **どちらで始めるか:** **初めてなら下の `xray.sh` を。** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
 
