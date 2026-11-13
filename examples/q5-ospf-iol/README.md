@@ -17,7 +17,7 @@ Nodes: r1 (IOL), r2 (IOL). The same problem with FRR: `examples/q5-ospf/`.
 ```bash
 ./xray.sh examples/q5-ospf-iol/q5.clab.yml
 ```
-Open **http://localhost:8080/**. IOL takes about a minute to boot; until SSH is up, the nodes are shown as not yet read.
+Open **http://localhost:8080/** (`./xray.sh` uses 8080; the `docker run` in the main README uses 8600). IOL takes about a minute to boot; until SSH is up, the nodes are shown as not yet read.
 network-xray reads the IOL nodes over SSH every 10 s, using only `show` commands (it changes no configuration).
 
 ## Stop
@@ -39,5 +39,5 @@ sudo containerlab destroy -t examples/q5-ospf-iol/q5.clab.yml --cleanup
 
 - Linux + Docker + containerlab + Node.js 18 以上。
 - **IOL のイメージは自分で用意**してください。network-xray には IOL の本体も、作ったイメージも入っていません。IOL は自分の Cisco のライセンスで手に入れ、vrnetlab で `cisco_iol` を作り、topology の `image:` の行 (今は `vrnetlab/cisco_iol:17.18.02`) を自分のタグに変えます。
-- 起動: `./xray.sh examples/q5-ospf-iol/q5.clab.yml` → http://localhost:8080/ (IOL の起動に 1 分ほど)。
+- 起動: `./xray.sh examples/q5-ospf-iol/q5.clab.yml` → http://localhost:8080/ (IOL の起動に 1 分ほど)・`./xray.sh` は 8080、本体の README の `docker run` は 8600 です。
 - 止める: `sudo containerlab destroy -t examples/q5-ospf-iol/q5.clab.yml --cleanup`

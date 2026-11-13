@@ -9,6 +9,8 @@
 **Already have containerlab?** Jump to the [Quick start](#quick-start-run-a-lab-in-containerlab).
 
 <!-- nx_readme_entry (2026-10-20) -->
+**Fastest: the recorded demo (no routers, no setup).**
+
 ![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
 
 ### ▶ [Open the recorded Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — no routers needed
@@ -29,6 +31,7 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
    It only runs `show` commands, but the container is given the Docker socket (root-equivalent on the host) — lab machines only. [More](#security-notes)
+   Why it needs the socket (to run `show` in each router's container), and three ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
    You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull); see the [release page](https://github.com/rclab-dev/network-xray/releases/latest).
 
 Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab-defaults.yml` through `defaults.sources.extra`: [netlab tool](#netlab-tool).
@@ -987,6 +990,8 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 **BGP はなぜこの経路を選んだのか。** network-xray は、ネットワークのラボで各ルータが選んだ経路、ほかの候補、その経路を選んだ理由を表示します。containerlab / netlab のラボの FRR・Nokia SR Linux・Cisco IOL のルータの今の状態を読み、ブラウザに描きます。
 
 <!-- nx_readme_entry (2026-10-20) -->
+**いちばん速い試し方: 記録済みのデモ (ルータ不要・準備なし)。**
+
 ![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
 
 ### ▶ [記録済み (recorded) Best-Path Decision デモを開く](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — ルータ不要
@@ -1006,6 +1011,7 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
    読む命令だけですが、Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
+   ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使う 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
    イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) で固定できます。[リリースページ](https://github.com/rclab-dev/network-xray/releases/latest) を参照してください。
 
 netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` での `docker/netlab-defaults.yml` の読み込みが必要です。[netlab tool](#netlab-tool-ja) を参照してください。
