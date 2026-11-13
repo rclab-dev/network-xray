@@ -244,7 +244,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 ![Recorded quick start (recorded with the old name demo.sh): git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
 
-**You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
+**You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container; measured with `docker stats` on FRR 8.4: about 20 MB per router, and the network-xray container about 100 MB with 3 routers and 260 MB with 12) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
 
 **Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
@@ -1221,7 +1221,7 @@ MCP の `why_path` も同じ区別を `reason_source` (`device` = ルータが�
 
 ![記録済みのクイックスタート (前の名前 demo.sh で録った物): git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
 
-**必要なもの:** Linux (または Windows の **WSL2** ([WSL2 の手引き](docs/ja/windows-wsl2.md))・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
+**必要なもの:** Linux (または Windows の **WSL2** ([WSL2 の手引き](docs/ja/windows-wsl2.md))・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ。FRR 8.4 で `docker stats` で測った値: ルータ 1 台 20 MB ほど・network-xray のコンテナはルータ 3 台で 100 MB ほど・12 台で 260 MB ほど)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
 
 **どちらで始めるか:** **初めてなら下の `xray.sh` を。** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
 
