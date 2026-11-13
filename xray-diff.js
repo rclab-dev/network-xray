@@ -200,17 +200,17 @@
 
   /* ---- the page's baseline (v1.4 step 3): kept in memory only, never written anywhere --------------------------- */
   var LABEL = {
-    en: { node_removed: 'router gone', node_unread: 'not read', iface_down: 'interface down', ospf_if_left: 'left OSPF',
+    en: { node_removed: 'router gone', node_unread: 'not read', iface_down: 'interface', ospf_if_left: 'left OSPF',
       ospf_if_value: 'OSPF value', bgp_peer_removed: 'BGP peer gone', ospf_adjacency_lost: 'OSPF adjacency lost',
-      bgp_session_down: 'BGP session down', best_path_changed: 'best path', route_removed: 'route gone', route_changed: 'route',
-      ospf_adjacency_state: 'OSPF adjacency', node_added: 'router new', iface_up: 'interface up', ospf_adjacency_up: 'OSPF adjacency up',
-      ospf_adjacency_new: 'OSPF adjacency new', ospf_if_joined: 'joined OSPF', bgp_session_up: 'BGP session up', bgp_peer_added: 'BGP peer new',
+      bgp_session_down: 'BGP session', best_path_changed: 'best path', route_removed: 'route gone', route_changed: 'route',
+      ospf_adjacency_state: 'OSPF adjacency', node_added: 'router new', iface_up: 'interface', ospf_adjacency_up: 'OSPF adjacency',
+      ospf_adjacency_new: 'OSPF adjacency new', ospf_if_joined: 'joined OSPF', bgp_session_up: 'BGP session', bgp_peer_added: 'BGP peer new',
       route_added: 'route new', iface_address: 'address' },
-    ja: { node_removed: 'ルータが消えた', node_unread: '読めない', iface_down: 'interface が down', ospf_if_left: 'OSPF から外れた',
+    ja: { node_removed: 'ルータが消えた', node_unread: '読めない', iface_down: 'interface', ospf_if_left: 'OSPF から外れた',
       ospf_if_value: 'OSPF の値', bgp_peer_removed: 'BGP の相手が消えた', ospf_adjacency_lost: 'OSPF の隣接が切れた',
-      bgp_session_down: 'BGP が落ちた', best_path_changed: '最良経路', route_removed: '経路が消えた', route_changed: '経路',
-      ospf_adjacency_state: 'OSPF の隣接', node_added: 'ルータが増えた', iface_up: 'interface が up', ospf_adjacency_up: 'OSPF の隣接が戻った',
-      ospf_adjacency_new: 'OSPF の隣接が増えた', ospf_if_joined: 'OSPF に入った', bgp_session_up: 'BGP が戻った', bgp_peer_added: 'BGP の相手が増えた',
+      bgp_session_down: 'BGP', best_path_changed: '最良経路', route_removed: '経路が消えた', route_changed: '経路',
+      ospf_adjacency_state: 'OSPF の隣接', node_added: 'ルータが増えた', iface_up: 'interface', ospf_adjacency_up: 'OSPF の隣接',
+      ospf_adjacency_new: 'OSPF の隣接が増えた', ospf_if_joined: 'OSPF に入った', bgp_session_up: 'BGP', bgp_peer_added: 'BGP の相手が増えた',
       route_added: '経路が増えた', iface_address: 'アドレス' }
   };
   var TONE = { node_removed: 'bad', node_unread: 'bad', iface_down: 'bad', ospf_if_left: 'bad', ospf_if_value: 'bad', bgp_peer_removed: 'bad',
