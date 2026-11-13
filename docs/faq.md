@@ -105,6 +105,14 @@ A router that is stopped is drawn grey with the reason. One that stops answering
 is asked again about 10 seconds later, while the rest of the picture keeps updating. See the
 [netlab tool](../README.md#netlab-tool) section.
 
+### How heavy is a large lab?
+
+Memory, measured with `docker stats` on FRR 8.4: about 20 MB per FRR router, and the network-xray container about
+100 MB with 3 routers and 260 MB with 12. One round of reading, on synthetic FRR labs (a ring, one OSPF area, no
+containers; `node scripts/scale-bench.js`): the Node side takes about 0.1 s for 50 routers, 0.4 s for 100 and 1–1.6 s
+for 200, and the state file at 200 routers is about 14 MB (OSPF) to 38 MB (OSPF and BGP). Labs with several OSPF areas
+have not been measured on their own.
+
 ## Limits
 
 ### What happens with a vendor it does not read (Arista cEOS, Juniper, Linux hosts, …)?
@@ -125,6 +133,18 @@ VRFs are not read: a lab with VRFs shows a warning instead of a wrong picture. S
 
 On FRR, OSPFv3 neighbors, interfaces and the IPv6 routing table are read on routers with `router ospf6`. The IPv6 BGP
 table is not read. See [When to use](../README.md#when-to-use).
+
+### Which BGP values does it draw?
+
+For each prefix, every path in the router's BGP table with its next hop, Local Preference, AS path, origin and MED
+(and weight on FRR and Cisco IOL), the path the router marked best (on FRR with its own reason), and ECMP paths. Not read:
+communities, the IPv6 BGP table, and paths the router dropped before its table (what a neighbor sent before policy).
+
+### Does a route-map change show on the page?
+
+What a route-map changes in those values (Local Preference, MED, an AS path prepend, weight) is read on the next round
+and shown, and the Best-Path Decision panel uses the new values. The route-map itself (which entry matched, a deny) and
+communities are not read: see [the fields the bundled collectors do not fill](../DATA-CONTRACT.md#fields-the-bundled-collectors-do-not-fill).
 
 ### What if some output cannot be parsed?
 
