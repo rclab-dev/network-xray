@@ -45,6 +45,39 @@ html = shell.fill(html, NAME, topo);
 if (html.split("loadSeq('static/'").length !== 2) throw new Error("xray-graph.html: expected one loadSeq('static/' in the loader");
 html = html.replace("loadSeq('static/'", "loadSeq('../'");
 
+// 1b) a recorded replay never loads xray-states.js (replay-bar.js seeds window.LIVE_STATES from FRAMES); without this
+//     the page asked Pages for demo/static/xray-states.js and logged a 404. Same as index-bgp.html.
+function once(re, to, what) {
+  var m = html.match(new RegExp(re.source, 'g'));
+  if (!m || m.length !== 1) throw new Error('xray-graph.html: expected one ' + what);
+  html = html.replace(re, function () { return to; });
+}
+once(/  function withStates\(base, done\)\{\n[^\n]*createElement\('script'\);\n(?:[^\n]*\n){5}  \}/,
+  '  function withStates(base, done){\n'
+  + '    // nx_demo_no_states_fetch: this is a RECORDED replay — replay-bar.js seeds window.LIVE_STATES from the\n'
+  + '    // baked-in FRAMES, so a live xray-states.js is never needed here. Skip loading it (no console 404 on Pages,\n'
+  + "    // and a stray xray-states.js next to the page can't override the recording). Same as index-bgp.html.\n"
+  + '    done();\n'
+  + '  }', 'withStates() loader');
+// 1c) a line to the Best-Path Decision demo (English / Japanese), and the topology box fits a phone
+once(/  <div class="ov" id="ov"><\/div>\n/,
+  '  <style>.nx-next a{color:#4dd0e1}</style>\n'
+  + '  <p class="sub nx-next" data-i18n="next_demo">Why one BGP path wins over another: the <a href="index-bgp-lp.html">Best-Path Decision demo</a>.</p>\n'
+  + '  <div class="ov" id="ov"></div>\n'
+  + '<script>/* nx_demo_fit_ov: on a narrow screen (a phone) the 560px topology box is zoomed to the page width, so it no\n'
+  + '   longer spills sideways (the DeepDive below keeps its own sideways scroll and the note about it). */\n'
+  + "(function(){ function fit(){ var o = document.getElementById('ov'); if (!o) return;\n"
+  + "  var w = document.documentElement.clientWidth - 16; o.style.zoom = w < 562 ? (w / 562).toFixed(3) : ''; }\n"
+  + "  fit(); window.addEventListener('resize', fit); })();</script>\n", 'overview box');
+once(/(X-Ray adds the per-node DeepDive\.',\n)(      footer:)/,
+  "X-Ray adds the per-node DeepDive.',\n"
+  + "      next_demo: 'Why one BGP path wins over another: the <a href=\"index-bgp-lp.html\">Best-Path Decision demo</a>.',\n"
+  + '      footer:', 'English intro');
+var jaIntro = /\n      intro: '全体図はあなたの[^\n]*\n      footer:/;
+once(jaIntro, (html.match(jaIntro) || [''])[0].replace(/      footer:$/,
+  "      next_demo: 'BGP の経路がなぜ選ばれるか: <a href=\"index-bgp-lp.html\">Best-Path Decision のデモ</a>。',\n      footer:"),
+  'Japanese intro');
+
 // 2) inject the replay driver right before </body>. It runs synchronously at parse
 //    time (after the loader kicks off async dep-loading), seeds window.LIVE_STATES
 //    with frame A so the first render is real, then advances frames on a timer using

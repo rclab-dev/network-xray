@@ -82,7 +82,14 @@
   <h1><span class="x">X-Ray</span> graph — <span id="labname">xray-ospf</span> <small data-i18n="subtitle">(containerlab × X-Ray DeepDive)</small></h1>
   <p class="sub" data-i18n="intro">The topology view = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
     OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.</p>
+  <style>.nx-next a{color:#4dd0e1}</style>
+  <p class="sub nx-next" data-i18n="next_demo">Why one BGP path wins over another: the <a href="index-bgp-lp.html">Best-Path Decision demo</a>.</p>
   <div class="ov" id="ov"></div>
+<script>/* nx_demo_fit_ov: on a narrow screen (a phone) the 560px topology box is zoomed to the page width, so it no
+   longer spills sideways (the DeepDive below keeps its own sideways scroll and the note about it). */
+(function(){ function fit(){ var o = document.getElementById('ov'); if (!o) return;
+  var w = document.documentElement.clientWidth - 16; o.style.zoom = w < 562 ? (w / 562).toFixed(3) : ''; }
+  fit(); window.addEventListener('resize', fit); })();</script>
   <div id="peers"></div>
   <div class="nx-synth-badge" id="nx-synth-badge" role="status">Sample view — not connected to the routers</div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
@@ -101,12 +108,14 @@
       subtitle: '(containerlab × X-Ray DeepDive)',
       node_open: 'Open DeepDive for {name}',   // aria-label of an overview node ({name} = node name)
       intro: 'The topology view = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> — OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.',
+      next_demo: 'Why one BGP path wins over another: the <a href="index-bgp-lp.html">Best-Path Decision demo</a>.',
       footer: 'This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).'
     },
     ja: {
       subtitle: '(containerlab × X-Ray DeepDive)',
       node_open: '{name} の DeepDive を開く',
       intro: '全体図はあなたの containerlab トポロジ（サイズ自由）。<b>ノードをクリック</b>すると、その<b>ルータの内部</b>——OSPF/BGP 隣接・LSDB・経路判定——が見えます。全体図は普通のトポロジ図で、X-Ray がノードごとの DeepDive を足します。',
+      next_demo: 'BGP の経路がなぜ選ばれるか: <a href="index-bgp-lp.html">Best-Path Decision のデモ</a>。',
       footer: 'この X-Ray 表示はオープンソース（<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>）です。'
     }
   };
@@ -326,7 +335,7 @@ window.__xrayGraphBoot = function () {
      load event, and fall back to the other base. -->
 <script>
 (function(){
-  var FILES = ['xray-core.js','xray-i18n.js','xray-api.js',   /* nx_i18n_follow_page: English UI strings for the engine */
+  var FILES = ['xray-core.js','xray-diff.js','xray-i18n.js','xray-api.js',   /* nx_i18n_follow_page: English UI strings for the engine */
                'clab-xray-bridge.js','xray-skin.js'];
   function loadSeq(base, done){
     var i = 0;
@@ -346,12 +355,10 @@ window.__xrayGraphBoot = function () {
   // (window.LIVE_STATES) next to the assets. Load it from the working base, ignore if absent
   // (the graph then uses the topology-derived synthetic scaffold).
   function withStates(base, done){
-    var s = document.createElement('script');
-    // cache-bust the INITIAL state fetch (clab graph serves xray-states.js with no Cache-Control, so a
-    // browser can serve a STALE cached copy across deploys); ?t= forces a fresh fetch every load.
-    s.src = base + 'xray-states.js?t=' + (+new Date());
-    s.onload = done; s.onerror = done;   // optional; 404/HTML is fine
-    document.head.appendChild(s);
+    // nx_demo_no_states_fetch: this is a RECORDED replay — replay-bar.js seeds window.LIVE_STATES from the
+    // baked-in FRAMES, so a live xray-states.js is never needed here. Skip loading it (no console 404 on Pages,
+    // and a stray xray-states.js next to the page can't override the recording). Same as index-bgp.html.
+    done();
   }
   function boot(){ if (window.__xrayGraphBoot) window.__xrayGraphBoot(); }
   // Live mode (opt-in): only when the collector ran with --watch (it sets window.LIVE_WATCH) do we

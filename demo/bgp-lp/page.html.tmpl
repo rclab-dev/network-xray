@@ -49,6 +49,11 @@
   <h1><span class="x">X-Ray</span> — BGP Best-Path Decision <small>why one BGP route wins · <span id="labname">Local Preference</span></small></h1>
   <p class="sub">Two ISPs both advertise <b>8.8.8.0/24</b>. The <b>fast</b> ISP (r2) was mis-set to <b>LocPref 50</b>, so the <b>slow</b> ISP (r3, default 100) always wins. Raise r2 to <b>LocPref 150</b> and best-path flips — then a link drops and only one path remains. <b>Open r1</b> to see the BGP table and the per-prefix <b>Best-Path Decision</b>. Try it hands-on: <a href="https://routecrushlab.com/lab/tl/q21?try=guest&amp;lang=en&amp;ref=network-xray&amp;utm_source=network-xray&amp;utm_medium=oss_embed&amp;utm_campaign=funnel_back&amp;utm_content=demo_q21" style="color:#80cbc4"><b>Q21</b> on RouteCrushLab</a>.</p>
   <div class="ov" id="ov"></div>
+<script>/* nx_demo_fit_ov: on a narrow screen (a phone) the 560px topology box is zoomed to the page width, so it no
+   longer spills sideways (the DeepDive below keeps its own sideways scroll and the note about it). */
+(function(){ function fit(){ var o = document.getElementById('ov'); if (!o) return;
+  var w = document.documentElement.clientWidth - 16; o.style.zoom = w < 562 ? (w / 562).toFixed(3) : ''; }
+  fit(); window.addEventListener('resize', fit); })();</script>
   <div id="peers"></div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
   <div class="err" id="err"></div>

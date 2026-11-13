@@ -49,7 +49,14 @@
   <h1><span class="x">X-Ray</span> graph — <span id="labname">xray-bgp</span> <small>(containerlab × X-Ray DeepDive)</small></h1>
   <p class="sub">The topology view = your containerlab topology (any size). <b>Click any node</b> to look <b>inside the router</b> —
     OSPF/BGP adjacencies, LSDB, route decision. The topology layout is commodity; X-Ray adds the per-node DeepDive.</p>
+  <style>.nx-next a{color:#4dd0e1}</style>
+  <p class="sub nx-next">Why one BGP path wins over another: the <a href="index-bgp-lp.html">Best-Path Decision demo</a>.</p>
   <div class="ov" id="ov"></div>
+<script>/* nx_demo_fit_ov: on a narrow screen (a phone) the 560px topology box is zoomed to the page width, so it no
+   longer spills sideways (the DeepDive below keeps its own sideways scroll and the note about it). */
+(function(){ function fit(){ var o = document.getElementById('ov'); if (!o) return;
+  var w = document.documentElement.clientWidth - 16; o.style.zoom = w < 562 ? (w / 562).toFixed(3) : ''; }
+  fit(); window.addEventListener('resize', fit); })();</script>
   <div id="peers"></div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
   <div class="err" id="err"></div>
