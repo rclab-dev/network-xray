@@ -1,6 +1,7 @@
 # network-xray
 
 **rclab-dev/network-xray** — live BGP / OSPF state viewer for containerlab and netlab labs (FRR, SR Linux, Cisco IOL). Read-only.
+Also an MCP server: lets AI agents read the lab state and ask why a route or adjacency is the way it is ([MCP](docs/mcp.md)).
 
 **Why did BGP pick this path?** network-xray shows, for a network lab, which path each router chose, what the other candidates were, and why. It reads the live state of the FRR, Nokia SR Linux and Cisco IOL routers in your containerlab or netlab lab and draws it in the browser.
 
@@ -984,6 +985,7 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 # 日本語
 
 **rclab-dev/network-xray** — containerlab と netlab のラボの BGP / OSPF の今の状態を見る道具です (FRR・SR Linux・Cisco IOL)。読むだけです。
+MCP のサーバでもあります: AI エージェントがラボの状態を読み、経路や隣接がなぜ今の形なのかを聞けます ([MCP](docs/ja/mcp.md))。
 
 *[English](#network-xray) | 日本語*
 
