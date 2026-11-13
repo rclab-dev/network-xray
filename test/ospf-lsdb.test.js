@@ -83,3 +83,53 @@ test('a state without the OSPF database (older collector) gets no why', () => {
   for (const n of Object.keys(st)) { delete st[n].ospf_router_id; delete st[n].ospf_stubs; delete st[n].ospf_lsdb; delete st[n].ospf_routes; }
   assert.equal(q.routeLookup(st, 'r1', '2.2.2.2').why, undefined);
 });
+
+// the page's LSDB panel (xray-core.js xrayUpdateLsdb): the LSAs themselves when the state has the database
+const vm = require('node:vm');
+function lsdbPanel(st, live) {
+  const rows = [], hd = { textContent: 'LSDB', style: {} };
+  const el = { style: {}, querySelector: (q) => (q === '.lsdb-hd' ? hd : null), querySelectorAll: () => [],
+    appendChild: (d) => rows.push(d) };
+  const doc = { getElementById: (id) => (id === 'de-lsdb' ? el : null), querySelector: () => null, querySelectorAll: () => [],
+    createElement: () => ({ style: {} }), addEventListener() {}, head: { appendChild() {} },
+    body: { classList: { add() {}, remove() {}, toggle() {}, contains: () => false } }, documentElement: { getAttribute: () => 'en' } };
+  const ctx = { document: doc, console: { log() {}, warn() {}, error() {} }, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0,
+    clearInterval() {}, requestAnimationFrame: () => 0, navigator: { userAgent: '' }, location: { search: '', href: '', hash: '' },
+    localStorage: { getItem: () => null, setItem() {} }, getComputedStyle: () => ({}), addEventListener() {} };
+  ctx.window = ctx; ctx.self = ctx;
+  if (live) ctx.LIVE_STATES = live;
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'xray-core.js'), 'utf8'), ctx, { filename: 'xray-core.js' });
+  ctx.xrayUpdateLsdb(Object.assign({ ospf_active_on_interface: true, has_full: true, full_count: 2 }, st), {});
+  return { head: hd.textContent, rows: rows.map((d) => d.textContent) };
+}
+
+test('LSDB panel: a small table (prefix, LSA, from) - every router LSA stub, the inter-area routes OSPF uses, AS-external, counts in the header', () => {
+  const sq = (r) => r.replace(/ +/g, ' ').trim();
+  const p = lsdbPanel(states('baseline').r1);
+  assert.match(p.head, /^LSDB R\d+·N\d+·S\d+·E1$/);
+  assert.equal(sq(p.rows[0]), 'Prefix LSA From', 'a heading row');
+  const rows = p.rows.map(sq);
+  assert.ok(rows.includes('1.1.1.1/32 router own'), rows.join(' | '));
+  assert.ok(rows.includes('2.2.2.2/32 router 2.2.2.2'), 'a router whose state the page does not have: its router ID');
+  assert.ok(rows.includes('192.0.2.0/24 external E2 3.3.3.3'));
+  assert.ok(!rows.some((r) => / inter-area /.test(r)), 'no inter-area route here: the summaries of the other ABR are not listed');
+  const ia = lsdbPanel(states('loopback-in-area-2').r1).rows.map(sq);
+  assert.ok(ia.includes('2.2.2.2/32 inter-area 2.2.2.2'), 'the inter-area route OSPF uses');
+  // r2's loopback without a network statement: no LSA has it any more
+  assert.ok(!lsdbPanel(states('network-statement-removed').r1).rows.some((r) => r.startsWith('2.2.2.2/32')));
+});
+
+test('LSDB panel: the node name instead of the router ID when the page has that node (window.LIVE_STATES)', () => {
+  const st = states('baseline');
+  const p = lsdbPanel(st.r1, st);
+  assert.ok(p.rows.map((r) => r.replace(/ +/g, ' ').trim()).includes('2.2.2.2/32 router r2'));
+});
+
+test('LSDB panel: a state without the database keeps the old rows (OSPF routes) and the plain header', () => {
+  const st = states('baseline').r1;
+  delete st.ospf_router_lsas; delete st.ospf_lsdb;
+  const p = lsdbPanel(st);
+  assert.equal(p.head, 'LSDB');
+  assert.ok(p.rows.includes('2.2.2.2/32'));
+});

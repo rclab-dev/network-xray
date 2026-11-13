@@ -2132,7 +2132,50 @@ function xrayUpdateLsdb(s, opts) {
     r.remove();
   });
   var rows = [];
-  if (Array.isArray(s.lsdb_prefixes) && s.lsdb_prefixes.length) {
+  /* nx_ospf_lsdb_panel (v1.4): with the OSPF database in the state (collector 1.4+), the panel lists the LSAs themselves:
+     each stub prefix of every router LSA with the router that advertises it, the inter-area summaries and the AS-external
+     prefixes, and the header counts the LSAs by type. Without it (older states, RCL) the panel is as before. */
+  var _rl = Array.isArray(s.ospf_router_lsas) ? s.ospf_router_lsas : null, _db = Array.isArray(s.ospf_lsdb) ? s.ospf_lsdb : null;
+  if (_rl && _rl.length) {
+    var _me = s.ospf_router_id || "", _seen = {}, _cols = [];
+    /* the router that advertises an LSA, in words: "own", or the node name when the page has that node's state, with its router ID */
+    var _from = function (rid) {
+      if (rid === _me) return "own";
+      var all = (typeof window !== "undefined" && window.LIVE_STATES && typeof window.LIVE_STATES === "object") ? window.LIVE_STATES : {};
+      var n = Object.keys(all).filter(function (k) { return all[k] && all[k].ospf_router_id === rid; })[0];
+      return n || rid;   // the node name when the page has it (narrow panel); the router ID is in the row's tooltip
+    };
+    var _add = function (prefix, kind, rid, title) {
+      var k = prefix + "|" + kind + "|" + rid; if (_seen[k]) return; _seen[k] = true;
+      _cols.push({ c: [prefix, kind, _from(rid)], own: rid === _me, title: title + " (router ID " + rid + ")" });
+    };
+    _rl.forEach(function (L) {
+      (Array.isArray(L.stubs) ? L.stubs : []).forEach(function (p) { _add(p, "router", L.adv_router, "stub network in the router LSA of " + L.adv_router + ", area " + L.area); });
+    });
+    /* inter-area: only the summaries OSPF uses for a route here (an ABR sees the other ABRs' copies of every area-0 network too) */
+    var _or = s.ospf_routes && typeof s.ospf_routes === "object" ? s.ospf_routes : {};
+    Object.keys(_or).forEach(function (p) {
+      var r = _or[p]; if (!r || !/IA/.test(r.type || "")) return;
+      (r.adv && r.adv.length ? r.adv : ["?"]).forEach(function (a) { _add(p, "inter-area", a, "summary LSA used for an inter-area route" + (r.area ? ", area " + r.area : "")); });
+    });
+    (_db || []).forEach(function (l) {
+      if (l.type === "external") _add(l.prefix || l.ls_id, "external " + (l.metric_type || ""), l.adv_router, "AS-external LSA from " + l.adv_router);
+    });
+    /* a small table in the monospace panel: the columns are padded to the widest cell, with a heading row */
+    if (_cols.length) {
+      var _hdRow = ["Prefix", "LSA", "From"], _w = [0, 1, 2].map(function (i) { return Math.max(_hdRow[i].length, Math.max.apply(null, _cols.map(function (r) { return String(r.c[i]).length; }))); });
+      var _line = function (c) { return c.map(function (v, i) { return i < 2 ? String(v) + new Array(_w[i] - String(v).length + 1).join(" ") : String(v); }).join("  "); };
+      rows.push({ text: _line(_hdRow), own: true, head: true, title: "LSAs in this router's database (at MaxAge left out)" });
+      _cols.forEach(function (r) { rows.push({ text: _line(r.c), own: r.own, title: r.title }); });
+    }
+    if (hd) {
+      var _cnt = {}; (_db || []).forEach(function (l) { _cnt[l.type] = (_cnt[l.type] || 0) + 1; });
+      var _parts = [["router", "R"], ["network", "N"], ["summary", "S"], ["external", "E"]].filter(function (k) { return _cnt[k[0]]; }).map(function (k) { return k[1] + _cnt[k[0]]; });   // compact: the header is one short line in a narrow panel
+      hd.textContent = "LSDB" + (_parts.length ? " " + _parts.join("·") : "");
+      hd.title = "LSAs by type: R router, N network, S summary, E AS-external (LSAs at MaxAge left out)";
+    }
+  } else if (Array.isArray(s.lsdb_prefixes) && s.lsdb_prefixes.length) {
+    if (hd && hd.textContent !== "LSDB") hd.textContent = "LSDB";
     s.lsdb_prefixes.forEach(function(p) {
       if (p && p.text) rows.push({
         text: p.text,
@@ -2176,7 +2219,10 @@ function xrayUpdateLsdb(s, opts) {
     var visible = row.own || synced;
     div.className = visible ? "lsdb-row show" : "lsdb-row";
     div.textContent = row.text;
-    if (visible) div.style.color = "#39ff14";
+    if (row.title) div.title = row.title;   /* nx_ospf_lsdb_panel */
+    if (row.head) { div.className += " lsdb-colhd"; div.style.opacity = "0.75"; }
+    if (_rl) div.style.whiteSpace = "pre";   /* the table columns line up (monospace panel) */
+    if (visible) div.style.color = row.head ? "#7facc9" : (row.own || !_rl ? "#39ff14" : "#9fe8a8");
     lsdbEl.appendChild(div);
   });
   _xrayRtFindApply();   /* nx_rt_find */
@@ -2190,7 +2236,7 @@ function _xrayRtFindApply() {
     var hit = function (r) { return !t || String(r.textContent || "").toLowerCase().indexOf(t) >= 0; };
     document.querySelectorAll("#de-routing-panel .de-rt-tbl tr").forEach(function (r) { r.style.display = hit(r) ? "" : "none"; });
     /* the LSDB rows are prefixes only: narrowed when the text is found there (a prefix), left whole for an interface or a protocol */
-    var lsdb = Array.prototype.slice.call(document.querySelectorAll("#de-lsdb .lsdb-row"));
+    var lsdb = Array.prototype.slice.call(document.querySelectorAll("#de-lsdb .lsdb-row:not(.lsdb-colhd)"));
     var any = lsdb.some(hit);
     lsdb.forEach(function (r) { r.style.display = !any || hit(r) ? "" : "none"; });
   } catch (_e) {}
