@@ -1,6 +1,6 @@
 'use strict';
 // The OSPF "Neighbor" line as counts (v1.4): with the OSPF interface rows in the state (ospf_ifaces), the Routing Engine panel says
-// "Neighbor: Full 2 · no adjacency 1" - the OSPF interfaces that face a neighbour, with a Full adjacency / without (the same count
+// "Neighbor: Full 2 · no adjacency 1" - the OSPF interfaces that face a neighbor, with a Full adjacency / without (the same count
 // as lab_state's ospf_ifaces_full / ospf_ifaces_without_adjacency) - instead of one word that turned orange when one was missing
 // (an orange "Full" was read as "not Full"). The node panel (Lite) puts the same counts first in its What's wrong box.
 // States without those rows keep the old line. Fixture = FRR 10.7.1 (test/fixtures/frr-hello-mismatch: r1 eth1 -> r2 hello 5 / 10).
@@ -56,10 +56,10 @@ test('all Full: only the count; Japanese page: the words in Japanese', () => {
   assert.equal(plain(nbrLine(LAB().r2, 'ja').text), '> Neighbor: Full 1 · 隣接なし 1');
 });
 
-test('passive interfaces and interfaces without a neighbour on the link are not counted; an interface with no neighbour row uses its own count', () => {
+test('passive interfaces and interfaces without a neighbor on the link are not counted; an interface with no neighbor row uses its own count', () => {
   const st = LAB().r1;
   st.ospf_ifaces.eth3.passive = true;
-  st.ospf_ifaces.eth9 = { area: '0.0.0.0', passive: false };   /* no peer on the link: not facing a neighbour */
+  st.ospf_ifaces.eth9 = { area: '0.0.0.0', passive: false };   /* no peer on the link: not facing a neighbor */
   assert.equal(plain(nbrLine(st).text), '> Neighbor: Full 1 · no adjacency 1');
   st.ospf_neighbors = st.ospf_neighbors.filter((n) => n.iface !== 'eth2');
   st.ospf_ifaces.eth2.neighbors_adjacent = 1;

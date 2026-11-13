@@ -2939,8 +2939,8 @@ function _xrayOspfNoNbrIfs(s) {
     return _escapeHtml(f) + (peers.length === 1 ? ' (\u2192 ' + _escapeHtml(peers[0]) + ')' : '');
   });
 }
-/* nx_ospf_nbr_counts (v1.4): the OSPF interfaces that face a neighbour (s.ospf_ifaces rows, not passive, with a peer on the link) -
-   how many have a Full neighbour, how many not (as lab_state's ospf_ifaces_full / ospf_ifaces_without_adjacency). null when the
+/* nx_ospf_nbr_counts (v1.4): the OSPF interfaces that face a neighbor (s.ospf_ifaces rows, not passive, with a peer on the link) -
+   how many have a Full neighbor, how many not (as lab_state's ospf_ifaces_full / ospf_ifaces_without_adjacency). null when the
    state has no such rows (older collectors): the summary line stays as before. */
 function _xrayOspfAdjCounts(s) {
   var o = s && s.ospf_ifaces;
@@ -2951,7 +2951,7 @@ function _xrayOspfAdjCounts(s) {
     var r = o[i];
     if (!r || typeof r !== "object" || r.passive === true) return;
     if (!r.peer && !links.some(function (x) { return x && x.iface === i && x.peer; })) return;
-    var mine = L.filter(function (x) { return x && x.iface === i; });   /* no neighbour row for it: the interface row's own count */
+    var mine = L.filter(function (x) { return x && x.iface === i; });   /* no neighbor row for it: the interface row's own count */
     if (mine.length ? mine.some(function (x) { return x.full || /^full/i.test(String(x.state || "")); }) : r.neighbors_adjacent > 0) out.full++; else out.none++;
   });
   return out.full + out.none ? out : null;
@@ -2973,7 +2973,7 @@ function _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume) {
   if (_cnt) {   /* nx_ospf_nbr_counts: "Full 4 · no adjacency 1" instead of one word (an orange "Full" was read as "not Full") */
     var _ja = typeof document !== "undefined" && ((document.documentElement.getAttribute("lang") || "en") === "ja" || window._xrayLang === "ja");
     var _ct = '<span style="color:#39ff14">Full ' + _cnt.full + "</span>" + (_cnt.none ? ' · <span style="color:#ff8c00">' + (_ja ? "隣接なし " : "no adjacency ") + _cnt.none + "</span>" : "");
-    lines.push({ text: "> Neighbor: " + _ct, _nxCounts: true, title: _ja ? "隣り合うルータに向いた OSPF のインターフェースの数" : "OSPF interfaces facing a neighbour: with a Full adjacency / without" });
+    lines.push({ text: "> Neighbor: " + _ct, _nxCounts: true, title: _ja ? "隣り合うルータに向いた OSPF のインターフェースの数" : "OSPF interfaces facing a neighbor: with a Full adjacency / without" });
     return;
   }
   var _ord = ["?", "Down", "Attempt", "Init", "2-Way", "ExStart", "Exchange", "Loading", "Full"];
