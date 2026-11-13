@@ -13360,28 +13360,50 @@ function _xrayRenderLinkStatus(d, qid) {
   /* nx_rt_cap (2026-10-23): the Routing table panel grows UP from the floor; with many routes (ECMP next-hops stacked one per
      line) its top rows slid under the Routing Engine panel and could not be seen. When they would, cap its height so its top
      stays 8px below the Routing Engine panel (the bottom stays where the CSS puts it) and scroll inside it. Undone when not needed. */
+  /* nx_re_cap (2026-11-13): since v1.3.1 the Routing Engine panel can itself reach down over the Routing table (the "What's
+     wrong" list, open OSPF interface blocks; more lines follow). Then the table left too little room (< 60px) to be capped
+     under it and stayed underneath: its rows could not be clicked. In that case the Routing Engine panel is capped instead -
+     it ends 8px above the table and scrolls inside, "What's wrong" stays at its top. Pure (numbers in, plan out) for tests. */
+  function capPlan(g) {
+    var none = { rt: null, re: null };
+    if (!g || !g.side) return none;
+    var reB = g.reTop + g.reH + 8;
+    if (g.rtTop >= reB) return none;
+    if (g.rtBottom - reB >= 60) return { rt: g.rtBottom - reB, re: null };   /* nx_rt_cap: the table fits under the panel */
+    var avail = g.rtTop - 8 - g.reTop;
+    return avail >= 80 ? { rt: null, re: avail } : none;
+  }
+  window._xrayDeCapPlan = capPlan;
   function capRt(de) {
     var rt = document.getElementById("de-routing-panel"), re = document.getElementById("de-re-panel");
     if (!rt) return;
-    var had = rt.classList.contains("nx-rt-cap");
+    var had = rt.classList.contains("nx-rt-cap"), hadRe = !!(re && re.classList.contains("nx-re-cap")), reScroll = hadRe ? re.scrollTop : 0;
     if (had) { rt.style.removeProperty("max-height"); rt.style.removeProperty("overflow-y"); }   /* measure the CSS place */
+    if (hadRe) { re.style.removeProperty("max-height"); re.style.removeProperty("overflow-y"); }   /* nx_re_cap: measure its full height */
     var ok = de && re && de.contains(rt) && de.contains(re) && rt.offsetHeight > 0 && re.offsetHeight > 0 &&
       getComputedStyle(rt).display !== "none" && getComputedStyle(re).display !== "none" && rt.offsetParent && rt.offsetParent === re.offsetParent;
+    var rtOn = false, reOn = false;
     if (ok) {
       /* nx_re_expand_over (2026-10-28): the open OSPF / BGP neighbor lines are left out of the Routing Engine height, so
          opening them floats over the Routing table (the clicked panel comes to the front) instead of pushing it down. */
       var reH = Math.max(re.offsetHeight, re.scrollHeight);   /* nx_re_scroll: a capped (scrolling) RE -> its full content height */
       Array.prototype.forEach.call(re.querySelectorAll(".re-ospf-nbr,.re-bgp-nbr"), function (n) { if (n.style.display !== "none") reH -= n.offsetHeight; });
       reH = Math.min(reH, re.offsetHeight);   /* nx_re_scroll: never below what is shown */
-      var reB = re.offsetTop + reH + 8, bottom = rt.offsetTop + rt.offsetHeight;
-      var side = rt.offsetLeft < re.offsetLeft + re.offsetWidth && re.offsetLeft < rt.offsetLeft + rt.offsetWidth;
-      if (side && rt.offsetTop < reB && bottom - reB >= 60) {
-        rt.style.setProperty("max-height", (bottom - reB) + "px", "important"); rt.style.setProperty("overflow-y", "auto", "important");
-        if (rt.offsetTop >= reB - 1) { if (!had) rt.classList.add("nx-rt-cap"); return; }
-        rt.style.removeProperty("max-height"); rt.style.removeProperty("overflow-y");   /* not floor-anchored here: leave it */
+      var plan = capPlan({ side: rt.offsetLeft < re.offsetLeft + re.offsetWidth && re.offsetLeft < rt.offsetLeft + rt.offsetWidth,
+        reTop: re.offsetTop, reH: reH, rtTop: rt.offsetTop, rtBottom: rt.offsetTop + rt.offsetHeight });
+      if (plan.rt != null) {
+        var reB = re.offsetTop + reH + 8;
+        rt.style.setProperty("max-height", plan.rt + "px", "important"); rt.style.setProperty("overflow-y", "auto", "important");
+        if (rt.offsetTop >= reB - 1) rtOn = true;
+        else { rt.style.removeProperty("max-height"); rt.style.removeProperty("overflow-y"); }   /* not floor-anchored here: leave it */
+      } else if (plan.re != null) {
+        re.style.setProperty("max-height", plan.re + "px", "important"); re.style.setProperty("overflow-y", "auto", "important");
+        if (reScroll) re.scrollTop = reScroll;   /* keep where the reader scrolled to (this runs again on every change) */
+        reOn = true;
       }
     }
-    if (had) rt.classList.remove("nx-rt-cap");
+    if (rtOn !== had) rt.classList.toggle("nx-rt-cap", rtOn);
+    if (re && reOn !== hadRe) re.classList.toggle("nx-re-cap", reOn);
   }
   function stack() {
     var de = document.querySelector(".xray-deep-engine");
