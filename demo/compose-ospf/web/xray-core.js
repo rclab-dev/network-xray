@@ -2939,11 +2939,28 @@ function _xrayOspfNoNbrIfs(s) {
     return _escapeHtml(f) + (peers.length === 1 ? ' (\u2192 ' + _escapeHtml(peers[0]) + ')' : '');
   });
 }
+/* nx_ospf_nbr_counts (v1.4): the OSPF interfaces that face a neighbour (s.ospf_ifaces rows, not passive, with a peer on the link) -
+   how many have a Full neighbour, how many not (as lab_state's ospf_ifaces_full / ospf_ifaces_without_adjacency). null when the
+   state has no such rows (older collectors): the summary line stays as before. */
+function _xrayOspfAdjCounts(s) {
+  var o = s && s.ospf_ifaces;
+  if (!o || typeof o !== "object" || Array.isArray(o)) return null;
+  var L = Array.isArray(s.ospf_neighbors) ? s.ospf_neighbors : [], links = Array.isArray(s.peer_links) ? s.peer_links : [];
+  var out = { full: 0, none: 0 };
+  Object.keys(o).forEach(function (i) {
+    var r = o[i];
+    if (!r || typeof r !== "object" || r.passive === true) return;
+    if (!r.peer && !links.some(function (x) { return x && x.iface === i && x.peer; })) return;
+    var mine = L.filter(function (x) { return x && x.iface === i; });   /* no neighbour row for it: the interface row's own count */
+    if (mine.length ? mine.some(function (x) { return x.full || /^full/i.test(String(x.state || "")); }) : r.neighbors_adjacent > 0) out.full++; else out.none++;
+  });
+  return out.full + out.none ? out : null;
+}
 function _xrayOspfNbrSummaryPush(lines, s, allowEmpty, legacyAssume) {
   var noNbr = _xrayOspfNoNbrIfs(s), n0 = lines.length;
   _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume);
   if (!noNbr.length || _xrayOspfHeadKind(s, legacyAssume) !== 'run') return;
-  for (var i = n0; i < lines.length; i++) if (/^> Neighbor: /.test(lines[i].text)) lines[i].text = lines[i].text.replace(/#39ff14/g, '#ff8c00');   /* something is missing: the heading is not all-green */
+  for (var i = n0; i < lines.length; i++) if (/^> Neighbor: /.test(lines[i].text) && !lines[i]._nxCounts) lines[i].text = lines[i].text.replace(/#39ff14/g, '#ff8c00');   /* something is missing: the heading is not all-green */
   var ja = typeof document !== 'undefined' && ((document.documentElement.getAttribute('lang') || 'en') === 'ja' || window._xrayLang === 'ja');
   var line = { text: '> ' + (ja ? 'Hello \u9001\u4fe1\u4e2d\u30fb\u76f8\u624b\u306a\u3057' : 'Hello sent, no neighbor') + ': <span style="color:#ff8c00">' + noNbr.join(', ') + '</span>' };
   if (s.ospf_neighbors.length) lines.push(line); else lines._nxNoNbr = line;   /* nx_ospf_nbr_own_list (2): no rows -> after the caller's own Neighbor line */
@@ -2952,6 +2969,13 @@ function _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume) {
   if (_xrayOspfHeadKind(s, legacyAssume) !== "run") return;
   var L = Array.isArray(s.ospf_neighbors) ? s.ospf_neighbors : [];
   if (!L.length) { if (allowEmpty) lines.push({ text: "> Neighbor: " + _xrayOspfNbrSpan("Down") }); return; }
+  var _cnt = _xrayOspfAdjCounts(s);
+  if (_cnt) {   /* nx_ospf_nbr_counts: "Full 4 · no adjacency 1" instead of one word (an orange "Full" was read as "not Full") */
+    var _ja = typeof document !== "undefined" && ((document.documentElement.getAttribute("lang") || "en") === "ja" || window._xrayLang === "ja");
+    var _ct = '<span style="color:#39ff14">Full ' + _cnt.full + "</span>" + (_cnt.none ? ' · <span style="color:#ff8c00">' + (_ja ? "隣接なし " : "no adjacency ") + _cnt.none + "</span>" : "");
+    lines.push({ text: "> Neighbor: " + _ct, _nxCounts: true, title: _ja ? "隣り合うルータに向いた OSPF のインターフェースの数" : "OSPF interfaces facing a neighbour: with a Full adjacency / without" });
+    return;
+  }
   var _ord = ["?", "Down", "Attempt", "Init", "2-Way", "ExStart", "Exchange", "Loading", "Full"];
   var _ok = 0, _full = 0, _worst = null, _worstRole = "";
   L.forEach(function (_n) {

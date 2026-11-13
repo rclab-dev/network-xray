@@ -298,6 +298,18 @@
     });
     var body = items.length ? items.map(function (it) { return '<div class="xnp-wrong-' + it[0] + '">' + (it[0] === 'warn' ? '\u26a0 ' : '\u2715 ') + it[1] + '</div>'; }).join('')
       : '<div class="xnp-wrong-none">\u2713 No mismatch or down adjacency</div>';
+    // v1.4 nx_ospf_nbr_counts: how many OSPF interfaces facing a neighbour are Full / not (as the Full DeepDive's Neighbor line)
+    if (hasO) {
+      var links = Array.isArray(state.peer_links) ? state.peer_links : [], nl = Array.isArray(state.ospf_neighbors) ? state.ospf_neighbors : [], cf = 0, cn = 0;
+      Object.keys(o).forEach(function (ifn) {
+        var r = o[ifn]; if (!r || typeof r !== 'object' || Array.isArray(r) || r.passive === true) return;
+        if (!r.peer && !links.some(function (x) { return x && x.iface === ifn && x.peer; })) return;
+        var mine = nl.filter(function (x) { return x && x.iface === ifn; });
+        if (mine.length ? mine.some(function (x) { return x.full || /^full/i.test(String(x.state || '')); }) : r.neighbors_adjacent > 0) cf++; else cn++;
+      });
+      if (cf + cn) body = '<div class="xnp-wrong-count" title="OSPF interfaces facing a neighbour: with a Full adjacency / without">OSPF neighbor: <span class="xnp-wrong-none">Full ' + cf + '</span>' +
+        (cn ? ' \u00b7 <span class="xnp-wrong-down">no adjacency ' + cn + '</span>' : '') + '</div>' + body;
+    }
     return panel("What's wrong", body);
   }
   // v1.4 nx_state_diff_page: under What's wrong, what changed for this router since a baseline kept on the page (xray-diff.js,
