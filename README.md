@@ -32,6 +32,7 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
+   **Before you run it:** memory — about 20 MB per FRR router, plus about 100 MB for network-xray with 3 routers (260 MB with 12); Windows — in WSL2 ([WSL2 guide](docs/windows-wsl2.md)); routers it reads — FRR, Nokia SR Linux, Cisco IOL ([the table](#when-to-use)); your `.clab.yml` is not changed (the folder is mounted read-only).
    It only runs `show` commands, but the container is given the Docker socket (root-equivalent on the host) — lab machines only. [More](#security-notes)
    Rather not give it the socket? Ways 1 and 2 need none on your machine (the recorded demo, the paste pages, Codespaces).
    Why it needs the socket (to run `show` in each router's container), and three more ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
@@ -1029,6 +1030,7 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
+   **動かす前に:** メモリ — FRR のルータ 1 台 20 MB ほど + network-xray がルータ 3 台で 100 MB ほど (12 台で 260 MB ほど)。Windows — WSL2 の中で ([WSL2 の手引き](docs/ja/windows-wsl2.md))。読めるルータ — FRR・Nokia SR Linux・Cisco IOL ([表](#いつ使うか))。`.clab.yml` は変えません (フォルダは読むだけでマウント)。
    読む命令だけですが、Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
    ソケットを渡したくない時は、1 と 2 (記録済みのデモ・貼る頁・Codespaces) なら手元の機械にソケットは要りません。
    ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使うほかの 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
