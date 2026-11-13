@@ -13415,7 +13415,7 @@ function _xrayRenderLinkStatus(d, qid) {
     if (!g || !g.side) return none;
     var reB = g.reTop + g.reH + 8;
     if (g.rtTop >= reB) return none;
-    if (g.rtBottom - reB >= 60) return { rt: g.rtBottom - reB, re: null };   /* nx_rt_cap: the table fits under the panel */
+    if (g.rtBottom - reB >= 60) return { rt: g.rtBottom - reB, re: null, top: reB };   /* nx_rt_cap: the table fits under the panel (top = where its top goes; used when the table is placed from its top) */
     var avail = g.rtTop - 8 - g.reTop;
     return avail >= 80 ? { rt: null, re: avail } : none;
   }
@@ -13424,11 +13424,13 @@ function _xrayRenderLinkStatus(d, qid) {
     var rt = document.getElementById("de-routing-panel"), re = document.getElementById("de-re-panel");
     if (!rt) return;
     var had = rt.classList.contains("nx-rt-cap"), hadRe = !!(re && re.classList.contains("nx-re-cap")), reScroll = hadRe ? re.scrollTop : 0;
+    var hadTop = rt.classList.contains("nx-rt-top");
     if (had) { rt.style.removeProperty("max-height"); rt.style.removeProperty("overflow-y"); }   /* measure the CSS place */
+    if (hadTop) rt.style.removeProperty("top");   /* nx_rt_top_fixed: back to the CSS place to measure */
     if (hadRe) { re.style.removeProperty("max-height"); re.style.removeProperty("overflow-y"); }   /* nx_re_cap: measure its full height */
     var ok = de && re && de.contains(rt) && de.contains(re) && rt.offsetHeight > 0 && re.offsetHeight > 0 &&
       getComputedStyle(rt).display !== "none" && getComputedStyle(re).display !== "none" && rt.offsetParent && rt.offsetParent === re.offsetParent;
-    var rtOn = false, reOn = false;
+    var rtOn = false, reOn = false, topOn = false;
     if (ok) {
       /* nx_re_expand_over (2026-10-28): the open OSPF / BGP neighbor lines are left out of the Routing Engine height, so
          opening them floats over the Routing table (the clicked panel comes to the front) instead of pushing it down. */
@@ -13441,7 +13443,14 @@ function _xrayRenderLinkStatus(d, qid) {
         var reB = re.offsetTop + reH + 8;
         rt.style.setProperty("max-height", plan.rt + "px", "important"); rt.style.setProperty("overflow-y", "auto", "important");
         if (rt.offsetTop >= reB - 1) rtOn = true;
-        else { rt.style.removeProperty("max-height"); rt.style.removeProperty("overflow-y"); }   /* not floor-anchored here: leave it */
+        else {
+          /* nx_rt_top_fixed (2026-11-13): this table is placed from its top (not from the floor), so the cap alone does not
+             uncover its first rows (many routes: the Routing Engine panel covered them). Move its top to 8px under the panel too;
+             with the cap its bottom stays where it was. Undone when not needed. */
+          rt.style.setProperty("top", plan.top + "px", "important");
+          if (rt.offsetTop >= reB - 1) { rtOn = true; topOn = true; }
+          else { rt.style.removeProperty("top"); rt.style.removeProperty("max-height"); rt.style.removeProperty("overflow-y"); }   /* leave it */
+        }
       } else if (plan.re != null) {
         re.style.setProperty("max-height", plan.re + "px", "important"); re.style.setProperty("overflow-y", "auto", "important");
         if (reScroll) re.scrollTop = reScroll;   /* keep where the reader scrolled to (this runs again on every change) */
@@ -13449,6 +13458,7 @@ function _xrayRenderLinkStatus(d, qid) {
       }
     }
     if (rtOn !== had) rt.classList.toggle("nx-rt-cap", rtOn);
+    if (topOn !== hadTop) rt.classList.toggle("nx-rt-top", topOn);
     if (re && reOn !== hadRe) re.classList.toggle("nx-re-cap", reOn);
   }
   function stack() {

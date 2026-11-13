@@ -92,3 +92,16 @@ test('nothing to do: no overlap, side by side, or too little room to cap the pan
   assert.deepStrictEqual(JSON.parse(JSON.stringify(plan({ side: true, reTop: 640, reH: 240, rtTop: 707, rtBottom: 885 }))), { rt: null, re: null }, 'only 59px above the table');
   assert.deepStrictEqual(JSON.parse(JSON.stringify(plan(null))), { rt: null, re: null });
 });
+
+// nx_rt_top_fixed: a Routing table placed from its top (the recorded demo with many routes, r1 = 17 routes): the Routing
+// Engine panel 557..787 covered its first rows (607..). The cap alone does not move such a table, so it is also moved: its
+// top goes to the plan's top (8px under the panel) and its height to the plan's rt (the bottom stays at 948).
+test('a table placed from its top under a Routing Engine panel: the plan gives its new top under the panel and its height to the old bottom', function () {
+  var g = { side: true, reTop: 557, reH: 230, rtTop: 607, rtBottom: 948 };
+  var p = plan(g);
+  assert.strictEqual(p.re, null, 'the Routing Engine panel is not capped');
+  assert.strictEqual(p.top, 557 + 230 + 8, 'the table starts 8px under the panel');
+  assert.strictEqual(p.rt, 948 - p.top, 'and ends where it ended (153px, as measured on the page)');
+  assert.strictEqual(p.rt, 153);
+  for (var y = p.top; y + 16 <= p.top + p.rt; y += 16) assert.ok(y + 8 > g.reTop + g.reH, 'row centre ' + (y + 8) + ' is under the panel');
+});
