@@ -1090,6 +1090,74 @@ function _vlanOnLink(ifs, oif, nei, adj) {
   });
 }
 
+/* nx_ospf_lsdb (2026-11-13, v1.4): the OSPF database and route table, so the page and xray-query can say why a route is missing:
+   who advertises a prefix (a stub network in a router LSA, a summary, an AS-external LSA), which type of OSPF route it became, and
+   whether the RIB installed it. FRR 10.7.1 field names, read on a live lab. LSAs at MaxAge (3600 s) are being flushed: left out. */
+var OSPF_MAXAGE = 3600;
+function _maskLen(m) {
+  var p = String(m || '').split('.'); if (p.length !== 4) return null;
+  var n = 0; for (var i = 0; i < 4; i++) { var o = +p[i]; if (!(o >= 0 && o <= 255)) return null; for (var b = 7; b >= 0; b--) if (o & (1 << b)) n++; }
+  return n;
+}
+// show ip ospf json -> router ID
+function parseOspfRouterId(j) { return j && typeof j === 'object' && typeof j.routerId === 'string' ? j.routerId : ''; }
+// show ip ospf database router self-originate json -> this router's stub networks [{prefix, area}]
+function parseOspfOwnStubs(j) {
+  var out = [], areas = j && j.routerLinkStates && j.routerLinkStates.areas;
+  if (!areas || typeof areas !== 'object') return out;
+  Object.keys(areas).forEach(function (area) {
+    (Array.isArray(areas[area]) ? areas[area] : []).forEach(function (L) {
+      if (!L || typeof L !== 'object' || +L.lsaAge >= OSPF_MAXAGE) return;
+      var links = L.routerLinks && typeof L.routerLinks === 'object' ? L.routerLinks : {};
+      Object.keys(links).forEach(function (k) {
+        var lk = links[k];
+        if (!lk || !/stub/i.test(String(lk.linkType || ''))) return;
+        var len = _maskLen(lk.networkMask);
+        if (!lk.networkAddress || len == null) return;
+        out.push({ prefix: lk.networkAddress + '/' + len, area: area });
+      });
+    });
+  });
+  return out;
+}
+// show ip ospf database json -> [{type, ls_id, adv_router, area, prefix?}] (router / network / summary / asbr-summary / external)
+var OSPF_DB_KEYS = { routerLinkStates: 'router', networkLinkStates: 'network', summaryLinkStates: 'summary', asbrSummaryLinkStates: 'asbr-summary' };
+function parseOspfDatabaseSummary(j) {
+  var out = [];
+  if (!j || typeof j !== 'object') return out;
+  var row = function (type, L, area) {
+    if (!L || typeof L !== 'object' || +L.lsaAge >= OSPF_MAXAGE) return;
+    var r = { type: type, ls_id: _str(L.lsId), adv_router: _str(L.advertisedRouter) };
+    if (area) r.area = area;
+    if (type === 'external' && L.route) r.prefix = _str(L.route);
+    if (type === 'external' && L.metricType) r.metric_type = _str(L.metricType);
+    out.push(r);
+  };
+  var areas = j.areas && typeof j.areas === 'object' ? j.areas : {};
+  Object.keys(areas).forEach(function (area) {
+    var A = areas[area] || {};
+    Object.keys(OSPF_DB_KEYS).forEach(function (k) { (Array.isArray(A[k]) ? A[k] : []).forEach(function (L) { row(OSPF_DB_KEYS[k], L, area); }); });
+  });
+  (Array.isArray(j.asExternalLinkStates) ? j.asExternalLinkStates : []).forEach(function (L) { row('external', L, ''); });
+  return out;
+}
+// show ip ospf route json -> { "<prefix>": {type, area, cost, adv:[router IDs]} } (network routes only; the router rows have no length)
+function parseOspfRoutes(j) {
+  var out = {};
+  if (!j || typeof j !== 'object') return out;
+  Object.keys(j).forEach(function (p) {
+    var r = j[p];
+    if (String(p).indexOf('/') < 0 || !r || typeof r !== 'object' || Array.isArray(r)) return;
+    var o = { type: _str(r.routeType) };
+    if (r.area) o.area = _str(r.area);
+    if (typeof r.cost === 'number') o.cost = r.cost;
+    var adv = (Array.isArray(r.nexthops) ? r.nexthops : []).map(function (h) { return h && _str(h.advertisedRouter); }).filter(Boolean);
+    if (adv.length) o.adv = adv.filter(function (a, i) { return adv.indexOf(a) === i; });
+    out[p] = o;
+  });
+  return out;
+}
+
 function collectFromJson(args) {
   var proto = (args.proto || 'ospf').toLowerCase();
   var _ifs = parseInterfaces(args.interface);
@@ -1112,6 +1180,11 @@ function collectFromJson(args) {
   });
   /* nx_frr_vlan_link: the RE line says both names ("eth2 (vlan500)"), like the IOS BDI (nx_re_via) */
   Object.keys(_ifs).forEach(function (n) { if (_ifs[n].via && _st.interfaces && _st.interfaces[n]) _st.interfaces[n].via = _ifs[n].via; });
+  /* nx_ospf_lsdb (v1.4): only when the commands were read (an older capture keeps its old shape) */
+  if (args.ospfInfo) { var _rid = parseOspfRouterId(args.ospfInfo); if (_rid) _st.ospf_router_id = _rid; }
+  if (args.ospfSelf) _st.ospf_stubs = parseOspfOwnStubs(args.ospfSelf);
+  if (args.ospfDatabase) _st.ospf_lsdb = parseOspfDatabaseSummary(args.ospfDatabase);
+  if (args.ospfRoute) _st.ospf_routes = parseOspfRoutes(args.ospfRoute);
   return _st;
 }
 
@@ -1263,6 +1336,11 @@ function collectLive(opts) {
   /* nx_ospf6: OSPFv3 is read only on a router that has `router ospf6` (one extra vtysh run, none on IPv4-only labs) */
   var _ospf6On = _cfgLines.some(function (l) { return /^router ospf6\b/.test(l); });
   if (_ospf6On) { var _o6 = _safe(function () { return _vtyshOspf6(container); }); if (_o6) { raw.ospf6Neighbor = _o6.nei; raw.ospf6Interface = _o6.ifs; raw.route6 = _o6.route; } }
+  /* nx_ospf_lsdb (v1.4): the OSPFv2 database and route table, in one vtysh run, only on a router with `router ospf` (default VRF) */
+  if (_cfgLines.some(function (l) { return /^router ospf(\s|$)/.test(l); })) {
+    var _odb = _safe(function () { return _vtyshBatch(container, ['show ip ospf', 'show ip ospf database', 'show ip ospf database router self-originate', 'show ip ospf route']); });
+    if (_odb) { raw.ospfInfo = _odb[0]; raw.ospfDatabase = _odb[1]; raw.ospfSelf = _odb[2]; raw.ospfRoute = _odb[3]; }
+  }
   return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [], configStatics: _cfgStatics,
     ospfConfigured: _cfgLines.some(function(l){return l.indexOf('router ospf')===0;}),   /* "router ospf6" also starts with "router ospf" = OSPFv3-only routers count (nx_ospf6) */
     bgpConfigured: _bgpCfgWithNeighbor(_cfgLines),   /* nx_bgp_no_nbr */
@@ -1270,7 +1348,8 @@ function collectLive(opts) {
     mgmtSubnet: opts.mgmtSubnet || '',
     ospfNeighbor: raw.ospfNeighbor, ospfInterface: raw.ospfInterface, interface: raw.interface,
     ospf6Neighbor: raw.ospf6Neighbor, ospf6Interface: raw.ospf6Interface, route6: raw.route6,
-    route: raw.route, bgpSummary: raw.bgpSummary, bgp: raw.bgp });
+    route: raw.route, bgpSummary: raw.bgpSummary, bgp: raw.bgp,
+    ospfInfo: raw.ospfInfo, ospfDatabase: raw.ospfDatabase, ospfSelf: raw.ospfSelf, ospfRoute: raw.ospfRoute });
 }
 /* nx_bgp_no_nbr (2026-10-19): `router bgp <AS>` with NO neighbor at all (netlab's FRR vrf module makes an empty one) is not a BGP that
    failed - drawing it as the red "BGP: Active" was false. BGP counts as configured only with a `router bgp` AND at least one
@@ -1699,5 +1778,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pairOspfIfaces: pairOspfIfaces, parseOspfNeighbors: parseOspfNeighbors, parseOspfInterfaces: parseOspfInterfaces,
     parseInterfaces: parseInterfaces, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
     parseBgpRoutes: parseBgpRoutes, buildState: buildState, collectFromJson: collectFromJson, collectLive: collectLive,
-    _sameSubnet: _sameSubnet };
+    _sameSubnet: _sameSubnet, parseOspfRouterId: parseOspfRouterId, parseOspfOwnStubs: parseOspfOwnStubs,
+    parseOspfDatabaseSummary: parseOspfDatabaseSummary, parseOspfRoutes: parseOspfRoutes };
 }

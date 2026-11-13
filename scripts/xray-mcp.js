@@ -151,6 +151,10 @@ var TOOLS = [
       'for ECMP). next_hop is null for a directly connected route; route is null with a note when nothing matches. ' +
       'A recursive next hop carries resolved_via (what the router resolved it through; via_mgmt when that is the lab\'s ' +
       'management network, i.e. not reachable inside the lab topology) and a note says so. ' +
+      'When the data has the OSPF database (collected with network-xray 1.4 or later), the answer starts with `why`: one line ' +
+      'per reason the destination has no OSPF route here or a different one (a router has it but does not advertise it, it is ' +
+      'advertised by a router whose router ID another router also has, OSPF has the route but the routing table did not install ' +
+      'it, a static route is not redistributed, an inter-area route). ' +
       'This reads the table the collector saved; it does not compute routing. Read-only.',
     inputSchema: {
       type: 'object',

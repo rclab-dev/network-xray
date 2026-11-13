@@ -394,6 +394,19 @@ ECMP では、`route.nexthops` にすべてのネクストホップが入りま�
 `note` もそう言います。解いた先が containerlab の管理網 (`--exclude-mgmt` で表から外れる) の時は `resolved_via.via_mgmt` が `true` です。
 ラボのトポロジの中では、その次の段に届いていません。
 
+データに OSPF のデータベース (`ospf_router_id`・`ospf_stubs`・`ospf_lsdb`・`ospf_routes`: network-xray 1.4 からの `clab-collect.js`
+が集める) がある時は、答えの最初が `why` です。この宛先にこのルータで OSPF の経路が無い (または別の経路になる) わけを、全部のルータの
+データベースから 1 件 1 行で言います。例 (FRR 10.7.1・`test/fixtures/frr-ospf-lsdb`):
+
+- `"r2 has 2.2.2.2/32 on lo but does not advertise it in OSPF (no network statement or ip ospf area for lo)"` (広告していない)
+- `"r3 advertises 3.3.3.3/32 (area 0.0.0.0), but r3 and r2 have the same OSPF router ID 2.2.2.2: …"` (Router ID の重複)
+- `"r1 has the OSPF route 2.2.2.2/32 but it is not in the routing table (no better route either: filtered)"` (RIB に入らない)
+- `"r3 has a static route 192.0.2.0/24 but no AS-external LSA for it is in the OSPF database (not redistributed)"` (再配布していない)
+- `"2.2.2.2/32 is an inter-area route here (N IA, advertised by 2.2.2.2)"` (area をまたぐ経路)
+
+MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` にも、同じ OSPF の Router ID を持つ 2 台と、ルーティングテーブルに
+入らなかった OSPF の経路が出ます。
+
 ### why_path
 
 入力: `path`・`router`・`prefix` (`8.8.8.0/24` のようなプレフィックス、またはその中のアドレス。アドレスだけを渡すと、それを含む

@@ -400,6 +400,20 @@ When the next hop is recursive (FRR: `via 10.0.12.1 (recursive)`, for example a 
 hop the router resolved it through, and a `note` says so. `resolved_via.via_mgmt` is `true` when that is the containerlab
 management network (left out of the view with `--exclude-mgmt`): inside the lab topology the next hop is not reachable.
 
+When the data has the OSPF database (`ospf_router_id`, `ospf_stubs`, `ospf_lsdb`, `ospf_routes`: collected by
+`clab-collect.js` from network-xray 1.4 on), the answer starts with `why`, one line per reason the destination has no OSPF
+route on this router (or a different one), worked out from every router's database. Examples, from FRR 10.7.1
+(`test/fixtures/frr-ospf-lsdb`):
+
+- `"r2 has 2.2.2.2/32 on lo but does not advertise it in OSPF (no network statement or ip ospf area for lo)"`
+- `"r3 advertises 3.3.3.3/32 (area 0.0.0.0), but r3 and r2 have the same OSPF router ID 2.2.2.2: one router LSA replaces the other, so 3.3.3.3/32 is lost"`
+- `"r1 has the OSPF route 2.2.2.2/32 but it is not in the routing table (no better route either: filtered)"`
+- `"r3 has a static route 192.0.2.0/24 but no AS-external LSA for it is in the OSPF database (not redistributed)"`
+- `"2.2.2.2/32 is an inter-area route here (N IA, advertised by 2.2.2.2)"`
+
+LSAs at MaxAge (being flushed) are not counted. `lab_state`'s `wrong` also lists two routers with the same OSPF router ID and
+an OSPF route the routing table did not install.
+
 ### why_path
 
 Input: `path`, `router`, `prefix` (a prefix such as `8.8.8.0/24`, or an address inside it; a bare address is matched to the

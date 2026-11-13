@@ -129,6 +129,9 @@ function ospfExpected(states) {
   return out;
 }
 function wrongList(states, names) {
+  return wrongListBase(states, names).concat(ospfDbWrong(states, names));
+}
+function wrongListBase(states, names) {
   var out = [], seen = Object.create(null);
   names.forEach(function (n) {
     var st = states[n], ifs = st.interfaces && typeof st.interfaces === 'object' ? st.interfaces : {}, down = Object.create(null);
@@ -169,8 +172,31 @@ function wrongList(states, names) {
   });
   return out;
 }
+/* nx_ospf_lsdb (v1.4): what the OSPF database adds to wrong - two routers with the same router ID (one router LSA replaces the
+   other, so the prefixes of one of them disappear), and an OSPF route that the RIB did not take although nothing better is there */
+function ospfDbWrong(states, names) {
+  var out = [], byRid = Object.create(null);
+  names.forEach(function (n) { var rid = states[n].ospf_router_id; if (rid) (byRid[rid] = byRid[rid] || []).push(n); });
+  Object.keys(byRid).sort().forEach(function (rid) {
+    var ns = byRid[rid]; if (ns.length < 2) return;
+    out.push({ kind: 'down', protocol: 'ospf', node: ns[0], nodes: ns.slice(), router_id: rid,
+      text: ns.join(' and ') + ': the same OSPF router ID ' + rid + ' (one router LSA replaces the other, so the prefixes of one of them are lost)' });
+  });
+  names.forEach(function (n) {
+    var st = states[n], or = st.ospf_routes, rt = Array.isArray(st.routing_table) ? st.routing_table : [];
+    if (!or || typeof or !== 'object') return;
+    Object.keys(or).sort().forEach(function (p) {
+      var rows = rt.filter(function (r) { return r && r.prefix === p; });
+      var ospf = rows.filter(function (r) { return /^ospf$/i.test(r.protocol || ''); })[0];
+      if (!ospf || ospf.selected !== false || rows.some(function (r) { return r.selected; })) return;
+      out.push({ kind: 'warn', protocol: 'ospf', node: n, prefix: p,
+        text: n + ' ' + p + ': OSPF has this route but it is not in the routing table (no better route either: filtered)' });
+    });
+  });
+  return out;
+}
 function wrongFor(list, protocols, node) {
-  return list.filter(function (w) { return protocols.indexOf(w.protocol) >= 0 && (!node || w.node === node); });
+  return list.filter(function (w) { return protocols.indexOf(w.protocol) >= 0 && (!node || w.node === node || (Array.isArray(w.nodes) && w.nodes.indexOf(node) >= 0)); });
 }
 
 function summarize(states) {
@@ -673,7 +699,86 @@ function inPrefix(addr, pfx) {
 }
 
 // longest-prefix match of an address in a router's collected routing_table (installed rows only)
+/* nx_ospf_lsdb (v1.4): why a destination has no OSPF route here (or a different one), from the OSPF database of every router:
+   OSPF has the route but the RIB did not install it / prefers another protocol; a router advertises it but shares its router ID;
+   a router has it on an interface or as a static route but does not advertise it. Each answer is one text line. */
+function covers(prefix, addr) { var p = parsePrefix(prefix); return !!(p && inPrefix(addr, p)); }
+function longestCover(keys, addr) {
+  var best = null, bl = -1;
+  keys.forEach(function (k) { var p = parsePrefix(k); if (p && inPrefix(addr, p) && p.len > bl) { best = k; bl = p.len; } });
+  return best;
+}
+function ospfWhy(states, node, addr, dest, installed) {
+  var s = states[node], why = [];
+  if (!s || !(s.ospf_routes || s.ospf_stubs || s.ospf_router_id)) return why;   // no OSPF database in the data (older collector)
+  var names = Object.keys(states).sort();
+  var rt = Array.isArray(s.routing_table) ? s.routing_table : [];
+  var or = s.ospf_routes && typeof s.ospf_routes === 'object' ? s.ospf_routes : {};
+  var op = longestCover(Object.keys(or), addr);
+  if (op && (!installed || parsePrefix(installed.prefix).len < parsePrefix(op).len || !/^ospf$/i.test(installed.protocol || ''))) {
+    var rows = rt.filter(function (r) { return r && r.prefix === op; });
+    var win = rows.filter(function (r) { return r.selected && !/^ospf$/i.test(r.protocol || ''); })[0];
+    var o = or[op];
+    if (win) why.push(node + ' has the OSPF route ' + op + ' (' + (o.type || 'OSPF') + (o.cost != null ? ', cost ' + o.cost : '') + ') but uses its ' + (win.protocol || '?') +
+      ' route' + (win.distance != null ? ' (distance ' + win.distance + ' < 110)' : ''));
+    else if (rows.some(function (r) { return /^ospf$/i.test(r.protocol || '') && r.selected === false; }))
+      why.push(node + ' has the OSPF route ' + op + ' but it is not in the routing table (no better route either: filtered)');
+    return why;
+  }
+  if (op) {
+    var t = or[op];
+    if (/IA/.test(t.type || '')) why.push(op + ' is an inter-area route here (' + t.type + (t.adv ? ', advertised by ' + t.adv.join(', ') : '') + ')');
+    return why;
+  }
+  // OSPF has no route for it here: who advertises it, and who has it without advertising it
+  var ridOf = function (n) { return states[n].ospf_router_id || ''; };
+  var dupOf = function (n) { var r = ridOf(n); return r ? names.filter(function (m) { return m !== n && ridOf(m) === r; }) : []; };
+  var origin = [];
+  names.forEach(function (n) { (Array.isArray(states[n].ospf_stubs) ? states[n].ospf_stubs : []).forEach(function (x) { if (x && covers(x.prefix, addr)) origin.push({ n: n, p: x.prefix, area: x.area }); }); });
+  var ext = [];
+  names.forEach(function (n) { (Array.isArray(states[n].ospf_lsdb) ? states[n].ospf_lsdb : []).forEach(function (l) { if (l && l.type === 'external' && l.prefix && covers(l.prefix, addr)) ext.push(l); }); });
+  origin.forEach(function (o) {
+    var d = dupOf(o.n);
+    if (d.length) why.push(o.n + ' advertises ' + o.p + ' (area ' + o.area + '), but ' + o.n + ' and ' + d.join(', ') + ' have the same OSPF router ID ' + ridOf(o.n) +
+      ': one router LSA replaces the other, so ' + o.p + ' is lost');
+    else why.push(o.n + ' advertises ' + o.p + ' in area ' + o.area + ', but ' + node + ' has no OSPF route to it');
+  });
+  if (origin.length || ext.length) return why;
+  names.forEach(function (n) {
+    var st = states[n];
+    if (!(st.ospf_router_id || st.ospf_stubs)) return;   // that router does not run OSPF (or the data has no OSPF database)
+    var ifs = st.interfaces && typeof st.interfaces === 'object' ? st.interfaces : {}, oif = st.ospf_ifaces && typeof st.ospf_ifaces === 'object' ? st.ospf_ifaces : {};
+    // the router's own networks: interface addresses, and the connected rows of its routing table (same thing, when interfaces were not read)
+    var own = Object.create(null);
+    Object.keys(ifs).forEach(function (i) { if (ifs[i] && ifs[i].ip) own[i + ' ' + ifs[i].ip] = [i, ifs[i].ip]; });
+    (Array.isArray(st.routing_table) ? st.routing_table : []).forEach(function (r) {
+      if (r && /^connected$/i.test(r.protocol || '') && r.out_iface && r.prefix && !Object.keys(own).some(function (k) { return own[k][0] === r.out_iface; })) own[r.out_iface + ' ' + r.prefix] = [r.out_iface, r.prefix];
+    });
+    Object.keys(own).sort().forEach(function (key) {
+      var i = own[key][0], ip = own[key][1]; if (!covers(ip, addr)) return;
+      var lo = /^lo/i.test(i);
+      if (!lo && oif[i]) return;   // an OSPF interface: its network is in a router or network LSA
+      if (lo && (st.ospf_stubs || []).some(function (x) { return covers(x.prefix, addr); })) return;
+      why.push(n + ' has ' + ip + ' on ' + i + ' but does not advertise it in OSPF (no network statement or ip ospf area for ' + i + ')');
+    });
+    (Array.isArray(st.routing_table) ? st.routing_table : []).forEach(function (r) {
+      if (!r || !/^(static|kernel|blackhole)$/i.test(r.protocol || '') || !r.prefix || !covers(r.prefix, addr) || r.prefix === '0.0.0.0/0') return;
+      why.push(n + ' has a ' + r.protocol + ' route ' + r.prefix + ' but no AS-external LSA for it is in the OSPF database (not redistributed)');
+    });
+  });
+  if (!why.length) why.push('no router in the data advertises a route to ' + dest + ' in OSPF');
+  return why;
+}
 function routeLookup(states, node, destination, vrf) {
+  var res = routeLookupBase(states, node, destination, vrf);
+  var addr = parseAddr(destination);
+  var why = addr && !vrf ? ospfWhy(states, node, addr, res.destination, res.route) : [];
+  if (!why.length) return res;
+  var out = { why: why };
+  Object.keys(res).forEach(function (k) { out[k] = res[k]; });   // why first: the reason before the table row
+  return out;
+}
+function routeLookupBase(states, node, destination, vrf) {
   var s = getNode(states, node);
   if (!destination || !String(destination).trim()) throw new QueryError('missing destination');
   var addr = parseAddr(destination);
