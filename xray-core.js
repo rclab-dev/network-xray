@@ -3174,6 +3174,30 @@ if (typeof window !== "undefined" && !window._xrayReGoIf) {
     } catch (_e) {}
   };
 }
+/* nx_state_diff_page (v1.4): under "What's wrong", what changed for this router since a baseline the user keeps on the page
+   (xray-diff.js: kept in memory only, never written). Without xray-diff.js nothing is shown; without a baseline, one line
+   offers to keep the state now. The whole lab is compared (window.LIVE_STATES), the lines are this router's. */
+function _xrayDiffLines(s) {
+  if (typeof window === "undefined" || !window.xrayDiff || !window.LIVE_STATES || !s) return [];
+  var ja = _xrayOspfIfJa(), node = String(s.target_node || ""), res;
+  try { res = node ? window.xrayDiff.changeLines(window.LIVE_STATES, node, ja ? "ja" : "en") : null; } catch (_e) { return []; }
+  var btn = function (fn, label) { return '<span style="cursor:pointer;text-decoration:underline dotted;color:#7facc9" onclick="window.' + fn + ' && window.' + fn + '()">' + label + "</span>"; };
+  if (!res) return [{ cls: "re-diff-keep", style: "color:#7facc9", text: btn("_xrayDiffKeep", ja ? "◎ 今の状態を基準にする (この後の差を出す)" : "◎ Keep the state now as the baseline (then see what changes)") }];
+  var t = res.at, hh = ("0" + t.getHours()).slice(-2) + ":" + ("0" + t.getMinutes()).slice(-2) + ":" + ("0" + t.getSeconds()).slice(-2);
+  var out = [{ cls: "re-diff-title", style: "color:#7facc9;font-weight:700", text: (ja ? "基準 (" + hh + ") からの差" : "Changed since the baseline (" + hh + ")") +
+    " &nbsp;" + btn("_xrayDiffKeep", ja ? "基準を今に" : "new baseline") + " · " + btn("_xrayDiffClear", ja ? "やめる" : "clear") }];
+  if (res.none) { out.push({ cls: "re-diff-none", style: "padding-left:1.2em;color:#39ff14", text: ja ? "(none) 基準から変わっていない" : "(none) no change from the baseline" }); return out; }
+  var col = { bad: "#ff4444", good: "#39ff14", note: "#ffcc00" }, max = 8;
+  res.items.slice(0, max).forEach(function (it) {
+    out.push({ cls: "re-diff", style: "padding-left:1.2em;color:" + (col[it.tone] || col.note), text: _escapeHtml(it.text) });
+  });
+  if (res.items.length > max) out.push({ cls: "re-diff-more", style: "padding-left:1.2em;color:#7facc9", text: (ja ? "ほか " : "and ") + (res.items.length - max) + (ja ? " 件" : " more") });
+  return out;
+}
+if (typeof window !== "undefined" && !window._xrayDiffKeep) {
+  window._xrayDiffKeep = function () { try { if (window.xrayDiff && window.LIVE_STATES) window.xrayDiff.setBaseline(window.LIVE_STATES); } catch (_e) {} };
+  window._xrayDiffClear = function () { try { if (window.xrayDiff) window.xrayDiff.clearBaseline(); } catch (_e) {} };
+}
 function _xrayOspfIfLines(s) {
   var o = s && s.ospf_ifaces;
   if (!o || typeof o !== "object" || Array.isArray(o)) return [];
@@ -3349,7 +3373,7 @@ function _xrayOspfRtSummaryLines(s) {
   var lines = [{
     text: "[Routing Engine]",
     cls: "de-title"
-  }].concat(_xrayWrongLines(s));   /* nx_re_wrong_first */
+  }].concat(_xrayWrongLines(s)).concat(_xrayDiffLines(s));   /* nx_re_wrong_first / nx_state_diff_page */
   var ospfActive = s.ospf_active_on_interface !== undefined ? !!s.ospf_active_on_interface : s.ospf_configured !== false;
 
   var _osFullAny = (Array.isArray(s.ospf_neighbors) && s.ospf_neighbors.some(function (_n) { return _n.full || _n.state === "Full"; })) || !!s.ospf_neighbor_full;
@@ -3830,7 +3854,7 @@ function xrayBgpDeepLines(s, opts) {
     text: "[Routing Engine]",
     cls: "de-title"
   });
-  if ((typeof window !== "undefined" && window.xrayCore) || (s.routing_table && s.routing_table.length)) lines = lines.concat(_xrayWrongLines(s));   /* nx_re_wrong_first: live pages only */
+  if ((typeof window !== "undefined" && window.xrayCore) || (s.routing_table && s.routing_table.length)) lines = lines.concat(_xrayWrongLines(s)).concat(_xrayDiffLines(s));   /* nx_re_wrong_first / nx_state_diff_page: live pages only */
 
   var _nbAgg = (function () { if (!Array.isArray(s.bgp_neighbors) || !s.bgp_neighbors.length) return ""; var _c = {}, _any = false; s.bgp_neighbors.forEach(function (_n) { if (_n.state) { _any = true; _c[_n.state] = (_c[_n.state] || 0) + 1; } }); if (!_any) return ""; return Object.keys(_c).map(function (_k) { /* oss_nbagg_per_state_color */ return '<span style="color:' + (/establ/i.test(_k) ? '#a855f7' : '#ffb74d') + '">' + _escapeHtml(_k) + " " + _c[_k] + '</span>'; }).join(", "); })();
   if (s.r2_established !== undefined || s.r3_established !== undefined) {

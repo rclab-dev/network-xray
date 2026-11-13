@@ -300,6 +300,21 @@
       : '<div class="xnp-wrong-none">\u2713 No mismatch or down adjacency</div>';
     return panel("What's wrong", body);
   }
+  // v1.4 nx_state_diff_page: under What's wrong, what changed for this router since a baseline kept on the page (xray-diff.js,
+  // in memory only). The whole lab is compared: opts.states, or the page's window.LIVE_STATES. Nothing without xray-diff.js.
+  function labStates(opts) { return (opts && opts.states) || (typeof window !== 'undefined' && window.LIVE_STATES) || null; }
+  function diffHtml(state, opts) {
+    var xd = typeof window !== 'undefined' && window.xrayDiff, now = labStates(opts);
+    if (!xd || !now || !state.target_node) return '';
+    var res; try { res = xd.changeLines(now, String(state.target_node), 'en'); } catch (e) { return ''; }
+    var btn = function (act, label) { return '<span class="xnp-diff-btn" data-xnp-diff="' + act + '">' + esc(label) + '</span>'; };
+    if (!res) return '<div class="xnp-diff-keep">' + btn('keep', '◎ Keep the state now as the baseline (then see what changes)') + '</div>';
+    var t = res.at, hh = ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2);
+    var body = res.none ? '<div class="xnp-diff-none">(none) no change from the baseline</div>'
+      : res.items.slice(0, 8).map(function (it) { return '<div class="xnp-diff-' + esc(it.tone) + '">' + esc(it.text) + '</div>'; }).join('') +
+        (res.items.length > 8 ? '<div class="xnp-dim">and ' + (res.items.length - 8) + ' more</div>' : '');
+    return panel('Changed since the baseline (' + hh + ')', body + '<div class="xnp-diff-acts">' + btn('keep', 'new baseline') + ' · ' + btn('clear', 'clear') + '</div>');
+  }
   function bgpHtml(state) {
     var routes = state.bgp_routes;
     if (!routes || !routes.length) {
@@ -357,6 +372,8 @@
       '.xnp-tools{margin:0 0 6px 0}.xnp-find{width:100%;box-sizing:border-box;background:var(--xnp-bg);color:var(--xnp-fg);border:1px solid var(--xnp-border);border-radius:4px;padding:3px 6px;font:inherit}' +
       '.xnp-counts{margin-top:4px;font-size:10px;color:var(--xnp-muted);line-height:1.6}.xnp-cnt{cursor:pointer;white-space:nowrap}.xnp-cnt:hover{color:var(--xnp-accent)}' +
       '.xnp-wrong-down{color:#ff6b6b}.xnp-wrong-warn{color:var(--xnp-decider-strong)}.xnp-wrong-none{color:var(--xnp-ok)}' +
+      '.xnp-diff-bad{color:#ff6b6b}.xnp-diff-good{color:var(--xnp-ok)}.xnp-diff-note{color:var(--xnp-decider-strong)}.xnp-diff-none{color:var(--xnp-ok)}' +
+      '.xnp-diff-btn{cursor:pointer;text-decoration:underline dotted;color:var(--xnp-accent)}.xnp-diff-acts{margin-top:4px}' +
       '.xnp-rt.xnp-click tr[data-prefix]{cursor:pointer}' +
       '.xnp-rt.xnp-click tr[data-prefix]:hover td{background:var(--xnp-sel-bg)}';
     document.head.appendChild(s);
@@ -410,8 +427,16 @@
     container._xnpBoxNode = state.target_node;
     var _f0 = container.querySelector('.xnp-find'), _hadFocus = !!(_f0 && typeof document !== 'undefined' && document.activeElement === _f0);
     if (!same) container._xnpFind = ''; else if (_f0) container._xnpFind = _f0.value;
-    container.innerHTML = wrongHtml(state) + (fig ? figureSvg(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
+    container.innerHTML = wrongHtml(state) + diffHtml(state, opts) + (fig ? figureSvg(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
     wireFind(container, _hadFocus);
+    Array.prototype.forEach.call(container.querySelectorAll('[data-xnp-diff]'), function (b) {   // keep / clear the baseline, then draw again
+      b.addEventListener('click', function () {
+        var xd = window.xrayDiff, act = b.getAttribute('data-xnp-diff');
+        if (!xd) return;
+        if (act === 'keep') xd.setBaseline(labStates(opts)); else xd.clearBaseline();
+        render(container, state, opts);
+      });
+    });
     Object.keys(keep).forEach(function (q) { var b = container.querySelector(q); if (b) b.scrollTop = keep[q]; });
     boxShow(container.querySelector('.xnp-rt-box'), container.querySelector('.xnp-rt tr.xnp-sel'));
     if (fig) {   // click a routing row -> move the arrow to that prefix's out-iface (interactive)

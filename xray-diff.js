@@ -64,7 +64,7 @@
       var nhs = arr(r.nexthops).filter(function (h) { return h && typeof h === 'object'; });   // ECMP: every next hop, not only the first
       var hops = (nhs.length > 1 ? nhs : [{ ip: r.next_hop, iface: r.out_iface }]).map(function (h) {
         var ip = str(h.ip != null ? h.ip : h.next_hop), ifc = str(h.iface != null ? h.iface : h.out_iface);
-        return (ip || 'directly connected') + (ifc ? ' on ' + ifc : '');
+        return ip ? ip + (ifc ? ' on ' + ifc : '') : (ifc ? 'on ' + ifc : 'directly connected');
       });
       if (rv && rv.ip) hops = hops.map(function (h) { return h + ' (resolved via ' + str(rv.ip) + (rv.iface ? ' on ' + str(rv.iface) : '') + (mgmt ? ', management network' : '') + ')'; });
       var k = routeKey(r), e = (out[k] = out[k] || { protocol: str(r.protocol), hops: [], via_mgmt: false });
@@ -198,7 +198,56 @@
     };
   }
 
-  var api = { diffStates: diffStates, KINDS: Object.keys(RANK) };
+  /* ---- the page's baseline (v1.4 step 3): kept in memory only, never written anywhere --------------------------- */
+  var LABEL = {
+    en: { node_removed: 'router gone', node_unread: 'not read', iface_down: 'interface down', ospf_if_left: 'left OSPF',
+      ospf_if_value: 'OSPF value', bgp_peer_removed: 'BGP peer gone', ospf_adjacency_lost: 'OSPF adjacency lost',
+      bgp_session_down: 'BGP session down', best_path_changed: 'best path', route_removed: 'route gone', route_changed: 'route',
+      ospf_adjacency_state: 'OSPF adjacency', node_added: 'router new', iface_up: 'interface up', ospf_adjacency_up: 'OSPF adjacency up',
+      ospf_adjacency_new: 'OSPF adjacency new', ospf_if_joined: 'joined OSPF', bgp_session_up: 'BGP session up', bgp_peer_added: 'BGP peer new',
+      route_added: 'route new', iface_address: 'address' },
+    ja: { node_removed: 'ルータが消えた', node_unread: '読めない', iface_down: 'interface が down', ospf_if_left: 'OSPF から外れた',
+      ospf_if_value: 'OSPF の値', bgp_peer_removed: 'BGP の相手が消えた', ospf_adjacency_lost: 'OSPF の隣接が切れた',
+      bgp_session_down: 'BGP が落ちた', best_path_changed: '最良経路', route_removed: '経路が消えた', route_changed: '経路',
+      ospf_adjacency_state: 'OSPF の隣接', node_added: 'ルータが増えた', iface_up: 'interface が up', ospf_adjacency_up: 'OSPF の隣接が戻った',
+      ospf_adjacency_new: 'OSPF の隣接が増えた', ospf_if_joined: 'OSPF に入った', bgp_session_up: 'BGP が戻った', bgp_peer_added: 'BGP の相手が増えた',
+      route_added: '経路が増えた', iface_address: 'アドレス' }
+  };
+  var TONE = { node_removed: 'bad', node_unread: 'bad', iface_down: 'bad', ospf_if_left: 'bad', ospf_if_value: 'bad', bgp_peer_removed: 'bad',
+    ospf_adjacency_lost: 'bad', bgp_session_down: 'bad', route_removed: 'bad', iface_up: 'good', ospf_adjacency_up: 'good',
+    bgp_session_up: 'good', ospf_adjacency_new: 'good' };
+  var base = null, listeners = [];
+  function fire() { listeners.slice().forEach(function (fn) { try { fn(base); } catch (e) {} }); }
+  function setBaseline(states) {
+    base = { states: JSON.parse(JSON.stringify(obj(states))), at: new Date() };
+    fire();
+    return base.at;
+  }
+  function clearBaseline() { base = null; fire(); }
+  function getBaseline() { return base; }
+  function onBaseline(fn) { if (typeof fn === 'function') listeners.push(fn); }
+  // the lines a panel shows for one router: null when no baseline is kept; text is plain (the panel escapes it)
+  function changeLines(now, node, lang) {
+    if (!base) return null;
+    var L = LABEL[lang === 'ja' ? 'ja' : 'en'];
+    var d = diffStates(base.states, now, { node: node });
+    return {
+      at: base.at, none: d.none,
+      items: d.changes.map(function (c) {
+        var lbl = L[c.kind] || c.kind, t;
+        if (/_(added|new|joined)$/.test(c.kind) || c.before === 'absent' || c.before === 'none') t = c.item + ': ' + lbl + ' — ' + c.after;
+        else if (/_(removed|lost|left)$/.test(c.kind) && (c.after === 'absent' || c.after === 'gone' || c.after === 'not in OSPF'))
+          t = c.item + ': ' + lbl + (lang === 'ja' ? ' (前は ' : ' (was ') + c.before + ')';
+        else t = c.item + ': ' + lbl + ' ' + (c.before == null ? '-' : c.before) + ' → ' + (c.after == null ? '-' : c.after);
+        if (c.reason) t += ' (' + c.reason + ')';
+        if (c.originated_by && c.originated_by.length) t += lang === 'ja' ? ' [元: ' + c.originated_by.join(', ') + ']' : ' [from ' + c.originated_by.join(', ') + ']';
+        return { kind: c.kind, tone: c.via_mgmt ? 'bad' : (TONE[c.kind] || 'note'), text: t };
+      })
+    };
+  }
+
+  var api = { diffStates: diffStates, KINDS: Object.keys(RANK), setBaseline: setBaseline, clearBaseline: clearBaseline,
+    getBaseline: getBaseline, onBaseline: onBaseline, changeLines: changeLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.xrayDiff = api;
 })(typeof window !== 'undefined' ? window : this);
