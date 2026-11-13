@@ -14,11 +14,14 @@ only with `--allow-collect`, runs the collector once: see [Read the lab again](#
 
 ## The usual setup <!-- nx_mcp_usual -->
 
-With a lab running under `./xray.sh`, add the server, then give it the state file `xray.sh` keeps up to date:
+With a lab running under `./xray.sh`, add the server, then give it the state file `xray.sh` keeps up to date.
+**The one thing every tool needs is `path`: give it `/path/to/network-xray/xray-states.js` (an absolute path).**
 
 ```
 claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
 ```
+
+In Cursor, put the same server in `.cursor/mcp.json` instead ([Cursor](#cursor)).
 
 Then ask, for example: "Use lab_state on /path/to/network-xray/xray-states.js. Which links are down?"
 
@@ -144,6 +147,26 @@ That writes:
 
 `claude mcp list` should then show `network-xray: node …/scripts/xray-mcp.js - √ Connected`. On Windows, give the
 `C:\...\scripts\xray-mcp.js` path.
+
+### Cursor
+
+Cursor reads MCP servers from `.cursor/mcp.json` in the project (or `~/.cursor/mcp.json` for all your projects),
+in the same `mcpServers` form:
+
+```json
+{
+  "mcpServers": {
+    "network-xray": {
+      "command": "node",
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+    }
+  }
+}
+```
+
+Then ask in the chat as under [Ask](#ask), with the absolute path of `xray-states.js`. On Windows, give the
+`C:\...\scripts\xray-mcp.js` path (JSON needs the backslashes doubled). We have not tried it in Cursor ourselves; the
+server is a plain stdio server, the same for every client.
 
 ### Any other MCP client (JSON config)
 

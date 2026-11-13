@@ -12,11 +12,14 @@
 
 ## よくある使い方 <!-- nx_mcp_usual -->
 
-`./xray.sh` でラボを動かしているなら、サーバを足して、`xray.sh` が最新に保つ state のファイルを渡します:
+`./xray.sh` でラボを動かしているなら、サーバを足して、`xray.sh` が最新に保つ state のファイルを渡します。
+**どのツールにも要るのは `path` だけです: `/path/to/network-xray/xray-states.js` (絶対パス) を渡してください。**
 
 ```
 claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
 ```
+
+Cursor では、同じサーバを `.cursor/mcp.json` に書きます ([Cursor](#cursor))。
 
 聞き方の例: 「/path/to/network-xray/xray-states.js で lab_state を使って。どのリンクが落ちている?」
 
@@ -138,6 +141,26 @@ claude mcp add --scope project network-xray -- node /path/to/network-xray/script
 
 その後 `claude mcp list` で `network-xray: node …/scripts/xray-mcp.js - √ Connected` と出るはずです。Windows では
 `C:\...\scripts\xray-mcp.js` のパスを渡します。
+
+### Cursor
+
+Cursor は MCP のサーバをプロジェクトの `.cursor/mcp.json` (全プロジェクト共通なら `~/.cursor/mcp.json`) から読みます。
+形は同じ `mcpServers` です:
+
+```json
+{
+  "mcpServers": {
+    "network-xray": {
+      "command": "node",
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+    }
+  }
+}
+```
+
+あとはチャットで [聞く](#聞く) のとおりに、`xray-states.js` の絶対パスを付けて聞きます。Windows では
+`C:\...\scripts\xray-mcp.js` のパスを書きます (JSON では  を 2 つ重ねる)。Cursor では私たちはまだ試していません。
+サーバはただの stdio のサーバで、どのクライアントでも同じです。
 
 ### そのほかの MCP クライアント (JSON の設定)
 
