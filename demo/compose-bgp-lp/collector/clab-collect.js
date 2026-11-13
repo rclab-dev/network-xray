@@ -1120,6 +1120,23 @@ function parseOspfOwnStubs(j) {
   });
   return out;
 }
+// show ip ospf database router json -> every router LSA with its stub networks [{adv_router, area, stubs:[prefix]}]
+function parseOspfRouterLsas(j) {
+  var out = [], areas = j && j.routerLinkStates && j.routerLinkStates.areas;
+  if (!areas || typeof areas !== 'object') return out;
+  Object.keys(areas).forEach(function (area) {
+    (Array.isArray(areas[area]) ? areas[area] : []).forEach(function (L) {
+      if (!L || typeof L !== 'object' || +L.lsaAge >= OSPF_MAXAGE) return;
+      var links = L.routerLinks && typeof L.routerLinks === 'object' ? L.routerLinks : {}, stubs = [];
+      Object.keys(links).forEach(function (k) {
+        var lk = links[k], len = lk && _maskLen(lk.networkMask);
+        if (lk && /stub/i.test(String(lk.linkType || '')) && lk.networkAddress && len != null) stubs.push(lk.networkAddress + '/' + len);
+      });
+      out.push({ adv_router: _str(L.advertisingRouter), area: area, stubs: stubs });
+    });
+  });
+  return out;
+}
 // show ip ospf database json -> [{type, ls_id, adv_router, area, prefix?}] (router / network / summary / asbr-summary / external)
 var OSPF_DB_KEYS = { routerLinkStates: 'router', networkLinkStates: 'network', summaryLinkStates: 'summary', asbrSummaryLinkStates: 'asbr-summary' };
 function parseOspfDatabaseSummary(j) {
@@ -1183,6 +1200,7 @@ function collectFromJson(args) {
   /* nx_ospf_lsdb (v1.4): only when the commands were read (an older capture keeps its old shape) */
   if (args.ospfInfo) { var _rid = parseOspfRouterId(args.ospfInfo); if (_rid) _st.ospf_router_id = _rid; }
   if (args.ospfSelf) _st.ospf_stubs = parseOspfOwnStubs(args.ospfSelf);
+  if (args.ospfRouters) _st.ospf_router_lsas = parseOspfRouterLsas(args.ospfRouters);
   if (args.ospfDatabase) _st.ospf_lsdb = parseOspfDatabaseSummary(args.ospfDatabase);
   if (args.ospfRoute) _st.ospf_routes = parseOspfRoutes(args.ospfRoute);
   return _st;
@@ -1338,8 +1356,8 @@ function collectLive(opts) {
   if (_ospf6On) { var _o6 = _safe(function () { return _vtyshOspf6(container); }); if (_o6) { raw.ospf6Neighbor = _o6.nei; raw.ospf6Interface = _o6.ifs; raw.route6 = _o6.route; } }
   /* nx_ospf_lsdb (v1.4): the OSPFv2 database and route table, in one vtysh run, only on a router with `router ospf` (default VRF) */
   if (_cfgLines.some(function (l) { return /^router ospf(\s|$)/.test(l); })) {
-    var _odb = _safe(function () { return _vtyshBatch(container, ['show ip ospf', 'show ip ospf database', 'show ip ospf database router self-originate', 'show ip ospf route']); });
-    if (_odb) { raw.ospfInfo = _odb[0]; raw.ospfDatabase = _odb[1]; raw.ospfSelf = _odb[2]; raw.ospfRoute = _odb[3]; }
+    var _odb = _safe(function () { return _vtyshBatch(container, ['show ip ospf', 'show ip ospf database', 'show ip ospf database router self-originate', 'show ip ospf route', 'show ip ospf database router']); });
+    if (_odb) { raw.ospfInfo = _odb[0]; raw.ospfDatabase = _odb[1]; raw.ospfSelf = _odb[2]; raw.ospfRoute = _odb[3]; raw.ospfRouters = _odb[4]; }
   }
   return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [], configStatics: _cfgStatics,
     ospfConfigured: _cfgLines.some(function(l){return l.indexOf('router ospf')===0;}),   /* "router ospf6" also starts with "router ospf" = OSPFv3-only routers count (nx_ospf6) */
@@ -1349,7 +1367,7 @@ function collectLive(opts) {
     ospfNeighbor: raw.ospfNeighbor, ospfInterface: raw.ospfInterface, interface: raw.interface,
     ospf6Neighbor: raw.ospf6Neighbor, ospf6Interface: raw.ospf6Interface, route6: raw.route6,
     route: raw.route, bgpSummary: raw.bgpSummary, bgp: raw.bgp,
-    ospfInfo: raw.ospfInfo, ospfDatabase: raw.ospfDatabase, ospfSelf: raw.ospfSelf, ospfRoute: raw.ospfRoute });
+    ospfInfo: raw.ospfInfo, ospfDatabase: raw.ospfDatabase, ospfSelf: raw.ospfSelf, ospfRoute: raw.ospfRoute, ospfRouters: raw.ospfRouters });
 }
 /* nx_bgp_no_nbr (2026-10-19): `router bgp <AS>` with NO neighbor at all (netlab's FRR vrf module makes an empty one) is not a BGP that
    failed - drawing it as the red "BGP: Active" was false. BGP counts as configured only with a `router bgp` AND at least one
@@ -1779,5 +1797,5 @@ if (typeof module !== 'undefined' && module.exports) {
     parseInterfaces: parseInterfaces, parseRoutes: parseRoutes, parseBgpSummary: parseBgpSummary,
     parseBgpRoutes: parseBgpRoutes, buildState: buildState, collectFromJson: collectFromJson, collectLive: collectLive,
     _sameSubnet: _sameSubnet, parseOspfRouterId: parseOspfRouterId, parseOspfOwnStubs: parseOspfOwnStubs,
-    parseOspfDatabaseSummary: parseOspfDatabaseSummary, parseOspfRoutes: parseOspfRoutes };
+    parseOspfDatabaseSummary: parseOspfDatabaseSummary, parseOspfRoutes: parseOspfRoutes, parseOspfRouterLsas: parseOspfRouterLsas };
 }

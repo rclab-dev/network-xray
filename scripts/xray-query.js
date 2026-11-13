@@ -733,8 +733,14 @@ function ospfWhy(states, node, addr, dest, installed) {
   // OSPF has no route for it here: who advertises it, and who has it without advertising it
   var ridOf = function (n) { return states[n].ospf_router_id || ''; };
   var dupOf = function (n) { var r = ridOf(n); return r ? names.filter(function (m) { return m !== n && ridOf(m) === r; }) : []; };
-  var origin = [];
-  names.forEach(function (n) { (Array.isArray(states[n].ospf_stubs) ? states[n].ospf_stubs : []).forEach(function (x) { if (x && covers(x.prefix, addr)) origin.push({ n: n, p: x.prefix, area: x.area }); }); });
+  var origin = [], seenO = Object.create(null);
+  var nodeOfRid = function (rid) { return names.filter(function (m) { return ridOf(m) === rid; })[0] || ''; };
+  var addO = function (n, p, area) { var k = n + ' ' + p + ' ' + area; if (seenO[k]) return; seenO[k] = true; origin.push({ n: n, p: p, area: area }); };
+  names.forEach(function (n) { (Array.isArray(states[n].ospf_stubs) ? states[n].ospf_stubs : []).forEach(function (x) { if (x && covers(x.prefix, addr)) addO(n, x.prefix, x.area); }); });
+  /* every router LSA this router holds (show ip ospf database router): a stub of a router that was not collected is named by its router ID */
+  (Array.isArray(s.ospf_router_lsas) ? s.ospf_router_lsas : []).forEach(function (L) {
+    (Array.isArray(L.stubs) ? L.stubs : []).forEach(function (p) { if (covers(p, addr) && !origin.some(function (o) { return o.p === p && ridOf(o.n) === L.adv_router; })) addO(nodeOfRid(L.adv_router) || ('router ' + L.adv_router), p, L.area); });
+  });
   var ext = [];
   names.forEach(function (n) { (Array.isArray(states[n].ospf_lsdb) ? states[n].ospf_lsdb : []).forEach(function (l) { if (l && l.type === 'external' && l.prefix && covers(l.prefix, addr)) ext.push(l); }); });
   origin.forEach(function (o) {
@@ -750,9 +756,9 @@ function ospfWhy(states, node, addr, dest, installed) {
     var ifs = st.interfaces && typeof st.interfaces === 'object' ? st.interfaces : {}, oif = st.ospf_ifaces && typeof st.ospf_ifaces === 'object' ? st.ospf_ifaces : {};
     // the router's own networks: interface addresses, and the connected rows of its routing table (same thing, when interfaces were not read)
     var own = Object.create(null);
-    Object.keys(ifs).forEach(function (i) { if (ifs[i] && ifs[i].ip) own[i + ' ' + ifs[i].ip] = [i, ifs[i].ip]; });
+    Object.keys(ifs).forEach(function (i) { if (ifs[i] && ifs[i].ip) own[i + '|' + ifs[i].ip] = [i, ifs[i].ip]; });
     (Array.isArray(st.routing_table) ? st.routing_table : []).forEach(function (r) {
-      if (r && /^connected$/i.test(r.protocol || '') && r.out_iface && r.prefix && !Object.keys(own).some(function (k) { return own[k][0] === r.out_iface; })) own[r.out_iface + ' ' + r.prefix] = [r.out_iface, r.prefix];
+      if (r && /^connected$/i.test(r.protocol || '') && r.out_iface && r.prefix && !Object.keys(own).some(function (k) { return own[k][0] === r.out_iface; })) own[r.out_iface + '|' + r.prefix] = [r.out_iface, r.prefix];
     });
     Object.keys(own).sort().forEach(function (key) {
       var i = own[key][0], ip = own[key][1]; if (!covers(ip, addr)) return;

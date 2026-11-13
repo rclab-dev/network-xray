@@ -1,8 +1,8 @@
 'use strict';
 // The OSPF database and route table (v1.4): what clab-collect.js reads from FRR, and how route_lookup / lab_state use it to say
 // why a destination has no OSPF route. Fixtures = FRR 10.7.1 output captured on a three-router lab (containerlab), one JSON per
-// case: { r1: { ospf, database, self, route, rib }, r2: …, r3: … } = show ip ospf / database / database router self-originate /
-// route / show ip route, each `… json`.
+// case: { r1: { ospf, database, self, route, routers, rib }, r2: …, r3: … } = show ip ospf / database / database router
+// self-originate / route / database router / show ip route, each `… json`.
 //   r1 - r2 - r3 triangle in area 0 (+ a second r1 - r3 link in area 1); loopbacks 1.1.1.1 / 2.2.2.2 / 3.3.3.3; r3 redistributes
 //   the static 192.0.2.0/24. Cases: baseline, r2 loopback network statement removed, r2 loopback put in area 2, r3 router ID set
 //   to 2.2.2.2 (same as r2), OSPF routes kept out of r1's RIB by a route-map, r3's redistribute static removed.
@@ -20,7 +20,7 @@ function states(name) {
   const out = {};
   for (const n of Object.keys(raw)) {
     const r = raw[n];
-    out[n] = collector.collectFromJson({ node: n, proto: 'ospf', route: r.rib, ospfInfo: r.ospf, ospfDatabase: r.database, ospfSelf: r.self, ospfRoute: r.route });
+    out[n] = collector.collectFromJson({ node: n, proto: 'ospf', route: r.rib, ospfInfo: r.ospf, ospfDatabase: r.database, ospfSelf: r.self, ospfRoute: r.route, ospfRouters: r.routers });
   }
   return out;
 }
@@ -55,11 +55,16 @@ test('route_lookup why: an inter-area route (the loopback is in area 2)', () => 
 });
 
 test('route_lookup why and wrong: a duplicate router ID', () => {
+  // r2 and r3 both 2.2.2.2: whichever router LSA arrived last stays, so either 2.2.2.2/32 or 3.3.3.3/32 is lost (in this
+  // capture r3's LSA stayed and r2's loopback is gone); the lookup of the lost one says why
   const st = states('duplicate-router-id');
-  assert.deepEqual(q.routeLookup(st, 'r1', '3.3.3.3').why,
-    ['r3 advertises 3.3.3.3/32 (area 0.0.0.0), but r3 and r2 have the same OSPF router ID 2.2.2.2: one router LSA replaces the other, so 3.3.3.3/32 is lost']);
+  const lost = ['2.2.2.2', '3.3.3.3'].map((d) => q.routeLookup(st, 'r1', d)).filter((r) => r.why);
+  assert.equal(lost.length, 1, 'one of the two loopbacks is lost');
+  assert.match(lost[0].why[0], /^r[23] advertises [23]\.[23]\.[23]\.[23]\/32 \(area 0\.0\.0\.0\), but r[23] and r[23] have the same OSPF router ID 2\.2\.2\.2: one router LSA replaces the other/);
   assert.deepEqual(texts(q.summarize(st).wrong), ['r2 and r3: the same OSPF router ID 2.2.2.2 (one router LSA replaces the other, so the prefixes of one of them are lost)']);
   assert.equal(q.ospfNeighbors(st, 'r3').wrong.length, 1, 'listed for each router that has the ID');
+  // r1 holds a single router LSA for 2.2.2.2, and in this capture it carries r3's loopback
+  assert.deepEqual(st.r1.ospf_router_lsas.filter((l) => l.adv_router === '2.2.2.2' && l.area === '0.0.0.0').map((l) => l.stubs), [['3.3.3.3/32', '10.0.23.0/24']]);
 });
 
 test('route_lookup why and wrong: an OSPF route the RIB did not install', () => {
