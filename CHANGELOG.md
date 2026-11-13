@@ -2,6 +2,12 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.3.2 — 2026-11-13
+
+- xray-query and MCP: the `lab_state`, `ospf_interfaces`, `ospf_neighbors` and `bgp_neighbors` answers start with `wrong` (one line of `text` each: an interface down, an OSPF interface facing a neighbor with no adjacency and the values both ends disagree on, Full but a value differs, a BGP session not up; `[]` when nothing is wrong). `lab_state` also counts the OSPF interfaces that should have an adjacency and those without one (`ospf_ifaces_expected`, `ospf_ifaces_full`, `ospf_ifaces_without_adjacency`): a neighbor that never came up is not in the neighbor table, so `ospf_full` / `ospf_total` alone can read all Full. `--format table` starts with "What's wrong" when there is something.
+- Docs (en / ja): docs/mcp.md starts with the usual setup (one `claude mcp add` line for a lab started with `xray.sh`, how to ask, and how to copy the state out of the docker / netlab container) and says what `--allow-collect` needs (access to Docker; macOS Docker Desktop and a remote Docker are not tested). The README lists what the page does not report on a live lab (route-map results, prefix-list denies, `next-hop-self`, `update-source`, a duplicate Router ID) and shows the DeepDive starting with what is wrong.
+- DATA-CONTRACT: what each collector puts in `lsdb_prefixes` (the LSDB panel), that `ospf_lsdb` comes from `frr-collect.js` only, that `area_match` is set only with a Full neighbor, and the Router ID fields among those the bundled collectors do not fill.
+
 ## v1.3.1 — 2026-11-12
 
 - The DeepDive's Routing Engine panel starts with what is wrong: interfaces down, OSPF interfaces with no adjacency or with a value both ends must share that differs ("hello 3 ⇔ 10"), BGP sessions not up; a line opens that interface. Healthy OSPF interfaces fold to one line each, and a long routing table gets a filter with counts per exit interface. The node panel shows the same list first and keeps its routing and BGP tables in their own scroll boxes under the figure.
