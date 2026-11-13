@@ -18,6 +18,9 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
 2. In its BGP table, compare the two candidates for `8.8.8.0/24`.
 3. Read the **Best-Path Decision** panel: why the winner won (here, Local Preference).
 
+<!-- nx_readme_wrong_first -->
+<img src="docs/whats-wrong-first.png" width="380" alt="The DeepDive&#39;s Routing Engine panel starts with what is wrong: on r10, eth4 has no OSPF adjacency to r11 because the hello / dead timers differ (hello 3 ⇔ 10, dead 12 ⇔ 40); the other OSPF interfaces are Full">
+
 <!-- nx_readme_three_ways (2026-10-28) -->
 **Two ways to start:**
 1. **Recorded** — the recorded demo above (no routers needed), or a [recorded 30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) showing the best path move after one Local Preference change.
@@ -987,6 +990,9 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 1. **r1** をクリックして中を見る。
 2. BGP の表で、`8.8.8.0/24` の 2 つの候補を比べる。
 3. **Best-Path Decision** の欄で、勝った方が勝った理由を読む (この例では Local Preference)。
+
+<!-- nx_readme_wrong_first -->
+<img src="docs/whats-wrong-first.png" width="380" alt="DeepDive の Routing Engine の板は問題から始まる: r10 の eth4 は hello / dead のタイマーが違うので r11 と OSPF の隣接ができない (hello 3 ⇔ 10・dead 12 ⇔ 40)。ほかの OSPF の IF は Full">
 
 **最初の選択肢は 2 つ:**
 1. **記録済み (recorded)** — 上のデモ (ルータ不要)、または [記録済みの 30 秒動画](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB)。Local Preference を変えると最良経路が変わる様子を見られます。
