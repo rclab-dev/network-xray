@@ -12,6 +12,7 @@
 # netlab create / netlab up also write network-xray.json (the transformed topology, without the defaults):
 # network-xray reads the lab's validate: tests from it and shows them as a band (3 / 5, ✓ Solved) with marks on the graph.
 # The file holds the lab's values (passwords included): netlab down removes it (first, so a failed docker kill does not keep it).
+# In CI, do not keep the lab folder (network-xray.json and netlab's own files) as an artifact; stop the lab with netlab down --cleanup.
 netlab:
   create:
     output:
