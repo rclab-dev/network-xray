@@ -4,13 +4,13 @@
 > **`config`** (the topology you want to draw) and a **`state`** (a snapshot of router
 > protocol state) — and it draws the picture. It does **not** talk to any router, run any
 > protocol, or fetch anything by itself. Everything it knows comes from the data you pass.
-> This document is the complete shape of that data.
+> This document is the complete shape of that data. A JSON Schema of the state: [docs/dev/states-schema.json](docs/dev/states-schema.json).
 >
 > **JA** — `xray-core.js` は *データ駆動* のレンダラです。**`config`**(描きたいトポロジ)と
 > **`state`**(ルータのプロトコル状態のスナップショット)という2つのプレーンなオブジェクトを
 > 渡すと、絵を描きます。ルータと通信したり、プロトコルを動かしたり、自分でデータを取りに行ったり
 > は**一切しません**。エンジンが知っているのは、あなたが渡したデータだけ。本書はそのデータの
-> 全体像です。
+> 全体像です。state の JSON Schema は [docs/dev/states-schema.json](docs/dev/states-schema.json) にあります。
 
 The fields below are all **generic networking concepts** (OSPF / BGP / static routes /
 interfaces). None are tied to a specific router OS — they map 1:1 to `show` command output

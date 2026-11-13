@@ -25,14 +25,16 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
 <img src="docs/whats-wrong-first.png" width="380" alt="The DeepDive&#39;s Routing Engine panel starts with what is wrong: on r10, eth4 has no OSPF adjacency to r11 because the hello / dead timers differ (hello 3 ⇔ 10, dead 12 ⇔ 40); the other OSPF interfaces are Full">
 
 <!-- nx_readme_three_ways (2026-10-28) -->
-**Two ways to start:**
-1. **Recorded** — the recorded demo above (no routers needed), or a [recorded 30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) showing the best path move after one Local Preference change.
-2. **Live: your own running containerlab lab** — run in the lab's folder, then open <http://localhost:8600/>:
+**Three ways to try it:**
+1. **Just look (no setup)** — the recorded demo above, or the [recorded 30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) of the best path moving after one Local Preference change. Or paste your own router's output: [`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) (OSPF, routes) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html) (BGP). It all runs in your browser.
+2. **GitHub Codespaces (about 2–3 minutes)** — a real 3-router FRR lab in your browser that you can change: [Live lab — GitHub Codespaces](#-live-lab--github-codespaces).
+3. **Your own running containerlab lab (one line)** — run in the lab's folder, then open <http://localhost:8600/>:
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
    It only runs `show` commands, but the container is given the Docker socket (root-equivalent on the host) — lab machines only. [More](#security-notes)
-   Why it needs the socket (to run `show` in each router's container), and three ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
+   Rather not give it the socket? Ways 1 and 2 need none on your machine (the recorded demo, the paste pages, Codespaces).
+   Why it needs the socket (to run `show` in each router's container), and three more ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
    You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull); see the [release page](https://github.com/rclab-dev/network-xray/releases/latest).
 
 Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab-defaults.yml` through `defaults.sources.extra`: [netlab tool](#netlab-tool).
@@ -72,6 +74,18 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
   - SR Linux: `sr_cli 'info from state … | as json'`.
   - Cisco IOS-XE (containerlab kind `cisco_iol`), over SSH: plain-text `show` commands — see [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol).
 
+<!-- nx_readme_which_routers -->
+**Which routers it reads:**
+
+| Router (containerlab kind) | Read through | OSPF | BGP |
+|---|---|---|---|
+| FRR (`linux`, FRR images) | `docker exec … vtysh` | ✓ (OSPFv2; OSPFv3 too) | ✓ (IPv4) |
+| Nokia SR Linux (`nokia_srlinux`) | `docker exec … sr_cli` | ✓ | ✓ |
+| Cisco IOS-XE IOL (`cisco_iol`) | SSH `show` | ✓ | ✓ |
+| Arista cEOS, Juniper, Linux hosts, … | — | drawn, not read ([FAQ](docs/faq.md#what-happens-with-a-vendor-it-does-not-read-arista-ceos-juniper-linux-hosts-)) | |
+
+The IPv6 BGP table is not read.
+
 <!-- nx_readme_checked_versions (2026-10-28) -->
 **Tested with** (only these versions have been tried; others may work):
 
@@ -85,7 +99,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 | Node.js | 18 and 24 (for `xray.sh` / the collector without the image; the tests run on both, and CI and the image use 24) |
 
 <a id="maintenance-policy"></a>
-This is a small tool kept by one person. Please open an issue with the raw output and I'll make the fix here; pull requests aren't merged.
+This is a small tool kept by one person. Please open an issue with the raw output and I'll make the fix here; pull requests aren't merged, because the project keeps a single copyright holder.
 Released versions stay MIT, and forks are welcome.
 
 **Walkthrough:** [See why BGP picked that path — a browser X-ray for your containerlab lab](https://dev.to/routecrushlab/see-why-bgp-picked-that-path-a-browser-x-ray-for-your-containerlab-lab-3e) (dev.to)
@@ -230,7 +244,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 ![Recorded quick start (recorded with the old name demo.sh): git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
 
-**You need:** Linux (or Windows with **WSL2**, or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
+**You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
 
 **Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
@@ -801,7 +815,7 @@ Two ways to feed it:
 2. **Feed `state` directly (any vendor)** — build the documented `config`/`state` objects and call
    `view.applyState(state)`. This is how you support **Arista, Juniper or Cisco kinds other than `cisco_iol` in containerlab**: write a small
    adapter from your OS's `show` output to the shapes in
-   **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** (which includes a FRR ↔ Cisco IOS `show`-command
+   **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** (a JSON Schema of the state is in [docs/dev/states-schema.json](docs/dev/states-schema.json); the contract includes a FRR ↔ Cisco IOS `show`-command
    mapping table and the two optional seams). **`frr-parse.js` is the worked adapter template** —
    copy it and swap the regexes for your vendor.
 
@@ -1006,14 +1020,16 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
 <!-- nx_readme_wrong_first -->
 <img src="docs/whats-wrong-first.png" width="380" alt="DeepDive の Routing Engine の板は問題から始まる: r10 の eth4 は hello / dead のタイマーが違うので r11 と OSPF の隣接ができない (hello 3 ⇔ 10・dead 12 ⇔ 40)。ほかの OSPF の IF は Full">
 
-**最初の選択肢は 2 つ:**
-1. **記録済み (recorded)** — 上のデモ (ルータ不要)、または [記録済みの 30 秒動画](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB)。Local Preference を変えると最良経路が変わる様子を見られます。
-2. **ライブ (live): 自分の稼働中の containerlab ラボ** — ラボのフォルダで実行し、<http://localhost:8600/> を開きます:
+**試し方は 3 つ:**
+1. **見るだけ (準備なし)** — 上の記録済みのデモ、または [記録済みの 30 秒動画](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB・Local Preference を 1 つ変えると最良経路が変わる様子)。自分のルータの出力を貼る頁もあります: [`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) (OSPF・経路)・[`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html) (BGP)。どれもブラウザの中だけで動きます。
+2. **GitHub Codespaces (2〜3 分ほど)** — 本物の 3 台の FRR のラボをブラウザで動かし、設定も変えられます: [ライブ (live) ラボ — GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
+3. **自分の稼働中の containerlab ラボ (1 行)** — ラボのフォルダで実行し、<http://localhost:8600/> を開きます:
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
    読む命令だけですが、Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
-   ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使う 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
+   ソケットを渡したくない時は、1 と 2 (記録済みのデモ・貼る頁・Codespaces) なら手元の機械にソケットは要りません。
+   ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使うほかの 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
    イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) で固定できます。[リリースページ](https://github.com/rclab-dev/network-xray/releases/latest) を参照してください。
 
 netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` での `docker/netlab-defaults.yml` の読み込みが必要です。[netlab tool](#netlab-tool-ja) を参照してください。
@@ -1053,6 +1069,18 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
   - SR Linux は `sr_cli 'info from state … | as json'`。
   - Cisco IOS-XE (containerlab の kind `cisco_iol`) は、SSH 経由でテキスト形式の `show` コマンド出力を取得します — [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol-1) を見てください。
 
+<!-- nx_readme_which_routers -->
+**読めるルータ:**
+
+| ルータ (containerlab の kind) | 読み方 | OSPF | BGP |
+|---|---|---|---|
+| FRR (`linux`・FRR のイメージ) | `docker exec … vtysh` | ✓ (OSPFv2・OSPFv3 も) | ✓ (IPv4) |
+| Nokia SR Linux (`nokia_srlinux`) | `docker exec … sr_cli` | ✓ | ✓ |
+| Cisco IOS-XE IOL (`cisco_iol`) | SSH の `show` | ✓ | ✓ |
+| Arista cEOS・Juniper・Linux のホスト ほか | — | 描くが読まない ([FAQ](docs/ja/faq.md)) | |
+
+IPv6 の BGP の表は読みません。
+
 **動作確認した版** (これらだけ確認済み。ほかの版も動く可能性があります):
 
 | | 版 |
@@ -1065,7 +1093,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 | Node.js | 18 と 24 (`xray.sh` / イメージを使わない collector。試験は両方で流し、CI とイメージは 24) |
 
 <a id="maintenance-policy-ja"></a>
-1 人で保守している小さな道具です。生の出力を添えて issue を開いてください。修正はここで行い、Pull Request はマージしません。
+1 人で保守している小さな道具です。生の出力を添えて issue を開いてください。修正はここで行い、Pull Request はマージしません (著作権を 1 人に保つため)。
 公開済みの版は MIT のままで、フォークは歓迎します。
 
 **解説記事:** [network-xray の紹介 (Zenn)](https://zenn.dev/routecrushlab/articles/network-xray-oss)
@@ -1191,7 +1219,7 @@ MCP の `why_path` も同じ区別を `reason_source` (`device` = ルータが�
 
 ![記録済みのクイックスタート (前の名前 demo.sh で録った物): git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
 
-**必要なもの:** Linux (または Windows の **WSL2**・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
+**必要なもの:** Linux (または Windows の **WSL2** ([WSL2 の手引き](docs/ja/windows-wsl2.md))・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
 
 **どちらで始めるか:** **初めてなら下の `xray.sh` を。** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
 
@@ -1689,7 +1717,7 @@ node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exc
    **FRR・OSPF・小規模トポロジ**。BGP は **`bgp-paste.html`** (`show bgp summary` + `show ip bgp` を貼る)。大規模メッシュ・他ベンダーはまだ自動解析しません。
 2. **`state` を直接渡す(任意ベンダー)** — ドキュメント化された `config`/`state` を作って
    `view.applyState(state)` を呼ぶ。**Arista・Juniper・containerlab の `cisco_iol` 以外の Cisco の kind** はこの方法:自分の OS の
-   `show` 出力を **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** の形(FRR ↔ Cisco IOS の `show`
+   `show` 出力を **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** の形 (state の JSON Schema は [docs/dev/states-schema.json](docs/dev/states-schema.json))(FRR ↔ Cisco IOS の `show`
    コマンド対応表と、2つの任意シーム付き)に変換する小さなアダプタを書く。
    **`frr-parse.js` がそのアダプタの雛形**なので、コピーして正規表現を自分のベンダー用に差し替える。
 
