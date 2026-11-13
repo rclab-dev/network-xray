@@ -72,4 +72,12 @@ function lab(kind) {
     // when an MTU was not reported (here both were)
     assert.deepStrictEqual(res.hints, ['hint: r1 ' + i[2] + ' Full, but network type differs (point-to-point ⇔ broadcast): routes from r2 can be missing']);
   });
+  test(k[1] + ': odd_end names the end that differs from its own router (MTU was changed on r2, the rest on r1)', function () {
+    var L = lab(kind);
+    var res = query.ospfInterfaces(JSON.parse(JSON.stringify(L.states)));
+    assert.strictEqual(res.mismatch_details.length, res.mismatches.length, 'one detail per line, same order');
+    assert.deepStrictEqual(res.mismatch_details.map(function (d) { return d.field + ' ' + d.odd_end; }),
+      ['mtu r2', 'hello r1', 'dead r1', 'network_type r1', 'auth r1']);
+    assert.match(res.mismatch_details[0].note, /^inferred: r2 /);
+  });
 });

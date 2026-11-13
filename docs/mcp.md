@@ -195,7 +195,7 @@ If the assistant does not know which lab you mean, give the path again.
 | `why_best_path` | `path`, `node`, `prefix`, `vrf?` | BGP best path for the prefix and the reason stored with it |
 | `list_routers` | `path` | router names, which protocols have state, whether a routing table was collected, row counts |
 | `ospf_neighbors` | `path`, `router?` | per router: neighbor ID, address, state, interface, DR/BDR role, peer node |
-| `ospf_interfaces` | `path`, `router?` | per OSPF interface: MTU, hello / dead, network type, area, cost, role, passive, authentication; the other end of each link and `mismatches` (one line per value that must match but does not, e.g. `r1 eth1 MTU 1500 ⇔ r2 eth1 MTU 1400`) |
+| `ospf_interfaces` | `path`, `router?` | per OSPF interface: MTU, hello / dead, network type, area, cost, role, passive, authentication; the other end of each link and `mismatches` (one line per value that must match but does not, e.g. `r1 eth1 MTU 1500 ⇔ r2 eth1 MTU 1400`); `mismatch_details` gives each line as fields with `odd_end`, the end whose value differs from its own router's other OSPF interfaces (inferred; null when that does not decide it) |
 | `bgp_neighbors` | `path`, `router?` | per router: peer, remote AS, iBGP/eBGP, state, prefixes received |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | longest-prefix match in the collected routing table |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | the selected BGP path, the other candidates with their attributes, the deciding step and where that reason came from |

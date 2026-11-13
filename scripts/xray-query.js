@@ -535,9 +535,31 @@ function ospfIfNbrState(st, iface) {
   return null;
 }
 var OSPF_MUST_MATCH_Q = ['area', 'mtu', 'hello', 'dead', 'network_type', 'auth'];
+// Which end of a link is the odd one for a value both ends must share: the end whose value differs from the same
+// router's other OSPF interfaces, while the other end matches its own. An inference, not something the routers say:
+// it names the end only when one side agrees with its router and the other does not (null otherwise, and for area,
+// which differs per interface by design on an area border router).
+function oddEnd(states, n, i, peer, peerIface, field) {
+  if (field === 'area') return null;
+  function others(node, iface) {
+    var o = ospfIfRows(states[node] || {});
+    return Object.keys(o).filter(function (k) { return k !== iface && !/^lo/i.test(k) && o[k][field] != null; }).map(function (k) { return String(o[k][field]); });
+  }
+  var a = ospfIfRows(states[n] || {})[i], b = ospfIfRows(states[peer] || {})[peerIface];
+  var va = a && a[field] != null ? String(a[field]) : null;
+  var vb = b && b[field] != null ? String(b[field]) : (a && a.remote && a.remote[field] != null ? String(a.remote[field]) : null);
+  if (va == null || vb == null || va === vb) return null;
+  var oa = others(n, i), ob = others(peer, peerIface);
+  var aFits = oa.length > 0 && oa.every(function (v) { return v === va; }), bFits = ob.length > 0 && ob.every(function (v) { return v === vb; });
+  var aOff = oa.length > 0 && oa.every(function (v) { return v !== va; }), bOff = ob.length > 0 && ob.every(function (v) { return v !== vb; });
+  if (aFits && bOff) return { router: peer, interface: peerIface, value: vb, usual: ob[0] };
+  if (bFits && aOff) return { router: n, interface: i, value: va, usual: oa[0] };
+  return null;
+}
+
 function ospfInterfaces(states, node) {
   pairFromLinks(states);
-  var names = pickNodes(states, node), seen = Object.create(null), mismatches = [], hints = [];
+  var names = pickNodes(states, node), seen = Object.create(null), mismatches = [], details = [], hints = [];
   var routers = names.map(function (n) {
     var o = ospfIfRows(states[n]);
     return { router: n, interfaces: Object.keys(o).sort().map(function (i) {
@@ -565,6 +587,14 @@ function ospfInterfaces(states, node) {
         if (!seen[back] && x.remote && typeof x.remote === 'object') x.mismatch.forEach(function (f) {
           mismatches.push(n + ' ' + i + ' ' + OSPF_IF_LABEL[f] + ' ' + ospfIfValue(f, x[f]) + ' \u21d4 ' +
             x.peer + ' ' + x.peer_iface + ' ' + OSPF_IF_LABEL[f] + ' ' + ospfIfValue(f, x.remote[f]));
+          var d = { router: n, interface: i, peer: x.peer, peer_interface: x.peer_iface, field: f,
+            value: x[f] == null ? null : x[f], peer_value: x.remote[f] == null ? null : x.remote[f], odd_end: null };
+          var odd = oddEnd(states, n, i, x.peer, x.peer_iface, f);
+          if (odd) {
+            d.odd_end = odd.router;
+            d.note = 'inferred: ' + odd.router + ' ' + odd.interface + ' has ' + OSPF_IF_LABEL[f] + ' ' + odd.value + ', its other OSPF interfaces ' + odd.usual;
+          }
+          details.push(d);
         });
         seen[key] = true;
       }
@@ -575,7 +605,8 @@ function ospfInterfaces(states, node) {
   // only ospf_ifaces / interfaces / neighbours are read here (not the whole lab_state), so an odd field elsewhere is not an error
   return { wrong: wrongFor(wrongList(states, Object.keys(states).sort()), ['ospf', 'interface'], node), mismatches: mismatches, hints: hints, routers: routers,
     counts: { interfaces: all.length, compared: all.filter(function (x) { return x.mismatch; }).length,
-      with_mismatch: all.filter(function (x) { return x.mismatch && x.mismatch.length; }).length } };
+      with_mismatch: all.filter(function (x) { return x.mismatch && x.mismatch.length; }).length },
+    mismatch_details: details };
 }
 
 function bgpNeighbors(states, node) {
@@ -761,7 +792,11 @@ function ospfIfTable(res, color) {
   ], rows, color, '  '));
   out.push('', title('Must match for an adjacency, but do not (' + res.mismatches.length + ')', color));
   if (!res.mismatches.length) out.push('  none' + (res.counts.compared ? '' : ' (no link had both ends reported)'));
-  else res.mismatches.forEach(function (m) { out.push('  ' + paint(textLine(m), 'red', color)); });
+  else res.mismatches.forEach(function (m, k) {
+    out.push('  ' + paint(textLine(m), 'red', color));
+    var d = (res.mismatch_details || [])[k];
+    if (d && d.odd_end) out.push('    ' + paint(textLine('odd end: ' + d.odd_end + ' (' + d.note + ')'), 'yellow', color));
+  });
   (res.hints || []).forEach(function (h) { out.push('  ' + paint(textLine(h), 'yellow', color)); });
   out.push('', textLine('? = not reported by the router (not compared); ! = differs from the other end; NBRS = adjacent/seen'));
   return out.join('\n') + '\n';

@@ -119,3 +119,14 @@ test('MCP ospf_interfaces answers the same object', function () {
   assert.ok(out && out.result && !out.result.isError, r.stdout + r.stderr);
   assert.deepStrictEqual(out.result.structuredContent, JSON.parse(JSON.stringify(query.run(['ospf-if', dir, 'r1']))));
 });
+
+test('odd_end is null when the routers have no other OSPF interface to compare with (it does not guess)', function () {
+  var q = require(path.join(__dirname, '..', 'scripts', 'xray-query.js'));
+  var st = {
+    r1: { ospf_ifaces: { eth1: { hello: 5, dead: 20, peer: 'r2', peer_iface: 'eth1', mismatch: ['hello', 'dead'], remote: { hello: 10, dead: 40 } } } },
+    r2: { ospf_ifaces: { eth1: { hello: 10, dead: 40, peer: 'r1', peer_iface: 'eth1', mismatch: ['hello', 'dead'], remote: { hello: 5, dead: 20 } } } }
+  };
+  var res = q.ospfInterfaces(st);
+  assert.strictEqual(res.mismatches.length, 2);
+  assert.ok(res.mismatch_details.every(function (d) { return d.odd_end === null && !('note' in d); }));
+});
