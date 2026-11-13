@@ -109,3 +109,39 @@ test('node panel: the same section under What\'s wrong, from opts.states or the 
   panel.render(c, B.r2, {});
   assert.ok(!/xnp-diff/.test(c.innerHTML), 'no lab states: no section');
 });
+
+// many changes: the first three, then "N more" opens the rest (the owner 11-13); OSPF triangle r1 with a link cut,
+// the baseline holding ten more routes that are gone
+function manyStates() {
+  var A = load('demo/frameA.json'), B = load('demo/frameB.json');
+  for (var i = 1; i <= 10; i++) A.r1.routing_table.push({ prefix: '172.16.' + i + '.0/24', protocol: 'ospf', selected: true, next_hop: '10.1.12.2', out_iface: 'eth1' });
+  return { A: A, B: B };
+}
+
+test('Full DeepDive, many changes: three lines show, the rest are drawn hidden behind "N more"; open stays open while the page is', function () {
+  var w = fullPage('en'), m = manyStates();
+  w.LIVE_STATES = m.A; w._xrayDiffKeep(); w.LIVE_STATES = m.B;
+  var lines = JSON.parse(JSON.stringify(w._xrayDiffLines(m.B.r1)));
+  var rows = lines.filter(function (l) { return /^re-diff( |$)/.test(l.cls); });
+  assert.strictEqual(rows.length, 16, 'every line is drawn');
+  assert.strictEqual(rows.filter(function (l) { return !/display:none/.test(l.style); }).length, 3, 'three are shown');
+  assert.match(texts(lines).slice(-1)[0], /^▸ 13 more$/);
+  assert.match(rows[0].text, /^eth1: interface up → down$/, 'the cause first');
+  w._xrayDiffOpen = true;
+  var open = JSON.parse(JSON.stringify(w._xrayDiffLines(m.B.r1)));
+  assert.strictEqual(open.filter(function (l) { return /^re-diff( |$)/.test(l.cls) && !/display:none/.test(l.style); }).length, 16);
+  assert.match(texts(open).slice(-1)[0], /^▾ fewer$/);
+});
+
+test('node panel, many changes: three lines, then "N more" opens the rest', function () {
+  var window = {}, document = { getElementById: function () { return null; }, createElement: function () { return {}; }, head: { appendChild: function () {} } };
+  ['xray-diff.js', 'xray-node-panel.js'].forEach(function (f) { vm.runInNewContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { window: window, document: document }, { filename: f }); });
+  var m = manyStates(), c = { innerHTML: '', classList: { add: function () {} }, querySelectorAll: function () { return []; }, querySelector: function () { return null; } };
+  window.xrayDiff.setBaseline(m.A);
+  window.XrayNodePanel.render(c, m.B.r1, { states: m.B });
+  assert.strictEqual((c.innerHTML.match(/class="xnp-diff-(bad|good|note)"/g) || []).length, 3);
+  assert.match(c.innerHTML, /data-xnp-diff="more">▸ 13 more/);
+  window._xrayDiffOpen = true;
+  window.XrayNodePanel.render(c, m.B.r1, { states: m.B });
+  assert.strictEqual((c.innerHTML.match(/class="xnp-diff-(bad|good|note)"/g) || []).length, 16);
+});

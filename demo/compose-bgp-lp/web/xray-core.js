@@ -3187,16 +3187,35 @@ function _xrayDiffLines(s) {
   var out = [{ cls: "re-diff-title", style: "color:#7facc9;font-weight:700", text: (ja ? "基準 (" + hh + ") からの差" : "Changed since the baseline (" + hh + ")") +
     " &nbsp;" + btn("_xrayDiffKeep", ja ? "基準を今に" : "new baseline") + " · " + btn("_xrayDiffClear", ja ? "やめる" : "clear") }];
   if (res.none) { out.push({ cls: "re-diff-none", style: "padding-left:1.2em;color:#39ff14", text: ja ? "(none) 基準から変わっていない" : "(none) no change from the baseline" }); return out; }
-  var col = { bad: "#ff4444", good: "#39ff14", note: "#ffcc00" }, max = 8;
-  res.items.slice(0, max).forEach(function (it) {
-    out.push({ cls: "re-diff", style: "padding-left:1.2em;color:" + (col[it.tone] || col.note), text: _escapeHtml(it.text) });
+  /* folded by default when there are many (the owner 11-13): the first FEW (causes first), then "▸ N more" opens the rest;
+     open / closed is kept while the page is open (window._xrayDiffOpen), for every router */
+  var col = { bad: "#ff4444", good: "#39ff14", note: "#ffcc00" }, FEW = 3, MAX = 50;
+  var open = !!window._xrayDiffOpen;
+  res.items.slice(0, MAX).forEach(function (it, k) {
+    var extra = k >= FEW;   // the lines past the first FEW: drawn, hidden until opened (the toggle shows / hides them in place)
+    out.push({ cls: "re-diff" + (extra ? " re-diff-extra" : ""), style: "padding-left:1.2em;color:" + (col[it.tone] || col.note) + (extra && !open ? ";display:none" : ""), text: _escapeHtml(it.text) });
   });
-  if (res.items.length > max) out.push({ cls: "re-diff-more", style: "padding-left:1.2em;color:#7facc9", text: (ja ? "ほか " : "and ") + (res.items.length - max) + (ja ? " 件" : " more") });
+  if (res.items.length > FEW) {
+    var rest = res.items.length - FEW;
+    window._xrayDiffRest = rest;
+    out.push({ cls: "re-diff-more", style: "padding-left:1.2em", text: btn("_xrayDiffToggle", open ? (ja ? "▾ たたむ" : "▾ fewer") : (ja ? "▸ ほか " + rest + " 件" : "▸ " + rest + " more")) });
+    if (open && res.items.length > MAX) out.push({ cls: "re-diff-more", style: "padding-left:1.2em;color:#7facc9", text: (ja ? "(ほか " : "(and ") + (res.items.length - MAX) + (ja ? " 件は query / MCP の diff で)" : " more: see xray-query diff / MCP state_diff)") });
+  }
   return out;
 }
 if (typeof window !== "undefined" && !window._xrayDiffKeep) {
   window._xrayDiffKeep = function () { try { if (window.xrayDiff && window.LIVE_STATES) window.xrayDiff.setBaseline(window.LIVE_STATES); } catch (_e) {} };
   window._xrayDiffClear = function () { try { if (window.xrayDiff) window.xrayDiff.clearBaseline(); } catch (_e) {} };
+  window._xrayDiffToggle = function () {
+    window._xrayDiffOpen = !window._xrayDiffOpen;
+    try {
+      var open = window._xrayDiffOpen, ja = _xrayOspfIfJa(), rest = window._xrayDiffRest || 0;
+      document.querySelectorAll(".re-diff-extra").forEach(function (r) { r.style.display = open ? "" : "none"; });
+      document.querySelectorAll(".re-diff-more span[onclick*='_xrayDiffToggle']").forEach(function (b) {
+        b.textContent = open ? (ja ? "▾ たたむ" : "▾ fewer") : (ja ? "▸ ほか " + rest + " 件" : "▸ " + rest + " more");
+      });
+    } catch (_e) {}
+  };
 }
 function _xrayOspfIfLines(s) {
   var o = s && s.ospf_ifaces;

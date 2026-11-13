@@ -310,9 +310,12 @@
     var btn = function (act, label) { return '<span class="xnp-diff-btn" data-xnp-diff="' + act + '">' + esc(label) + '</span>'; };
     if (!res) return '<div class="xnp-diff-keep">' + btn('keep', '◎ Keep the state now as the baseline (then see what changes)') + '</div>';
     var t = res.at, hh = ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2);
+    // folded when there are many (as the Full DeepDive): the first FEW, then "▸ N more"; open / closed kept while the page is open
+    var FEW = 3, MAX = 50, open = !!window._xrayDiffOpen, rest = res.items.length - FEW;
     var body = res.none ? '<div class="xnp-diff-none">(none) no change from the baseline</div>'
-      : res.items.slice(0, 8).map(function (it) { return '<div class="xnp-diff-' + esc(it.tone) + '">' + esc(it.text) + '</div>'; }).join('') +
-        (res.items.length > 8 ? '<div class="xnp-dim">and ' + (res.items.length - 8) + ' more</div>' : '');
+      : res.items.slice(0, res.items.length <= FEW ? FEW : open ? MAX : FEW).map(function (it) { return '<div class="xnp-diff-' + esc(it.tone) + '">' + esc(it.text) + '</div>'; }).join('') +
+        (rest > 0 ? '<div>' + btn('more', open ? '▾ fewer' : '▸ ' + rest + ' more') + '</div>' : '') +
+        (open && res.items.length > MAX ? '<div class="xnp-dim">(and ' + (res.items.length - MAX) + ' more: see xray-query diff / MCP state_diff)</div>' : '');
     return panel('Changed since the baseline (' + hh + ')', body + '<div class="xnp-diff-acts">' + btn('keep', 'new baseline') + ' · ' + btn('clear', 'clear') + '</div>');
   }
   function bgpHtml(state) {
@@ -433,7 +436,8 @@
       b.addEventListener('click', function () {
         var xd = window.xrayDiff, act = b.getAttribute('data-xnp-diff');
         if (!xd) return;
-        if (act === 'keep') xd.setBaseline(labStates(opts)); else xd.clearBaseline();
+        if (act === 'more') window._xrayDiffOpen = !window._xrayDiffOpen;
+        else if (act === 'keep') xd.setBaseline(labStates(opts)); else xd.clearBaseline();
         render(container, state, opts);
       });
     });
