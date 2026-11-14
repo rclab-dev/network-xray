@@ -2152,6 +2152,27 @@ function xrayUpdateLsdb(s, opts) {
     _rl.forEach(function (L) {
       (Array.isArray(L.stubs) ? L.stubs : []).forEach(function (p) { _add(p, "router", L.adv_router, "stub network in the router LSA of " + L.adv_router + ", area " + L.area); });
     });
+    /* network LSAs: a network with a DR (every broadcast network with two or more OSPF routers) is in the database as a network
+       LSA, not as a stub of a router LSA. Its link state ID is the DR's address and the summary has no mask, so the prefix is the
+       OSPF network route (or this router's own interface) that holds that address - the longest one; else the DR's address */
+    var _ip4 = function (a) { var p = String(a || "").split("."); if (p.length !== 4 || p.some(function (x) { return x === "" || isNaN(+x) || +x < 0 || +x > 255 || +x % 1; })) return null; return +p[0] * 16777216 + +p[1] * 65536 + +p[2] * 256 + +p[3]; };
+    var _ip4s = function (v) { return [Math.floor(v / 16777216) % 256, Math.floor(v / 65536) % 256, Math.floor(v / 256) % 256, v % 256].join("."); };
+    var _netOf = function (ip, len) { var v = _ip4(ip), sz = Math.pow(2, 32 - len); return v === null || !(len >= 0 && len <= 32) ? null : _ip4s(v - v % sz) + "/" + len; };
+    var _nr = s.ospf_routes && typeof s.ospf_routes === "object" ? s.ospf_routes : {};
+    var _netPrefix = function (ip) {
+      var c = Object.keys(_nr).filter(function (p) { var r = _nr[p], t = String(p).split("/"); return r && !/IA|E/.test(r.type || "") && t.length === 2 && _netOf(ip, +t[1]) === _netOf(t[0], +t[1]); });
+      Object.keys(ifaces).forEach(function (k) {
+        var f = ifaces[k] || {}, a = String(f.ip || "").split("/"), len = a.length === 2 ? +a[1] : +f.prefix;
+        if (a[0] && len > 0 && len < 32 && _netOf(ip, len) && _netOf(ip, len) === _netOf(a[0], len)) c.push(_netOf(a[0], len));
+      });
+      c.sort(function (x, y) { return +y.split("/")[1] - +x.split("/")[1]; });
+      return c.length ? _netOf(c[0].split("/")[0], +c[0].split("/")[1]) : null;
+    };
+    (_db || []).forEach(function (l) {
+      if (l.type !== "network" || !l.ls_id) return;
+      var np = _netPrefix(l.ls_id);
+      _add(np || l.ls_id + " (DR)", "network", l.adv_router, "network LSA of the network whose DR is " + l.ls_id + (l.area ? ", area " + l.area : "") + ", from the DR");
+    });
     /* inter-area: only the summaries OSPF uses for a route here (an ABR sees the other ABRs' copies of every area-0 network too) */
     var _or = s.ospf_routes && typeof s.ospf_routes === "object" ? s.ospf_routes : {};
     Object.keys(_or).forEach(function (p) {

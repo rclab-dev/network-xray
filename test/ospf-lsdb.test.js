@@ -133,3 +133,26 @@ test('LSDB panel: a state without the database keeps the old rows (OSPF routes) 
   assert.equal(p.head, 'LSDB');
   assert.ok(p.rows.includes('2.2.2.2/32'));
 });
+
+test('LSDB panel: a network LSA (a network with a DR) is a row - the prefix of the OSPF network route that holds the DR\'s address', () => {
+  const sq = (r) => r.replace(/ +/g, ' ').trim();
+  const rows = lsdbPanel(states('baseline').r1).rows.map(sq);
+  assert.ok(rows.includes('10.0.12.0/24 network 2.2.2.2'), rows.join(' | '));
+  assert.ok(rows.includes('10.0.13.0/24 network 3.3.3.3'));
+  assert.ok(rows.includes('10.0.23.0/24 network 3.3.3.3'), 'a network this router is not on: from its OSPF route');
+  const st = states('baseline');
+  assert.ok(lsdbPanel(st.r1, st).rows.map(sq).includes('10.0.12.0/24 network r2'), 'the DR\'s node name when the page has it');
+});
+
+test('LSDB panel: a network LSA whose network is in no route here is shown by the DR\'s address; no network LSA, no row', () => {
+  const sq = (r) => r.replace(/ +/g, ' ').trim();
+  const st = states('baseline').r1;
+  st.ospf_routes = {}; st.interfaces = {};
+  const rows = lsdbPanel(st).rows.map(sq);
+  assert.ok(rows.includes('10.0.12.2 (DR) network 2.2.2.2'), rows.join(' | '));
+  const st2 = states('baseline').r1;
+  st2.ospf_lsdb = st2.ospf_lsdb.filter((l) => l.type !== 'network');
+  const r2 = lsdbPanel(st2).rows.map(sq);
+  assert.ok(!r2.some((r) => / network /.test(r)), r2.join(' | '));
+  assert.ok(r2.includes('1.1.1.1/32 router own'));
+});
