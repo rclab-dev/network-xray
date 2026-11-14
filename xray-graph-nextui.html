@@ -140,6 +140,9 @@
   #nx-validate .nxv-row.pass .nxv-st,#nx-validate .nxv-row.pass .nxv-ttl{color:#66bb6a}
   #nx-validate .nxv-row.pending .nxv-ttl,#nx-validate .nxv-row.settling .nxv-ttl,#nx-validate .nxv-row.unsupported .nxv-ttl,#nx-validate .nxv-row.skip .nxv-ttl{color:#90a4ae}
   #nx-validate .nxv-note{font-size:12px;color:#78909c;margin-top:6px}
+  #nx-validate .nxv-row.fail .nxv-st,#nx-validate .nxv-row.error .nxv-st{color:#ef5350}   /* nx_netlab_json: netlab's failed / error */
+  #nx-validate.nxv-old{opacity:.6}   /* nx_netlab_json: results older than a minute, kept and dimmed */
+  #nx-validate .nxv-src a{color:#80deea}
   #nx-validate code{color:#ffd54f}
   /* nx_synthetic_badge: no collected state for the shown node -> say so, and draw its adjacencies as unknown (grey dashed),
      not as healthy. body.nx-synthetic is set only then; with collected state nothing here applies. */
@@ -1078,10 +1081,43 @@ window.__initNeXtOverview = function (data) {
       if (partOk) { if (!window.__nxValidateSince) window.__nxValidateSince = Date.now(); } else window.__nxValidateSince = 0;
       var held = (typeof v.held === 'boolean') ? (v.held && partOk) : (partOk && (Date.now() - window.__nxValidateSince >= hold));   /* nx_validate_held: the collector counts the 20 s */
       var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
-      var sig = JSON.stringify(v) + L + held;
+      var sig = JSON.stringify(v) + L + held + (v.source === 'netlab' ? '|' + Math.floor((Date.now() - Date.parse(v.netlab_at || '')) / 60000) : '');   /* nx_netlab_json: the age shown */
       if (sig === window.__nxValidateSig) return;
       window.__nxValidateSig = sig;
       var ja = L === 'ja', esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); };
+      if (v.source === 'netlab') {   /* nx_netlab_json (v1.4.1): netlab's validate results as netlab gives them - netlab's words and
+                                        states (error stays error, skipped stays skipped), no ✓ Solved and no wait here, and the age of
+                                        the results (an old file is kept and dimmed, not taken away) */
+        var NSR = ja ? { pass: '通過', fail: '不合格', warning: '警告', skip: 'スキップ', error: 'エラー' }
+                     : { pass: 'passed', fail: 'failed', warning: 'warning', skip: 'skipped', error: 'error' };
+        var NMK = { pass: '✓', fail: '✗', warning: '!', skip: '–', error: '!' };
+        var nrows = v.tests.map(function (t) {
+          var why = t.message || t.text || '';
+          return '<div class="nxv-row ' + esc(t.status) + '" title="' + esc([t.text, why].filter(Boolean).join('\n')) + '"><span class="nxv-st"><span aria-hidden="true">' + (NMK[t.status] || '?') + '</span><span class="nx-sr">' + esc(NSR[t.status] || t.status) + '</span></span>'
+            + '<span class="nxv-txt"><span class="nxv-ttl">' + esc(t.description) + '<code>' + esc(t.name) + '</code></span><span class="nxv-why">' + esc(why) + '</span></span></div>';
+        }).join('');
+        var nRun = c.pass + c.fail + c.warning + (c.error || 0), allPassed = nRun > 0 && c.pass === nRun;
+        var parts = [];
+        if (c.fail) parts.push(ja ? c.fail + ' 件が不合格' : c.fail + ' test' + (c.fail === 1 ? '' : 's') + ' failed');
+        if (c.error) parts.push(ja ? c.error + ' 件がエラー' : c.error + ' error' + (c.error === 1 ? '' : 's'));
+        if (c.warning) parts.push(ja ? c.warning + ' 件が警告' : c.warning + ' warning' + (c.warning === 1 ? '' : 's'));
+        if (c.pass && parts.length) parts.push(ja ? c.pass + ' 件が通過' : c.pass + ' passed');
+        var sumTxt = allPassed ? (ja ? nRun + ' 件の検査がすべて通過' : 'All ' + nRun + ' test' + (nRun === 1 ? '' : 's') + ' passed')
+                               : (parts.join(ja ? '・' : ', ') || (ja ? '検査なし' : 'no tests run'));
+        var ageMs = Date.now() - Date.parse(v.netlab_at || ''), mins = isNaN(ageMs) ? -1 : Math.floor(ageMs / 60000), old = mins >= 1;
+        var ageTxt = mins < 0 ? '' : mins < 1 ? (ja ? 'たった今' : 'just now') : (ja ? mins + ' 分前' : mins + ' min ago');
+        host.innerHTML = '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
+          + '<span class="nxp-count">' + esc(sumTxt) + '</span></div>'
+          + '<div class="nxv-note nxv-src">' + (ja ? 'netlab validate の結果' : 'netlab validate results') + (ageTxt ? ' · ' + esc(ageTxt) : '')
+          + ' · <a href="https://netlab.tools/netlab/validate/" target="_blank" rel="noopener">' + (ja ? 'netlab validate について' : 'about netlab validate') + '</a></div>'
+          + '<div class="nxv-list">' + nrows + '</div>';
+        host.classList.toggle('nx-solved', allPassed && !old);
+        host.classList.toggle('nxv-old', old);
+        host.style.display = 'block';
+        if (window.__nxValidateMarks) window.__nxValidateMarks(v);
+        return;
+      }
+      host.classList.remove('nxv-old');
       var SRW = ja ? { settling: '\u5f85\u3061', pass: '\u901a\u904e', fail: '\u672a\u901a\u904e', warning: '\u8b66\u544a', pending: '\u672a\u78ba\u8a8d', unsupported: '\u5bfe\u8c61\u5916', skip: '\u5bfe\u8c61\u5916' }
                    : { settling: 'waiting', pass: 'passed', fail: 'not yet', warning: 'warning', pending: 'not run yet', unsupported: 'not checked', skip: 'skipped' };   /* nx_a11y */
       var MARK = { settling: '\u2713', pass: '\u2713', fail: '\u2713', warning: '\u2713', pending: '\u2713', unsupported: '\u2013', skip: '\u2013' };   /* nx_validate_list: grey \u2713 until done */
@@ -1112,7 +1148,8 @@ window.__initNeXtOverview = function (data) {
       var waitLine = (v.converging || c.settling || (partOk && !held))   /* nx_validate_converge: say why there is no Solved yet */
         ? '<div class="nxv-note">' + (ja ? 'ラボの収束を待っています… (立ち上げから ' + esc(v.converge_s || 60) + ' 秒と、全部の合格が 20 秒続くまでは ✓ Solved を出しません)' : 'Waiting for the lab to converge… (no ✓ Solved until ' + esc(v.converge_s || 60) + ' s after the lab started and all checks have passed for 20 s)') + '</div>' : '';
       host.innerHTML = waitLine + '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
-        + '<span class="nxp-count">' + esc(c.pass || 0) + ' / ' + esc(c.total || 0) + (c.unsupported ? ' · ' + esc(c.unsupported) + (ja ? ' つは見ていない' : ' not read') : '') + '</span>' + badge + '</div><div class="nxv-list">' + rows + '</div>'
+        + '<span class="nxp-count">' + esc(c.pass || 0) + ' / ' + esc(c.total || 0) + (c.unsupported ? ' · ' + esc(c.unsupported) + (ja ? ' つは見ていない' : ' not read') : '') + '</span>' + badge + '</div>'
+        + '<div class="nxv-list">' + rows + '</div>'
         + (c.unsupported && !(held && !allOk) ? '<div class="nxv-note">' + (ja ? '\u7070\u8272\u306e ' + esc(c.unsupported) + ' \u3064\u306f network-xray \u3067\u306f\u898b\u3066\u3044\u306a\u3044\u306e\u3067\u3001\u2713 Solved \u306f\u51fa\u3057\u307e\u305b\u3093 (netlab validate \u3067\u78ba\u304b\u3081\u3066\u304f\u3060\u3055\u3044)\u3002' : esc(c.unsupported) + ' grey check(s) are not read by network-xray, so \u2713 Solved is not shown: run netlab validate for those.') + '</div>' : '');
       host.classList.toggle('nx-solved', held && allOk);
       host.style.display = 'block';

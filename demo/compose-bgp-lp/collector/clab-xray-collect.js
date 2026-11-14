@@ -508,18 +508,25 @@ function graphLevels() {
 }
 var clabTiers = graphLevels();
 var VALIDATE = null, valRes = null, valLast = '', tierRes = clabTiers, lastStates = null, lastLive = false;
-if (validateFile) {
-  try { VALIDATE = require(path.join(__dirname, 'netlab-validate.js')); if (VALIDATE.setLiveStart) VALIDATE.setLiveStart(watch); }   /* nx_validate_clistart */
-  catch (e) { console.error('!! --validate: netlab-validate.js not found next to the collector'); VALIDATE = null; }
-}
-var valPassSince = 0, VAL_HOLD_MS = 20000;   /* nx_validate_held */
+/* nx_netlab_json (v1.4.1): the module is loaded for every lab, not only with --validate: a lab folder can hold netlab's own
+   verdict (network_xray/validate.json, netlab-validate.js readNetlabJson), and then the band shows it even without
+   network-xray.json. No such file and no --validate -> a stat per round and no band, as before. */
+try { VALIDATE = require(path.join(__dirname, 'netlab-validate.js')); if (VALIDATE.setLiveStart) VALIDATE.setLiveStart(watch); }   /* nx_validate_clistart */
+catch (e) { if (validateFile) console.error('!! --validate: netlab-validate.js not found next to the collector'); VALIDATE = null; }
+var valPassSince = 0, VAL_HOLD_MS = 20000, valSource = '';   /* nx_validate_held */
 function validateRound(cb) {
-  var labv;
-  try { labv = VALIDATE.load(validateFile); } catch (e) { return cb(false); }   /* no file yet (netlab create not run): no band */
-  var nt = clabTiers || labv.tiers, tierChanged = JSON.stringify(nt) !== JSON.stringify(tierRes);   /* nx_netlab_tiers: rows for the graph */
+  var labv = null, nj = VALIDATE.readNetlabJson ? VALIDATE.readNetlabJson(path.dirname(topoPath)) : null;
+  if (validateFile) { try { labv = VALIDATE.load(validateFile); } catch (e) { labv = null; } }   /* no file yet (netlab create not run) */
+  if (!nj && !labv) {   /* nothing to show; a band from netlab's file that went stale is taken away */
+    if (valSource === 'netlab' && valRes) { valRes = null; valLast = ''; valSource = ''; valPassSince = 0; return cb(true); }
+    return cb(false);
+  }
+  var nt = clabTiers || (labv && labv.tiers) || null, tierChanged = JSON.stringify(nt) !== JSON.stringify(tierRes);   /* nx_netlab_tiers: rows for the graph */
   tierRes = nt;
+  if (nj) return judged(VALIDATE.fromNetlabJson(nj, (labv && labv.name) || lab, labv), 'netlab');   /* nx_netlab_json: netlab's verdict wins */
   if (!labv.tests.length) return cb(tierChanged);
-  VALIDATE.run(labv, cPrefix, function (res) {   /* nx_prefix_any */
+  VALIDATE.run(labv, cPrefix, function (res) { judged(res, 'self'); });   /* nx_prefix_any */
+  function judged(res, source) {
     /* nx_validate_held (2026-10-17): "all the checks network-xray reads pass" must hold for VAL_HOLD_MS, counted here (not from
        when the page was opened). A one-shot run (no --watch) has no time to wait: no converging, no hold. */
     var c0 = res.counts || {};
@@ -528,9 +535,10 @@ function validateRound(cb) {
     if (partOk) { if (!valPassSince) valPassSince = Date.now(); } else valPassSince = 0;
     res.held = !!(partOk && (!watch || Date.now() - valPassSince >= VAL_HOLD_MS));
     var j = JSON.stringify(res), changed = j !== valLast;
+    valSource = source;
     if (changed) { valLast = j; valRes = res; var c = res.counts; console.log('[' + new Date().toISOString() + '] validate: ' + c.pass + '/' + c.total + ' passed' + (c.fail ? ', ' + c.fail + ' failed' : '') + (c.pending ? ', ' + c.pending + ' not run' : '') + (c.settling ? ', ' + c.settling + ' waiting for routes' : '') + (c.unsupported ? ', ' + c.unsupported + ' not checked' : '')); }
     cb(changed || tierChanged);
-  });
+  }
 }
 /* nx_states_json (v1.1.8): the states as one JSON text, built from one JSON text per router, so the watch loop can
    tell which routers changed without a second JSON.stringify. Same bytes as JSON.stringify(states) (same key order). */

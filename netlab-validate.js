@@ -427,7 +427,67 @@ function run(lab, prefix, done) {
   next();
 }
 
-module.exports = { setLiveStart: function (on) { LIVE_START = !!on; }, load: load, tiers: tiers, run: run, parseCall: parseCall, evalValue: evalValue, getPrefix: getPrefix, PLUGINS: PLUGINS };
+/* ---------- netlab's validate results: network_xray/validate.json (nx_netlab_json, v1.4.1) ----------
+   netlab can run the validate: tests itself and print the results as JSON (`netlab validate --format json`). When the lab
+   folder has network_xray/validate.json with that JSON (version 1), the band shows netlab's results for every test (every
+   plugin, every device) in netlab's own words and states, instead of the checks run here; those are the results to go by.
+   File: { netlab_validate: { version: 1, started, exit_code, aborted, summary, results: { <test>: { description, level,
+   result, message, elapsed, nodes: { <node>: { device, result, message } } } } }, collected_at, exit_status }.
+   The bare `netlab validate --format json` output (no netlab_validate wrapper) is read too. An old file is not dropped:
+   the band keeps it and says how old it is (nothing here assumes how often the file is written). Not there, not version 1
+   or not JSON -> null: the caller keeps the checks run here (or no band). */
+var NETLAB_JSON_REL = 'network_xray/validate.json';
+var NJ_STATUS = { pass: 'pass', fail: 'fail', warning: 'warning', skipped: 'skip', skip: 'skip', error: 'error' };   /* netlab's states, kept */
+function readNetlabJson(labDir) {
+  var p = require('path').join(labDir, NETLAB_JSON_REL), st, doc;
+  try { st = fs.statSync(p); doc = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return null; }
+  var inner = doc && typeof doc.netlab_validate === 'object' && doc.netlab_validate ? doc.netlab_validate : doc;
+  if (!inner || inner.version !== 1 || !inner.results || typeof inner.results !== 'object' || Array.isArray(inner.results)) return null;
+  var at = Date.parse(String(doc.collected_at || '').replace(/([+-]\d\d)(\d\d)$/, '$1:$2'));   /* "+0000" -> "+00:00" */
+  if (isNaN(at)) at = st.mtimeMs;
+  return { doc: inner, at: at };
+}
+/* where a test points on the graph (the session or the prefix), from the test definition in network-xray.json when that
+   file is there too; no show command is run */
+function markOf(t, node, lab, ok) {
+  try {
+    var call = parseCall(t.plugin), ctx = { node: lab.nodes[node], nodes: lab.nodes, topo: lab.topo }, kw = {};
+    var args = call.args.map(function (a) { return evalValue(a, ctx); });
+    Object.keys(call.kw).forEach(function (x) { kw[x] = evalValue(call.kw[x], ctx); });
+    (POSITIONAL[call.fn] || []).forEach(function (name, i) { if (has(kw, name) && args[i] === undefined) { args[i] = kw[name]; delete kw[name]; } });
+    if (call.fn === 'bgp_neighbor' && typeof args[1] === 'string' && args[1]) return { node: node, ok: ok, link: [node, args[1]] };
+    if (call.fn === 'bgp_prefix' && args[0]) return { node: node, ok: ok, prefix: getPrefix(args[0]) };
+  } catch (e) {}
+  return null;
+}
+function fromNetlabJson(nj, labName, lab) {
+  var doc = nj.doc, out = [], defs = {};
+  (lab && Array.isArray(lab.tests) ? lab.tests : []).forEach(function (t) { if (t && typeof t === 'object' && t.name) defs[t.name] = t; });
+  Object.keys(doc.results).forEach(function (name) {
+    var r = doc.results[name] && typeof doc.results[name] === 'object' ? doc.results[name] : {};
+    var def = defs[name], st = NJ_STATUS[String(r.result || '').toLowerCase()] || 'unsupported';
+    var row = { name: name, description: String(r.description || name), status: st, nodes: [], marks: [], level: r.level || '' };
+    var nds = r.nodes && typeof r.nodes === 'object' && !Array.isArray(r.nodes) ? r.nodes : {};
+    Object.keys(nds).forEach(function (n) {
+      var x = nds[n] && typeof nds[n] === 'object' ? nds[n] : {}, ns = NJ_STATUS[String(x.result || '').toLowerCase()] || 'unsupported';
+      row.nodes.push({ node: n, status: ns, message: String(x.message || ''), device: String(x.device || '') });
+      if (def && lab && (ns === 'pass' || ns === 'fail')) { var m = markOf(def, n, lab, ns === 'pass'); if (m) row.marks.push(m); }
+    });
+    var bad = row.nodes.filter(function (x) { return x.status === 'fail' || x.status === 'error'; })[0];
+    row.message = bad ? bad.node + ': ' + bad.message : String(r.message || '');
+    row.text = def ? (st === 'pass' ? (def.pass || '') : (st === 'fail' || st === 'warning') ? (def.fail || '') : '') : '';
+    out.push(row);
+  });
+  var c = { total: 0, pass: 0, fail: 0, warning: 0, error: 0, pending: 0, settling: 0, unsupported: 0, skip: 0 };
+  out.forEach(function (r) { c[r.status] = (c[r.status] || 0) + 1; if (r.status !== 'skip') c.total++; });
+  c.checked = c.pass + c.fail + c.warning + c.error;
+  return { format: 'netlab-validate/0', source: 'netlab', lab: labName || '', tests: out, counts: c, converging: false,
+    converge_s: CONVERGE_S, netlab_started: String(doc.started || ''), netlab_version: String(doc.netlab_version || ''),
+    netlab_at: isFinite(nj.at) ? new Date(nj.at).toISOString() : '' };   /* when netlab ran the tests: the page says how long ago */
+}
+
+module.exports = { setLiveStart: function (on) { LIVE_START = !!on; }, load: load, tiers: tiers, run: run, parseCall: parseCall, evalValue: evalValue, getPrefix: getPrefix, PLUGINS: PLUGINS,
+  readNetlabJson: readNetlabJson, fromNetlabJson: fromNetlabJson, NETLAB_JSON_REL: NETLAB_JSON_REL };
 
 if (require.main === module) {
   var USAGE = 'usage: node netlab-validate.js <network-xray.json> [container-prefix]\n' +
