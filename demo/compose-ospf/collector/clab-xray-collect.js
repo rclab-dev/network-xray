@@ -341,6 +341,11 @@ function refreshContainers() {
   } catch (e) {}   // no docker here (fixtures, tests): the name rule
 }
 function containerOf(n) { return Object.prototype.hasOwnProperty.call(cMap, n) ? cMap[n] : cPrefix + n; }
+/* nx_bridge_drawn_only (v1.4.1): a bridge, ovs-bridge or host node with links stays in the graph (routers on a shared
+   LAN are linked to it) but has no router to read, so no collector is started for it: it is marked as a device that is
+   drawn only, as a failed read used to mark it, without the run and its error each round. (Without links it is left
+   out of the graph, as before.) */
+function drawnOnly(n) { return /^(bridge|ovs-bridge|host)$/i.test(kindOf[n] || ''); }
 // which collector, adjacency string and extra args for one node
 function nodeJob(n) {
   var v = vendorOf(n), k = kindOf[n];
@@ -378,6 +383,7 @@ function collectAll() {
     /* nx_no_shell: one small node process starts every child with an argument array (no sh) and waits for all of them */
     var _jobs = [];
     nodes.forEach(function (n) {
+      if (drawnOnly(n)) return;   /* nx_bridge_drawn_only */
       if (running[n]) { _job[n] = running[n]; return; }   // started in an earlier cycle and not taken yet
       if (retryAt[n] > _t0 || (iosNextAt[n] > _t0 && lastGood[n])) return;   /* nx_unread: back-off */   /* nx_ios_interval */
       var c = _cmdOf(n); _job[n] = running[n] = { code: c.out + '.code', err: c.out + '.err', since: _t0 };
@@ -399,6 +405,12 @@ function collectAll() {
     }
   }
   nodes.forEach(function (n) {
+    if (drawnOnly(n)) {   /* nx_bridge_drawn_only */
+      var _dm = '  ' + n + ' is a ' + kindOf[n] + ' - drawn only (not read)';
+      if (!(failSeen[n] && failSeen[n].msg === _dm)) { console.error(_dm); failSeen[n] = { msg: _dm, count: 1 }; }
+      states[n] = lastOut[n] = { success: false, target_node: n, nx_unread: 'device', interfaces: {} };
+      return;
+    }
     var _nj = nodeJob(n), script = _nj.script, adjStr = _nj.adjStr, mg = _nj.mg;   /* nx_ios_collect: FRR / SR Linux / IOS (--exclude-mgmt is FRR-only) */
     var out = stateFile(n);   /* nx_tmp_per_user (2026-10-05): a collector run with sudo and one without no longer fight over a root-owned tmp file (EACCES forever) */   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
     if (_par && _job[n] && !_jobDone(_job[n], Date.now())) { if (lastOut[n]) { states[n] = lastOut[n]; if (lastOut[n] === lastGood[n]) ok++; } return; }   // still running: its last state stays

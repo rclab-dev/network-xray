@@ -151,3 +151,21 @@ test('graph-hide forms: yes / "yes" / true / y / TRUE (the values graphite hides
   assert.strictEqual(r2.calls.h1.adj, 'eth1:r1');
   assert.doesNotMatch(r2.stderr, /graph-hide/);
 });
+
+test('a bridge, ovs-bridge or host node with links is drawn, not read: no collector runs for it, the routers keep their links to it', { skip: SKIP }, function () {
+  var yml = 'name: pf\ntopology:\n  nodes:\n    r1:\n      kind: linux\n    r2:\n      kind: linux\n' +
+    '    br1:\n      kind: bridge\n    ovs1:\n      kind: ovs-bridge\n    h1:\n      kind: host\n' +
+    '  links:\n    - endpoints: ["r1:eth1", "br1:e1"]\n    - endpoints: ["r2:eth1", "br1:e2"]\n' +
+    '    - endpoints: ["r1:eth2", "ovs1:e1"]\n    - endpoints: ["r2:eth2", "h1:veth9"]\n';
+  var r = collectOnce(yml);
+  assert.deepStrictEqual(Object.keys(r.calls).sort(), ['r1', 'r2'], 'only the routers are read');
+  ['br1', 'ovs1', 'h1'].forEach(function (n) {
+    assert.ok(r.states[n], n + ' stays in the graph');
+    assert.strictEqual(r.states[n].success, false, n);
+    assert.strictEqual(r.states[n].nx_unread, 'device', n);
+  });
+  assert.match(r.calls.r1.adj, /eth1:br1/);
+  assert.match(r.calls.r2.adj, /eth1:br1/);
+  assert.match(r.stderr, /br1 is a bridge - drawn only/);
+  assert.ok(!r.docker.some(function (c) { return c[0] === 'exec' && /br1|ovs1|h1/.test(c.join(' ')); }), 'no docker exec for them');
+});
