@@ -105,8 +105,8 @@ pyATS で既に出力を集めているなら、`genie-to-xray.js` が Genie の
 
 ### 大きいラボだと重いですか?
 
-メモリ (FRR 8.4 で `docker stats` で測った値): FRR のルータ 1 台 20 MB ほど。network-xray のコンテナはルータ 3 台で
-100 MB ほど・12 台で 260 MB ほど。1 回の読み直しは、作り物の FRR のラボ (輪・OSPF のエリア 1 つ・コンテナなし・
+メモリ (FRR 8.4 で `docker stats` で測った値): FRR のルータ 1 台 20 MB ほど。network-xray のコンテナは起動して
+1 分ほどは最大 100 MB ほど・その後は 50 MB ほど (ルータ 3 台でも 10 台でも)。1 回の読み直しは、作り物の FRR のラボ (輪・OSPF のエリア 1 つ・コンテナなし・
 `node scripts/scale-bench.js`) で Node の側が 50 台で 0.1 秒ほど・100 台で 0.4 秒ほど・200 台で 1〜1.6 秒ほど。
 200 台の state のファイルは 14 MB (OSPF) 〜 38 MB (OSPF と BGP) ほど。OSPF のエリアが多いラボは別には測っていません。
 

@@ -107,8 +107,8 @@ is asked again about 10 seconds later, while the rest of the picture keeps updat
 
 ### How heavy is a large lab?
 
-Memory, measured with `docker stats` on FRR 8.4: about 20 MB per FRR router, and the network-xray container about
-100 MB with 3 routers and 260 MB with 12. One round of reading, on synthetic FRR labs (a ring, one OSPF area, no
+Memory, measured with `docker stats` on FRR 8.4: about 20 MB per FRR router, and the network-xray container up
+to about 100 MB in its first minute, then about 50 MB, with 3 or with 10 routers. One round of reading, on synthetic FRR labs (a ring, one OSPF area, no
 containers; `node scripts/scale-bench.js`): the Node side takes about 0.1 s for 50 routers, 0.4 s for 100 and 1–1.6 s
 for 200, and the state file at 200 routers is about 14 MB (OSPF) to 38 MB (OSPF and BGP). Labs with several OSPF areas
 have not been measured on their own.
