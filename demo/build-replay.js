@@ -87,7 +87,7 @@ var driver = shell.CSS + shell.bar(FRAMES.length)
 + '<script>(function(){'
 + 'var FRAMES=' + JSON.stringify(FRAMES) + ';'
 + 'var LABELS=' + JSON.stringify(LABELS) + ';'
-+ 'window.xrayReplayBar.mount({frames:FRAMES,labels:LABELS,dwell:2600,focus:"r1",'
++ 'window.xrayReplayBar.mount({frames:FRAMES,labels:LABELS,dwell:6000,focus:"r1",'
 + 'cta:' + JSON.stringify(CTA) + '});'
 + '})();<\/script>';
 

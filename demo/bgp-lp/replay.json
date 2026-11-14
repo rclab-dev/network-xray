@@ -9,25 +9,25 @@
       "file": "frameA.json",
       "label": "fault — fast ISP r2 knocked to LP 50, so slow r3 (LP 100) wins",
       "caption": "8.8.8.0/24 heard from both ISPs — r2 (fast) was set to LP 50, so the slow ISP r3 (LP 100) wins. Why the slow one?",
-      "dwell": 3400
+      "dwell": 7000
     },
     {
       "file": "frameB.json",
       "label": "fix — set LocPref 150 on r2: the fast ISP now wins (150 > 100)",
       "caption": "Raise LocPref to 150 on r2 — the fast ISP is best again (150 > 100)",
-      "dwell": 3200
+      "dwell": 6500
     },
     {
       "file": "frameC.json",
       "label": "eth1 (r1–r2) down — only r3 remains",
       "caption": "r1–r2 link down — 8.8.8.0/24 now has only one path, via r3",
-      "dwell": 2600
+      "dwell": 6000
     },
     {
       "file": "frameD.json",
       "label": "restored — LP 150 decides again: r2 (fast) wins",
       "caption": "Restored — LP 150 > 100 decides again: fast ISP r2 wins",
-      "dwell": 3000
+      "dwell": 6500
     }
   ],
   "cta": {

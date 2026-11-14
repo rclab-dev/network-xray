@@ -119,10 +119,20 @@
     if (typeof root.ResizeObserver === 'function' && bar) new root.ResizeObserver(fitPad).observe(bar);
 
     var tog = $('rb-toggle');
-    function syncToggle() { tog.textContent = ctl.state.paused ? 'play' : 'pause'; tog.setAttribute('aria-pressed', String(ctl.state.paused)); }
+    function syncToggle() { tog.textContent = ctl.state.paused ? '▶ play' : '⏸ pause';   /* a symbol with the word: easier to find */ tog.setAttribute('aria-pressed', String(ctl.state.paused)); }
     tog.onclick = function () { ctl.toggle(); syncToggle(); };
     $('rb-prev').onclick = function () { ctl.prev(); };
     $('rb-next').onclick = function () { ctl.next(); };
+    /* nx_replay_pause_on_close (v1.4.1): closing the DeepDive pauses the replay. It used to keep playing on the overview and
+       wrap round to frame 1, which looked as if Close had sent the visitor back to the start. play (or Space) goes on. */
+    if (typeof root.MutationObserver === 'function' && doc.body) {
+      var wasDeep = doc.body.classList.contains('is-xray-deep');
+      new root.MutationObserver(function () {
+        var deep = doc.body.classList.contains('is-xray-deep');
+        if (wasDeep && !deep && ctl.state.running && !ctl.state.paused) { ctl.toggle(); syncToggle(); }
+        wasDeep = deep;
+      }).observe(doc.body, { attributes: true, attributeFilter: ['class'] });
+    }
     doc.addEventListener('keydown', function (e) {
       var a = keyAction(e);
       if (!a) return;

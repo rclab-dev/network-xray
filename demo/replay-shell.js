@@ -23,7 +23,7 @@ function bar(n) {
   + '<span>frame <b id="rb-i">1</b>/' + n + ':</span> <span class="st" id="rb-st">…</span>'
   + '<span class="dots" id="rb-dots"></span>'
   + '<span class="ctl"><button type="button" id="rb-prev" aria-label="previous frame" title="previous frame (←)">◀</button>'
-  + '<button type="button" id="rb-toggle" aria-pressed="false" title="pause / play (Space)">pause</button>'
+  + '<button type="button" id="rb-toggle" aria-pressed="false" title="pause / play (Space)">⏸ pause</button>'
   + '<button type="button" id="rb-next" aria-label="next frame" title="next frame (→)">▶</button></span>'
   + '<span class="src">real frames captured from a live FRR / containerlab lab · no backend</span></div>'
   + '<script src="replay-bar.js"><\/script>';
