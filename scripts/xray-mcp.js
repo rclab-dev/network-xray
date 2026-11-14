@@ -27,6 +27,10 @@
  * A file that does not hold network-xray state is refused with "not a network-xray state file" (the error never
  * quotes the file).
  *
+ * A default path: start the server with --path <p> or set NX_MCP_PATH=<p> (the option wins) and the tools that take
+ * `path` use it when the client leaves `path` out (tools/list then shows `path` as optional and names it). A `path`
+ * the client gives is used as given. The default is resolved once, when the server starts.
+ *
  * It only reads the given path. It never runs commands on routers, never writes files, opens no network sockets.
  *
  * The one exception is opt-in: started with --allow-collect, the server also lists
@@ -237,7 +241,18 @@ var COLLECT_TOOL = {
 };
 var COLLECT_MS = 120000, ROOT = path.join(__dirname, '..');
 var allowCollect = false, collecting = false, collectDir = null;
-function tools() { return allowCollect ? TOOLS.concat([COLLECT_TOOL]) : TOOLS; }
+/* nx_mcp_default_path (v1.4.1): with a default path the tools that take `path` list it as optional and say where it
+   points; without one the list is exactly as before. state_diff keeps before / after required. */
+var defaultPath = null;
+function withDefaultPath(t) {
+  var props = t.inputSchema && t.inputSchema.properties;
+  if (!props || !props.path) return t;
+  var c = JSON.parse(JSON.stringify(t));
+  c.inputSchema.properties.path.description += ' (optional here: the server was started with ' + defaultPath + ')';
+  c.inputSchema.required = c.inputSchema.required.filter(function (k) { return k !== 'path'; });
+  return c;
+}
+function tools() { var t = allowCollect ? TOOLS.concat([COLLECT_TOOL]) : TOOLS; return defaultPath ? t.map(withDefaultPath) : t; }
 
 /* the collector needs its per-vendor collectors next to the output: a directory only this user can open (made once),
    with one sub-directory per topology holding copies of them - a lab page served from the repo keeps its own
@@ -318,6 +333,7 @@ function loadStates(p) {
 function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = args || {};
+  if (defaultPath && name !== 'state_diff' && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
   if (name === 'lab_state') return query.summarize(loadStates(str(args, 'path', true)));
   if (name === 'why_best_path') {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);
@@ -411,15 +427,30 @@ function handleLine(line) {
 if (require.main === module) {
   var _cli = process.argv.slice(2);
   if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) {
-    process.stdout.write('usage: node scripts/xray-mcp.js [--allow-collect]\n' +
+    process.stdout.write('usage: node scripts/xray-mcp.js [--allow-collect] [--path <state>]\n' +
       '  read-only MCP server over stdio (JSON-RPC, one message per line); start it from an MCP client\n' +
       '  tools: ' + TOOLS.map(function (t) { return t.name; }).join(', ') + '\n' +
       '  --allow-collect  also offer collect: read a running containerlab lab\'s routers again (read-only show commands)\n' +
+      '  --path <state>   the state the tools read when the client gives no path (also NX_MCP_PATH; the option wins)\n' +
       '  -h, --help       show this help\n');
     process.exitCode = 0;
     return;
   }
   _cli = _cli.filter(function (a) { if (a === '--allow-collect') { allowCollect = true; return false; } return true; });
+  var _pathArg = null, _rest = [];   /* nx_mcp_default_path: --path <p> or --path=<p> */
+  for (var _i = 0; _i < _cli.length; _i++) {
+    if (_cli[_i] === '--path') {
+      if (_i + 1 >= _cli.length || !_cli[_i + 1]) { console.error("xray-mcp.js: --path needs a value\nTry 'node scripts/xray-mcp.js --help'."); process.exit(2); }
+      _pathArg = _cli[++_i];
+    } else if (_cli[_i].indexOf('--path=') === 0 && _cli[_i].length > 7) _pathArg = _cli[_i].slice(7);
+    else _rest.push(_cli[_i]);
+  }
+  _cli = _rest;
+  var _def = _pathArg != null ? _pathArg : (process.env.NX_MCP_PATH || '');
+  if (_def) {
+    defaultPath = path.resolve(_def);
+    if (!fs.existsSync(defaultPath)) console.error('xray-mcp.js: the default path does not exist yet (the tools say not found until it does): ' + defaultPath);
+  }
   if (_cli.length) { console.error('xray-mcp.js: unknown option: ' + _cli[0] + "\nTry 'node scripts/xray-mcp.js --help'."); process.exit(2); }
   var rl = readline.createInterface({ input: process.stdin, terminal: false });
   var write = function (res) { if (res) process.stdout.write(JSON.stringify(res) + '\n'); };
@@ -433,4 +464,5 @@ if (require.main === module) {
 }
 
 module.exports = { handle: handle, handleLine: handleLine, TOOLS: TOOLS, COLLECT_TOOL: COLLECT_TOOL,
-  setAllowCollect: function (on) { allowCollect = !!on; } };
+  setAllowCollect: function (on) { allowCollect = !!on; },
+  setDefaultPath: function (p) { defaultPath = p ? path.resolve(p) : null; } };

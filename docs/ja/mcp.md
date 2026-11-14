@@ -23,6 +23,13 @@ Cursor では、同じサーバを `.cursor/mcp.json` に書きます ([Cursor](
 
 聞き方の例: 「/path/to/network-xray/xray-states.js で lab_state を使って。どのリンクが落ちている?」
 
+毎回の問いで書かずに済ませるには、サーバをその path つきで起動します (または `NX_MCP_PATH` に書く・起動の引数が勝ちます)。
+ツールは `path` が無い時にそれを読み、`path` を渡した時はそちらを使います:
+
+```
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray/xray-states.js
+```
+
 `docker run` や netlab の tool の時は state がコンテナの中にあります: 先に `curl` で写しを取り、そのファイルを
 `path` に渡してください (コマンドは [state はどこから来るか](#state-はどこから来るか) にあります)。
 

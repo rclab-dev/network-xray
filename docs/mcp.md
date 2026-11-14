@@ -25,6 +25,13 @@ In Cursor, put the same server in `.cursor/mcp.json` instead ([Cursor](#cursor))
 
 Then ask, for example: "Use lab_state on /path/to/network-xray/xray-states.js. Which links are down?"
 
+To not repeat it in every question, start the server with that path (or set `NX_MCP_PATH`; the option wins). The tools then
+read it when no `path` is given, and a `path` you do give is still used:
+
+```
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray/xray-states.js
+```
+
 With `docker run` or the netlab tool the state is inside the container: save a copy with `curl` first and give that
 file as `path` (the command is under [Where the state comes from](#where-the-state-comes-from)).
 
