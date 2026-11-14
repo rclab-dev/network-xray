@@ -42,11 +42,14 @@
   }
   // interfaces on the management network, per node (from the interface addresses)
   function mgmtIfaces(st, net) {
-    var out = Object.create(null), ifs = obj(st.interfaces);
+    var out = Object.create(null), ifs = obj(obj(st).interfaces);   /* nx_diff_null_node */
     Object.keys(ifs).forEach(function (i) { if (ifs[i] && inNet(ifs[i].ip, net)) out[i] = true; });
     return out;
   }
 
+  /* nx_diff_not_collected: a field one side does not have was not collected there; comparing it with an empty list
+     reported everything in it as lost / new. Only fields both sides have are compared. */
+  function has(st, k) { return Object.prototype.hasOwnProperty.call(st, k) && st[k] != null; }
   function nbrKey(n) { return str(n.iface) + ' ' + str(n.router_id || n.neighbor_id || n.address); }
   function routeKey(r) { return (r.vrf ? '[vrf ' + r.vrf + '] ' : '') + str(r.prefix); }
   function bgpKey(r) {
@@ -77,8 +80,8 @@
   function originators(states, names, net) {
     var lo = Object.create(null), any = Object.create(null);
     names.forEach(function (n) {
-      var mg = mgmtIfaces(states[n], net);
-      arr(states[n].routing_table).forEach(function (r) {
+      var st = obj(states[n]), mg = mgmtIfaces(st, net);   /* nx_diff_null_node: a node given as null has nothing in it */
+      arr(st.routing_table).forEach(function (r) {
         if (!r || str(r.protocol) !== 'connected' || mg[str(r.out_iface)]) return;
         var k = routeKey(r);
         ((/^lo/.test(str(r.out_iface)) ? lo : any)[k] = (/^lo/.test(str(r.out_iface)) ? lo : any)[k] || []).push(n);
@@ -93,7 +96,7 @@
     before = obj(before); after = obj(after);
     var all = Object.keys(before).concat(Object.keys(after)).filter(function (n, i, a) { return a.indexOf(n) === i; }).sort();
     var names = opts.node ? all.filter(function (n) { return n === opts.node; }) : all;
-    var changes = [], touched = Object.create(null);
+    var changes = [], touched = Object.create(null), notCompared = [];
     function add(kind, node, item, b, a, extra) {
       var c = { kind: kind, node: node, item: item, before: b === undefined ? null : b, after: a === undefined ? null : a };
       if (extra) Object.keys(extra).forEach(function (k) { c[k] = extra[k]; });
@@ -107,12 +110,17 @@
       if (B && !A) return add('node_removed', n, n, 'present', 'absent');
       if (!B && A) return add('node_added', n, n, 'absent', 'present');
       B = obj(B); A = obj(A);
+      var both = function (k) {   /* nx_diff_not_collected */
+        if (has(B, k) && has(A, k)) return true;
+        if (has(B, k) || has(A, k)) notCompared.push({ node: n, field: k, missing_in: has(B, k) ? 'after' : 'before' });
+        return false;
+      };
       var unreadB = !!(B.unread || B.error), unreadA = !!(A.unread || A.error);
       if (!unreadB && unreadA) return add('node_unread', n, n, 'read', str((A.unread && A.unread.reason) || A.error || 'not read'));
 
       // interfaces
       var mgB = mgmtIfaces(B, net), mgA = mgmtIfaces(A, net), ib = obj(B.interfaces), ia = obj(A.interfaces);
-      Object.keys(ib).concat(Object.keys(ia)).filter(function (i, k, l) { return l.indexOf(i) === k && !mgB[i] && !mgA[i]; }).sort().forEach(function (i) {
+      if (both('interfaces')) Object.keys(ib).concat(Object.keys(ia)).filter(function (i, k, l) { return l.indexOf(i) === k && !mgB[i] && !mgA[i]; }).sort().forEach(function (i) {
         var b = obj(ib[i]), a = obj(ia[i]);
         if (ib[i] && ia[i]) {
           if (b.up !== false && a.up === false) add('iface_down', n, i, 'up', 'down');
@@ -123,8 +131,8 @@
 
       // OSPF adjacencies
       var nb = Object.create(null), na = Object.create(null);
-      arr(B.ospf_neighbors).forEach(function (x) { if (x) nb[nbrKey(x)] = x; });
-      arr(A.ospf_neighbors).forEach(function (x) { if (x) na[nbrKey(x)] = x; });
+      if (both('ospf_neighbors')) arr(B.ospf_neighbors).forEach(function (x) { if (x) nb[nbrKey(x)] = x; });
+      if (has(B, 'ospf_neighbors') && has(A, 'ospf_neighbors')) arr(A.ospf_neighbors).forEach(function (x) { if (x) na[nbrKey(x)] = x; });
       Object.keys(nb).concat(Object.keys(na)).filter(function (k, i, l) { return l.indexOf(k) === i; }).sort().forEach(function (k) {
         var b = nb[k], a = na[k], item = str((b || a).iface) + ' → ' + str((b || a).router_id || (b || a).address);
         if (b && !a) add('ospf_adjacency_lost', n, item, str(b.state), 'gone');
@@ -137,6 +145,7 @@
 
       // OSPF interface values
       var ob = obj(B.ospf_ifaces), oa = obj(A.ospf_ifaces);
+      if (!both('ospf_ifaces')) { ob = {}; oa = {}; }
       Object.keys(ob).concat(Object.keys(oa)).filter(function (i, k, l) { return l.indexOf(i) === k; }).sort().forEach(function (i) {
         if (ob[i] && !oa[i]) return add('ospf_if_left', n, i, 'in OSPF', 'not in OSPF');
         if (!ob[i] && oa[i]) return add('ospf_if_joined', n, i, 'not in OSPF', 'in OSPF');
@@ -149,8 +158,11 @@
 
       // BGP sessions
       var pb = Object.create(null), pa = Object.create(null);
-      arr(B.bgp_neighbors).forEach(function (x) { if (x && x.ip) pb[str(x.ip)] = x; });
-      arr(A.bgp_neighbors).forEach(function (x) { if (x && x.ip) pa[str(x.ip)] = x; });
+      var peerKey = function (x) { var v = str(x.vrf); return str(x.ip) + (v && v !== 'default' ? ' (vrf ' + v + ')' : ''); };   /* nx_diff_bgp_vrf */
+      if (both('bgp_neighbors')) {
+        arr(B.bgp_neighbors).forEach(function (x) { if (x && x.ip) pb[peerKey(x)] = x; });
+        arr(A.bgp_neighbors).forEach(function (x) { if (x && x.ip) pa[peerKey(x)] = x; });
+      }
       Object.keys(pb).concat(Object.keys(pa)).filter(function (k, i, l) { return l.indexOf(k) === i; }).sort().forEach(function (ip) {
         var b = pb[ip], a = pa[ip];
         if (b && !a) return add('bgp_peer_removed', n, ip, str(b.state), 'gone');
@@ -165,7 +177,7 @@
         arr(st.bgp_routes).forEach(function (r) { if (r && (r.best === true || /^\*\s*>/.test(str(r.status)))) o[bgpKey(r)] = { via: str(r.next_hop), reason: r.reason || r.sel_reason || null }; });
         return o;
       }
-      var bb = bests(B), ba = bests(A);
+      var bb = both('bgp_routes') ? bests(B) : {}, ba = has(B, 'bgp_routes') && has(A, 'bgp_routes') ? bests(A) : {};
       Object.keys(bb).concat(Object.keys(ba)).filter(function (k, i, l) { return l.indexOf(k) === i; }).sort().forEach(function (k) {
         var b = bb[k], a = ba[k];
         if (b && a && b.via === a.via) return;
@@ -174,7 +186,7 @@
       });
 
       // routing table (selected routes)
-      var rb = selectedRoutes(B, mgB, net), ra = selectedRoutes(A, mgA, net);
+      var rt = both('routing_table'), rb = rt ? selectedRoutes(B, mgB, net) : {}, ra = rt ? selectedRoutes(A, mgA, net) : {};
       Object.keys(rb).concat(Object.keys(ra)).filter(function (k, i, l) { return l.indexOf(k) === i; }).sort().forEach(function (k) {
         var b = rb[k], a = ra[k], o = origin(k), extra = o.length ? { originated_by: o } : null;
         if (a && a.via_mgmt && !(b && b.via_mgmt)) extra = Object.assign(extra || {}, { via_mgmt: true });
@@ -190,12 +202,14 @@
     changes.forEach(function (c) { delete c._i; });
     var byKind = Object.create(null);
     changes.forEach(function (c) { byKind[c.kind] = (byKind[c.kind] || 0) + 1; });
-    return {
+    var res = {
       changes: changes,
       counts: { changes: changes.length, by_kind: byKind, nodes: names.length },
       unchanged: names.filter(function (n) { return !touched[n]; }),
       none: changes.length === 0
     };
+    if (notCompared.length) res.not_compared = notCompared;   /* nx_diff_not_collected: only when a field was left out */
+    return res;
   }
 
   /* ---- the page's baseline (v1.4 step 3): kept in memory only, never written anywhere --------------------------- */

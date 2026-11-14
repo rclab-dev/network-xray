@@ -128,3 +128,34 @@ test('xray-diff.js runs in the page too (no require, no fs)', function () {
   var win = {}; new Function('window', src)(win);
   assert.strictEqual(typeof win.xrayDiff.diffStates, 'function');
 });
+
+// three cases from a code reading (v1.4.1): each failed before the fix
+function oneRouter() {
+  return { interfaces: { eth1: { up: true, ip: '10.0.0.1/30' } }, routing_table: [],
+    ospf_neighbors: [{ iface: 'eth1', router_id: '2.2.2.2', state: 'Full' }],
+    bgp_neighbors: [{ ip: '10.0.0.2', state: 'Established' }, { ip: '10.0.0.2', vrf: 'blue', state: 'Active' }] };
+}
+
+test('a node given as null does not stop the comparison', function () {
+  var d = xd.diffStates({ r1: oneRouter(), r2: null }, { r1: oneRouter() });
+  assert.strictEqual(d.none, true);
+  assert.deepStrictEqual(d.unchanged, ['r1', 'r2']);
+});
+
+test('a field one side did not collect is not compared (not reported as lost or new) and is listed under not_compared', function () {
+  var a = oneRouter(); delete a.ospf_neighbors;
+  var d = xd.diffStates({ r1: oneRouter() }, { r1: a });
+  assert.strictEqual(d.none, true, JSON.stringify(d.changes));
+  assert.deepStrictEqual(d.not_compared, [{ node: 'r1', field: 'ospf_neighbors', missing_in: 'after' }]);
+  var b = oneRouter(); b.ospf_neighbors = [];   // collected, and empty: that is a loss
+  assert.deepStrictEqual(kinds(xd.diffStates({ r1: oneRouter() }, { r1: b })), ['ospf_adjacency_lost']);
+  assert.ok(!('not_compared' in xd.diffStates({ r1: oneRouter() }, { r1: oneRouter() })), 'no key when every field is compared');
+});
+
+test('BGP peers with the same address in two VRFs are kept apart: one going down is reported', function () {
+  var a = oneRouter(); a.bgp_neighbors = [{ ip: '10.0.0.2', state: 'Idle' }, { ip: '10.0.0.2', vrf: 'blue', state: 'Active' }];
+  var d = xd.diffStates({ r1: oneRouter() }, { r1: a });
+  assert.deepStrictEqual(d.changes.map(function (c) { return c.kind + ' ' + c.item; }), ['bgp_session_down 10.0.0.2']);
+  var c = oneRouter(); c.bgp_neighbors = [{ ip: '10.0.0.2', state: 'Established' }, { ip: '10.0.0.2', vrf: 'blue', state: 'Established' }];
+  assert.deepStrictEqual(xd.diffStates({ r1: oneRouter() }, { r1: c }).changes.map(function (x) { return x.kind + ' ' + x.item; }), ['bgp_session_up 10.0.0.2 (vrf blue)']);
+});
