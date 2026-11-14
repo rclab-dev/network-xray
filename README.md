@@ -33,10 +33,13 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
    **Before you run it:** memory — about 20 MB per FRR router, plus network-xray — up to about 100 MB in its first minute, then about 50 MB (3 or 10 routers); Windows — in WSL2 ([WSL2 guide](docs/windows-wsl2.md)); routers it reads — FRR, Nokia SR Linux, Cisco IOL ([the table](#when-to-use)); your `.clab.yml` is not changed (the folder is mounted read-only).
-   It only runs `show` commands, but the container is given the Docker socket (root-equivalent on the host) — lab machines only. [More](#security-notes)
-   Rather not give it the socket? Ways 1 and 2 need none on your machine (the recorded demo, the paste pages, Codespaces).
-   Why it needs the socket (to run `show` in each router's container), and three more ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
    You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull); see the [release page](https://github.com/rclab-dev/network-xray/releases/latest).
+
+> [!CAUTION]
+> Way 3 gives the container the Docker socket (root-equivalent on the host): use it on lab machines only. It only runs `show` commands. [Security notes](#security-notes)
+>
+> **No socket needed:** the recorded demo, the paste pages ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html)) and [GitHub Codespaces](#-live-lab--github-codespaces).
+> Why it needs the socket (to run `show` in each router's container), and three more ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
 
 Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab-defaults.yml` through `defaults.sources.extra`: [netlab tool](#netlab-tool).
 
@@ -1031,10 +1034,13 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
    **動かす前に:** メモリ — FRR のルータ 1 台 20 MB ほど + network-xray が起動して 1 分ほどは最大 100 MB ほど・その後は 50 MB ほど (ルータ 3 台でも 10 台でも)。Windows — WSL2 の中で ([WSL2 の手引き](docs/ja/windows-wsl2.md))。読めるルータ — FRR・Nokia SR Linux・Cisco IOL ([表](#いつ使うか))。`.clab.yml` は変えません (フォルダは読むだけでマウント)。
-   読む命令だけですが、Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。[詳しく](#security-notes-ja)
-   ソケットを渡したくない時は、1 と 2 (記録済みのデモ・貼る頁・Codespaces) なら手元の機械にソケットは要りません。
-   ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使うほかの 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
    イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) で固定できます。[リリースページ](https://github.com/rclab-dev/network-xray/releases/latest) を参照してください。
+
+> [!CAUTION]
+> 3 はコンテナに Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。打つのは `show` だけです。[詳しく](#security-notes-ja)
+>
+> **ソケットが要らない道:** 記録済みのデモ・貼る頁 ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html))・[GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
+> ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使うほかの 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
 
 netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` での `docker/netlab-defaults.yml` の読み込みが必要です。[netlab tool](#netlab-tool-ja) を参照してください。
 
