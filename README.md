@@ -12,23 +12,20 @@ Also an MCP server: lets AI agents read the lab state and ask why a route or adj
 <!-- nx_readme_entry (2026-10-20) -->
 **Fastest: the recorded demo (no routers, no setup).**
 
-![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)
-
 ### ▶ [Open the recorded Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — no routers needed
+
+[![BGP Best-Path Decision, recorded — 8.8.8.0/24 is heard from two upstreams; change the LocPref and the best path flips in place with no reload (via r3 at 100 ⇄ via r2 at 150) — X-Ray re-reads the real FRR state and redraws. Recorded from a real FRR/containerlab lab](docs/bgp-best-path-live.gif)](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html)
 
 Recorded from a real FRR / containerlab lab and replayed in the browser. Three things to look at:
 1. Click **r1** to look inside it.
 2. In its BGP table, compare the two candidates for `8.8.8.0/24`.
 3. Read the **Best-Path Decision** panel: why the winner won (here, Local Preference).
 
-<!-- nx_readme_wrong_first -->
-<img src="docs/whats-wrong-first.png" width="380" alt="The DeepDive&#39;s Routing Engine panel starts with what is wrong: on r10, eth4 has no OSPF adjacency to r11 because the hello / dead timers differ (hello 3 ⇔ 10, dead 12 ⇔ 40); the other OSPF interfaces are Full">
-
 <!-- nx_readme_three_ways (2026-10-28) -->
-**Three ways to try it:**
-1. **Just look (no setup)** — the recorded demo above, or the [recorded 30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) of the best path moving after one Local Preference change. Or paste your own router's output: [`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) (OSPF, routes) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html) (BGP). It all runs in your browser.
-2. **GitHub Codespaces (about 2–3 minutes)** — a real 3-router FRR lab in your browser that you can change: [Live lab — GitHub Codespaces](#-live-lab--github-codespaces).
-3. **Your own running containerlab lab (one line)** — run in the lab's folder, then open <http://localhost:8600/>:
+**Three ways to try it** — start with 1; open 2 when you want to break and fix something yourself:
+1. **Just look — opens at once, no setup** — the recorded demo above, or the [recorded 30-second video](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB) of the best path moving after one Local Preference change. Or paste your own router's output: [`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) (OSPF, routes) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html) (BGP). It all runs in your browser.
+2. **Change a router — GitHub Codespaces, about 2–3 minutes** — a real 3-router FRR lab in your browser that you can change: [Live lab — GitHub Codespaces](#-live-lab--github-codespaces).
+3. **Your own running containerlab lab — one line** — run in the lab's folder, then open <http://localhost:8600/>:
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
@@ -40,6 +37,9 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
 >
 > **No socket needed:** the recorded demo, the paste pages ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html)) and [GitHub Codespaces](#-live-lab--github-codespaces).
 > Why it needs the socket (to run `show` in each router's container), and three more ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
+
+<!-- nx_readme_wrong_first -->
+<img src="docs/whats-wrong-first.png" width="380" alt="The DeepDive&#39;s Routing Engine panel starts with what is wrong: on r10, eth4 has no OSPF adjacency to r11 because the hello / dead timers differ (hello 3 ⇔ 10, dead 12 ⇔ 40); the other OSPF interfaces are Full">
 
 Using netlab? Add the `tools: network_xray:` declaration and load `docker/netlab-defaults.yml` through `defaults.sources.extra`: [netlab tool](#netlab-tool).
 
@@ -1014,22 +1014,19 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
 <!-- nx_readme_entry (2026-10-20) -->
 **いちばん速い試し方: 記録済みのデモ (ルータ不要・準備なし)。**
 
-![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)
-
 ### ▶ [記録済み (recorded) Best-Path Decision デモを開く](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) — ルータ不要
+
+[![BGP Best-Path Decision の記録 — 8.8.8.0/24 を 2 つの上流から受け、LocPref を変えると再読み込みなしで最良経路がその場で切り替わる (r3 経由 100 ⇄ r2 経由 150)。X-Ray が本物の FRR の状態を読み直して描き直す。本物の FRR/containerlab のラボで記録](docs/bgp-best-path-live.gif)](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html)
 
 本物の FRR / containerlab のラボで記録した物を、ブラウザで再生します。見るところは 3 つ:
 1. **r1** をクリックして中を見る。
 2. BGP の表で、`8.8.8.0/24` の 2 つの候補を比べる。
 3. **Best-Path Decision** の欄で、勝った方が勝った理由を読む (この例では Local Preference)。
 
-<!-- nx_readme_wrong_first -->
-<img src="docs/whats-wrong-first.png" width="380" alt="DeepDive の Routing Engine の板は問題から始まる: r10 の eth4 は hello / dead のタイマーが違うので r11 と OSPF の隣接ができない (hello 3 ⇔ 10・dead 12 ⇔ 40)。ほかの OSPF の IF は Full">
-
-**試し方は 3 つ:**
-1. **見るだけ (準備なし)** — 上の記録済みのデモ、または [記録済みの 30 秒動画](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB・Local Preference を 1 つ変えると最良経路が変わる様子)。自分のルータの出力を貼る頁もあります: [`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) (OSPF・経路)・[`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html) (BGP)。どれもブラウザの中だけで動きます。
-2. **GitHub Codespaces (2〜3 分ほど)** — 本物の 3 台の FRR のラボをブラウザで動かし、設定も変えられます: [ライブ (live) ラボ — GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
-3. **自分の稼働中の containerlab ラボ (1 行)** — ラボのフォルダで実行し、<http://localhost:8600/> を開きます:
+**試し方は 3 つ** — まず 1。自分で壊して直したくなったら 2:
+1. **見るだけ — すぐ開く・準備なし** — 上の記録済みのデモ、または [記録済みの 30 秒動画](https://rclab-dev.github.io/network-xray/docs/demo-30s.mp4) (1.4 MB・Local Preference を 1 つ変えると最良経路が変わる様子)。自分のルータの出力を貼る頁もあります: [`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) (OSPF・経路)・[`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html) (BGP)。どれもブラウザの中だけで動きます。
+2. **ルータを変えてみる — GitHub Codespaces・2〜3 分ほど** — 本物の 3 台の FRR のラボをブラウザで動かし、設定も変えられます: [ライブ (live) ラボ — GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
+3. **自分の稼働中の containerlab ラボ — 1 行** — ラボのフォルダで実行し、<http://localhost:8600/> を開きます:
    ```bash
    docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml
    ```
@@ -1041,6 +1038,9 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
 >
 > **ソケットが要らない道:** 記録済みのデモ・貼る頁 ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html))・[GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
 > ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使うほかの 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
+
+<!-- nx_readme_wrong_first -->
+<img src="docs/whats-wrong-first.png" width="380" alt="DeepDive の Routing Engine の板は問題から始まる: r10 の eth4 は hello / dead のタイマーが違うので r11 と OSPF の隣接ができない (hello 3 ⇔ 10・dead 12 ⇔ 40)。ほかの OSPF の IF は Full">
 
 netlab では `tools: network_xray:` の宣言と、`defaults.sources.extra` での `docker/netlab-defaults.yml` の読み込みが必要です。[netlab tool](#netlab-tool-ja) を参照してください。
 
