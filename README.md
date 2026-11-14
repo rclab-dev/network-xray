@@ -165,7 +165,9 @@ router at the forwarding decision (the deepdive).
   `xray-states.js` only when it changed.
 - `./xray.sh` runs the collector and `containerlab graph` on the lab host; the image (`docker run`, the netlab tool) runs both
   inside one container, and `:8600` is the port it publishes on the lab host (`-p 127.0.0.1:8600:8600`). With the image the
-  state files are inside the container: from the host, `curl http://localhost:8600/static/xray-states.js`. The image also
+  state files are inside the container: from the host, `curl http://localhost:8600/static/xray-states.js`. That file is
+  JavaScript for the page (`window.LIVE_STATES = {…};`); for JSON, give it to `node scripts/xray-query.js state <file>` (JSON is
+  the default output) or to the MCP tools. The image also
   reads each router's running configuration every 30 s to choose OSPF or BGP (`show running-config` / `sr_cli 'info from
   running …'`, read-only; Cisco IOL from the last collected state, no second login).
 - Only starting a lab touches a router, and viewing it never does: see [Read-only](#read-only) below.
@@ -1160,6 +1162,8 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
   `xray-states.js` を読み直します。`scripts/xray-query.js` と MCP サーバは同じ状態のファイルを読むだけです。
 - collector はルータを変えません。ルータに触るのはラボを立てる時だけです (下の [読むだけ](#read-only-ja))。image の時、状態のファイルはコンテナの中です
   (host からは `curl http://localhost:8600/static/xray-states.js`)。<!-- nx-how-it-works2-20261107 -->
+  このファイルは頁のための JavaScript (`window.LIVE_STATES = {…};`) です。JSON が欲しい時は `node scripts/xray-query.js state <ファイル>`
+  (出力は既定で JSON) か MCP のツールに渡してください。
 
 <a id="read-only-ja"></a>
 ### 読むだけ: その意味と例外
