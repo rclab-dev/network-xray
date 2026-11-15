@@ -2,6 +2,17 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.4.1 — 2026-11-15
+
+- **MCP:** start the server with `--path <state>` (or `NX_MCP_PATH`; the option wins) and the tools that take `path` read it when the client gives none; `tools/list` then shows `path` as optional. A `path` the client gives is still used. Without it nothing changes.
+- **state_diff / `xray-query.js diff`:** a node given as `null` no longer stops the comparison; a field one side did not collect is not compared (it was reported as lost or new) and is listed under `not_compared`; BGP peers with the same address in two VRFs are kept apart.
+- **Collector:** a `bridge`, `ovs-bridge` or `host` node with links is drawn, not read: no reader is started for it each round.
+- **Recorded demos:** each frame stays 6–7 s, the pause button has a symbol, and closing the DeepDive pauses the replay (it kept playing on the overview).
+- **Fixed:** in v1.4.0 the DeepDive's LSDB table had no rows for network LSAs (type 2): the networks of a broadcast segment were missing (the header counts were right).
+- **Memory, corrected:** the network-xray container uses about 30 MB between reads; while it reads the routers (one reader per router) it peaks at about 110 MB with 3 routers and 260 MB with 10. v1.4.0's README said "up to about 100 MB in its first minute, then about 50 MB", which was wrong: the peak comes back on every read. A memory limit on the container should be above that peak.
+- Docs (en / ja): the README top leads to the recorded demo first and says how quick each way to try it is; the Docker socket note is a caution box with the ways that need no socket; `xray-states.js` is JavaScript for the page (for JSON, use `xray-query.js state` or the MCP tools); on a shared machine keep the lab folder readable by you only; the FAQ answers how heavy a large lab is, which BGP values are drawn and whether a route-map change shows; docs/mcp.md says what `state_diff` returns more exactly.
+- Known issue: `state_diff` does not report an interface that was added, and an interface removed while it was down is shown as `up → absent`.
+
 ## v1.4.0 — 2026-11-14
 
 - **What changed from a baseline:** `xray-diff.js` compares two states and lists what changed, causes first (an interface down, an OSPF interface value, a lost adjacency or BGP session) before what they broke (best paths and routes, every ECMP next hop; a route now resolved through the management network comes before best-path changes). `xray-query.js diff` and the read-only MCP tool `state_diff` give the same answer for one router or the whole lab; `collect` (with `--allow-collect`) can keep the state it replaces (`keep_previous`).
