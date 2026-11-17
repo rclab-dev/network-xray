@@ -196,7 +196,8 @@ removes it. See [Security notes](../README.md#security-notes) and the [netlab to
 
 Yes. The [recorded Best-Path Decision demo](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) replays a
 real FRR lab in the browser. The paste pages (`frr-paste.html`, `bgp-paste.html`, `srl-paste.html`) draw your own
-`show` output and run entirely in the browser: nothing is uploaded. See [See it](../README.md#see-it) and
+`show` output and run entirely in the browser: nothing is uploaded. They also work with no network: download the repo zip
+(or the release assets) and open `frr-paste.html` / `bgp-paste.html` from disk (they read only the `.js` files next to them). See [See it](../README.md#see-it) and
 [Bring your own network](../README.md#bring-your-own-network).
 
 ### Can I change a real lab without installing anything locally?

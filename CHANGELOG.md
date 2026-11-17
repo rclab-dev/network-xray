@@ -8,6 +8,8 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **state_diff:** a recursive route whose resolution moved to another interface (no address given) is reported; an interface written by hand as `"up": "false"` counts as down. The docs say the order is by kind, not a traced cause.
 - **state_diff / `xray-query.js diff`:** the lab's management network can be given (`mgmt_subnet` / `--mgmt-subnet <cidr>`; netlab uses 192.168.121.0/24), as the collector's `--exclude-mgmt` already reads it from the topology. Without it nothing changes (172.20.20.0/24).
 - **Pages:** on the 日本語 toggle the DeepDive's English panel headings (Router — Internal View, Routing Engine, Routing table, BGP Table, Best-Path Decision, …) are shown in Japanese; protocol words (OSPF, LSDB, Full) stay English.
+- **bgp-paste:** the DeepDive's BGP Table shows the pasted routes (it said "No routes received (BGP session is up)" next to them).
+- **FAQ:** the paste pages work with no network, opened from the repo zip on disk.
 - **README:** the Caution box is two bullets (why the socket / no socket needed); the Codespaces quota in hours (about 30 a month); a memory-limit example (`--memory 300m`); how to check what a change (an Ansible playbook) did with `diff`.
 
 ## v1.4.1 — 2026-11-15

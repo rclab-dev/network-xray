@@ -193,7 +193,7 @@ netlab のツールでは、ラボが動いている間 `network-xray.json` に�
 
 試せます。[録画した Best-Path Decision のデモ](https://rclab-dev.github.io/network-xray/demo/index-bgp-lp.html) は、
 実際の FRR のラボをブラウザで再生します。貼り付け用のページ (`frr-paste.html`・`bgp-paste.html`・`srl-paste.html`) は
-自分の `show` の出力を描き、すべてブラウザの中で動きます。何もアップロードしません。
+自分の `show` の出力を描き、すべてブラウザの中で動きます。何もアップロードしません。ネットが無くても動きます: repo の zip (か Release の付属) を落とし、`frr-paste.html` / `bgp-paste.html` をディスクから開きます (読むのは隣の `.js` だけ)。
 [See it](../../README.md#see-it) と [Bring your own network](../../README.md#bring-your-own-network) を参照してください。
 
 ### 手元に何も入れずに、本物のラボを変えてみられますか?
