@@ -223,7 +223,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `bgp_neighbors` | `path`, `router?` | ルータごと: ピア・リモート AS・iBGP/eBGP・状態・受け取ったプレフィックスの数 |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | 集めたルーティングテーブルでの最長一致 |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | 選ばれた BGP の経路・ほかの候補と属性・決め手になったステップ・そのわけの出どころ |
-| `state_diff` | `before`, `after`, `router?` | 基準の state から今までに変わった所 (重い順・何も変わっていなければ `none`) |
+| `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | 基準の state から今までに変わった所 (重い順・何も変わっていなければ `none`) |
 
 `why_best_path` は、データに保存されているわけだけを返します (無ければ `null` と注記)。`why_path` はほかの候補も並べ、
 ルータがわけを出していない時は、属性を自分で比べます (`reason_source`)。
@@ -499,7 +499,7 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 `bgp_peer_removed`・`ospf_adjacency_lost`・`bgp_session_down`・`best_path_changed`・`route_removed`・`route_changed`・
 `ospf_adjacency_state`、その後に戻った物・足された物 (増えた interface は `iface_added`・もともと down で消えた物は `iface_removed`)。並びは種類の順で、たどった因果ではありません (上の行が下の行の原因と確かめたわけではない)。containerlab の管理の網で解くようになった経路 (`via_mgmt: true`) は
 最良経路の変化のすぐ前に来ます (ラボのトポロジの中では、その次の段に届かないので)。経路には、分かる時は `originated_by` (その prefix を直結で持つルータ・loopback があればそれ) が付きます (分からない時はキーごと無し)。uptime・
-カウンタ・管理の網は比べません。片方に無い欄 (そちらでは集めていない) も比べず、`not_compared` (`node`・`field`・`missing_in`: before / after) に並べます
+カウンタ・管理の網は比べません (`mgmt_subnet` を渡さなければ 172.20.20.0/24・netlab のラボは `192.168.121.0/24`)。片方に無い欄 (そちらでは集めていない) も比べず、`not_compared` (`node`・`field`・`missing_in`: before / after) に並べます
 (比べなかった物がある時だけのキー)。BGP の相手はアドレスと VRF で見分けます。同じ変化は `node scripts/xray-query.js diff <before> <after> [router]` でも
 (人向けは `--format table`)。エラーの言い方はツールごとです (エラーの節)。
 ## エラー

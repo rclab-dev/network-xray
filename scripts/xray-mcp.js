@@ -207,7 +207,8 @@ var TOOLS = [
       properties: {
         before: { type: 'string', description: 'The baseline state (same input as lab_state)' },
         after: { type: 'string', description: 'The state now (same input as lab_state)' },
-        router: { type: 'string', description: 'Only this router (default: all)' }
+        router: { type: 'string', description: 'Only this router (default: all)' },
+        mgmt_subnet: { type: 'string', description: 'The lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)' }
       },
       required: ['before', 'after'],
       additionalProperties: false
@@ -351,7 +352,7 @@ function callTool(name, args) {
   }
   if (name === 'state_diff') {
     var b5 = str(args, 'before', true), a5 = str(args, 'after', true);
-    return query.diff(loadStates(b5), loadStates(a5), str(args, 'router', false));
+    return query.diff(loadStates(b5), loadStates(a5), str(args, 'router', false), str(args, 'mgmt_subnet', false) || null);
   }
   if (name === 'why_path') {
     var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);

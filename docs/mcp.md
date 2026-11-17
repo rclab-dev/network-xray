@@ -229,7 +229,7 @@ If the assistant does not know which lab you mean, give the path again.
 | `bgp_neighbors` | `path`, `router?` | per router: peer, remote AS, iBGP/eBGP, state, prefixes received |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | longest-prefix match in the collected routing table |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | the selected BGP path, the other candidates with their attributes, the deciding step and where that reason came from |
-| `state_diff` | `before`, `after`, `router?` | what changed from a baseline state to now, heaviest first (`none` when nothing changed) |
+| `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | what changed from a baseline state to now, heaviest first (`none` when nothing changed) |
 
 `why_best_path` gives only the reason stored in the data (`null` with a note when there is none). `why_path` also lists
 the other candidates, and when the router gave no reason it compares their attributes itself (`reason_source`).
@@ -507,7 +507,7 @@ Kinds, causes before what they broke: `node_removed`, `node_unread`, `iface_down
 `ospf_adjacency_state`, then what came back or was added (an interface new is `iface_added`; one removed while it was already down is `iface_removed`). The order is by kind, not a traced chain: a line above another is not proven to be its cause. A route now resolved through the containerlab management network
 (`via_mgmt: true`) comes just before the best-path changes: inside the lab topology its next hop is not reachable. A route carries `originated_by` when it is known: the router where that prefix is directly connected (on its
 loopback when there is one); without it the key is left out. Uptimes, counters and the management network are not
-compared. A field one side does not have (not collected there) is not compared either, and is listed under
+compared (172.20.20.0/24 unless you give `mgmt_subnet`; a netlab lab uses `192.168.121.0/24`). A field one side does not have (not collected there) is not compared either, and is listed under
 `not_compared` (`node`, `field`, `missing_in`: before / after); the key is there only when something was left out.
 BGP peers are told apart by address and VRF. The same changes come from `node scripts/xray-query.js diff <before> <after> [router]`
 (`--format table` for people); errors are worded the way each tool words them (see Errors).

@@ -871,6 +871,8 @@ ansible-playbook change.yml
 node scripts/xray-query.js diff before/ <out-dir> --format table
 ```
 
+On a netlab lab add `--mgmt-subnet 192.168.121.0/24` (its management network; containerlab's 172.20.20.0/24 is the default).
+
 `state` starts with `wrong` (what is wrong: an interface down, an OSPF interface with no adjacency and the values both ends must share and do not, a BGP session not Established; empty here), then nodes, links, OSPF adjacencies and BGP sessions (trimmed here):
 
 ```json
@@ -1785,6 +1787,8 @@ ansible-playbook change.yml
 # 次の読み (数秒) を待ってから:
 node scripts/xray-query.js diff before/ <out-dir> --format table
 ```
+
+netlab のラボでは `--mgmt-subnet 192.168.121.0/24` を足します (netlab の管理の網・既定は containerlab の 172.20.20.0/24)。
 
 `state` は最初に `wrong` (問題のある所: down の interface・隣接の無い OSPF の interface と両端で食い違う値・確立していない BGP。ここでは空)、続いてノード・リンク・OSPF の隣接・BGP のセッション (ここでは一部省略):
 

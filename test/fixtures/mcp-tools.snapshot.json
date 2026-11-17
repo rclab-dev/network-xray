@@ -206,6 +206,10 @@
         "router": {
           "type": "string",
           "description": "Only this router (default: all)"
+        },
+        "mgmt_subnet": {
+          "type": "string",
+          "description": "The lab's management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)"
         }
       },
       "required": [

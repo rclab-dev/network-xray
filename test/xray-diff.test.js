@@ -188,3 +188,21 @@ test('a resolution with only an interface, or only the management mark, is compa
   d = xd.diffStates({ r1: { interfaces: { eth1: { up: 'false' } } } }, { r1: { interfaces: { eth1: { up: false } } } });
   assert.strictEqual(d.none, true);
 });
+
+test('a lab whose management network is not 172.20.20.0/24 (netlab): --mgmt-subnet / mgmt_subnet leave it out', async function () {
+  var os = require('os'), dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-mg-'));
+  function st(ip) { return { r1: { interfaces: { eth0: { up: true, ip: ip }, eth1: { up: true, ip: '10.0.0.1/30' } } } }; }
+  var b = path.join(dir, 'b.json'), a = path.join(dir, 'a.json');
+  fs.writeFileSync(b, JSON.stringify(st('192.168.121.101/24'))); fs.writeFileSync(a, JSON.stringify(st('192.168.121.102/24')));
+  assert.deepStrictEqual(query.run(['diff', b, a]).changes.map(function (c) { return c.kind + ' ' + c.item; }), ['iface_address eth0']);
+  assert.strictEqual(query.run(['diff', b, a], { mgmtSubnet: '192.168.121.0/24' }).none, true);
+  assert.strictEqual(query.run(query.parseOptions(['diff', b, a, '--mgmt-subnet=192.168.121.0/24']).args, { mgmtSubnet: '192.168.121.0/24' }).none, true);
+  assert.throws(function () { query.run(['diff', b, a], { mgmtSubnet: 'lab' }); }, function (e) { return /IPv4 subnet/.test(e.message); });
+  assert.throws(function () { query.run(['state', b], { mgmtSubnet: '192.168.121.0/24' }); }, function (e) { return /for diff only/.test(e.message); });
+  var t = cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'xray-query.js'), 'diff', b, a, '--mgmt-subnet', '192.168.121.0/24'], { cwd: ROOT, encoding: 'utf8' });
+  assert.strictEqual(t.status, 0, t.stderr); assert.strictEqual(JSON.parse(t.stdout).none, true);
+  var mcp = require(path.join(ROOT, 'scripts', 'xray-mcp.js'));
+  var r = await mcp.handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'state_diff', arguments: { before: b, after: a, mgmt_subnet: '192.168.121.0/24' } } });
+  assert.ok(!r.result.isError, JSON.stringify(r)); assert.strictEqual(r.result.structuredContent.none, true);
+  fs.rmSync(dir, { recursive: true, force: true });
+});

@@ -6,6 +6,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 
 - **state_diff / `xray-query.js diff`:** an interface that is new is reported (`iface_added`), and one removed while it was already down is `iface_removed` (it was shown as `up → absent`). This was the known issue of v1.4.1.
 - **state_diff:** a recursive route whose resolution moved to another interface (no address given) is reported; an interface written by hand as `"up": "false"` counts as down. The docs say the order is by kind, not a traced cause.
+- **state_diff / `xray-query.js diff`:** the lab's management network can be given (`mgmt_subnet` / `--mgmt-subnet <cidr>`; netlab uses 192.168.121.0/24), as the collector's `--exclude-mgmt` already reads it from the topology. Without it nothing changes (172.20.20.0/24).
 - **README:** the Caution box is two bullets (why the socket / no socket needed); the Codespaces quota in hours (about 30 a month); a memory-limit example (`--memory 300m`); how to check what a change (an Ansible playbook) did with `diff`.
 
 ## v1.4.1 — 2026-11-15

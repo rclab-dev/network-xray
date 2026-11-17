@@ -1000,9 +1000,11 @@ function whyTable(w, color) {
 // ---- diff ------------------------------------------------------------------------------------
 // What changed between a baseline the user kept and the state now (xray-diff.js: the same answer as the MCP tool
 // state_diff and the page). The changes come first; when nothing changed, `none: true` and a note say so.
-function diff(before, after, node) {
+function diff(before, after, node, mgmtSubnet) {
   if (node && !before[node] && !after[node]) throw new QueryError('unknown node: ' + node + ' (in neither state)');
-  var d = require('../xray-diff.js').diffStates(before, after, { node: node });
+  // the lab's management network when it is not containerlab's default (netlab: 192.168.121.0/24), as the collector's --mgmt-subnet
+  if (mgmtSubnet != null && !/^\d{1,3}(\.\d{1,3}){3}\/\d{1,2}$/.test(String(mgmtSubnet))) throw new QueryError('the management subnet must be an IPv4 subnet like 192.168.121.0/24: ' + mgmtSubnet);
+  var d = require('../xray-diff.js').diffStates(before, after, { node: node, mgmtSubnet: mgmtSubnet || undefined });
   var out = { changes: d.changes, none: d.none, counts: d.counts, unchanged: d.unchanged };
   if (d.none) out.note = 'no change from the baseline' + (node ? ' on ' + node : '');
   return out;
@@ -1022,7 +1024,7 @@ function diffTable(res, color) {
 }
 
 var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf] | ospf-if <state.json|dir> [node]' +
-  ' | diff <before> <after> [node]' +
+  ' | diff <before> <after> [node] [--mgmt-subnet <cidr>]' +
   ' [--format json|table] [--color]';
 
 // pull --format / --color out of argv; the rest are the positional arguments
@@ -1035,23 +1037,25 @@ function parseOptions(argv) {
       if (v !== 'json' && v !== 'table') throw new QueryError('--format must be json or table');
       o.format = v;
     } else if (a === '--color') o.color = true;
+    else if ((m = /^--mgmt-subnet(?:=(.*))?$/.exec(a))) o.mgmtSubnet = m[1] != null ? m[1] : (argv[++i] || '');
     else o.args.push(a);
   }
   return o;
 }
 
-function run(argv) {
-  var cmd = argv[0];
+function run(argv, o) {
+  var cmd = argv[0], mg = o && o.mgmtSubnet != null ? o.mgmtSubnet : null;
+  if (mg != null && cmd !== 'diff') throw new QueryError('--mgmt-subnet is for diff only');
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
   if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
-  if (cmd === 'diff') { if (argv.length < 3 || argv.length > 4) throw new QueryError(USAGE); return diff(loadStates(argv[1]), loadStates(argv[2]), argv[3]); }
+  if (cmd === 'diff') { if (argv.length < 3 || argv.length > 4) throw new QueryError(USAGE); return diff(loadStates(argv[1]), loadStates(argv[2]), argv[3], mg); }
   if (cmd === 'ospf-if') { if (argv.length < 2 || argv.length > 3) throw new QueryError(USAGE); return ospfInterfaces(loadStates(argv[1]), argv[2]); }
   throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
 }
 
 // the text for --format table (same checks and errors as run())
-function runTable(argv, color) {
-  var res = run(argv);
+function runTable(argv, color, o) {
+  var res = run(argv, o);
   if (argv[0] === 'diff') return diffTable(res, color);
   return argv[0] === 'state' ? stateTable(loadStates(argv[1]), color) : argv[0] === 'ospf-if' ? ospfIfTable(res, color) : whyTable(res, color);
 }
@@ -1064,6 +1068,7 @@ if (require.main === module) {
       '  why <path> <node> <prefix> [vrf]    BGP best path and the reason stored with it\n' +
       '  ospf-if <path> [node]               OSPF interface values, both ends of each link, what must match but does not\n' +
       '  diff <before> <after> [node]        what changed from a state you kept (the baseline) to now, heaviest first\n' +
+      '  --mgmt-subnet <cidr>  diff: the lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)\n' +
       '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR / Genie captures\n' +
       '  --format json|table  default: json\n' +
       '  --color              colors in table output (only on a terminal)\n' +
@@ -1071,16 +1076,16 @@ if (require.main === module) {
     process.exit(0);
   }
   for (var _i = 0; _i < _cli.length; _i++) {
-    if (_cli[_i] === '--format') _i++;
-    else if (_cli[_i] !== '--color' && !/^--format=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
+    if (_cli[_i] === '--format' || _cli[_i] === '--mgmt-subnet') _i++;
+    else if (_cli[_i] !== '--color' && !/^--(format|mgmt-subnet)=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
       console.error('xray-query.js: unknown option: ' + _cli[_i] + "\nTry 'node scripts/xray-query.js --help'.");
       process.exit(2);
     }
   }
   try {
     opts = parseOptions(process.argv.slice(2));
-    if (opts.format === 'table') res = runTable(opts.args, opts.color && !!process.stdout.isTTY);
-    else res = run(opts.args);
+    if (opts.format === 'table') res = runTable(opts.args, opts.color && !!process.stdout.isTTY, opts);
+    else res = run(opts.args, opts);
   } catch (e) {
     res = { error: (e && e.message) || String(e) }; code = 2;
   }
