@@ -245,6 +245,14 @@
         local_pref: r.local_pref, weight: r.weight, metric: r.metric, as_path: r.as_path, origin: r.origin, best: r.best };
     });
 
+    // nx_paste_bgp_routes (v1.4.2): the same routes in the state, in the collector's bgp_routes shape. The DeepDive's
+    // BGP Table reads them there; without them it said "No routes received (BGP session is up)" next to the 2 it had.
+    state.bgp_routes = tbl.routes.map(function (r) {
+      var p = String(r.prefix || '').split('/');
+      return { prefix: p[0], prefixlen: p[1] != null ? parseInt(p[1], 10) : undefined, next_hop: r.nexthop, as_path: r.as_path,
+        best: !!r.best, status: r.status || (r.best ? '*>' : '*'), local_pref: r.local_pref, weight: r.weight, metric: r.metric, origin: r.origin };
+    });
+
     return { config: config, state: state, topo: topo, trace: trace, bgpRows: bgpRows, estimates: estimates,
       _debug: { summary: sum, table: tbl, peers: peers } };
   }
@@ -274,6 +282,7 @@
     ck('build: bgpRows = 2 candidates same prefix', r.bgpRows.length === 2 && r.bgpRows[0].prefix === r.bgpRows[1].prefix);
     ck('build: bgpRows carry local_pref attribute', r.bgpRows.length === 2 && r.bgpRows.every(function (x) { return typeof x.local_pref === 'number'; }));
     ck('build: topology unaffected (≥2 nodes)', r.config.nodes.length >= 2);
+    ck('state: bgp_routes = the same 2 routes in the collector shape (prefix + prefixlen, one best)', Array.isArray(r.state.bgp_routes) && r.state.bgp_routes.length === 2 && r.state.bgp_routes.every(function (x) { return x.prefix === '8.8.8.0' && x.prefixlen === 24; }) && r.state.bgp_routes.filter(function (x) { return x.best; }).length === 1);
     ck('config: dual-link apex (inverted_v / bgp_multi / nodes r2—r1—r3)', r.config.layout === 'inverted_v' && r.config.xray.pattern === 'bgp_multi' && r.config.nodes.map(function (n) { return n.id; }).join(',') === 'r2,r1,r3');
     ck('state: per-peer iface (eth0/eth1) + best_path_via = winner (r3, LP100)', r.state.r2_iface === 'eth0' && r.state.r3_iface === 'eth1' && r.state.best_path_via === 'r3');
     console.log('bgp-parse self-test (real FRR fixture — multipath / LocPrf decider):');
