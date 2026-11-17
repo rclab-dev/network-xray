@@ -35,8 +35,8 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
 > [!CAUTION]
 > Way 3 gives the container the Docker socket (root-equivalent on the host): use it on lab machines only. It only runs `show` commands. [Security notes](#security-notes)
 >
-> **No socket needed:** the recorded demo, the paste pages ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html)) and [GitHub Codespaces](#-live-lab--github-codespaces).
-> Why it needs the socket (to run `show` in each router's container), and three more ways to do without it: [FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket).
+> - **Why the socket:** to run `show` in each router's container ([FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket), with three more ways to do without it).
+> - **No socket needed:** the recorded demo, the paste pages ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html)) and [GitHub Codespaces](#-live-lab--github-codespaces).
 
 <!-- nx_readme_wrong_first -->
 <img src="docs/whats-wrong-first.png" width="380" alt="The DeepDive&#39;s Routing Engine panel starts with what is wrong: on r10, eth4 has no OSPF adjacency to r11 because the hello / dead timers differ (hello 3 ⇔ 10, dead 12 ⇔ 40); the other OSPF interfaces are Full">
@@ -61,7 +61,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/rclab-dev/network-xray?quickstart=1)
 
 **Try it in your browser** — the button starts a GitHub Codespace that deploys a 3-router FRR lab with containerlab and opens the X-Ray graph on port 8600 (about 2–3 minutes). Click any router to look inside it; shut an interface (`sudo docker exec clab-q21-bgp-lp-r1 vtysh -c 'conf t' -c 'interface eth2' -c 'shutdown'`) and the picture updates by itself in a few seconds.
-- Uses your own Codespaces quota (personal accounts: 120 core-hours/month free; this demo asks for a 4-core machine). **Delete the codespace when you are done.**
+- Uses your own Codespaces quota (personal accounts: 120 core-hours/month free; this demo asks for a 4-core machine, so about 30 hours of it a month). **Delete the codespace when you are done.**
 - Container-based nodes only (FRR etc.) — Codespaces has no nested virtualization.
 
 **Next:** [your own containerlab lab](#quick-start-run-a-lab-in-containerlab) · [netlab](#netlab-tool) · [what it supports](#scope--maintenance)
@@ -250,7 +250,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 ![Recorded quick start (recorded with the old name demo.sh): git clone, ./demo.sh, open the browser, click a router, Ctrl-C and destroy](docs/quickstart.gif)
 
-**You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container; measured with `docker stats` on FRR 8.4: about 20 MB per router, and the network-xray container about 30 MB between reads and, while it reads the routers (one Node.js reader per router), up to about 110 MB with 3 routers and 260 MB with 10; a memory limit on the container should be above that peak) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
+**You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container; measured with `docker stats` on FRR 8.4: about 20 MB per router, and the network-xray container about 30 MB between reads and, while it reads the routers (one Node.js reader per router), up to about 110 MB with 3 routers and 260 MB with 10; a memory limit on the container should be above that peak, e.g. `docker run --memory 300m` or `deploy.resources.limits.memory: 300m` in compose for up to 10 routers) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
 
 **Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
@@ -862,6 +862,15 @@ node scripts/xray-query.js diff demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json
 adjacency lost, a best path that moved, routes removed or moved), and says `none` when nothing changed; the MCP tool
 `state_diff` gives the same answer ([docs/mcp.md](docs/mcp.md#state_diff)). <!-- nx_state_diff -->
 
+To check what a change did (an Ansible playbook, a config push), keep the state before it and compare after the next read:
+
+```
+cp -r <out-dir> before/            # the collector's output folder (state_<node>.json files)
+ansible-playbook change.yml
+# wait for the next read (a few seconds), then:
+node scripts/xray-query.js diff before/ <out-dir> --format table
+```
+
 `state` starts with `wrong` (what is wrong: an interface down, an OSPF interface with no adjacency and the values both ends must share and do not, a BGP session not Established; empty here), then nodes, links, OSPF adjacencies and BGP sessions (trimmed here):
 
 ```json
@@ -1039,8 +1048,8 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
 > [!CAUTION]
 > 3 はコンテナに Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。打つのは `show` だけです。[詳しく](#security-notes-ja)
 >
-> **ソケットが要らない道:** 記録済みのデモ・貼る頁 ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html))・[GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
-> ソケットが要る理由 (各ルータのコンテナで `show` を打つため) と、ソケットなしで使うほかの 3 つの道: [FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)。
+> - **ソケットが要る訳:** 各ルータのコンテナで `show` を打つため ([FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)・ソケットなしで使うほかの 3 つの道も)。
+> - **ソケットが要らない道:** 記録済みのデモ・貼る頁 ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html))・[GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
 
 <!-- nx_readme_wrong_first -->
 <img src="docs/whats-wrong-first.png" width="380" alt="DeepDive の Routing Engine の板は問題から始まる: r10 の eth4 は hello / dead のタイマーが違うので r11 と OSPF の隣接ができない (hello 3 ⇔ 10・dead 12 ⇔ 40)。ほかの OSPF の IF は Full">
@@ -1065,7 +1074,7 @@ GitHub のログインが要ります・起動は 2〜3 分・FRR のルータ 3
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/rclab-dev/network-xray?quickstart=1)
 
 **ブラウザで試す** — このボタンで Codespace が立ち上がり、containerlab で FRR のルータ 3 台のラボを作って、ポート 8600 で X-Ray の画面を開きます (2〜3 分ほど)。ルータをクリックすると中が見えます。インターフェースを止めると (`sudo docker exec clab-q21-bgp-lp-r1 vtysh -c 'conf t' -c 'interface eth2' -c 'shutdown'`)、数秒で図が自分で書き換わります。
-- ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシン)。**使い終わったら codespace を削除してください。**
+- ご自身の Codespaces の枠を使います (個人のアカウントは月 120 コア時間まで無料・このデモは 4 コアのマシンなので月 30 時間ほど)。**使い終わったら codespace を削除してください。**
 - コンテナのノード (FRR など) だけ動きます — Codespaces では入れ子の仮想化ができません。
 
 **次に:** [自分の containerlab のラボで](#クイックスタート-containerlab-で例題を動かす) · [netlab で](#netlab-tool-ja) · [対応範囲](#スコープと保守)
@@ -1234,7 +1243,7 @@ MCP の `why_path` も同じ区別を `reason_source` (`device` = ルータが�
 
 ![記録済みのクイックスタート (前の名前 demo.sh で録った物): git clone → ./demo.sh → ブラウザで開く → ルータをクリック → Ctrl-C と destroy](docs/quickstart.gif)
 
-**必要なもの:** Linux (または Windows の **WSL2** ([WSL2 の手引き](docs/ja/windows-wsl2.md))・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ。FRR 8.4 で `docker stats` で測った値: ルータ 1 台 20 MB ほど・network-xray のコンテナは読みの合間は 30 MB ほど・ルータを読む間 (ルータ 1 台に Node.js の読み手 1 つ) は 3 台で最大 110 MB ほど・10 台で 260 MB ほど。コンテナにメモリの上限を掛ける時は、この山より上に)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
+**必要なもの:** Linux (または Windows の **WSL2** ([WSL2 の手引き](docs/ja/windows-wsl2.md))・Linux の VM)・**Docker**・**[containerlab](https://containerlab.dev/install/)**・**Node.js 18 以上**・空きメモリ **2 GB ほど** (FRR のルータ 1 台が小さなコンテナ 1 つ。FRR 8.4 で `docker stats` で測った値: ルータ 1 台 20 MB ほど・network-xray のコンテナは読みの合間は 30 MB ほど・ルータを読む間 (ルータ 1 台に Node.js の読み手 1 つ) は 3 台で最大 110 MB ほど・10 台で 260 MB ほど。コンテナにメモリの上限を掛ける時は、この山より上に。例: ルータ 10 台までなら `docker run --memory 300m`・compose なら `deploy.resources.limits.memory: 300m`)・自分のユーザで `sudo` なしに `docker` が使えること (`docker` グループ: [やり方](docs/ja/troubleshooting.md#docker-socket-permission))。
 
 **どちらで始めるか:** **初めてなら下の `xray.sh` を。** 例題のラボで試すなら下の `xray.sh` (ラボを立てて、画面はポート **8080**)。**もう動いている**ラボを見るなら、上の `docker run` の 1 行 (ポート **8600**) を使ってください — `xray.sh` はラボを立て直す (`containerlab deploy --reconfigure`) ので、手で変えた設定は消えます (`./xray.sh --attach <ラボ>.clab.yml` なら、動いているラボを立て直さずに繋げます)。Releases から落とした 1 問は、その中の `run.sh` で動きます (ポート **50080**)。
 
@@ -1767,6 +1776,15 @@ node scripts/xray-query.js diff demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json
 
 `diff` は、取っておいた基準の state から今までに変わった所を重い順に出します (落ちた interface・消えた隣接・動いた最良経路・
 消えた / 変わった経路)。何も変わっていなければ `none` と言います。MCP の `state_diff` も同じ答えです ([docs/ja/mcp.md](docs/ja/mcp.md#state_diff))。 <!-- nx_state_diff -->
+
+変更 (Ansible の playbook・設定の投入) が何を変えたかを見るには、前の state を取っておき、次の読みの後に比べます:
+
+```
+cp -r <out-dir> before/            # 集める側の出力のフォルダ (state_<node>.json)
+ansible-playbook change.yml
+# 次の読み (数秒) を待ってから:
+node scripts/xray-query.js diff before/ <out-dir> --format table
+```
 
 `state` は最初に `wrong` (問題のある所: down の interface・隣接の無い OSPF の interface と両端で食い違う値・確立していない BGP。ここでは空)、続いてノード・リンク・OSPF の隣接・BGP のセッション (ここでは一部省略):
 
