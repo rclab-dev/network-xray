@@ -159,3 +159,20 @@ test('BGP peers with the same address in two VRFs are kept apart: one going down
   var c = oneRouter(); c.bgp_neighbors = [{ ip: '10.0.0.2', state: 'Established' }, { ip: '10.0.0.2', vrf: 'blue', state: 'Established' }];
   assert.deepStrictEqual(xd.diffStates({ r1: oneRouter() }, { r1: c }).changes.map(function (x) { return x.kind + ' ' + x.item; }), ['bgp_session_up 10.0.0.2 (vrf blue)']);
 });
+
+test('an interface added or removed: new is reported, a removed one that was down is not called up', function () {
+  function r(ifs) { return { r1: { interfaces: ifs } }; }
+  var up = { up: true, ip: '10.0.0.1/24' }, down = { up: false, ip: '10.0.0.1/24' };
+  var d = xd.diffStates(r({ eth1: up }), r({ eth1: up, eth2: { up: true }, eth3: { up: false } }));
+  assert.deepStrictEqual(d.changes.map(function (c) { return [c.kind, c.item, c.before, c.after].join(' '); }),
+    ['iface_added eth2 absent up', 'iface_added eth3 absent down']);
+  // removed while up stays a cause (first); removed while it was already down comes after what broke
+  d = xd.diffStates(r({ eth1: up, eth2: down }), r({}));
+  assert.deepStrictEqual(d.changes.map(function (c) { return [c.kind, c.item, c.before, c.after].join(' '); }),
+    ['iface_down eth1 up absent', 'iface_removed eth2 down absent']);
+  // the page's lines
+  xd.setBaseline(r({ eth2: down }));
+  var t = xd.changeLines(r({ eth3: up }), null, 'en').items.map(function (x) { return x.text; });
+  assert.deepStrictEqual(t, ['eth2: interface gone (was down)', 'eth3: interface new — up']);
+  xd.clearBaseline();
+});

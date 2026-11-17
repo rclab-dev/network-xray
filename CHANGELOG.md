@@ -2,6 +2,10 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## Unreleased
+
+- **state_diff / `xray-query.js diff`:** an interface that is new is reported (`iface_added`), and one removed while it was already down is `iface_removed` (it was shown as `up → absent`). This was the known issue of v1.4.1.
+
 ## v1.4.1 — 2026-11-15
 
 - **MCP:** start the server with `--path <state>` (or `NX_MCP_PATH`; the option wins) and the tools that take `path` read it when the client gives none; `tools/list` then shows `path` as optional. A `path` the client gives is still used. Without it nothing changes.

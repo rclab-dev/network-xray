@@ -504,7 +504,7 @@ saved, or `previous` from `collect` with `keep_previous: true`. The changes come
 
 Kinds, causes before what they broke: `node_removed`, `node_unread`, `iface_down`, `ospf_if_left`, `ospf_if_value`,
 `bgp_peer_removed`, `ospf_adjacency_lost`, `bgp_session_down`, `best_path_changed`, `route_removed`, `route_changed`,
-`ospf_adjacency_state`, then what came back or was added. A route now resolved through the containerlab management network
+`ospf_adjacency_state`, then what came back or was added (an interface new is `iface_added`; one removed while it was already down is `iface_removed`). A route now resolved through the containerlab management network
 (`via_mgmt: true`) comes just before the best-path changes: inside the lab topology its next hop is not reachable. A route carries `originated_by` when it is known: the router where that prefix is directly connected (on its
 loopback when there is one); without it the key is left out. Uptimes, counters and the management network are not
 compared. A field one side does not have (not collected there) is not compared either, and is listed under

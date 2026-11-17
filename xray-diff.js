@@ -22,7 +22,7 @@
   var RANK = {
     node_removed: 0, node_unread: 1, iface_down: 2, ospf_if_left: 3, ospf_if_value: 4, bgp_peer_removed: 5,
     ospf_adjacency_lost: 6, bgp_session_down: 7, best_path_changed: 8, route_removed: 9, route_changed: 10,
-    ospf_adjacency_state: 11, node_added: 12, iface_up: 13, ospf_adjacency_up: 14, ospf_adjacency_new: 15, ospf_if_joined: 16,
+    ospf_adjacency_state: 11, node_added: 12, iface_removed: 12.5, iface_up: 13, iface_added: 13.5, ospf_adjacency_up: 14, ospf_adjacency_new: 15, ospf_if_joined: 16,
     bgp_session_up: 17, bgp_peer_added: 18, route_added: 19, iface_address: 20
   };
   // OSPF interface values that change what the router does (role / counts follow from them and are left out)
@@ -126,7 +126,10 @@
           if (b.up !== false && a.up === false) add('iface_down', n, i, 'up', 'down');
           else if (b.up === false && a.up !== false) add('iface_up', n, i, 'down', 'up');
           if (str(b.ip) !== str(a.ip)) add('iface_address', n, i, str(b.ip) || null, str(a.ip) || null);
-        } else if (ib[i]) add('iface_down', n, i, 'up', 'absent');
+        } else if (ib[i]) {   // gone: a cause only if it was up; one that was already down is listed after what broke
+          if (b.up === false) add('iface_removed', n, i, 'down', 'absent');
+          else add('iface_down', n, i, 'up', 'absent');
+        } else add('iface_added', n, i, 'absent', a.up === false ? 'down' : 'up');
       });
 
       // OSPF adjacencies
@@ -217,13 +220,13 @@
     en: { node_removed: 'router gone', node_unread: 'not read', iface_down: 'interface', ospf_if_left: 'left OSPF',
       ospf_if_value: 'OSPF value', bgp_peer_removed: 'BGP peer gone', ospf_adjacency_lost: 'OSPF adjacency lost',
       bgp_session_down: 'BGP session', best_path_changed: 'best path', route_removed: 'route gone', route_changed: 'route',
-      ospf_adjacency_state: 'OSPF adjacency', node_added: 'router new', iface_up: 'interface', ospf_adjacency_up: 'OSPF adjacency',
+      ospf_adjacency_state: 'OSPF adjacency', node_added: 'router new', iface_removed: 'interface gone', iface_up: 'interface', iface_added: 'interface new', ospf_adjacency_up: 'OSPF adjacency',
       ospf_adjacency_new: 'OSPF adjacency new', ospf_if_joined: 'joined OSPF', bgp_session_up: 'BGP session', bgp_peer_added: 'BGP peer new',
       route_added: 'route new', iface_address: 'address' },
     ja: { node_removed: 'ルータが消えた', node_unread: '読めない', iface_down: 'interface', ospf_if_left: 'OSPF から外れた',
       ospf_if_value: 'OSPF の値', bgp_peer_removed: 'BGP の相手が消えた', ospf_adjacency_lost: 'OSPF の隣接が切れた',
       bgp_session_down: 'BGP', best_path_changed: '最良経路', route_removed: '経路が消えた', route_changed: '経路',
-      ospf_adjacency_state: 'OSPF の隣接', node_added: 'ルータが増えた', iface_up: 'interface', ospf_adjacency_up: 'OSPF の隣接',
+      ospf_adjacency_state: 'OSPF の隣接', node_added: 'ルータが増えた', iface_removed: 'interface が消えた', iface_up: 'interface', iface_added: 'interface が増えた', ospf_adjacency_up: 'OSPF の隣接',
       ospf_adjacency_new: 'OSPF の隣接が増えた', ospf_if_joined: 'OSPF に入った', bgp_session_up: 'BGP', bgp_peer_added: 'BGP の相手が増えた',
       route_added: '経路が増えた', iface_address: 'アドレス' }
   };

@@ -497,7 +497,7 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 
 種類 (原因を先に、それで壊れた物を後に): `node_removed`・`node_unread`・`iface_down`・`ospf_if_left`・`ospf_if_value`・
 `bgp_peer_removed`・`ospf_adjacency_lost`・`bgp_session_down`・`best_path_changed`・`route_removed`・`route_changed`・
-`ospf_adjacency_state`、その後に戻った物・足された物。containerlab の管理の網で解くようになった経路 (`via_mgmt: true`) は
+`ospf_adjacency_state`、その後に戻った物・足された物 (増えた interface は `iface_added`・もともと down で消えた物は `iface_removed`)。containerlab の管理の網で解くようになった経路 (`via_mgmt: true`) は
 最良経路の変化のすぐ前に来ます (ラボのトポロジの中では、その次の段に届かないので)。経路には、分かる時は `originated_by` (その prefix を直結で持つルータ・loopback があればそれ) が付きます (分からない時はキーごと無し)。uptime・
 カウンタ・管理の網は比べません。片方に無い欄 (そちらでは集めていない) も比べず、`not_compared` (`node`・`field`・`missing_in`: before / after) に並べます
 (比べなかった物がある時だけのキー)。BGP の相手はアドレスと VRF で見分けます。同じ変化は `node scripts/xray-query.js diff <before> <after> [router]` でも
