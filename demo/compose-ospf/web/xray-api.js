@@ -563,9 +563,36 @@
     for (i = 0; i < _i18nKeys.length; i++) { k = _i18nKeys[i]; if (s.indexOf(k) >= 0) s = s.split(k).join(d[k]); }
     return s;
   }
+  /* nx_ja_headings (v1.4.2): the engine writes its panel headings in English in both languages (the Japanese product
+     keeps them so). On the 日本語 toggle these pages show them in Japanese: only a text node that is exactly one of
+     these (protocol words - OSPF, LSDB, Full, Established - stay English; router output is never a whole match). The
+     English is kept on the node and put back on the English toggle. */
+  var _JA_HEADINGS = [
+    { en: 'Router — Internal View', ja: 'ルータの中' }, { en: 'Routing Engine', ja: 'ルーティング エンジン' },
+    { en: 'Routing table', ja: '経路表' }, { en: 'BGP Table', ja: 'BGP の表' }, { en: 'Best-Path Decision', ja: '最良経路の決め方' },
+    { en: 'No routes', ja: '経路なし' }, { en: 'Skin preset', ja: 'スキン' }
+  ];
+  function _jaHeading(t) {
+    var k = String(t == null ? '' : t).trim(), i;
+    for (i = 0; i < _JA_HEADINGS.length; i++) if (_JA_HEADINGS[i].en === k) return String(t).replace(k, _JA_HEADINGS[i].ja);
+    return null;
+  }
+  function _textNodes(root) {
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), out = [], n;
+    while ((n = w.nextNode())) out.push(n);
+    return out;
+  }
+  function _localizeHeadings(root, ja) {
+    var nodes = _textNodes(root), i, j;
+    for (i = 0; i < nodes.length; i++) {
+      if (ja) { j = _jaHeading(nodes[i].nodeValue); if (j != null) { nodes[i].__nxEn = nodes[i].nodeValue; nodes[i].nodeValue = j; } }
+      else if (nodes[i].__nxEn != null) { nodes[i].nodeValue = nodes[i].__nxEn; nodes[i].__nxEn = null; }
+    }
+  }
   function _localize(root) {
     var d = window.xrayI18n;
     if (!d) return;
+    if (root !== null && (root || document.body) && (root || document.body).querySelectorAll) _localizeHeadings(root || document.body, _bgpLang() === 'ja');
     if (_bgpLang() === 'ja') return;   // nx_i18n_follow_page: the 日本語 toggle keeps the engine's own Japanese
     if (!_i18nKeys) _i18nKeys = Object.keys(d).sort(function (a, b) { return b.length - a.length; });
     root = root || document.body;
@@ -592,6 +619,8 @@
       _i18nObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
     });
     _i18nObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+    // the language toggle only sets <html lang>: follow it (nx_ja_headings)
+    try { new MutationObserver(function () { _localize(document.body); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] }); } catch (e) {}
   }
 
   // Drive the unified radial DeepDive overlay for radial-capable configs. A config is

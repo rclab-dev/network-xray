@@ -23,6 +23,14 @@ window.xrayI18n = {
   "DENY (ブロック中)": "DENY (blocking)",
 
   // --- DeepDive panel headings ---
+  // the Japanese that xray-api.js shows for the engine's English headings on the 日本語 toggle (nx_ja_headings)
+  "ルータの中": "Router — Internal View",
+  "ルーティング エンジン": "Routing Engine",
+  "経路表": "Routing table",
+  "BGP の表": "BGP Table",
+  "最良経路の決め方": "Best-Path Decision",
+  "経路なし": "No routes",
+  "スキン": "Skin preset",
   "閉じる": "Close",
   "&#10005; 閉じる": "&#10005; Close",
   "解説": "Explanation",
