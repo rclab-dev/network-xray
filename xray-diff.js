@@ -33,6 +33,7 @@
   function str(x) { return x == null ? '' : String(x).trim(); }
   function isFull(s) { return /^full/i.test(str(s)); }
   function isEst(s) { return /^established$/i.test(str(s)); }
+  function isDown(x) { return x.up === false || /^(false|down|0)$/i.test(str(x.up)); }   // a state written by hand may say "false"
 
   function ip4(s) { var m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)/.exec(str(s)); return m ? ((+m[1] << 24) >>> 0) + (+m[2] << 16) + (+m[3] << 8) + +m[4] : null; }
   function inNet(addr, net) {
@@ -69,7 +70,9 @@
         var ip = str(h.ip != null ? h.ip : h.next_hop), ifc = str(h.iface != null ? h.iface : h.out_iface);
         return ip ? ip + (ifc ? ' on ' + ifc : '') : (ifc ? 'on ' + ifc : 'directly connected');
       });
-      if (rv && rv.ip) hops = hops.map(function (h) { return h + ' (resolved via ' + str(rv.ip) + (rv.iface ? ' on ' + str(rv.iface) : '') + (mgmt ? ', management network' : '') + ')'; });
+      if (rv && (rv.ip || rv.iface || mgmt)) hops = hops.map(function (h) {   // a resolution with only an interface is compared too
+        return h + ' (resolved ' + (str(rv.ip) ? 'via ' + str(rv.ip) + (rv.iface ? ' on ' + str(rv.iface) : '') : (rv.iface ? 'on ' + str(rv.iface) : 'through')) + (mgmt ? (str(rv.ip) || rv.iface ? ', ' : ' the ') + 'management network' : '') + ')';
+      });
       var k = routeKey(r), e = (out[k] = out[k] || { protocol: str(r.protocol), hops: [], via_mgmt: false });
       e.hops = e.hops.concat(hops); if (mgmt) e.via_mgmt = true;
     });
@@ -123,13 +126,13 @@
       if (both('interfaces')) Object.keys(ib).concat(Object.keys(ia)).filter(function (i, k, l) { return l.indexOf(i) === k && !mgB[i] && !mgA[i]; }).sort().forEach(function (i) {
         var b = obj(ib[i]), a = obj(ia[i]);
         if (ib[i] && ia[i]) {
-          if (b.up !== false && a.up === false) add('iface_down', n, i, 'up', 'down');
-          else if (b.up === false && a.up !== false) add('iface_up', n, i, 'down', 'up');
+          if (!isDown(b) && isDown(a)) add('iface_down', n, i, 'up', 'down');
+          else if (isDown(b) && !isDown(a)) add('iface_up', n, i, 'down', 'up');
           if (str(b.ip) !== str(a.ip)) add('iface_address', n, i, str(b.ip) || null, str(a.ip) || null);
         } else if (ib[i]) {   // gone: a cause only if it was up; one that was already down is listed after what broke
-          if (b.up === false) add('iface_removed', n, i, 'down', 'absent');
+          if (isDown(b)) add('iface_removed', n, i, 'down', 'absent');
           else add('iface_down', n, i, 'up', 'absent');
-        } else add('iface_added', n, i, 'absent', a.up === false ? 'down' : 'up');
+        } else add('iface_added', n, i, 'absent', isDown(a) ? 'down' : 'up');
       });
 
       // OSPF adjacencies

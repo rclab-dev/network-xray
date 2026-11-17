@@ -5,6 +5,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 ## Unreleased
 
 - **state_diff / `xray-query.js diff`:** an interface that is new is reported (`iface_added`), and one removed while it was already down is `iface_removed` (it was shown as `up → absent`). This was the known issue of v1.4.1.
+- **state_diff:** a recursive route whose resolution moved to another interface (no address given) is reported; an interface written by hand as `"up": "false"` counts as down. The docs say the order is by kind, not a traced cause.
 
 ## v1.4.1 — 2026-11-15
 

@@ -176,3 +176,15 @@ test('an interface added or removed: new is reported, a removed one that was dow
   assert.deepStrictEqual(t, ['eth2: interface gone (was down)', 'eth3: interface new — up']);
   xd.clearBaseline();
 });
+
+test('a resolution with only an interface, or only the management mark, is compared; "false" written by hand is down', function () {
+  function rt(rv) { return { r1: { routing_table: [{ prefix: '9.9.9.9/32', protocol: 'bgp', next_hop: '10.0.12.1', out_iface: 'eth1', resolved_via: rv }] } }; }
+  var d = xd.diffStates(rt({ ip: '', iface: 'eth1' }), rt({ ip: '', iface: 'eth2' }));
+  assert.deepStrictEqual(d.changes.map(function (c) { return c.kind + ' ' + c.after; }), ['route_changed bgp 10.0.12.1 on eth1 (resolved on eth2)']);
+  d = xd.diffStates(rt({ ip: '', iface: '' }), rt({ ip: '', iface: '', via_mgmt: true }));
+  assert.strictEqual(d.changes.length, 1); assert.strictEqual(d.changes[0].via_mgmt, true);
+  d = xd.diffStates({ r1: { interfaces: { eth1: { up: true } } } }, { r1: { interfaces: { eth1: { up: 'false' } } } });
+  assert.deepStrictEqual(d.changes.map(function (c) { return c.kind; }), ['iface_down']);
+  d = xd.diffStates({ r1: { interfaces: { eth1: { up: 'false' } } } }, { r1: { interfaces: { eth1: { up: false } } } });
+  assert.strictEqual(d.none, true);
+});
