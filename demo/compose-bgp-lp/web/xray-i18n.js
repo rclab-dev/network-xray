@@ -26,6 +26,7 @@ window.xrayI18n = {
   // the Japanese that xray-api.js shows for the engine's English headings on the 日本語 toggle (nx_ja_headings)
   "ルータの中": "Router — Internal View",
   "ルーティング エンジン": "Routing Engine",
+  "[ルーティング エンジン]": "[Routing Engine]",
   "経路表": "Routing table",
   "BGP の表": "BGP Table",
   "最良経路の決め方": "Best-Path Decision",

@@ -568,7 +568,7 @@
      these (protocol words - OSPF, LSDB, Full, Established - stay English; router output is never a whole match). The
      English is kept on the node and put back on the English toggle. */
   var _JA_HEADINGS = [
-    { en: 'Router — Internal View', ja: 'ルータの中' }, { en: 'Routing Engine', ja: 'ルーティング エンジン' },
+    { en: 'Router — Internal View', ja: 'ルータの中' }, { en: 'Routing Engine', ja: 'ルーティング エンジン' }, { en: '[Routing Engine]', ja: '[ルーティング エンジン]' },
     { en: 'Routing table', ja: '経路表' }, { en: 'BGP Table', ja: 'BGP の表' }, { en: 'Best-Path Decision', ja: '最良経路の決め方' },
     { en: 'No routes', ja: '経路なし' }, { en: 'Skin preset', ja: 'スキン' }
   ];

@@ -27,6 +27,7 @@ test('a whole heading is Japanese; a protocol word or a line of router output is
   assert.strictEqual(c._jaHeading('Routing table'), '経路表');
   assert.strictEqual(c._jaHeading(' Best-Path Decision '), ' 最良経路の決め方 ');
   assert.strictEqual(c._jaHeading('Router — Internal View'), 'ルータの中');
+  assert.strictEqual(c._jaHeading('[Routing Engine]'), '[ルーティング エンジン]');
   ['LSDB', 'OSPF', 'Full', 'Established', 'Routing table for VRF default', 'show ip route'].forEach(function (t) {
     assert.strictEqual(c._jaHeading(t), null, t);
   });
