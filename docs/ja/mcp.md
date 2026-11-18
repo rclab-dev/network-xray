@@ -166,7 +166,7 @@ Cursor は MCP のサーバをプロジェクトの `.cursor/mcp.json` (全プ�
 ```
 
 あとはチャットで [聞く](#聞く) のとおりに、`xray-states.js` の絶対パスを付けて聞きます。Windows では
-`C:\...\scripts\xray-mcp.js` のパスを書きます (JSON では  を 2 つ重ねる)。Cursor では私たちはまだ試していません。
+`C:\...\scripts\xray-mcp.js` のパスを書きます (JSON ではバックスラッシュを 2 つ重ねる)。Cursor では私たちはまだ試していません。
 サーバはただの stdio のサーバで、どのクライアントでも同じです。
 
 ### そのほかの MCP クライアント (JSON の設定)

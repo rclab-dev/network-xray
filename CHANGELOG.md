@@ -11,6 +11,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **DeepDive:** an LSDB row from the route to the target showed escaped characters (`&quot;`) for a prefix with quotes; a ping mode the page does not know, with a space in it, or a node name with a quote or a space, no longer stops the drawing.
 - **bgp-paste:** the DeepDive's BGP Table shows the pasted routes (it said "No routes received (BGP session is up)" next to them).
 - **FAQ:** the paste pages work with no network, opened from the repo zip on disk.
+- **Docs:** README and llms.txt say how to give the MCP server a default state (`--path` / `NX_MCP_PATH`); `host` nodes are drawn, not read (with `bridge` / `ovs-bridge`); DATA-CONTRACT: `resolved_via` came in v1.3.1.
 - **netlab:** the band shows netlab's own validate results when the lab folder has `network_xray/validate.json` (written by netlab's network_xray tool with `validate: True`, from netlab's next release), in netlab's words; results older than two of the plugin's runs (`interval`, else a minute) are kept and dimmed. Without the file, the band checks the tests itself as before.
 - **README:** the Caution box is two bullets (why the socket / no socket needed); the Codespaces quota in hours (about 30 a month); a memory-limit example (`--memory 300m`); how to check what a change (an Ansible playbook) did with `diff`.
 

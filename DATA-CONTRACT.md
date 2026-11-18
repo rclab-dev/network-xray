@@ -252,7 +252,7 @@ adapter が渡せばエンジンは読みますが、これらの collector で�
 | `out_iface` | string | Outgoing interface (`""` when the router does not name one, e.g. a recursive next hop). 出口 IF (再帰の次の段などで名前が無い時は `""`)。 |
 | `selected` | boolean | The router's selected route for the prefix (`>`). そのプレフィックスでルータが選んだ経路 (`>`)。 |
 | `nexthops` | array | Only with 2+ installed next hops (ECMP): `[{ip, iface}]`. 入っている次の段が 2 つ以上 (ECMP) の時だけ。 |
-| `resolved_via` | object | **Added in v1.3.2; absent when the next hop is not recursive or the source does not say.** For a recursive next hop (FRR `via X (recursive)`): `{ ip, iface }` of the next hop the router resolved it through (FRR's `*` line under it). `via_mgmt: true` when that next hop is on the containerlab management network (left out with `--exclude-mgmt`) = inside the lab topology the next hop is not reachable. **v1.3.2 で追加・次の段が再帰でない時や元のデータが言わない時は無い。** 再帰の次の段 (FRR の `via X (recursive)`) で、ルータがそれを解いた次の段の `{ ip, iface }` (FRR でその下の `*` の行)。その次の段が containerlab の管理網 (`--exclude-mgmt` で外れる) の上なら `via_mgmt: true` = ラボのトポロジの中では届いていない。 |
+| `resolved_via` | object | **Added in v1.3.1; absent when the next hop is not recursive or the source does not say.** For a recursive next hop (FRR `via X (recursive)`): `{ ip, iface }` of the next hop the router resolved it through (FRR's `*` line under it). `via_mgmt: true` when that next hop is on the containerlab management network (left out with `--exclude-mgmt`) = inside the lab topology the next hop is not reachable. **v1.3.2 で追加・次の段が再帰でない時や元のデータが言わない時は無い。** 再帰の次の段 (FRR の `via X (recursive)`) で、ルータがそれを解いた次の段の `{ ip, iface }` (FRR でその下の `*` の行)。その次の段が containerlab の管理網 (`--exclude-mgmt` で外れる) の上なら `via_mgmt: true` = ラボのトポロジの中では届いていない。 |
 
 ### 4.3 OSPF
 
