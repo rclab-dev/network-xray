@@ -10,6 +10,9 @@
  *   node scripts/xray-query.js diff  <before> <after> [node]   (what changed from a baseline you kept, heaviest first)
  *   node scripts/xray-query.js check run    <problem.json> <input>             (SolvedKit: is the lab solved now?)
  *   node scripts/xray-query.js check verify <problem.json> <broken> <solved>   (does the check tell them apart?)
+ *   node scripts/xray-query.js check suggest <broken> <solved> [--focus <node>] [--prefix <p>] [--max <n>]
+ *                                         (candidate conditions from what the fix changed, verified on both)
+ *   node scripts/xray-query.js check init <broken> <solved> [--out <problem.json>]   (a problem.json draft)
  *
  * <input> is one of:
  *   - a per-node state JSON (frr-collect.js / clab-collect.js --out, test/fixtures/<lab>/state_<node>.json)
@@ -27,6 +30,7 @@
  *
  * check run exits 0 when solved, 1 when not solved, 2 when it cannot judge (no check, a node it cannot read);
  * check verify exits 0 when the check fails on <broken> and holds on <solved>, 1 when not, 2 when it cannot judge.
+ * check suggest / init exit 0 with a verified check, 1 when no condition the check can use tells the two apart.
  * Errors (missing file, unknown node / prefix, unreadable input) -> {"error": "..."} and exit code 2
  * (with --format table: "error: ..." on stderr, exit code 2).
  * Nothing is sent anywhere; no router is contacted.
@@ -1064,15 +1068,32 @@ function loadProblem(input) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new QueryError('problem.json is not a JSON object');
   return obj;
 }
-function check(argv) {
+function check(argv, opts) {
   var kit = require('../solvedkit.js'), sub = argv[1];
   if (sub === 'run') { if (argv.length !== 4) throw new QueryError(USAGE); return kit.run(loadProblem(argv[2]), loadStates(argv[3])); }
   if (sub === 'verify') { if (argv.length !== 5) throw new QueryError(USAGE); return kit.verify(loadProblem(argv[2]), loadStates(argv[3]), loadStates(argv[4])); }
-  throw new QueryError(sub ? 'unknown check command: ' + sub + ' (run, verify)' : USAGE);
+  if (sub === 'suggest' || sub === 'init') {
+    if (argv.length !== 4) throw new QueryError(USAGE);
+    var o = opts || {}, so = { mgmtSubnet: o.mgmtSubnet || undefined };
+    if (o.mgmtSubnet != null && !/^\d{1,3}(\.\d{1,3}){3}\/\d{1,2}$/.test(String(o.mgmtSubnet))) throw new QueryError('the management subnet must be an IPv4 subnet like 192.168.121.0/24: ' + o.mgmtSubnet);
+    if (o.focus != null || o.prefix != null) so.focus = { node: o.focus || undefined, prefix: o.prefix || undefined };
+    if (o.max != null) { if (!/^[1-9]\d?$/.test(String(o.max))) throw new QueryError('--max must be a number from 1 to 99'); so.max = +o.max; }
+    var b = loadStates(argv[2]), a = loadStates(argv[3]);
+    if (so.focus && so.focus.node && !a[so.focus.node]) throw new QueryError('unknown node: ' + so.focus.node + ' (not in the solved state)');
+    if (sub === 'suggest') return kit.suggest(b, a, so);
+    var res = kit.init(b, a, so);
+    if (o.out && res.status === 'ok') {
+      if (fs.existsSync(o.out)) throw new QueryError('not written: ' + o.out + ' already exists (SolvedKit does not overwrite a problem.json)');
+      fs.writeFileSync(o.out, JSON.stringify(res.problem, null, 2) + '\n');
+      res.written = o.out;
+    }
+    return res;
+  }
+  throw new QueryError(sub ? 'unknown check command: ' + sub + ' (run, verify, suggest, init)' : USAGE);
 }
 // the exit code a script reads: 0 solved / ok, 1 not, 2 cannot judge
 function checkExit(res) {
-  return res.status === 'solved' || res.status === 'ok' ? 0 : res.status === 'not_solved' || res.status === 'not_ok' ? 1 : 2;
+  return res.status === 'solved' || res.status === 'ok' ? 0 : res.status === 'not_solved' || res.status === 'not_ok' || res.status === 'none' ? 1 : 2;
 }
 function condText(c) {
   if (!Array.isArray(c)) return JSON.stringify(c);
@@ -1081,6 +1102,17 @@ function condText(c) {
 function mark(v) { return v === true ? 'yes' : v === false ? 'no' : '?'; }
 function checkTable(argv, res, color) {
   var out = [];
+  if (argv[1] === 'suggest' || argv[1] === 'init') {
+    var sg = argv[1] === 'init' ? res.suggest : res;
+    out.push(title((argv[1] === 'init' ? 'problem.json draft: ' : 'Suggested check: ') + (res.status === 'ok' ? 'ok (fails on broken, holds on solved)' : 'none'), color));
+    if (res.reason) out.push(textLine('  ' + res.reason));
+    if (sg.candidates.length) out = out.concat(renderTable([{ head: 'USE', key: 'use' }, { head: 'KIND', key: 'kind' }, { head: 'TELLS', key: 't' }, { head: 'CONDITION', key: 'cond' }],
+      sg.candidates.map(function (c) { return { use: c.in_check ? '*' : '', kind: c.kind, t: c.tells ? 'yes' : 'no', cond: condText(c.cond) + (c.binds_method ? ' (names how)' : '') }; }), color, '  '));
+    if (sg.skipped.length) out.push('', textLine('not used: ' + sg.skipped.length + ' change(s) - see --format json (skipped)'));
+    if (argv[1] === 'init' && res.status === 'ok') out.push('', textLine(res.written ? 'written: ' + res.written : 'use --out <problem.json> to write it, or --format json'), textLine('to write by hand: ' + res.todo.join('; ')));
+    out.push('', textLine('* = in the proposed check; TELLS = fails on broken, holds on solved'));
+    return out.join('\n') + '\n';
+  }
   if (argv[1] === 'run') {
     out.push(title('Solved: ' + res.status.replace('_', ' '), color));
     if (res.reason) out.push(textLine('  ' + res.reason));
@@ -1098,6 +1130,7 @@ function checkTable(argv, res, color) {
 
 var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf] | ospf-if <state.json|dir> [node]' +
   ' | diff <before> <after> [node] [--mgmt-subnet <cidr>] | check run <problem.json> <input> | check verify <problem.json> <broken> <solved>' +
+  ' | check suggest <broken> <solved> [--focus <node>] [--prefix <p>] [--max <n>] | check init <broken> <solved> [--out <file>]' +
   ' [--format json|table] [--color]';
 
 // pull --format / --color out of argv; the rest are the positional arguments
@@ -1111,6 +1144,7 @@ function parseOptions(argv) {
       o.format = v;
     } else if (a === '--color') o.color = true;
     else if ((m = /^--mgmt-subnet(?:=(.*))?$/.exec(a))) o.mgmtSubnet = m[1] != null ? m[1] : (argv[++i] || '');
+    else if ((m = /^--(focus|prefix|max|out)(?:=(.*))?$/.exec(a))) o[m[1]] = m[2] != null ? m[2] : (argv[++i] || '');
     else o.args.push(a);
   }
   return o;
@@ -1118,11 +1152,14 @@ function parseOptions(argv) {
 
 function run(argv, o) {
   var cmd = argv[0], mg = o && o.mgmtSubnet != null ? o.mgmtSubnet : null;
-  if (mg != null && cmd !== 'diff') throw new QueryError('--mgmt-subnet is for diff only');
+  var sgi = cmd === 'check' && (argv[1] === 'suggest' || argv[1] === 'init');
+  if (mg != null && cmd !== 'diff' && !sgi) throw new QueryError('--mgmt-subnet is for diff only (and check suggest / init)');
+  if (o && (o.focus != null || o.prefix != null || o.max != null) && !sgi) throw new QueryError('--focus / --prefix / --max are for check suggest / init only');
+  if (o && o.out != null && !(cmd === 'check' && argv[1] === 'init')) throw new QueryError('--out is for check init only');
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
   if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
   if (cmd === 'diff') { if (argv.length < 3 || argv.length > 4) throw new QueryError(USAGE); return diff(loadStates(argv[1]), loadStates(argv[2]), argv[3], mg); }
-  if (cmd === 'check') return check(argv);
+  if (cmd === 'check') return check(argv, o);
   if (cmd === 'ospf-if') { if (argv.length < 2 || argv.length > 3) throw new QueryError(USAGE); return ospfInterfaces(loadStates(argv[1]), argv[2]); }
   throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
 }
@@ -1145,6 +1182,9 @@ if (require.main === module) {
       '  diff <before> <after> [node]        what changed from a state you kept (the baseline) to now, heaviest first\n' +
       '  check run <problem.json> <path>     SolvedKit: is the lab solved now (exit 0 solved, 1 not, 2 cannot judge)\n' +
       '  check verify <problem.json> <broken> <solved>  does the check fail on broken and hold on solved (exit 0 / 1 / 2)\n' +
+      '  check suggest <broken> <solved>     candidate conditions from what the fix changed, verified on both (exit 0, 1 none)\n' +
+      '  check init <broken> <solved>        a problem.json draft with that check (--out <file>: write it; never overwrites)\n' +
+      '  --focus <node> --prefix <p> --max <n>  check suggest / init: the router and destination to start from, how many conditions (3)\n' +
       '  --mgmt-subnet <cidr>  diff: the lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)\n' +
       '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR / Genie captures\n' +
       '  --format json|table  default: json\n' +
@@ -1153,8 +1193,8 @@ if (require.main === module) {
     process.exit(0);
   }
   for (var _i = 0; _i < _cli.length; _i++) {
-    if (_cli[_i] === '--format' || _cli[_i] === '--mgmt-subnet') _i++;
-    else if (_cli[_i] !== '--color' && !/^--(format|mgmt-subnet)=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
+    if (['--format', '--mgmt-subnet', '--focus', '--prefix', '--max', '--out'].indexOf(_cli[_i]) >= 0) _i++;
+    else if (_cli[_i] !== '--color' && !/^--(format|mgmt-subnet|focus|prefix|max|out)=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
       console.error('xray-query.js: unknown option: ' + _cli[_i] + "\nTry 'node scripts/xray-query.js --help'.");
       process.exit(2);
     }

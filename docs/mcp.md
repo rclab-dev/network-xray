@@ -247,6 +247,8 @@ If the assistant does not know which lab you mean, give the path again.
 | `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | what changed from a baseline state to now, heaviest first (`none` when nothing changed) |
 | `check_run` | `problem`, `path` | SolvedKit: is the lab solved in this state, by the problem.json `check` (`solved` / `not_solved` / `cannot_judge`, one result per condition) |
 | `check_verify` | `problem`, `broken`, `solved` | SolvedKit: does the `check` fail on the broken state and hold on the solved one (a verdict per condition: `tells` / `both` / `wrong` / `unknown`) |
+| `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: candidate conditions from what the fix changed, and a proposed `check` verified on both states (`status` `ok`, or `none` with `reason`) |
+| `check_init` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: a problem.json draft (`problem`) with that check and empty text fields; writes no file |
 
 `why_best_path` gives only the reason stored in the data (`null` with a note when there is none). `why_path` also lists
 the other candidates, and when the router gave no reason it compares their attributes itself (`reason_source`).
@@ -513,6 +515,12 @@ when the check fails on the broken one and holds on the solved one; `conditions`
 
 `status` is `ok`; the first condition (the route via AS 65002 is best) is `tells` and the second (the route via
 AS 65003 is still there as the backup) is `both`.
+
+`check_suggest` takes the two states only and proposes the check from what changed
+([how](problem-format.md#let-it-suggest-the-check)); for the same two q21 frames it proposes these two conditions.
+Each entry in `candidates` has `kind` (path / evidence / backup / gone), `tells`, `in_check`, and `binds_method`
+with a `note` when it names how a route is learned. `check_init` returns the same check inside a problem.json
+draft; the client saves it.
 
 ### state_diff
 

@@ -193,3 +193,125 @@ test('real states: the recorded q21 demo frames (before / after the Local Prefer
   assert.deepStrictEqual(v.conditions.map(c => c.verdict), ['tells', 'both']);   // the slow path stays as the backup
   assert.strictEqual(kit.verify(p, b, a).status, 'not_ok');                         // swapped: it would never be solved
 });
+
+// ---- suggest / init ----------------------------------------------------------------------------------------------
+test('suggest: the route the fix brought (where the traffic goes) and the adjacency on the same router; verified', () => {
+  const r = kit.suggest(BROKEN, SOLVED);
+  assert.strictEqual(r.status, 'ok');
+  assert.deepStrictEqual(r.check.all, [
+    ['r1', 'routing_table', 'some', [['prefix', 'eq', '2.2.2.2/32'], ['selected', 'eq', true], ['out_iface', 'eq', 'eth1']]],
+    ['r1', 'ospf_neighbors', 'some', [['router_id', 'eq', '2.2.2.2'], ['full', 'eq', true]]]
+  ]);
+  assert.strictEqual(r.verify.status, 'ok');
+  assert.deepStrictEqual(r.focus, { node: 'r1', prefix: '2.2.2.2/32' });
+  // r2's route and adjacency are candidates too, not in the check
+  assert.ok(r.candidates.some(c => c.cond[0] === 'r2' && c.kind === 'path' && !c.in_check));
+  assert.ok(r.candidates.every(c => c.holds_solved));
+});
+
+test('suggest: --focus picks the router; --max limits the check', () => {
+  let r = kit.suggest(BROKEN, SOLVED, { focus: { node: 'r2' } });
+  assert.deepStrictEqual(r.check.all.map(c => c[0]), ['r2', 'r2']);
+  r = kit.suggest(BROKEN, SOLVED, { max: 1 });
+  assert.strictEqual(r.check.all.length, 1); assert.strictEqual(r.check.all[0][1], 'routing_table');
+});
+
+test('suggest: a protocol change is named and marked binds_method; a wrong next hop on the same interface adds next_hop', () => {
+  const st = (proto, nh) => ({ r1: { target_node: 'r1', interfaces: { eth1: { up: true } }, routing_table: [{ prefix: '3.3.3.3/32', protocol: proto, out_iface: 'eth1', next_hop: nh, selected: true }] } });
+  let r = kit.suggest(st('static', '10.0.12.2'), st('ospf', '10.0.12.2'));
+  const c = r.candidates[0];
+  assert.deepStrictEqual(c.cond[3], [['prefix', 'eq', '3.3.3.3/32'], ['selected', 'eq', true], ['out_iface', 'eq', 'eth1'], ['next_hop', 'eq', '10.0.12.2'], ['protocol', 'eq', 'ospf']]);
+  assert.strictEqual(c.binds_method, true); assert.match(c.note, /static -> ospf/);
+  r = kit.suggest(st('static', '10.0.12.99'), st('static', '10.0.12.2'));   // the next hop inside the connected subnet
+  assert.deepStrictEqual(r.check.all[0][3], [['prefix', 'eq', '3.3.3.3/32'], ['selected', 'eq', true], ['out_iface', 'eq', 'eth1'], ['next_hop', 'eq', '10.0.12.2']]);
+  assert.ok(!r.candidates[0].binds_method);
+});
+
+test('suggest: nothing changed, or nothing the check can use -> none with the reason (never a wrong check)', () => {
+  let r = kit.suggest(SOLVED, SOLVED);
+  assert.strictEqual(r.status, 'none'); assert.strictEqual(r.check, null); assert.match(r.reason, /no difference/);
+  // only an OSPF timer changed (a configured value): not a condition
+  const t = (h) => ({ r1: { target_node: 'r1', ospf_ifaces: { eth1: { hello: h, dead: h * 4 } } } });
+  r = kit.suggest(t(10), t(5));
+  assert.strictEqual(r.status, 'none'); assert.match(r.reason, /no condition the check can use/);
+  assert.ok(r.skipped.some(x => /configured value/.test(x.why)));
+  // the solved lab cannot be read: said so
+  r = kit.suggest(BROKEN, { r1: { target_node: 'r1', nx_unread: 'IS-IS is not read' }, r2: BROKEN.r2 });
+  assert.strictEqual(r.status, 'none'); assert.deepStrictEqual(r.unread, ['r1: not readable (IS-IS is not read)']);
+});
+
+test('suggest: a route that only disappeared is a "gone" candidate, used only when nothing else tells', () => {
+  const extra = route('9.9.9.9/32', { protocol: 'static' });
+  const b = JSON.parse(JSON.stringify(BROKEN)); b.r1.routing_table.push(extra);
+  let r = kit.suggest(b, SOLVED);
+  assert.ok(r.candidates.some(c => c.kind === 'gone' && !c.in_check));
+  r = kit.suggest(b, JSON.parse(JSON.stringify(BROKEN)));
+  assert.strictEqual(r.status, 'ok');
+  assert.deepStrictEqual(r.check.all, [['r1', 'routing_table', 'none', [['prefix', 'eq', '9.9.9.9/32'], ['selected', 'eq', true]]]]);
+});
+
+test('real states: q21 demo frames -> the same two conditions as the hand-written official check (best via 65002, 65003 kept)', () => {
+  const q = require(QUERY), root = path.join(__dirname, '..');
+  const a = q.loadStates(path.join(root, 'demo', 'bgp-lp', 'frameA.json')), b = q.loadStates(path.join(root, 'demo', 'bgp-lp', 'frameB.json'));
+  const r = kit.suggest(a, b, { focus: { node: 'r1' } });
+  assert.strictEqual(r.status, 'ok');
+  const hand = q.loadProblem(path.join(root, 'examples', 'q21-bgp-lp')).check.all;
+  const key = (c) => c[0] + ' ' + c[1] + ' ' + JSON.stringify(c[3].filter(x => x[0] !== 'prefixlen'));
+  assert.deepStrictEqual(r.check.all.map(key), hand.map(key));
+});
+
+test('real states: the OSPF demo frames C -> D (r1-r2 back up) -> the route and the adjacency on r1', () => {
+  const q = require(QUERY), root = path.join(__dirname, '..');
+  const r = kit.suggest(q.loadStates(path.join(root, 'demo', 'frameC.json')), q.loadStates(path.join(root, 'demo', 'frameD.json')));
+  assert.strictEqual(r.status, 'ok');
+  assert.deepStrictEqual(r.check.all.map(c => c[0] + ' ' + c[1]), ['r1 routing_table', 'r1 ospf_neighbors']);
+});
+
+test('init: a draft with empty text fields, focus and the verified check; none passes the reason on', () => {
+  const r = kit.init(BROKEN, SOLVED, { id: 'me/lab-1' });
+  assert.strictEqual(r.status, 'ok');
+  assert.deepStrictEqual(Object.keys(r.problem), ['format', 'id', 'title_en', 'title_ja', 'problem_en', 'problem_ja', 'focus', 'check', 'check_note_en', 'check_note_ja']);
+  assert.strictEqual(r.problem.id, 'me/lab-1');
+  assert.deepStrictEqual(r.problem.focus, { node: 'r1', prefix: '2.2.2.2/32' });
+  assert.strictEqual(kit.verify(r.problem, BROKEN, SOLVED).status, 'ok');
+  assert.strictEqual(kit.run(r.problem, SOLVED).status, 'solved');
+  assert.ok(r.todo.some(t => /title_en/.test(t)));
+  assert.deepStrictEqual(kit.init(BROKEN, SOLVED, { focus: { node: 'r2' } }).problem.focus, { node: 'r2' });
+  const n = kit.init(SOLVED, SOLVED);
+  assert.strictEqual(n.status, 'none'); assert.match(n.reason, /no difference/);
+});
+
+test('cli: check suggest exits 0 / 1; check init --out writes a new file and never overwrites', (t) => {
+  const L = tmpLab(t);
+  let r = q(['check', 'suggest', L.broken, L.solved]);
+  assert.strictEqual(r.code, 0); assert.strictEqual(JSON.parse(r.out).status, 'ok');
+  r = q(['check', 'suggest', L.solved, L.solved, '--format', 'table']);
+  assert.strictEqual(r.code, 1); assert.match(r.out, /^Suggested check: none/);
+  const out = path.join(L.dir, 'new', 'problem.json'); fs.mkdirSync(path.dirname(out));
+  r = q(['check', 'init', L.broken, L.solved, '--out', out]);
+  assert.strictEqual(r.code, 0); assert.strictEqual(JSON.parse(r.out).written, out);
+  assert.strictEqual(kit.run(JSON.parse(fs.readFileSync(out, 'utf8')), SOLVED).status, 'solved');
+  r = q(['check', 'init', L.broken, L.solved, '--out', out]);
+  assert.strictEqual(r.code, 2); assert.match(JSON.parse(r.out).error, /already exists/);
+  for (const bad of [['--focus', 'r9'], ['--max', '0'], ['--mgmt-subnet', 'x']]) {
+    r = q(['check', 'suggest', L.broken, L.solved].concat(bad));
+    assert.strictEqual(r.code, 2, bad.join(' '));
+  }
+  r = q(['check', 'run', L.problem, L.solved, '--focus', 'r1']);
+  assert.strictEqual(r.code, 2); assert.match(JSON.parse(r.out).error, /for check suggest/);
+});
+
+test('mcp: check_suggest and check_init (no file is written)', (t) => {
+  const L = tmpLab(t);
+  const mcp = require(path.join(__dirname, '..', 'scripts', 'xray-mcp.js'));
+  const call = (name, args) => mcp.handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }).result;
+  let r = call('check_suggest', { broken: L.broken, solved: L.solved, focus: 'r2' });
+  assert.strictEqual(r.structuredContent.status, 'ok');
+  assert.deepStrictEqual(r.structuredContent.check.all.map(c => c[0]), ['r2', 'r2']);
+  const before = fs.readdirSync(L.dir).sort();
+  r = call('check_init', { broken: L.broken, solved: L.solved });
+  assert.strictEqual(r.structuredContent.problem.format, 'network-xray-lab/0');
+  assert.deepStrictEqual(fs.readdirSync(L.dir).sort(), before);
+  r = call('check_suggest', { broken: L.broken, solved: L.solved, focus: 'r9' });
+  assert.strictEqual(r.isError, true); assert.match(r.content[0].text, /unknown node: r9/);
+});

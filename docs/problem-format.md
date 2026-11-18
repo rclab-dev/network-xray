@@ -111,9 +111,44 @@ Check: ok (broken: not solved, solved: solved)
   yes     yes     both     r1 bgp_routes some [["prefix","eq","8.8.8.0"],["as_path","eq","65003"]]
 ```
 
-The MCP tools `check_run` and `check_verify` give the same answers ([docs/mcp.md](mcp.md)). One solved state cannot
-show every correct fix: `verify` says the check tells these two states apart, not that it accepts every other way to
-solve the problem — keep the check on what the network does (above).
+### Let it suggest the check
+
+Keep a state of the lab broken and one after you fixed it, and SolvedKit proposes the `check` from what the fix
+changed (the same changes as `xray-query.js diff`):
+
+```
+node scripts/xray-query.js check suggest demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json --focus r1 --format table
+node scripts/xray-query.js check init    demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json --out mylab/problem.json
+```
+
+```
+Suggested check: ok (fails on broken, holds on solved)
+  USE  KIND    TELLS  CONDITION
+  *    path    yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["best",~
+  -    path    yes    r1 routing_table some [["prefix","eq","8.8.8.0/24"],["selected","eq",true],[~
+  *    backup  no     r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["as_pat~
+```
+
+- **`check suggest <broken> <solved>`** writes each change it can use as a condition, from the solved state, the way
+  this page asks: **path** (a route now selected through its interface, or a BGP best path), **evidence** (an OSPF
+  adjacency Full, a BGP session Established, an interface up), **backup** (the old best path still there, so that
+  deleting it does not count) and **gone** (a route that disappeared — used only when nothing else tells the two
+  apart). Every candidate is judged on both states; the proposed `check` (`*`) is the first path, the evidence on
+  the same router and the backup of a BGP best path, and it is verified to fail on broken and hold on solved.
+  Exit code 0, or 1 when no condition it can use tells the two states apart (`reason` and `skipped` say why).
+  `--focus <node>` / `--prefix <p>` start from a router and a destination; `--max <n>` caps the check (default 3).
+- **`check init <broken> <solved>`** makes a problem.json draft with that check, `focus`, and empty `title_*`,
+  `problem_*` and `id` for you to write. `--out <file>` writes it; an existing file is never overwritten.
+- It does not guess other ways to solve the problem. A condition that names how a route is learned (`protocol`, when
+  the fix changed it) is marked `binds_method`: keep it only if the problem asks for that (official example q11 does).
+  A configured value (an OSPF timer, an area) is not a condition; the adjacency it brings is.
+- Changes the state does not show (a ping result, a router ID, a maximum-prefix value, a fail-over that needs a link to
+  go down) cannot be suggested; nor can a router the collector cannot read.
+
+The MCP tools `check_run`, `check_verify`, `check_suggest` and `check_init` give the same answers
+([docs/mcp.md](mcp.md)). One solved state cannot show every correct fix: `verify` and `suggest` say the check tells
+these two states apart, not that it accepts every other way to solve the problem — keep the check on what the network
+does (above).
 
 ## Example (official example q21-bgp-lp)
 

@@ -253,6 +253,48 @@ var TOOLS = [
       additionalProperties: false
     },
     annotations: READ_ONLY
+  },
+  {
+    name: 'check_suggest',
+    description: 'SolvedKit: candidate problem.json check conditions from what the fix changed between a broken and a solved ' +
+      'state of the same lab (the state_diff changes the check can see: a route now selected through an interface, a BGP ' +
+      'best path, an OSPF adjacency Full, a BGP session Established, an interface up; the old best path kept as a backup). ' +
+      'Every candidate is judged on both states; check is the proposed check, verified to fail on broken and hold on solved ' +
+      '(status ok), or null with reason (status none). A condition marked binds_method names how a route is learned - keep ' +
+      'it only if the problem asks for that. skipped lists the changes it did not use and why. It cannot know other ways ' +
+      'to solve the problem. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        broken: { type: 'string', description: 'A state of the broken lab (same input as lab_state)' },
+        solved: { type: 'string', description: 'A state of the solved lab (same input as lab_state)' },
+        focus: { type: 'string', description: 'The router to start from (default: the one the fix changed most)' },
+        prefix: { type: 'string', description: 'The destination to start from, e.g. 8.8.8.0/24 (optional)' },
+        mgmt_subnet: { type: 'string', description: 'The lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)' }
+      },
+      required: ['broken', 'solved'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
+  },
+  {
+    name: 'check_init',
+    description: 'SolvedKit: a problem.json draft for a lab from a broken and a solved state: format, focus, and the check from ' +
+      'check_suggest; the title and problem text (English and Japanese) and the id are left empty for you to write (todo ' +
+      'lists them). Returns the draft as problem; it writes no file. status none (with reason) when no check can be proposed. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        broken: { type: 'string', description: 'A state of the broken lab (same input as lab_state)' },
+        solved: { type: 'string', description: 'A state of the solved lab (same input as lab_state)' },
+        focus: { type: 'string', description: 'The router to start from (default: the one the fix changed most)' },
+        prefix: { type: 'string', description: 'The destination to start from, e.g. 8.8.8.0/24 (optional)' },
+        mgmt_subnet: { type: 'string', description: 'The lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)' }
+      },
+      required: ['broken', 'solved'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
   }
 ];
 
@@ -404,7 +446,7 @@ function loadStates(p) {
 function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = args || {};
-  if (defaultPath && name !== 'state_diff' && name !== 'check_verify' && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
+  if (defaultPath && !/^(state_diff|check_verify|check_suggest|check_init)$/.test(name) && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
   if (name === 'lab_state') return query.summarize(loadStates(str(args, 'path', true)));
   if (name === 'why_best_path') {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);
@@ -428,6 +470,16 @@ function callTool(name, args) {
   if (name === 'check_verify') {
     var pr6 = loadProblem(str(args, 'problem', true));
     return require('../solvedkit.js').verify(pr6, loadStates(str(args, 'broken', true)), loadStates(str(args, 'solved', true)));
+  }
+  if (name === 'check_suggest' || name === 'check_init') {
+    var mg7 = str(args, 'mgmt_subnet', false);
+    if (mg7 != null && !/^\d{1,3}(\.\d{1,3}){3}\/\d{1,2}$/.test(mg7)) throw new Error('mgmt_subnet must be an IPv4 subnet like 192.168.121.0/24');
+    var o7 = { mgmtSubnet: mg7 || undefined }, fn7 = str(args, 'focus', false), fp7 = str(args, 'prefix', false);
+    if (fn7 || fp7) o7.focus = { node: fn7, prefix: fp7 };
+    var b7 = loadStates(str(args, 'broken', true)), s7 = loadStates(str(args, 'solved', true));
+    if (fn7 && !s7[fn7]) throw new Error('unknown node: ' + fn7 + ' (not in the solved state)');
+    var kit7 = require('../solvedkit.js');
+    return name === 'check_suggest' ? kit7.suggest(b7, s7, o7) : kit7.init(b7, s7, o7);
   }
   if (name === 'why_path') {
     var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);

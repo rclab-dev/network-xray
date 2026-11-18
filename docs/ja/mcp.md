@@ -240,6 +240,8 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | 基準の state から今までに変わった所 (重い順・何も変わっていなければ `none`) |
 | `check_run` | `problem`, `path` | SolvedKit: problem.json の `check` で、この state のラボが解けているか (`solved` / `not_solved` / `cannot_judge`・条件ごとの結果) |
 | `check_verify` | `problem`, `broken`, `solved` | SolvedKit: `check` が壊れた版で不合格・解いた版で合格になるか (条件ごとに `tells` / `both` / `wrong` / `unknown`) |
+| `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: 直して変わった所から条件の候補と、両方の state で確かめた `check` の案 (`status` `ok`・出せなければ `none` と `reason`) |
+| `check_init` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: その check を入れた problem.json の下書き (`problem`・文は空欄)。ファイルは書きません |
 
 `why_best_path` は、データに保存されているわけだけを返します (無ければ `null` と注記)。`why_path` はほかの候補も並べ、
 ルータがわけを出していない時は、属性を自分で比べます (`reason_source`)。
@@ -505,6 +507,12 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 
 `status` は `ok`。1 つ目の条件 (AS 65002 経由の経路が best) は `tells`、2 つ目 (AS 65003 経由の経路が予備として
 残っている) は `both` です。
+
+`check_suggest` は 2 つの state だけを受け取り、変わった所から check を出します
+([やり方](../problem-format.md#let-it-suggest-the-check))。同じ q21 の 2 枚では、上の 2 つの条件が出ます。
+`candidates` の 1 つずつに `kind` (path / evidence / backup / gone)・`tells`・`in_check` があり、経路の覚え方を
+名指しする条件には `binds_method` と `note` が付きます。`check_init` は同じ check を problem.json の下書きに入れて
+返します (保存はクライアント側)。
 
 ### state_diff
 

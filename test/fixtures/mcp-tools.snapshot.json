@@ -267,5 +267,73 @@
       ],
       "additionalProperties": false
     }
+  },
+  {
+    "name": "check_suggest",
+    "description": "SolvedKit: candidate problem.json check conditions from what the fix changed between a broken and a solved state of the same lab (the state_diff changes the check can see: a route now selected through an interface, a BGP best path, an OSPF adjacency Full, a BGP session Established, an interface up; the old best path kept as a backup). Every candidate is judged on both states; check is the proposed check, verified to fail on broken and hold on solved (status ok), or null with reason (status none). A condition marked binds_method names how a route is learned - keep it only if the problem asks for that. skipped lists the changes it did not use and why. It cannot know other ways to solve the problem. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "broken": {
+          "type": "string",
+          "description": "A state of the broken lab (same input as lab_state)"
+        },
+        "solved": {
+          "type": "string",
+          "description": "A state of the solved lab (same input as lab_state)"
+        },
+        "focus": {
+          "type": "string",
+          "description": "The router to start from (default: the one the fix changed most)"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "The destination to start from, e.g. 8.8.8.0/24 (optional)"
+        },
+        "mgmt_subnet": {
+          "type": "string",
+          "description": "The lab's management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)"
+        }
+      },
+      "required": [
+        "broken",
+        "solved"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "check_init",
+    "description": "SolvedKit: a problem.json draft for a lab from a broken and a solved state: format, focus, and the check from check_suggest; the title and problem text (English and Japanese) and the id are left empty for you to write (todo lists them). Returns the draft as problem; it writes no file. status none (with reason) when no check can be proposed. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "broken": {
+          "type": "string",
+          "description": "A state of the broken lab (same input as lab_state)"
+        },
+        "solved": {
+          "type": "string",
+          "description": "A state of the solved lab (same input as lab_state)"
+        },
+        "focus": {
+          "type": "string",
+          "description": "The router to start from (default: the one the fix changed most)"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "The destination to start from, e.g. 8.8.8.0/24 (optional)"
+        },
+        "mgmt_subnet": {
+          "type": "string",
+          "description": "The lab's management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)"
+        }
+      },
+      "required": [
+        "broken",
+        "solved"
+      ],
+      "additionalProperties": false
+    }
   }
 ]
