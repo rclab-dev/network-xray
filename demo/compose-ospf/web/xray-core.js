@@ -441,6 +441,13 @@ function _xrayApplyPingModeClasses(bcl, mode) {
   }
 }
 
+/* nx_sel_escape: an id put into a CSS selector (a node name from the user's data may hold a quote or a space) */
+function _xrayCssEsc(v) {
+  v = String(v == null ? "" : v);
+  if (typeof CSS !== "undefined" && CSS && typeof CSS.escape === "function") return CSS.escape(v);
+  return v.replace(/[^A-Za-z0-9_-]/g, function(c) { return "\\" + c.charCodeAt(0).toString(16) + " "; });
+}
+
 function xrayCurrentPingMode() {
   if (document.body.classList.contains("trace-active")) {
     var cfg = window._scenarioConfig || {};
@@ -823,7 +830,7 @@ function xrayApplyHierarchy(state) {
       var next = linkEl.nextElementSibling;
       if (!prev || !next) return;
       var hasTarget = function(el) {
-        return el.id === targetId || !!(el.querySelector && el.querySelector("#" + targetId));
+        return el.id === targetId || !!(el.querySelector && el.querySelector("#" + _xrayCssEsc(targetId)));   /* nx_sel_escape */
       };
       var isTargetPrev = hasTarget(prev);
       var isTargetNext = hasTarget(next);
@@ -5013,7 +5020,8 @@ function _xrayOvXY(id) {
   if (!id) return null;
 
   var _pid = String(id).replace("topo-node-", "");
-  var el = document.querySelector('.node[data-id="' + _pid + '"]') || document.querySelector('[data-id="' + _pid + '"]') || document.getElementById(String(id).indexOf("topo-node-") === 0 ? id : ("topo-node-" + id));
+  var _pidE = _xrayCssEsc(_pid);   /* nx_sel_escape */
+  var el = document.querySelector('.node[data-id="' + _pidE + '"]') || document.querySelector('[data-id="' + _pidE + '"]') || document.getElementById(String(id).indexOf("topo-node-") === 0 ? id : ("topo-node-" + id));
   if (!el) return null;
   var r = el.getBoundingClientRect();
   if (!r || (!r.width && !r.height)) return null;
