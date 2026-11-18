@@ -134,3 +134,15 @@ test('collector: no netlab file and no --validate -> no band, as before', { skip
   assert.doesNotMatch(fs.readFileSync(path.join(out, 'xray-states.js'), 'utf8'), /XRAY_VALIDATE/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('the plugin\'s interval (validate_interval, seconds) is passed on: the page dims only past two runs of it, else past a minute', function () {
+  const d = tmp();
+  writeLab(d, { netlab_validate: netlabDoc(ADJ), collected_at: '2026-11-14T07:58:00+0000', exit_status: 0, interval: 300 });
+  assert.strictEqual(nv.fromNetlabJson(nv.readNetlabJson(d, NOW), 'lab1', null).netlab_interval_s, 300);
+  [{}, { interval: 0 }, { interval: 'x' }, { interval: -5 }].forEach(function (extra) {
+    writeLab(d, Object.assign({ netlab_validate: netlabDoc(ADJ), collected_at: '2026-11-14T07:58:00+0000' }, extra));
+    assert.strictEqual(nv.fromNetlabJson(nv.readNetlabJson(d, NOW), 'lab1', null).netlab_interval_s, null, JSON.stringify(extra));
+  });
+  const page = fs.readFileSync(path.join(__dirname, '..', 'xray-graph-nextui.html'), 'utf8');
+  assert.match(page, /Math\.max\(60000, 2000 \* \(Number\(v\.netlab_interval_s\) \|\| 0\)\)/, 'the page uses max(1 min, 2 x interval)');
+});

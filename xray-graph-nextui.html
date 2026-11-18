@@ -141,7 +141,7 @@
   #nx-validate .nxv-row.pending .nxv-ttl,#nx-validate .nxv-row.settling .nxv-ttl,#nx-validate .nxv-row.unsupported .nxv-ttl,#nx-validate .nxv-row.skip .nxv-ttl{color:#90a4ae}
   #nx-validate .nxv-note{font-size:12px;color:#78909c;margin-top:6px}
   #nx-validate .nxv-row.fail .nxv-st,#nx-validate .nxv-row.error .nxv-st{color:#ef5350}   /* nx_netlab_json: netlab's failed / error */
-  #nx-validate.nxv-old{opacity:.6}   /* nx_netlab_json: results older than a minute, kept and dimmed */
+  #nx-validate.nxv-old{opacity:.6}   /* nx_netlab_json: results older than two runs of netlab's loop (or a minute), kept and dimmed */
   #nx-validate .nxv-src a{color:#80deea}
   #nx-validate code{color:#ffd54f}
   /* nx_synthetic_badge: no collected state for the shown node -> say so, and draw its adjacencies as unknown (grey dashed),
@@ -1104,7 +1104,9 @@ window.__initNeXtOverview = function (data) {
         if (c.pass && parts.length) parts.push(ja ? c.pass + ' 件が通過' : c.pass + ' passed');
         var sumTxt = allPassed ? (ja ? nRun + ' 件の検査がすべて通過' : 'All ' + nRun + ' test' + (nRun === 1 ? '' : 's') + ' passed')
                                : (parts.join(ja ? '・' : ', ') || (ja ? '検査なし' : 'no tests run'));
-        var ageMs = Date.now() - Date.parse(v.netlab_at || ''), mins = isNaN(ageMs) ? -1 : Math.floor(ageMs / 60000), old = mins >= 1;
+        var ageMs = Date.now() - Date.parse(v.netlab_at || ''), mins = isNaN(ageMs) ? -1 : Math.floor(ageMs / 60000);
+        // dimmed when older than two runs of netlab's loop (validate_interval), else than a minute (nx_netlab_interval)
+        var oldMs = Math.max(60000, 2000 * (Number(v.netlab_interval_s) || 0)), old = !isNaN(ageMs) && ageMs >= oldMs;
         var ageTxt = mins < 0 ? '' : mins < 1 ? (ja ? 'たった今' : 'just now') : (ja ? mins + ' 分前' : mins + ' min ago');
         host.innerHTML = '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
           + '<span class="nxp-count">' + esc(sumTxt) + '</span></div>'

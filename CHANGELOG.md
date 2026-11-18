@@ -10,6 +10,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **Pages:** on the 日本語 toggle the DeepDive's English panel headings (Router — Internal View, Routing Engine, Routing table, BGP Table, Best-Path Decision, …) are shown in Japanese; protocol words (OSPF, LSDB, Full) stay English.
 - **bgp-paste:** the DeepDive's BGP Table shows the pasted routes (it said "No routes received (BGP session is up)" next to them).
 - **FAQ:** the paste pages work with no network, opened from the repo zip on disk.
+- **netlab:** the band shows netlab's own validate results when the lab folder has `network_xray/validate.json` (written by netlab's network_xray tool with `validate: True`), in netlab's words; results older than two of the plugin's runs (`interval`, else a minute) are kept and dimmed. Without the file, the band checks the tests itself as before.
 - **README:** the Caution box is two bullets (why the socket / no socket needed); the Codespaces quota in hours (about 30 a month); a memory-limit example (`--memory 300m`); how to check what a change (an Ansible playbook) did with `diff`.
 
 ## v1.4.1 — 2026-11-15

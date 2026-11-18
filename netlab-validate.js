@@ -445,7 +445,10 @@ function readNetlabJson(labDir) {
   if (!inner || inner.version !== 1 || !inner.results || typeof inner.results !== 'object' || Array.isArray(inner.results)) return null;
   var at = Date.parse(String(doc.collected_at || '').replace(/([+-]\d\d)(\d\d)$/, '$1:$2'));   /* "+0000" -> "+00:00" */
   if (isNaN(at)) at = st.mtimeMs;
-  return { doc: inner, at: at };
+  // netlab's network_xray plugin (validate: True) writes how often it runs the tests (seconds): the page dims the
+  // results only when they are older than two of those runs (nx_netlab_interval)
+  var iv = Number(doc.interval);
+  return { doc: inner, at: at, interval: isFinite(iv) && iv > 0 ? iv : null };
 }
 /* where a test points on the graph (the session or the prefix), from the test definition in network-xray.json when that
    file is there too; no show command is run */
@@ -483,7 +486,7 @@ function fromNetlabJson(nj, labName, lab) {
   c.checked = c.pass + c.fail + c.warning + c.error;
   return { format: 'netlab-validate/0', source: 'netlab', lab: labName || '', tests: out, counts: c, converging: false,
     converge_s: CONVERGE_S, netlab_started: String(doc.started || ''), netlab_version: String(doc.netlab_version || ''),
-    netlab_at: isFinite(nj.at) ? new Date(nj.at).toISOString() : '' };   /* when netlab ran the tests: the page says how long ago */
+    netlab_at: isFinite(nj.at) ? new Date(nj.at).toISOString() : '', netlab_interval_s: nj.interval || null };   /* when netlab ran the tests: the page says how long ago */
 }
 
 module.exports = { setLiveStart: function (on) { LIVE_START = !!on; }, load: load, tiers: tiers, run: run, parseCall: parseCall, evalValue: evalValue, getPrefix: getPrefix, PLUGINS: PLUGINS,
