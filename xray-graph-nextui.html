@@ -1109,6 +1109,13 @@ window.__initNeXtOverview = function (data) {
         // dimmed when older than two runs of netlab's loop (validate_interval), else than a minute (nx_netlab_interval)
         var oldMs = Math.max(60000, 2000 * (Number(v.netlab_interval_s) || 0)), old = !isNaN(ageMs) && ageMs >= oldMs;
         var ageTxt = mins < 0 ? '' : mins < 1 ? (ja ? 'たった今' : 'just now') : (ja ? mins + ' 分前' : mins + ' min ago');
+        // how often netlab's loop runs, next to the age: an old age then reads as "the loop stopped" (nx_netlab_interval_text)
+        var ivS = Number(v.netlab_interval_s) || 0, ivTxt = '';
+        if (ageTxt && ivS > 0) {
+          var ivN = ivS >= 60 && ivS % 60 === 0 ? ivS / 60 : Math.round(ivS), ivMin = ivS >= 60 && ivS % 60 === 0;
+          ivTxt = ja ? ' (' + ivN + (ivMin ? ' 分' : ' 秒') + 'ごとに実行)' : ' (runs every ' + ivN + (ivMin ? ' min' : ' s') + ')';
+        }
+        ageTxt += ivTxt;
         host.innerHTML = '<div class="nxp-head"><span class="nxp-badge">netlab validate</span><span class="nxp-title">' + esc(v.lab) + '</span>'
           + '<span class="nxp-count">' + esc(sumTxt) + '</span></div>'
           + '<div class="nxv-note nxv-src">' + (ja ? 'netlab validate の結果' : 'netlab validate results') + (ageTxt ? ' · ' + esc(ageTxt) : '')

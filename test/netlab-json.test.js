@@ -146,3 +146,17 @@ test('the plugin\'s interval (validate_interval, seconds) is passed on: the page
   const page = fs.readFileSync(path.join(__dirname, '..', 'xray-graph-nextui.html'), 'utf8');
   assert.match(page, /Math\.max\(60000, 2000 \* \(Number\(v\.netlab_interval_s\) \|\| 0\)\)/, 'the page uses max(1 min, 2 x interval)');
 });
+
+test('the band says how often netlab\'s loop runs next to the age (en / ja), and nothing when the file has no interval', function () {
+  const page = fs.readFileSync(path.join(__dirname, '..', 'xray-graph-nextui.html'), 'utf8');
+  const m = page.match(/var ivS = [\s\S]*?ageTxt \+= ivTxt;/);
+  assert.ok(m, 'the interval text is in the page');
+  const run = (ja, age, iv) => { const c = { ja: ja, ageTxt: age, v: { netlab_interval_s: iv } }; vm.runInNewContext(m[0], c); return c.ageTxt; };
+  assert.strictEqual(run(false, '3 min ago', 30), '3 min ago (runs every 30 s)');
+  assert.strictEqual(run(true, '3 分前', 30), '3 分前 (30 秒ごとに実行)');
+  assert.strictEqual(run(false, 'just now', 300), 'just now (runs every 5 min)');
+  assert.strictEqual(run(true, 'たった今', 300), 'たった今 (5 分ごとに実行)');
+  assert.strictEqual(run(false, '2 min ago', 90), '2 min ago (runs every 90 s)');
+  assert.strictEqual(run(false, '2 min ago', null), '2 min ago');
+  assert.strictEqual(run(false, '', 30), '');
+});
