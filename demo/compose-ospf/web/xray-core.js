@@ -436,7 +436,7 @@ function _xrayApplyPingModeClasses(bcl, mode) {
     bcl.add("ping-left");
   } else if (mode === "through-right") {
     bcl.add("ping-through");
-  } else {
+  } else if (/^[A-Za-z0-9_-]+$/.test(String(mode))) {   /* nx_ping_mode_token: only a value that can be a class name */
     bcl.add("ping-" + mode);
   }
 }
@@ -2217,11 +2217,11 @@ function xrayUpdateLsdb(s, opts) {
     }
     if (synced && (rr.resolved || s.lsa_in_db) && rr.matched_prefix) {
       var alreadyHas = rows.some(function(r) {
-        return r.text === _escapeHtml(rr.matched_prefix);
+        return r.text === String(rr.matched_prefix);   /* nx_lsdb_text_once: the rows go in as textContent, not HTML */
       });
       if (!alreadyHas) {
         rows.push({
-          text: _escapeHtml(rr.matched_prefix),
+          text: String(rr.matched_prefix),
           own: false
         });
       }

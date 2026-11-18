@@ -9,6 +9,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **state_diff / `xray-query.js diff`:** the lab's management network can be given (`mgmt_subnet` / `--mgmt-subnet <cidr>`; netlab uses 192.168.121.0/24), as the collector's `--exclude-mgmt` already reads it from the topology. Without it nothing changes (172.20.20.0/24).
 - **Pages:** on the 日本語 toggle the DeepDive's English panel headings (Router — Internal View, Routing Engine, Routing table, BGP Table, Best-Path Decision, …) are shown in Japanese; protocol words (OSPF, LSDB, Full) stay English.
 - **DeepDive:** a BGP session that is not Established is drawn with red dashed walls and no fill (it was a faint purple dashed wall that looked the same as an up session under the link beam).
+- **DeepDive:** an LSDB row from the route to the target showed escaped characters (`&quot;`) for a prefix with quotes; a ping mode the page does not know, with a space in it, no longer stops the drawing.
 - **bgp-paste:** the DeepDive's BGP Table shows the pasted routes (it said "No routes received (BGP session is up)" next to them).
 - **FAQ:** the paste pages work with no network, opened from the repo zip on disk.
 - **netlab:** the band shows netlab's own validate results when the lab folder has `network_xray/validate.json` (written by netlab's network_xray tool with `validate: True`, from netlab's next release), in netlab's words; results older than two of the plugin's runs (`interval`, else a minute) are kept and dimmed. Without the file, the band checks the tests itself as before.
