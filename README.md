@@ -865,6 +865,10 @@ node scripts/xray-query.js diff demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json
 adjacency lost, a best path that moved, routes removed or moved), and says `none` when nothing changed; the MCP tool
 `state_diff` gives the same answer ([docs/mcp.md](docs/mcp.md#state_diff)). <!-- nx_state_diff -->
 
+`check run <problem.json> <state>` judges a lab's `check` without the page (exit 0 solved, 1 not, 2 cannot judge), and
+`check verify <problem.json> <broken> <solved>` tells you whether your check fails on the broken lab and holds on the
+solved one ([docs/problem-format.md](docs/problem-format.md#check-a-lab-without-the-page-solvedkit)). <!-- nx_solvedkit -->
+
 To check what a change did (an Ansible playbook, a config push), keep the state before it and compare after the next read:
 
 ```

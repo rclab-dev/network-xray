@@ -245,6 +245,8 @@ If the assistant does not know which lab you mean, give the path again.
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | longest-prefix match in the collected routing table |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | the selected BGP path, the other candidates with their attributes, the deciding step and where that reason came from |
 | `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | what changed from a baseline state to now, heaviest first (`none` when nothing changed) |
+| `check_run` | `problem`, `path` | SolvedKit: is the lab solved in this state, by the problem.json `check` (`solved` / `not_solved` / `cannot_judge`, one result per condition) |
+| `check_verify` | `problem`, `broken`, `solved` | SolvedKit: does the `check` fail on the broken state and hold on the solved one (a verdict per condition: `tells` / `both` / `wrong` / `unknown`) |
 
 `why_best_path` gives only the reason stored in the data (`null` with a note when there is none). `why_path` also lists
 the other candidates, and when the router gave no reason it compares their attributes itself (`reason_source`).
@@ -494,6 +496,23 @@ says. With `"device"` or `"derived"`, `comparison` adds what the attribute compa
   "comparison": "Only path"
 }
 ```
+
+### check_run and check_verify (SolvedKit)
+
+The page's ✓ Solved rules on saved states ([docs/problem-format.md](problem-format.md#check-a-lab-without-the-page-solvedkit)).
+`problem` is the lab's problem.json or the folder that has it; the states are the same input as `lab_state`.
+`check_run` answers `status` `solved`, `not_solved` or `cannot_judge` (no check, or a router in the check is not
+in the state or cannot be read; `reason` says which) with one entry per condition in `results` (`ok`: true, false,
+or null when it cannot be judged). `check_verify` judges a broken and a solved state of the same lab: `status` `ok`
+when the check fails on the broken one and holds on the solved one; `conditions` gives each condition's verdict and
+`problems` what to fix. A problem.json that is not JSON gets one fixed message (its text is not quoted).
+
+```
+{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"check_verify","arguments":{"problem":"examples/q21-bgp-lp","broken":"demo/bgp-lp/frameA.json","solved":"demo/bgp-lp/frameB.json"}}}
+```
+
+`status` is `ok`; the first condition (the route via AS 65002 is best) is `tells` and the second (the route via
+AS 65003 is still there as the backup) is `both`.
 
 ### state_diff
 

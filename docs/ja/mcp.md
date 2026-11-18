@@ -238,6 +238,8 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | 集めたルーティングテーブルでの最長一致 |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | 選ばれた BGP の経路・ほかの候補と属性・決め手になったステップ・そのわけの出どころ |
 | `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | 基準の state から今までに変わった所 (重い順・何も変わっていなければ `none`) |
+| `check_run` | `problem`, `path` | SolvedKit: problem.json の `check` で、この state のラボが解けているか (`solved` / `not_solved` / `cannot_judge`・条件ごとの結果) |
+| `check_verify` | `problem`, `broken`, `solved` | SolvedKit: `check` が壊れた版で不合格・解いた版で合格になるか (条件ごとに `tells` / `both` / `wrong` / `unknown`) |
 
 `why_best_path` は、データに保存されているわけだけを返します (無ければ `null` と注記)。`why_path` はほかの候補も並べ、
 ルータがわけを出していない時は、属性を自分で比べます (`reason_source`)。
@@ -486,6 +488,23 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
   "comparison": "Only path"
 }
 ```
+
+### check_run と check_verify (SolvedKit)
+
+頁の ✓ Solved と同じ決まりで、保存した state を判定します ([docs/problem-format.md](../problem-format.md#check-a-lab-without-the-page-solvedkit))。
+`problem` はラボの problem.json か、それがあるフォルダ。state は `lab_state` と同じ入力です。
+`check_run` は `status` を `solved`・`not_solved`・`cannot_judge` (check が無い・check の中のルータが state に無いか読めない =
+`reason` にどれか) で返し、`results` に条件ごとの結果 (`ok`: true / false / 判定できない時は null) を返します。
+`check_verify` は同じラボの壊れた版と解いた版の state を判定します。check が壊れた版で不合格・解いた版で合格なら
+`status` は `ok`。`conditions` に条件ごとの判定、`problems` に直す所が入ります。JSON でない problem.json には決まった
+1 文だけを返します (中身は引用しません)。
+
+```
+{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"check_verify","arguments":{"problem":"examples/q21-bgp-lp","broken":"demo/bgp-lp/frameA.json","solved":"demo/bgp-lp/frameB.json"}}}
+```
+
+`status` は `ok`。1 つ目の条件 (AS 65002 経由の経路が best) は `tells`、2 つ目 (AS 65003 経由の経路が予備として
+残っている) は `both` です。
 
 ### state_diff
 

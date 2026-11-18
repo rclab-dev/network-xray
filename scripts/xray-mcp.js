@@ -217,6 +217,42 @@ var TOOLS = [
       additionalProperties: false
     },
     annotations: READ_ONLY
+  },
+  {
+    name: 'check_run',
+    description: 'SolvedKit: is the lab solved now? Judges the lab\'s problem.json check against one state with the same ' +
+      'rules as the page\'s Solved mark (one reading; the page also waits about 10 s for the check to keep holding). ' +
+      'status is solved, not_solved, or cannot_judge (no check, or a router in the check is missing or cannot be read - ' +
+      'then reason says which). results has one entry per condition (ok: true, false, or null when it cannot be judged). Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        problem: { type: 'string', description: 'The lab\'s problem.json, or the folder that has it' },
+        path: { type: 'string', description: 'The state to judge (same input as lab_state)' }
+      },
+      required: ['problem', 'path'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
+  },
+  {
+    name: 'check_verify',
+    description: 'SolvedKit: does a problem.json check tell the broken lab from the solved one? status ok means the check ' +
+      'fails on the broken state and holds on the solved state. Each condition gets a verdict: tells (fails on broken, ' +
+      'holds on solved), both (holds on both - fine next to a condition that tells), wrong (fails on solved: the solved lab ' +
+      'would never get the mark) or unknown (a router cannot be read). problems lists what to fix. Use it on a check you ' +
+      'wrote before you publish the lab. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        problem: { type: 'string', description: 'The lab\'s problem.json, or the folder that has it' },
+        broken: { type: 'string', description: 'A state of the broken lab (same input as lab_state)' },
+        solved: { type: 'string', description: 'A state of the solved lab (same input as lab_state)' }
+      },
+      required: ['problem', 'broken', 'solved'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
   }
 ];
 
@@ -348,6 +384,15 @@ function checkPath(p) {
   if (!sameOrUnder(real, root) && !(own && sameOrUnder(real, own))) throw new Error('outside the folder this server reads (' + root + '): start it with --path <folder>, or --allow-any-path');
   return p;
 }
+// problem.json: the same rule - the parser's message is not passed on (it can quote the file)
+var NOT_PROBLEM = 'not a problem.json (JSON object)';
+function loadProblem(p) {
+  checkPath(p);   /* nx_mcp_path_root: problem.json is read under the same folder as the states */
+  try { return query.loadProblem(p); } catch (e) {
+    if (/^problem\.json is not/.test((e && e.message) || '')) throw new Error(NOT_PROBLEM);
+    throw e;
+  }
+}
 function loadStates(p) {
   checkPath(p);
   try { return query.loadStates(p, { check: checkPath }); } catch (e) {
@@ -359,7 +404,7 @@ function loadStates(p) {
 function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = args || {};
-  if (defaultPath && name !== 'state_diff' && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
+  if (defaultPath && name !== 'state_diff' && name !== 'check_verify' && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
   if (name === 'lab_state') return query.summarize(loadStates(str(args, 'path', true)));
   if (name === 'why_best_path') {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);
@@ -378,6 +423,11 @@ function callTool(name, args) {
   if (name === 'state_diff') {
     var b5 = str(args, 'before', true), a5 = str(args, 'after', true);
     return query.diff(loadStates(b5), loadStates(a5), str(args, 'router', false), str(args, 'mgmt_subnet', false) || null);
+  }
+  if (name === 'check_run') return require('../solvedkit.js').run(loadProblem(str(args, 'problem', true)), loadStates(str(args, 'path', true)));
+  if (name === 'check_verify') {
+    var pr6 = loadProblem(str(args, 'problem', true));
+    return require('../solvedkit.js').verify(pr6, loadStates(str(args, 'broken', true)), loadStates(str(args, 'solved', true)));
   }
   if (name === 'why_path') {
     var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);

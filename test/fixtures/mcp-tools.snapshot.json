@@ -218,5 +218,54 @@
       ],
       "additionalProperties": false
     }
+  },
+  {
+    "name": "check_run",
+    "description": "SolvedKit: is the lab solved now? Judges the lab's problem.json check against one state with the same rules as the page's Solved mark (one reading; the page also waits about 10 s for the check to keep holding). status is solved, not_solved, or cannot_judge (no check, or a router in the check is missing or cannot be read - then reason says which). results has one entry per condition (ok: true, false, or null when it cannot be judged). Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "problem": {
+          "type": "string",
+          "description": "The lab's problem.json, or the folder that has it"
+        },
+        "path": {
+          "type": "string",
+          "description": "The state to judge (same input as lab_state)"
+        }
+      },
+      "required": [
+        "problem",
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "check_verify",
+    "description": "SolvedKit: does a problem.json check tell the broken lab from the solved one? status ok means the check fails on the broken state and holds on the solved state. Each condition gets a verdict: tells (fails on broken, holds on solved), both (holds on both - fine next to a condition that tells), wrong (fails on solved: the solved lab would never get the mark) or unknown (a router cannot be read). problems lists what to fix. Use it on a check you wrote before you publish the lab. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "problem": {
+          "type": "string",
+          "description": "The lab's problem.json, or the folder that has it"
+        },
+        "broken": {
+          "type": "string",
+          "description": "A state of the broken lab (same input as lab_state)"
+        },
+        "solved": {
+          "type": "string",
+          "description": "A state of the solved lab (same input as lab_state)"
+        }
+      },
+      "required": [
+        "problem",
+        "broken",
+        "solved"
+      ],
+      "additionalProperties": false
+    }
   }
 ]

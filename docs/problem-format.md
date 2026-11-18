@@ -81,6 +81,40 @@ A good check says "**the network now works**", not "**the user typed this exact 
 - Watch out for a broken next hop that sits **inside a connected subnet** (e.g. `10.10.0.99` on a `/24`): such a route is still selected and still looks "resolved". Check its `next_hop` against the real neighbor address instead.
 - If you cannot describe "solved" by state alone (for example, the only difference is a config line that changes nothing visible), leave `check` out. No mark is better than a wrong mark.
 
+## Check a lab without the page (SolvedKit)
+
+`scripts/xray-query.js` judges a `check` with the same rules as the page, on saved states — no running lab, no
+browser, only Node. Give it the problem.json (or the folder that has it) and states the collector wrote
+(`xray-states.js`, `state_<node>.json`, or a folder of them):
+
+```
+node scripts/xray-query.js check run    examples/q21-bgp-lp demo/bgp-lp/frameB.json
+node scripts/xray-query.js check verify examples/q21-bgp-lp demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json --format table
+```
+
+- **`check run <problem.json> <state>`** — is the lab solved in this state? `status` is `solved`, `not_solved` or
+  `cannot_judge` (no `check`, or a router in the check is missing from the state or cannot be read; `reason` says
+  which). Exit code 0 / 1 / 2, so a CI job or a grading script can use it. It judges one reading; the page also waits
+  about 10 seconds for the check to keep holding, so collect again and run it again if you want that.
+- **`check verify <problem.json> <broken> <solved>`** — does your check tell the broken lab from the solved one? `ok`
+  when it fails on the broken state and holds on the solved state. Each condition gets a verdict: `tells` (fails on
+  broken, holds on solved), `both` (holds on both — fine next to one that tells, like "the backup path is still
+  there"), `wrong` (fails on solved: the solved lab would never get the mark) or `unknown` (a router cannot be read).
+  Exit code 0 / 1 / 2. Run it on a check you wrote before you publish the lab.
+
+The output above (`--format table`) for the recorded q21 demo, before and after the Local Preference fix:
+
+```
+Check: ok (broken: not solved, solved: solved)
+  BROKEN  SOLVED  VERDICT  CONDITION
+  no      yes     tells    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["best","eq",true],["as_p~
+  yes     yes     both     r1 bgp_routes some [["prefix","eq","8.8.8.0"],["as_path","eq","65003"]]
+```
+
+The MCP tools `check_run` and `check_verify` give the same answers ([docs/mcp.md](mcp.md)). One solved state cannot
+show every correct fix: `verify` says the check tells these two states apart, not that it accepts every other way to
+solve the problem — keep the check on what the network does (above).
+
 ## Example (official example q21-bgp-lp)
 
 ```json

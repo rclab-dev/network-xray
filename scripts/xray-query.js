@@ -8,6 +8,8 @@
  *   node scripts/xray-query.js state <input>
  *   node scripts/xray-query.js why   <input> <node> <prefix>
  *   node scripts/xray-query.js diff  <before> <after> [node]   (what changed from a baseline you kept, heaviest first)
+ *   node scripts/xray-query.js check run    <problem.json> <input>             (SolvedKit: is the lab solved now?)
+ *   node scripts/xray-query.js check verify <problem.json> <broken> <solved>   (does the check tell them apart?)
  *
  * <input> is one of:
  *   - a per-node state JSON (frr-collect.js / clab-collect.js --out, test/fixtures/<lab>/state_<node>.json)
@@ -23,6 +25,8 @@
  *                   why: the best path and its candidates); lines stay under 100 characters
  *   --color         colors in table output, only when stdout is a terminal
  *
+ * check run exits 0 when solved, 1 when not solved, 2 when it cannot judge (no check, a node it cannot read);
+ * check verify exits 0 when the check fails on <broken> and holds on <solved>, 1 when not, 2 when it cannot judge.
  * Errors (missing file, unknown node / prefix, unreadable input) -> {"error": "..."} and exit code 2
  * (with --format table: "error: ..." on stderr, exit code 2).
  * Nothing is sent anywhere; no router is contacted.
@@ -1046,8 +1050,54 @@ function diffTable(res, color) {
   return out.join('\n') + '\n';
 }
 
+// ---- check (SolvedKit) ----------------------------------------------------------------------
+// The page's Solved rules (solved-check.js) on saved states, without the page: run = one state, verify = the
+// broken and the solved lab of the same problem. <problem.json> may be the file or the folder that has it.
+function loadProblem(input) {
+  if (!input) throw new QueryError('missing problem.json');
+  var p = input, stat;
+  try { stat = fs.statSync(p); } catch (e) { throw new QueryError('not found: ' + input); }
+  if (stat.isDirectory()) { p = path.join(p, 'problem.json'); try { stat = fs.statSync(p); } catch (e) { throw new QueryError('no problem.json in ' + input); } }
+  if (!stat.isFile()) throw new QueryError('not a regular file: ' + p);
+  var obj;
+  try { obj = JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, '')); } catch (e) { throw new QueryError('problem.json is not valid JSON: ' + e.message); }
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new QueryError('problem.json is not a JSON object');
+  return obj;
+}
+function check(argv) {
+  var kit = require('../solvedkit.js'), sub = argv[1];
+  if (sub === 'run') { if (argv.length !== 4) throw new QueryError(USAGE); return kit.run(loadProblem(argv[2]), loadStates(argv[3])); }
+  if (sub === 'verify') { if (argv.length !== 5) throw new QueryError(USAGE); return kit.verify(loadProblem(argv[2]), loadStates(argv[3]), loadStates(argv[4])); }
+  throw new QueryError(sub ? 'unknown check command: ' + sub + ' (run, verify)' : USAGE);
+}
+// the exit code a script reads: 0 solved / ok, 1 not, 2 cannot judge
+function checkExit(res) {
+  return res.status === 'solved' || res.status === 'ok' ? 0 : res.status === 'not_solved' || res.status === 'not_ok' ? 1 : 2;
+}
+function condText(c) {
+  if (!Array.isArray(c)) return JSON.stringify(c);
+  return c[0] + ' ' + c[1] + ' ' + c[2] + (c[3] === undefined ? '' : ' ' + JSON.stringify(c[3]));
+}
+function mark(v) { return v === true ? 'yes' : v === false ? 'no' : '?'; }
+function checkTable(argv, res, color) {
+  var out = [];
+  if (argv[1] === 'run') {
+    out.push(title('Solved: ' + res.status.replace('_', ' '), color));
+    if (res.reason) out.push(textLine('  ' + res.reason));
+    if (res.results.length) out = out.concat(renderTable([{ head: 'HOLDS', key: 'ok' }, { head: 'CONDITION', key: 'cond' }],
+      res.results.map(function (r) { return { ok: mark(r.ok), cond: condText(r.cond) + (r.unread ? ' (' + r.unread + ')' : '') }; }), color, '  '));
+  } else {
+    out.push(title('Check: ' + res.status.replace('_', ' ') + ' (broken: ' + res.broken.status.replace('_', ' ') + ', solved: ' + res.solved.status.replace('_', ' ') + ')', color));
+    res.problems.forEach(function (p) { out.push(textLine('  ' + p)); });
+    if (res.conditions.length) out = out.concat(renderTable([{ head: 'BROKEN', key: 'b' }, { head: 'SOLVED', key: 's' }, { head: 'VERDICT', key: 'v' }, { head: 'CONDITION', key: 'cond' }],
+      res.conditions.map(function (c) { return { b: mark(c.broken), s: mark(c.solved), v: c.verdict, cond: condText(c.cond) }; }), color, '  '));
+    out.push('', textLine('tells = fails on broken, holds on solved; both = holds on both; wrong = fails on solved'));
+  }
+  return out.join('\n') + '\n';
+}
+
 var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf] | ospf-if <state.json|dir> [node]' +
-  ' | diff <before> <after> [node] [--mgmt-subnet <cidr>]' +
+  ' | diff <before> <after> [node] [--mgmt-subnet <cidr>] | check run <problem.json> <input> | check verify <problem.json> <broken> <solved>' +
   ' [--format json|table] [--color]';
 
 // pull --format / --color out of argv; the rest are the positional arguments
@@ -1072,6 +1122,7 @@ function run(argv, o) {
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
   if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
   if (cmd === 'diff') { if (argv.length < 3 || argv.length > 4) throw new QueryError(USAGE); return diff(loadStates(argv[1]), loadStates(argv[2]), argv[3], mg); }
+  if (cmd === 'check') return check(argv);
   if (cmd === 'ospf-if') { if (argv.length < 2 || argv.length > 3) throw new QueryError(USAGE); return ospfInterfaces(loadStates(argv[1]), argv[2]); }
   throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
 }
@@ -1080,6 +1131,7 @@ function run(argv, o) {
 function runTable(argv, color, o) {
   var res = run(argv, o);
   if (argv[0] === 'diff') return diffTable(res, color);
+  if (argv[0] === 'check') return checkTable(argv, res, color);
   return argv[0] === 'state' ? stateTable(loadStates(argv[1]), color) : argv[0] === 'ospf-if' ? ospfIfTable(res, color) : whyTable(res, color);
 }
 
@@ -1091,6 +1143,8 @@ if (require.main === module) {
       '  why <path> <node> <prefix> [vrf]    BGP best path and the reason stored with it\n' +
       '  ospf-if <path> [node]               OSPF interface values, both ends of each link, what must match but does not\n' +
       '  diff <before> <after> [node]        what changed from a state you kept (the baseline) to now, heaviest first\n' +
+      '  check run <problem.json> <path>     SolvedKit: is the lab solved now (exit 0 solved, 1 not, 2 cannot judge)\n' +
+      '  check verify <problem.json> <broken> <solved>  does the check fail on broken and hold on solved (exit 0 / 1 / 2)\n' +
       '  --mgmt-subnet <cidr>  diff: the lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)\n' +
       '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR / Genie captures\n' +
       '  --format json|table  default: json\n' +
@@ -1112,12 +1166,13 @@ if (require.main === module) {
   } catch (e) {
     res = { error: (e && e.message) || String(e) }; code = 2;
   }
+  if (!code && opts && opts.args[0] === 'check') code = checkExit(opts.format === 'table' ? run(opts.args, opts) : res);
   if (typeof res === 'string') process.stdout.write(res);
   else if (code && opts && opts.format === 'table') process.stderr.write('error: ' + plain(res.error) + '\n');
   else process.stdout.write(JSON.stringify(res, null, 2) + '\n');
   process.exitCode = code;
 }
 
-module.exports = { diff: diff, loadStates: loadStates, summarize: summarize, why: why, run: run,
+module.exports = { diff: diff, loadStates: loadStates, loadProblem: loadProblem, summarize: summarize, why: why, run: run,
   listRouters: listRouters, ospfNeighbors: ospfNeighbors, ospfInterfaces: ospfInterfaces, ospfIfTable: ospfIfTable, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath,
   parseOptions: parseOptions, runTable: runTable, stateTable: stateTable, whyTable: whyTable };
