@@ -53,7 +53,7 @@ test('the same numbers as lab_state (ospf_ifaces_full / ospf_ifaces_without_adja
 
 test('all Full: only the count; Japanese page: the words in Japanese', () => {
   assert.equal(plain(nbrLine(LAB().r3).text), '> Neighbor: Full 3');
-  assert.equal(plain(nbrLine(LAB().r2, 'ja').text), '> Neighbor: Full 1 · 隣接なし 1');
+  assert.equal(plain(nbrLine(LAB().r2, 'ja').text), '> Neighbor: Full 1 · neighbor なし 1');
 });
 
 test('passive interfaces and interfaces without a neighbor on the link are not counted; an interface with no neighbor row uses its own count', () => {

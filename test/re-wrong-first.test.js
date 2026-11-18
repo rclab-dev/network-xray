@@ -124,7 +124,7 @@ test('Japanese labels', function () {
   var ctx = sandbox('ja');
   var t = texts(ctx._xrayWrongLines(r10()));
   assert.strictEqual(t[0], '問題のある所');
-  assert.strictEqual(t[1], '✕ eth4 → r11: OSPF 隣接なし — hello 3 ⇔ 10 · dead 12 ⇔ 40');
+  assert.strictEqual(t[1], '✕ eth4 → r11: OSPF neighbor なし — hello 3 ⇔ 10 · dead 12 ⇔ 40');
 });
 
 test('router-supplied names in the wrong lines render as text', function () {
