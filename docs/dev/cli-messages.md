@@ -2,7 +2,7 @@
 
 What the command-line tools print, when, and what the user should do next.
 Verdicts: **ok** = accurate and actionable, **fixed** = changed in this pass, **note** = acceptable, possible follow-up.
-Line numbers are for the current tree.
+Line numbers are from when this list was made and may have moved since; search for the message text in the current tree.
 
 ## xray.sh
 

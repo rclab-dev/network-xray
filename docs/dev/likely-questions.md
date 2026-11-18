@@ -156,7 +156,7 @@ MIT (`LICENSE`).
 The point is a topology drawn with animated state (packets, neighbor state changes, best-path highlight), which a terminal does poorly. There is no TUI.
 
 For terminal and scripting use:
-- `scripts/xray-query.js` has `state` and `why` subcommands, `--format json` (default) or `--format table`. It reads saved state only and contacts no router.
+- `scripts/xray-query.js` has `state`, `why`, `ospf-if` and `diff` subcommands, `--format json` (default) or `--format table`. It reads saved state only and contacts no router.
 - `scripts/xray-mcp.js` serves the same queries over MCP stdio.
 
 ## 14. Is the "why" reported by the router or inferred?
