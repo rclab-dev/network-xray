@@ -16,7 +16,7 @@
 **どのツールにも要るのは `path` だけです: `/path/to/network-xray/xray-states.js` (絶対パス) を渡してください。**
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
 ```
 
 Cursor では、同じサーバを `.cursor/mcp.json` に書きます ([Cursor](#cursor))。
@@ -29,6 +29,11 @@ Cursor では、同じサーバを `.cursor/mcp.json` に書きます ([Cursor](
 ```
 claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray/xray-states.js
 ```
+
+**読むファイル:** 1 つのフォルダの下だけです。`--path` のフォルダ (ファイルならその置かれたフォルダ)、`--path` が無ければ
+サーバを起動したフォルダ。その外の `path` は誤りになります (シンボリックリンクは先にたどるので、外へは出られません)。
+ラボの state があるフォルダを `--path <folder>` で渡してください。v1.4.3 より前の様にクライアントが渡すどの path も読むには
+`--allow-any-path` (か `NX_MCP_ALLOW_ANY_PATH=1`) で起動します。64 MB を超える state のファイルは読みません。
 
 `docker run` や netlab の tool の時は state がコンテナの中にあります: 先に `curl` で写しを取り、そのファイルを
 `path` に渡してください (コマンドは [state はどこから来るか](#state-はどこから来るか) にあります)。
@@ -70,10 +75,10 @@ mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/
 MCP のツールだけで新しい状態を見られます (変える → `collect` → `why_path`)。旗が無い時は一覧に出ず、呼んでも断ります。
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect --path /path/to/your-lab
 ```
 
-- `collect` が受けるのは `topology` (動いているラボの `*.clab.yml`・絶対パス)・任意の `keep_previous`・任意の `proto` (既定の `bgp` = OSPF も読む /
+- `collect` が受けるのは `topology` (動いているラボの `*.clab.yml`・絶対パス・`--path` のフォルダの下)・任意の `keep_previous`・任意の `proto` (既定の `bgp` = OSPF も読む /
   OSPF だけのラボは `ospf`) だけ。そのラボに `clab-xray-collect.js` を 1 回走らせます。
 - このツールは手元の Docker を読みます: 画面の collector と同じ読むだけのコマンド (`docker exec … vtysh` / `sr_cli` の
   `show`・Cisco IOS は SSH の `show`)。ルータは何も変わりませんが、collector と同じ権限 (Docker・IOS は `NX_IOS_PASSWORD`) が要ります。
@@ -119,14 +124,14 @@ printf '%s\n' \
 ### Claude Code
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
 ```
 
 これで、今のプロジェクトに自分だけのサーバとして追加されます (既定の `--scope local`)。すべてのプロジェクトで使うには
 `--scope user` を使います。`--scope project` を使うと、共有できるようにプロジェクトの `.mcp.json` に書き込みます:
 
 ```
-claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
 ```
 
 書き込まれる内容:
@@ -159,7 +164,7 @@ Cursor は MCP のサーバをプロジェクトの `.cursor/mcp.json` (全プ�
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
     }
   }
 }
@@ -180,7 +185,7 @@ Claude Desktop では `claude_desktop_config.json` に書きます (Settings →
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
     }
   }
 }

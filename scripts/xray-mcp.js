@@ -282,6 +282,7 @@ function collectTool(args) {
   var topo = str(args, 'topology', true), proto = str(args, 'proto', false) || 'bgp';
   if (proto !== 'bgp' && proto !== 'ospf') throw new Error('proto must be bgp or ospf');
   if (!/\.ya?ml$/i.test(topo)) throw new Error('topology must be a containerlab topology file (*.clab.yml)');
+  checkPath(topo);   /* nx_mcp_path_root */
   topo = path.resolve(topo);
   var st; try { st = fs.statSync(topo); } catch (e) { throw new Error('topology not found: ' + topo); }
   if (!st.isFile()) throw new Error('topology is not a file: ' + topo);
@@ -324,7 +325,26 @@ function str(args, k, required) {
 // message that says nothing about its contents or its path (the JSON parser's own message can quote the start of the
 // file). Paths are read as xray-query.js reads them (any name); a path that is not there still says "not found".
 var NOT_STATE = 'not a network-xray state file';
+/* nx_mcp_path_root (v1.4.3): the server reads only under one folder - the --path / NX_MCP_PATH folder (a file's folder),
+   else the folder it was started in. --allow-any-path (or NX_MCP_ALLOW_ANY_PATH=1) reads anywhere, as before.
+   Symbolic links are followed first (realpath), so a link cannot lead outside. null = no limit (when used as a module). */
+var pathRoot = null;
+function sameOrUnder(p, root) {
+  var a = process.platform === 'win32' ? p.toLowerCase() : p, b = process.platform === 'win32' ? root.toLowerCase() : root;
+  return a === b || a.indexOf(b.slice(-1) === path.sep ? b : b + path.sep) === 0;
+}
+function checkPath(p) {
+  if (pathRoot == null || p == null || p === '') return p;
+  var real, root;
+  try { root = fs.realpathSync(pathRoot); } catch (e) { root = path.resolve(pathRoot); }
+  try { real = fs.realpathSync(path.resolve(p)); } catch (e) { real = path.resolve(p); }
+  var own = null;   // the server's own collect folder (what collect returns) is read too
+  if (collectDir) { try { own = fs.realpathSync(collectDir); } catch (e) { own = null; } }
+  if (!sameOrUnder(real, root) && !(own && sameOrUnder(real, own))) throw new Error('outside the folder this server reads (' + root + '): start it with --path <folder>, or --allow-any-path');
+  return p;
+}
 function loadStates(p) {
+  checkPath(p);
   try { return query.loadStates(p); } catch (e) {
     if (/^(not valid JSON|no node state found|not a regular file or a directory)/.test((e && e.message) || '')) throw new Error(NOT_STATE);
     throw e;
@@ -428,16 +448,19 @@ function handleLine(line) {
 if (require.main === module) {
   var _cli = process.argv.slice(2);
   if (_cli.indexOf('-h') >= 0 || _cli.indexOf('--help') >= 0) {
-    process.stdout.write('usage: node scripts/xray-mcp.js [--allow-collect] [--path <state>]\n' +
+    process.stdout.write('usage: node scripts/xray-mcp.js [--allow-collect] [--path <state>] [--allow-any-path]\n' +
       '  read-only MCP server over stdio (JSON-RPC, one message per line); start it from an MCP client\n' +
       '  tools: ' + TOOLS.map(function (t) { return t.name; }).join(', ') + '\n' +
       '  --allow-collect  also offer collect: read a running containerlab lab\'s routers again (read-only show commands)\n' +
       '  --path <state>   the state the tools read when the client gives no path (also NX_MCP_PATH; the option wins)\n' +
+      '                   the tools read only under that folder (a file\'s folder); without --path, under the folder the server starts in\n' +
+      '  --allow-any-path read any path the client gives (also NX_MCP_ALLOW_ANY_PATH=1)\n' +
       '  -h, --help       show this help\n');
     process.exitCode = 0;
     return;
   }
-  _cli = _cli.filter(function (a) { if (a === '--allow-collect') { allowCollect = true; return false; } return true; });
+  var _anyPath = process.env.NX_MCP_ALLOW_ANY_PATH === '1';
+  _cli = _cli.filter(function (a) { if (a === '--allow-collect') { allowCollect = true; return false; } if (a === '--allow-any-path') { _anyPath = true; return false; } return true; });
   var _pathArg = null, _rest = [];   /* nx_mcp_default_path: --path <p> or --path=<p> */
   for (var _i = 0; _i < _cli.length; _i++) {
     if (_cli[_i] === '--path') {
@@ -453,6 +476,10 @@ if (require.main === module) {
     if (!fs.existsSync(defaultPath)) console.error('xray-mcp.js: the default path does not exist yet (the tools say not found until it does): ' + defaultPath);
   }
   if (_cli.length) { console.error('xray-mcp.js: unknown option: ' + _cli[0] + "\nTry 'node scripts/xray-mcp.js --help'."); process.exit(2); }
+  if (!_anyPath) {   /* nx_mcp_path_root */
+    var _isDir = false; try { _isDir = !!defaultPath && fs.statSync(defaultPath).isDirectory(); } catch (e) {}
+    pathRoot = defaultPath ? (_isDir ? defaultPath : path.dirname(defaultPath)) : process.cwd();
+  }
   var rl = readline.createInterface({ input: process.stdin, terminal: false });
   var write = function (res) { if (res) process.stdout.write(JSON.stringify(res) + '\n'); };
   rl.on('line', function (line) {
@@ -465,5 +492,6 @@ if (require.main === module) {
 }
 
 module.exports = { handle: handle, handleLine: handleLine, TOOLS: TOOLS, COLLECT_TOOL: COLLECT_TOOL,
-  setAllowCollect: function (on) { allowCollect = !!on; },
-  setDefaultPath: function (p) { defaultPath = p ? path.resolve(p) : null; } };
+  setAllowCollect: function (on) { allowCollect = !!on; }, checkPath: checkPath,
+  setDefaultPath: function (p) { defaultPath = p ? path.resolve(p) : null; },
+  setPathRoot: function (p) { pathRoot = p ? path.resolve(p) : null; } };

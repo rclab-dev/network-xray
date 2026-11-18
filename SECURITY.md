@@ -46,6 +46,8 @@ These are how the tool works, not vulnerabilities:
   (`-p 127.0.0.1:8600:8600`, `./xray.sh`, `containerlab graph -s 127.0.0.1:8080`)
   or on a trusted network. `./xray.sh`, the netlab tool and the container example listen on `127.0.0.1` by default;
   `./xray.sh --bind 0.0.0.0` (or `-p 8600:8600`) opens the page to other machines, and `./xray.sh` says so when it starts.
+- **The MCP server reads files the client names, under one folder.** By default only under the `--path` folder (or the
+  folder it starts in); `--allow-any-path` lifts that, so give it only to a client you trust with your files.
 - **SSH host keys are not checked for Cisco IOS-XE.** Lab routers get new keys on every deploy, so use the collector
   on the lab's management network only. The password is taken from `NX_IOS_PASSWORD` and is not printed or written
   to the state files.

@@ -13,7 +13,7 @@ var FRR_R1 = path.join(ROOT, 'fixtures', 'frr-collect-sample', 'r1');
 
 // send raw lines to a fresh server, close stdin, return the parsed reply lines keyed by id
 function session(lines) {
-  var r = cp.spawnSync(process.execPath, [SERVER], { input: lines.join('\n') + '\n', encoding: 'utf8', timeout: 10000 });
+  var r = cp.spawnSync(process.execPath, [SERVER], { input: lines.join('\n') + '\n', encoding: 'utf8', timeout: 10000, env: Object.assign({}, process.env, { NX_MCP_ALLOW_ANY_PATH: '1' }) });   // fixtures and temp files: no folder limit here (mcp-path-root.test.js tests it)
   assert.strictEqual(r.status, 0, r.stderr);
   var replies = r.stdout.split('\n').filter(Boolean).map(function (l) { return JSON.parse(l); });
   var byId = {};

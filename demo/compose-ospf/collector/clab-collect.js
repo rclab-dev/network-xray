@@ -1232,8 +1232,14 @@ function _vtyshBatch(container, showCmds) {
    `vrf all` answer is null or not the expected shape, read the plain command (as before nx_vrf_all). A router whose FRR failed once is
    remembered in a small tmp file (10 min), so an old FRR does not pay one extra vtysh run per command on every cycle. */
 var _VA_TTL = 10 * 60 * 1000;
-function _vaFile() { var os = require('os'); return path.join(os.tmpdir(), 'xray-vrfall' + (typeof process.getuid === 'function' ? '-u' + process.getuid() : '') + '.json'); }
-function _vaRead() { try { return JSON.parse(fs.readFileSync(_vaFile(), 'utf8')) || {}; } catch (e) { return {}; } }
+function _vaFile() {   /* nx_vrfall_cache_dir (v1.4.3): in the user's own cache folder (0700), not a fixed name in the shared tmp folder */
+  try {
+    var os = require('os'), base = process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'), dir = path.join(base, 'network-xray');
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    return path.join(dir, 'vrfall.json');
+  } catch (e) { return null; }   // no cache folder: no memory (one extra vtysh run on an old FRR), nothing else changes
+}
+function _vaRead() { var f = _vaFile(); if (!f) return {}; try { return JSON.parse(fs.readFileSync(f, 'utf8')) || {}; } catch (e) { return {}; } }
 function _vaNo(container, base) { var m = _vaRead(), k = container + '|' + base; return !!(m[k] && Date.now() - m[k] < _VA_TTL); }
 function _vaMark(container, base) { if (container.indexOf('selftest-') !== 0) console.error('  vrf all not usable on ' + container + ' (' + base + ') -> plain command'); try { var m = _vaRead(); m[container + '|' + base] = Date.now(); fs.writeFileSync(_vaFile(), JSON.stringify(m)); } catch (e) {} }
 var _VA_SHAPE = {

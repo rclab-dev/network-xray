@@ -18,7 +18,7 @@ With a lab running under `./xray.sh`, add the server, then give it the state fil
 **The one thing every tool needs is `path`: give it `/path/to/network-xray/xray-states.js` (an absolute path).**
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
 ```
 
 In Cursor, put the same server in `.cursor/mcp.json` instead ([Cursor](#cursor)).
@@ -31,6 +31,11 @@ read it when no `path` is given, and a `path` you do give is still used:
 ```
 claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray/xray-states.js
 ```
+
+**Which files it reads:** only under one folder - the `--path` folder (for a file, its folder), or without `--path` the
+folder the server was started in. A `path` outside it is an error (a symbolic link is followed first, so it cannot lead
+outside). Give `--path <folder>` for the folder your lab states are in. To read any path the client gives, as before
+v1.4.3, start it with `--allow-any-path` (or `NX_MCP_ALLOW_ANY_PATH=1`). A state file over 64 MB is not read.
 
 With `docker run` or the netlab tool the state is inside the container: save a copy with `curl` first and give that
 file as `path` (the command is under [Where the state comes from](#where-the-state-comes-from)).
@@ -73,10 +78,10 @@ then see the new state without leaving the MCP tools (change → `collect` → `
 not listed and a call to it is refused.
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --allow-collect --path /path/to/your-lab
 ```
 
-- `collect` takes only `topology` (the running lab's `*.clab.yml`, absolute path), an optional `keep_previous` and an optional `proto` (`bgp`, the
+- `collect` takes only `topology` (the running lab's `*.clab.yml`, absolute path, under the `--path` folder), an optional `keep_previous` and an optional `proto` (`bgp`, the
   default, which reads OSPF too, or `ospf` for an OSPF-only lab). It runs `clab-xray-collect.js` once on that lab.
 - This tool reads the local Docker: it runs the same read-only commands as the page's collector (`docker exec … vtysh`
   / `sr_cli` `show`, SSH `show` on Cisco IOS). It changes nothing on the routers, but it needs the access the collector
@@ -124,7 +129,7 @@ The reply to `initialize`:
 ### Claude Code
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
 ```
 
 This adds the server for the current project, for you only (the default `--scope local`). Use `--scope user` to make
@@ -132,7 +137,7 @@ it available in all your projects. Use `--scope project` to write it to `.mcp.js
 shared:
 
 ```
-claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js
+claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
 ```
 
 That writes:
@@ -165,7 +170,7 @@ in the same `mcpServers` form:
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
     }
   }
 }
@@ -185,7 +190,7 @@ Desktop it goes in `claude_desktop_config.json` (Settings → Developer → Edit
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
     }
   }
 }

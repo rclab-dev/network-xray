@@ -114,7 +114,7 @@ test('MCP ospf_interfaces answers the same object', function () {
     { jsonrpc: '2.0', method: 'notifications/initialized' },
     { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'ospf_interfaces', arguments: { path: dir, router: 'r1' } } }
   ].map(function (m) { return JSON.stringify(m); }).join('\n') + '\n';
-  var r = cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'xray-mcp.js')], { input: lines, encoding: 'utf8', timeout: 60000 });
+  var r = cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'xray-mcp.js')], { input: lines, encoding: 'utf8', timeout: 60000, env: Object.assign({}, process.env, { NX_MCP_ALLOW_ANY_PATH: '1' }) });
   var out = r.stdout.trim().split('\n').map(function (l) { return JSON.parse(l); }).filter(function (m) { return m.id === 2; })[0];
   assert.ok(out && out.result && !out.result.isError, r.stdout + r.stderr);
   assert.deepStrictEqual(out.result.structuredContent, JSON.parse(JSON.stringify(query.run(['ospf-if', dir, 'r1']))));

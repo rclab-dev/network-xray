@@ -22,7 +22,7 @@ function req(id, method, params) { return JSON.stringify({ jsonrpc: '2.0', id: i
 function call(id, name, args) { return req(id, 'tools/call', { name: name, arguments: args }); }
 function payload(reply) { return JSON.parse(reply.result.content[0].text); }
 function session(args, lines, env) {
-  var r = cp.spawnSync(process.execPath, [SERVER].concat(args), { input: lines.join('\n') + '\n', encoding: 'utf8', timeout: 150000, env: env || process.env });
+  var r = cp.spawnSync(process.execPath, [SERVER].concat(args), { input: lines.join('\n') + '\n', encoding: 'utf8', timeout: 150000, env: Object.assign({ NX_MCP_ALLOW_ANY_PATH: '1' }, env || process.env) });   // the folder limit is tested in mcp-path-root.test.js
   assert.strictEqual(r.status, 0, r.stderr);
   var byId = {};
   r.stdout.split('\n').filter(Boolean).forEach(function (l) { var m = JSON.parse(l); byId[m.id] = m; });

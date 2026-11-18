@@ -2,6 +2,11 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.4.3 — 2026-11-19
+
+- **MCP:** the server reads only under one folder by default - the `--path` folder (for a file, its folder), or the folder it starts in. `--allow-any-path` (or `NX_MCP_ALLOW_ANY_PATH=1`) reads any path the client gives, as before. A state file over 64 MB is not read.
+- **Collector:** the small "vrf all not usable" note is kept in the user's cache folder (`~/.cache/network-xray`), not in the shared tmp folder.
+
 ## v1.4.2 — 2026-11-19
 
 - **state_diff / `xray-query.js diff`:** an interface that is new is reported (`iface_added`), and one removed while it was already down is `iface_removed` (it was shown as `up → absent`). This was the known issue of v1.4.1.

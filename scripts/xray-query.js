@@ -68,6 +68,12 @@ function collectFrrDir(dir) {
   return frr.collectFromDir({ node: name, id: name, fromDir: dir, proto: 'auto', adjacency: [] }).state;
 }
 
+var MAX_STATE_BYTES = 64 * 1024 * 1024;   /* nx_state_size_cap (v1.4.3): a state file larger than this is not read */
+function readCapped(f) {
+  var st = fs.statSync(f);
+  if (st.size > MAX_STATE_BYTES) throw new QueryError('too large to read (over 64 MB): ' + f);
+  return fs.readFileSync(f, 'utf8');
+}
 function loadStates(input) {
   if (!input) throw new QueryError('missing input (a state JSON file or a directory)');
   var stat;
@@ -75,6 +81,7 @@ function loadStates(input) {
   if (!stat.isDirectory() && !stat.isFile()) throw new QueryError('not a regular file or a directory: ' + input);
   if (!stat.isDirectory()) {
     var text;
+    if (stat.size > MAX_STATE_BYTES) throw new QueryError('too large to read (over 64 MB): ' + input);
     try { text = fs.readFileSync(input, 'utf8'); } catch (e) { throw new QueryError('cannot read: ' + input); }
     var base = path.basename(input).replace(/\.json$/, '').replace(/^state_/, '');
     return parseText(text, base);
@@ -83,11 +90,11 @@ function loadStates(input) {
   var out = Object.create(null);
   var isFile = function (f) { try { return fs.statSync(path.join(input, f)).isFile(); } catch (e) { return false; } };
   files.filter(function (f) { return /^state_.+\.json$/.test(f) && isFile(f); }).forEach(function (f) {
-    var s = parseText(fs.readFileSync(path.join(input, f), 'utf8'), f.slice(6, -5));
+    var s = parseText(readCapped(path.join(input, f)), f.slice(6, -5));
     Object.keys(s).forEach(function (k) { out[k] = s[k]; });
   });
   if (Object.keys(out).length) return out;
-  if (files.indexOf('xray-states.js') >= 0 && isFile('xray-states.js')) return parseText(fs.readFileSync(path.join(input, 'xray-states.js'), 'utf8'));
+  if (files.indexOf('xray-states.js') >= 0 && isFile('xray-states.js')) return parseText(readCapped(path.join(input, 'xray-states.js')));
   if (isFrrDir(input)) { var st = collectFrrDir(input); out[nodeName(st)] = st; return out; }
   files.forEach(function (f) {
     var sub = path.join(input, f);
