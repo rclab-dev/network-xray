@@ -27,19 +27,18 @@ test('a whole heading is Japanese; a protocol word or a line of router output is
   assert.strictEqual(c._jaHeading('Routing table'), '経路表');
   assert.strictEqual(c._jaHeading(' Best-Path Decision '), ' 最良経路の決め方 ');
   assert.strictEqual(c._jaHeading('Router — Internal View'), 'ルータの中');
-  assert.strictEqual(c._jaHeading('[Routing Engine]'), '[ルーティング エンジン]');
-  ['LSDB', 'OSPF', 'Full', 'Established', 'Routing table for VRF default', 'show ip route'].forEach(function (t) {
+  ['Routing Engine', '[Routing Engine]', 'neighbor', 'LSDB', 'OSPF', 'Full', 'Established', 'Routing table for VRF default', 'show ip route'].forEach(function (t) {
     assert.strictEqual(c._jaHeading(t), null, t);
   });
 });
 
 test('日本語 then English: the English comes back as it was', function () {
-  var nodes = [{ nodeValue: 'Routing Engine' }, { nodeValue: 'LSDB' }, { nodeValue: 'BGP Table' }];
+  var nodes = [{ nodeValue: 'Routing table' }, { nodeValue: 'LSDB' }, { nodeValue: 'BGP Table' }];
   var c = load(nodes);
   c._localizeHeadings({}, true);
-  assert.deepStrictEqual(nodes.map(function (n) { return n.nodeValue; }), ['ルーティング エンジン', 'LSDB', 'BGP の表']);
+  assert.deepStrictEqual(nodes.map(function (n) { return n.nodeValue; }), ['経路表', 'LSDB', 'BGP の表']);
   c._localizeHeadings({}, true);   // again: nothing changes
-  assert.strictEqual(nodes[0].nodeValue, 'ルーティング エンジン');
+  assert.strictEqual(nodes[0].nodeValue, '経路表');
   c._localizeHeadings({}, false);
-  assert.deepStrictEqual(nodes.map(function (n) { return n.nodeValue; }), ['Routing Engine', 'LSDB', 'BGP Table']);
+  assert.deepStrictEqual(nodes.map(function (n) { return n.nodeValue; }), ['Routing table', 'LSDB', 'BGP Table']);
 });

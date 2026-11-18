@@ -3000,7 +3000,7 @@ function _xrayOspfNbrSummaryPushList(lines, s, allowEmpty, legacyAssume) {
   var _cnt = _xrayOspfAdjCounts(s);
   if (_cnt) {   /* nx_ospf_nbr_counts: "Full 4 · no adjacency 1" instead of one word (an orange "Full" was read as "not Full") */
     var _ja = typeof document !== "undefined" && ((document.documentElement.getAttribute("lang") || "en") === "ja" || window._xrayLang === "ja");
-    var _ct = '<span style="color:#39ff14">Full ' + _cnt.full + "</span>" + (_cnt.none ? ' · <span style="color:#ff8c00">' + (_ja ? "隣接なし " : "no adjacency ") + _cnt.none + "</span>" : "");
+    var _ct = '<span style="color:#39ff14">Full ' + _cnt.full + "</span>" + (_cnt.none ? ' · <span style="color:#ff8c00">' + (_ja ? "neighbor なし " : "no adjacency ") + _cnt.none + "</span>" : "");
     lines.push({ text: "> Neighbor: " + _ct, _nxCounts: true, title: _ja ? "隣り合うルータに向いた OSPF のインターフェースの数" : "OSPF interfaces facing a neighbor: with a Full adjacency / without" });
     return;
   }
@@ -3225,9 +3225,9 @@ function _xrayOspfIfProblem(s, ifn, r, ja) {
   var rem = r.remote && typeof r.remote === "object" ? r.remote : {};
   var pairs = mm.map(function (f) { return (lbl[f] || f) + " " + _xrayOspfIfVal(f, r[f], ja) + " ⇔ " + _xrayOspfIfVal(f, rem[f], ja); }).join(" · ");
   if (mm.length && adj) return { kind: "warn", what: (ja ? "Full だが " : "Full, but ") + pairs };
-  if (mm.length) return { kind: "down", what: (ja ? "隣接なし — " : "no adjacency — ") + pairs };
+  if (mm.length) return { kind: "down", what: (ja ? "neighbor なし — " : "no adjacency — ") + pairs };
   if (!adj && r.peer && r.passive !== true && (r.neighbors_adjacent === 0 || (nst && !/^full/i.test(nst))))
-    return { kind: "down", what: (ja ? "隣接なし" : "no adjacency") + (nst ? " (" + nst + ")" : "") };
+    return { kind: "down", what: (ja ? "neighbor なし" : "no adjacency") + (nst ? " (" + nst + ")" : "") };
   return null;
 }
 /* the first lines of the live Routing Engine panel: the interfaces / sessions that are wrong, each a link to its block */
@@ -3252,7 +3252,7 @@ function _xrayWrongLines(s) {
     items.push({ kind: "down", n: -1, text: "BGP " + _escapeHtml(b.ip || b.peer_ip || "?") + (b.remote_as ? " (AS " + _escapeHtml(b.remote_as) + ")" : "") + ": " + _escapeHtml(b.state || (ja ? "未確立" : "not established")) });
   });
   var out = [{ cls: "re-wrong-title", style: "color:#e0a84d;font-weight:700", text: ja ? "問題のある所" : "What's wrong" }];
-  if (!items.length) { out.push({ cls: "re-wrong-none", style: "padding-left:1.2em;color:#39ff14", text: ja ? "✓ 食い違い・落ちた隣接は無し" : "✓ No mismatch or down adjacency" }); return out; }
+  if (!items.length) { out.push({ cls: "re-wrong-none", style: "padding-left:1.2em;color:#39ff14", text: ja ? "✓ 食い違い・落ちた neighbor は無し" : "✓ No mismatch or down adjacency" }); return out; }
   items.forEach(function (it) {
     var col = it.kind === "warn" ? "#ffcc00" : "#ff4444", mark = it.kind === "warn" ? "⚠ " : "✕ ";
     var go = it.n >= 0 ? ' style="cursor:pointer;text-decoration:underline dotted" onclick="window._xrayReGoIf && window._xrayReGoIf(' + it.n + ')"' : "";
@@ -3329,7 +3329,7 @@ function _xrayOspfIfLines(s) {
     var _prob = _xrayOspfIfProblem(s, ifn, r, ja);
     var open = Object.prototype.hasOwnProperty.call(_map, _key) ? !!_map[_key]
       : typeof window._reOspfIfOpen === "boolean" ? window._reOspfIfOpen : (!!_prob || list.length <= 2);
-    var _nst = _xrayOspfIfNbrState(s, ifn) || (r.neighbors_adjacent > 0 ? "Full" : r.passive ? "passive" : r.peer ? (ja ? "隣接なし" : "no adjacency") : "");
+    var _nst = _xrayOspfIfNbrState(s, ifn) || (r.neighbors_adjacent > 0 ? "Full" : r.passive ? "passive" : r.peer ? (ja ? "neighbor なし" : "no adjacency") : "");
     var _sum = (r.peer || _nst) ? ' <span class="re-ospfif-sum" style="color:' + (_prob ? (_prob.kind === "warn" ? "#ffcc00" : "#ff4444") : "#7facc9") + '">' +
       (r.peer ? "→ " + _escapeHtml(r.peer) : "") + (r.peer && _nst ? " · " : "") + _escapeHtml(_nst) + "</span>" : "";
     var bad = {}; (Array.isArray(r.mismatch) ? r.mismatch : []).forEach(function (f) { bad[f] = true; });

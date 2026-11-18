@@ -227,10 +227,10 @@
       ospf_adjacency_new: 'OSPF adjacency new', ospf_if_joined: 'joined OSPF', bgp_session_up: 'BGP session', bgp_peer_added: 'BGP peer new',
       route_added: 'route new', iface_address: 'address' },
     ja: { node_removed: 'ルータが消えた', node_unread: '読めない', iface_down: 'interface', ospf_if_left: 'OSPF から外れた',
-      ospf_if_value: 'OSPF の値', bgp_peer_removed: 'BGP の相手が消えた', ospf_adjacency_lost: 'OSPF の隣接が切れた',
+      ospf_if_value: 'OSPF の値', bgp_peer_removed: 'BGP の相手が消えた', ospf_adjacency_lost: 'OSPF の neighbor が切れた',
       bgp_session_down: 'BGP', best_path_changed: '最良経路', route_removed: '経路が消えた', route_changed: '経路',
-      ospf_adjacency_state: 'OSPF の隣接', node_added: 'ルータが増えた', iface_removed: 'interface が消えた', iface_up: 'interface', iface_added: 'interface が増えた', ospf_adjacency_up: 'OSPF の隣接',
-      ospf_adjacency_new: 'OSPF の隣接が増えた', ospf_if_joined: 'OSPF に入った', bgp_session_up: 'BGP', bgp_peer_added: 'BGP の相手が増えた',
+      ospf_adjacency_state: 'OSPF の neighbor', node_added: 'ルータが増えた', iface_removed: 'interface が消えた', iface_up: 'interface', iface_added: 'interface が増えた', ospf_adjacency_up: 'OSPF の neighbor',
+      ospf_adjacency_new: 'OSPF の neighbor が増えた', ospf_if_joined: 'OSPF に入った', bgp_session_up: 'BGP', bgp_peer_added: 'BGP の相手が増えた',
       route_added: '経路が増えた', iface_address: 'アドレス' }
   };
   var TONE = { node_removed: 'bad', node_unread: 'bad', iface_down: 'bad', ospf_if_left: 'bad', ospf_if_value: 'bad', bgp_peer_removed: 'bad',

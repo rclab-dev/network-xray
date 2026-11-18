@@ -7,7 +7,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **state_diff / `xray-query.js diff`:** an interface that is new is reported (`iface_added`), and one removed while it was already down is `iface_removed` (it was shown as `up → absent`). This was the known issue of v1.4.1.
 - **state_diff:** a recursive route whose resolution moved to another interface (no address given) is reported; an interface written by hand as `"up": "false"` counts as down. The docs say the order is by kind, not a traced cause.
 - **state_diff / `xray-query.js diff`:** the lab's management network can be given (`mgmt_subnet` / `--mgmt-subnet <cidr>`; netlab uses 192.168.121.0/24), as the collector's `--exclude-mgmt` already reads it from the topology. Without it nothing changes (172.20.20.0/24).
-- **Pages:** on the 日本語 toggle the DeepDive's English panel headings (Router — Internal View, Routing Engine, Routing table, BGP Table, Best-Path Decision, …) are shown in Japanese; protocol words (OSPF, LSDB, Full) stay English.
+- **Pages:** on the 日本語 toggle the DeepDive's English panel headings (Router — Internal View, Routing table, BGP Table, Best-Path Decision, …) are shown in Japanese; Routing Engine, neighbor and the protocol words (OSPF, LSDB, Full) stay English.
 - **DeepDive:** an LSDB row from the route to the target showed escaped characters (`&quot;`) for a prefix with quotes; a ping mode the page does not know, with a space in it, or a node name with a quote or a space, no longer stops the drawing.
 - **bgp-paste:** the DeepDive's BGP Table shows the pasted routes (it said "No routes received (BGP session is up)" next to them).
 - **FAQ:** the paste pages work with no network, opened from the repo zip on disk.
