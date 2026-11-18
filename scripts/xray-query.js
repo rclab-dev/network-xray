@@ -1064,7 +1064,8 @@ function loadProblem(input) {
   if (stat.isDirectory()) { p = path.join(p, 'problem.json'); try { stat = fs.statSync(p); } catch (e) { throw new QueryError('no problem.json in ' + input); } }
   if (!stat.isFile()) throw new QueryError('not a regular file: ' + p);
   var obj;
-  try { obj = JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, '')); } catch (e) { throw new QueryError('problem.json is not valid JSON: ' + e.message); }
+  var text = readCapped(p);   /* nx_state_size_cap: the same 64 MB limit as a state file */
+  try { obj = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (e) { throw new QueryError('problem.json is not valid JSON: ' + e.message); }
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new QueryError('problem.json is not a JSON object');
   return obj;
 }

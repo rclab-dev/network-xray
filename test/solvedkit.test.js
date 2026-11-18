@@ -315,3 +315,23 @@ test('mcp: check_suggest and check_init (no file is written)', (t) => {
   r = call('check_suggest', { broken: L.broken, solved: L.solved, focus: 'r9' });
   assert.strictEqual(r.isError, true); assert.match(r.content[0].text, /unknown node: r9/);
 });
+
+test('mcp: the check tools read problem.json and the states only under the server\'s folder (v1.4.3 path limit)', (t) => {
+  const L = tmpLab(t);
+  const mcp = require(path.join(__dirname, '..', 'scripts', 'xray-mcp.js'));
+  const call = (name, args) => mcp.handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }).result;
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-solvedkit-out-'));
+  t.after(() => { mcp.setPathRoot(null); fs.rmSync(outside, { recursive: true, force: true }); });
+  const pOut = path.join(outside, 'problem.json'); fs.writeFileSync(pOut, JSON.stringify(P([ADJ])));
+  mcp.setPathRoot(L.dir);
+  assert.strictEqual(call('check_run', { problem: L.problem, path: L.solved }).structuredContent.status, 'solved');
+  for (const [name, args] of [
+    ['check_run', { problem: pOut, path: L.solved }],
+    ['check_verify', { problem: pOut, broken: L.broken, solved: L.solved }],
+    ['check_run', { problem: L.problem, path: path.join(outside, 'x.json') }]
+  ]) {
+    const r = call(name, args);
+    assert.strictEqual(r.isError, true, name);
+    assert.match(r.content[0].text, /outside the folder this server reads/, name);
+  }
+});
