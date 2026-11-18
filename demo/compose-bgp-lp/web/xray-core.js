@@ -13263,12 +13263,12 @@ function _xrayInitTriangleTools(config) {
     var _cfShutdown = config.check_flow && config.check_flow.shutdown_link || null;
     var _shutdownBtnHtml = "";
     if (_cfShutdown && _cfShutdown.label) {
-      _shutdownBtnHtml = '<button class="shutdown-btn" id="shutdown-btn" onclick="_triShutdownDirect(\'' + qid + "')\">" + _cfShutdown.label + "</button>";
+      _shutdownBtnHtml = '<button class="shutdown-btn" id="shutdown-btn" onclick="_triShutdownDirect(' + _xrayJsArg(qid) + ')">' + _escapeHtml(_cfShutdown.label) + "</button>";   /* nx_tri_tools_escape */
     }
     var linkCard = document.createElement("div");
     linkCard.className = "link-status";
     linkCard.id = "link-status";
-    linkCard.innerHTML = "<h3>リンク状態</h3>" + '<div class="link-row"><span class="link-name">r1 ── r3 (直通)</span><span class="link-indicator unknown" id="link-r1-r3">確認中...</span></div>' + '<div class="link-row"><span class="link-name">r1 ── r2</span><span class="link-indicator unknown" id="link-r1-r2">確認中...</span></div>' + '<div class="link-row"><span class="link-name">r2 ── r3</span><span class="link-indicator unknown" id="link-r2-r3">確認中...</span></div>' + '<div class="link-row"><span class="link-name">r1: ping ' + pingDst + '</span><span class="link-indicator unknown" id="ping-status">確認中...</span><span class="link-ping-rtt" id="ping-rtt"></span></div>' + '<div class="ping-dots" id="ping-dots"></div>' + (_shutdownBtnHtml ? '<div class="link-controls">' + _shutdownBtnHtml + "</div>" : "");
+    linkCard.innerHTML = "<h3>リンク状態</h3>" + '<div class="link-row"><span class="link-name">r1 ── r3 (直通)</span><span class="link-indicator unknown" id="link-r1-r3">確認中...</span></div>' + '<div class="link-row"><span class="link-name">r1 ── r2</span><span class="link-indicator unknown" id="link-r1-r2">確認中...</span></div>' + '<div class="link-row"><span class="link-name">r2 ── r3</span><span class="link-indicator unknown" id="link-r2-r3">確認中...</span></div>' + '<div class="link-row"><span class="link-name">r1: ping ' + _escapeHtml(pingDst) + '</span><span class="link-indicator unknown" id="ping-status">確認中...</span><span class="link-ping-rtt" id="ping-rtt"></span></div>' + '<div class="ping-dots" id="ping-dots"></div>' + (_shutdownBtnHtml ? '<div class="link-controls">' + _shutdownBtnHtml + "</div>" : "");
     topoRow.appendChild(linkCard);
     var dotsEl = document.getElementById("ping-dots");
     for (var i = 0; i < 50; i++) {
