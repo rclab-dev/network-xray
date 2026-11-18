@@ -1081,7 +1081,8 @@ window.__initNeXtOverview = function (data) {
       if (partOk) { if (!window.__nxValidateSince) window.__nxValidateSince = Date.now(); } else window.__nxValidateSince = 0;
       var held = (typeof v.held === 'boolean') ? (v.held && partOk) : (partOk && (Date.now() - window.__nxValidateSince >= hold));   /* nx_validate_held: the collector counts the 20 s */
       var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
-      var sig = JSON.stringify(v) + L + held + (v.source === 'netlab' ? '|' + Math.floor((Date.now() - Date.parse(v.netlab_at || '')) / 60000) : '');   /* nx_netlab_json: the age shown */
+      var _nAge = Date.now() - Date.parse(v.netlab_at || '');   /* nx_netlab_json: the age shown, and (nx_netlab_interval) whether it is dimmed */
+      var sig = JSON.stringify(v) + L + held + (v.source === 'netlab' ? '|' + Math.floor(_nAge / 60000) + '|' + (_nAge >= Math.max(60000, 2000 * (Number(v.netlab_interval_s) || 0))) : '');
       if (sig === window.__nxValidateSig) return;
       window.__nxValidateSig = sig;
       var ja = L === 'ja', esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); };
