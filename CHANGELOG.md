@@ -19,7 +19,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **FAQ:** the paste pages work with no network, opened from the repo zip on disk.
 - **Docs:** README and llms.txt say how to give the MCP server a default state (`--path` / `NX_MCP_PATH`); `host` nodes are drawn, not read (with `bridge` / `ovs-bridge`); DATA-CONTRACT: `resolved_via` came in v1.3.1.
 - **Examples:** the solved q21 lab's header comment says what the lab does (r2 wins with LocalPref 150, r3 is the backup; it still described the unsolved lab).
-- **netlab:** the band shows netlab's own validate results when the lab folder has `network_xray/validate.json` (written by netlab's network_xray tool with `validate: True`, from netlab's next release), in netlab's words; results older than two of the plugin's runs (`interval`, else a minute) are kept and dimmed. Without the file, the band checks the tests itself as before.
+- **netlab:** the band shows netlab's own validate results when the lab folder has `network_xray/validate.json` (written by netlab's network_xray tool with `validate: True`, netlab 26.11 or later), in netlab's words; results older than two of the plugin's runs (`interval`, else a minute) are kept and dimmed. Without the file, the band checks the tests itself as before.
 - **README:** the Caution box is two bullets (why the socket / no socket needed); the Codespaces quota in hours (about 30 a month); a memory-limit example (`--memory 300m`); how to check what a change (an Ansible playbook) did with `diff`.
 
 ## v1.4.1 — 2026-11-15
