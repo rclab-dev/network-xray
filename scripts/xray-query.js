@@ -1107,6 +1107,7 @@ function checkTable(argv, res, color) {
     var sg = argv[1] === 'init' ? res.suggest : res;
     out.push(title((argv[1] === 'init' ? 'problem.json draft: ' : 'Suggested check: ') + (res.status === 'ok' ? 'ok (fails on broken, holds on solved)' : 'none'), color));
     if (res.reason) out.push(textLine('  ' + res.reason));
+    (sg.warnings || []).forEach(function (w) { out.push(textLine('  warning: ' + w)); });
     if (sg.candidates.length) out = out.concat(renderTable([{ head: 'USE', key: 'use' }, { head: 'KIND', key: 'kind' }, { head: 'TELLS', key: 't' }, { head: 'CONDITION', key: 'cond' }],
       sg.candidates.map(function (c) { return { use: c.in_check ? '*' : '', kind: c.kind, t: c.tells ? 'yes' : 'no', cond: condText(c.cond) + (c.binds_method ? ' (names how)' : '') }; }), color, '  '));
     if (sg.skipped.length) out.push('', textLine('not used: ' + sg.skipped.length + ' change(s) - see --format json (skipped)'));

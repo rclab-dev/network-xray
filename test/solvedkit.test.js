@@ -216,12 +216,18 @@ test('suggest: --focus picks the router; --max limits the check', () => {
   assert.strictEqual(r.check.all.length, 1); assert.strictEqual(r.check.all[0][1], 'routing_table');
 });
 
-test('suggest: a protocol change is named and marked binds_method; a wrong next hop on the same interface adds next_hop', () => {
-  const st = (proto, nh) => ({ r1: { target_node: 'r1', interfaces: { eth1: { up: true } }, routing_table: [{ prefix: '3.3.3.3/32', protocol: proto, out_iface: 'eth1', next_hop: nh, selected: true }] } });
-  let r = kit.suggest(st('static', '10.0.12.2'), st('ospf', '10.0.12.2'));
-  const c = r.candidates[0];
-  assert.deepStrictEqual(c.cond[3], [['prefix', 'eq', '3.3.3.3/32'], ['selected', 'eq', true], ['out_iface', 'eq', 'eth1'], ['next_hop', 'eq', '10.0.12.2'], ['protocol', 'eq', 'ospf']]);
-  assert.strictEqual(c.binds_method, true); assert.match(c.note, /static -> ospf/);
+test('suggest: a protocol change is a separate binds_method candidate, not in the check by default; a wrong next hop on the same interface adds next_hop', () => {
+  const st = (proto, nh, ifc) => ({ r1: { target_node: 'r1', interfaces: { eth1: { up: true }, eth2: { up: true } }, routing_table: [{ prefix: '3.3.3.3/32', protocol: proto, out_iface: ifc || 'eth1', next_hop: nh, selected: true }] } });
+  // the route moved (eth1 -> eth2) and is now learned by OSPF: the check names where it goes, not how it was learned
+  let r = kit.suggest(st('static', '10.0.12.2'), st('ospf', '10.0.13.3', 'eth2'));
+  assert.deepStrictEqual(r.check.all, [['r1', 'routing_table', 'some', [['prefix', 'eq', '3.3.3.3/32'], ['selected', 'eq', true], ['out_iface', 'eq', 'eth2']]]]);
+  const b = r.candidates.find(x => x.binds_method);
+  assert.deepStrictEqual(b.cond[3].slice(-1), [['protocol', 'eq', 'ospf']]); assert.strictEqual(b.in_check, false); assert.match(b.note, /static -> ospf/);
+  assert.strictEqual(r.warnings, undefined);
+  // only the protocol tells (same interface and next hop): then it is used, with a warning
+  r = kit.suggest(st('static', '10.0.12.2'), st('ospf', '10.0.12.2'));
+  assert.strictEqual(r.status, 'ok'); assert.strictEqual(r.check.all[0][3].slice(-1)[0][2], 'ospf');
+  assert.match(r.warnings[0], /names how a route is learned/);
   r = kit.suggest(st('static', '10.0.12.99'), st('static', '10.0.12.2'));   // the next hop inside the connected subnet
   assert.deepStrictEqual(r.check.all[0][3], [['prefix', 'eq', '3.3.3.3/32'], ['selected', 'eq', true], ['out_iface', 'eq', 'eth1'], ['next_hop', 'eq', '10.0.12.2']]);
   assert.ok(!r.candidates[0].binds_method);
@@ -237,7 +243,7 @@ test('suggest: nothing changed, or nothing the check can use -> none with the re
   assert.ok(r.skipped.some(x => /configured value/.test(x.why)));
   // the solved lab cannot be read: said so
   r = kit.suggest(BROKEN, { r1: { target_node: 'r1', nx_unread: 'IS-IS is not read' }, r2: BROKEN.r2 });
-  assert.strictEqual(r.status, 'none'); assert.deepStrictEqual(r.unread, ['r1: not readable (IS-IS is not read)']);
+  assert.strictEqual(r.status, 'cannot_judge'); assert.deepStrictEqual(r.unread, ['r1: not readable (IS-IS is not read)']);
 });
 
 test('suggest: a route that only disappeared is a "gone" candidate, used only when nothing else tells', () => {
@@ -248,6 +254,26 @@ test('suggest: a route that only disappeared is a "gone" candidate, used only wh
   r = kit.suggest(b, JSON.parse(JSON.stringify(BROKEN)));
   assert.strictEqual(r.status, 'ok');
   assert.deepStrictEqual(r.check.all, [['r1', 'routing_table', 'none', [['prefix', 'eq', '9.9.9.9/32'], ['selected', 'eq', true]]]]);
+  assert.match(r.warnings[0], /only says that a route is gone/);
+});
+
+test('suggest: the OSPF neighbor of a change is matched as a whole address (1.1.1.1 is not 1.1.1.10), in either order', () => {
+  const st = (s10, first10) => {
+    const a = { router_id: '1.1.1.1', state: 'Full/DR', full: true }, b = { router_id: '1.1.1.10', state: s10, full: s10 === 'Full/BDR' };
+    return { r2: { target_node: 'r2', ospf_neighbors: first10 ? [b, a] : [a, b] } };
+  };
+  for (const first10 of [false, true]) {
+    const r = kit.suggest(st('Init/DROther', first10), st('Full/BDR', first10));
+    assert.strictEqual(r.status, 'ok', 'order ' + first10);
+    assert.deepStrictEqual(r.check.all, [['r2', 'ospf_neighbors', 'some', [['router_id', 'eq', '1.1.1.10'], ['full', 'eq', true]]]]);
+  }
+});
+
+test('cli: check suggest exits 2 when the solved lab cannot be read', (t) => {
+  const L = tmpLab(t);
+  const bad = L.write('unread.json', { r1: { target_node: 'r1', nx_unread: 'IS-IS is not read' }, r2: BROKEN.r2 });
+  const r = q(['check', 'suggest', L.broken, bad]);
+  assert.strictEqual(r.code, 2); assert.strictEqual(JSON.parse(r.out).status, 'cannot_judge');
 });
 
 test('real states: q21 demo frames -> the same two conditions as the hand-written official check (best via 65002, 65003 kept)', () => {

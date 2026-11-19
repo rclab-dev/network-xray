@@ -150,10 +150,15 @@
         // the next hop when the interface alone does not tell the fix (same interface, another next hop: a wrong
         // next hop inside the connected subnet), or when there is no interface to name
         if (s(r.next_hop) && (!s(r.out_iface) || (old && s(old.out_iface) === s(r.out_iface)))) conds.push(['next_hop', 'eq', r.next_hop]);
-        var bindsP = !!(old && s(old.protocol) && s(old.protocol) !== s(r.protocol));
-        if (bindsP) conds.push(['protocol', 'eq', r.protocol]);
         withVrf(conds, r);
-        return push([n, 'routing_table', 'some', conds], 'path', bindsP ? { binds_method: true, note: 'names how the route is learned (' + s(old.protocol) + ' -> ' + s(r.protocol) + '); drop protocol if any source is fine' } : null);
+        push([n, 'routing_table', 'some', conds], 'path');
+        // how the route is learned changed (static -> ospf): offered as a separate candidate, not in the check by default -
+        // it would fail a correct fix that reaches the same route another way. Add it only if the problem asks for it.
+        if (old && s(old.protocol) && s(old.protocol) !== s(r.protocol)) {
+          push([n, 'routing_table', 'some', conds.concat([['protocol', 'eq', r.protocol]])], 'path',
+            { binds_method: true, note: 'names how the route is learned (' + s(old.protocol) + ' -> ' + s(r.protocol) + '); add it only if the problem asks for that' });
+        }
+        return;
       }
       case 'route_removed': {
         var gone = selectedRows(B, c.item)[0];
@@ -178,7 +183,9 @@
         return;
       }
       case 'ospf_adjacency_up': case 'ospf_adjacency_new': {
-        var nb = arrOf(A.ospf_neighbors).filter(function (x) { return x && isFull(x) && (s(c.item).indexOf(s(x.router_id || x.address)) >= 0); })[0];
+        // the change's item is "<iface> → <router id or address>": compare that last word as a whole (1.1.1.1 is not 1.1.1.10)
+        var who = s(c.item).split('→').pop().trim();
+        var nb = arrOf(A.ospf_neighbors).filter(function (x) { return x && isFull(x) && (s(x.router_id) === who || s(x.address) === who); })[0];
         if (!nb) return skipped.push({ from: from, why: 'the neighbor is not Full in the solved state' });
         var nc = s(nb.router_id) ? [['router_id', 'eq', nb.router_id]] : [['address', 'eq', nb.address]];
         nc.push(nb.full === true ? ['full', 'eq', true] : ['state', 'eq', nb.state]);
@@ -248,7 +255,7 @@
     if (unread.length) out.unread = unread.map(function (n) { return n + ': ' + unreadNode(solved, n); });
     var telling = cands.filter(function (c) { return c.tells; });
     if (!telling.length) {
-      out.status = 'none'; out.check = null;
+      out.status = unread.length ? 'cannot_judge' : 'none'; out.check = null;
       out.reason = d.none ? 'no difference between the two states (the fix changed nothing the collector reads)'
         : 'no condition the check can use tells the broken state from the solved one' +
           (unread.length ? ' (cannot read ' + unread.join(', ') + ')' : '') + ' - see skipped';
@@ -257,13 +264,13 @@
     // the check: the first path, the first evidence, the backup of a chosen BGP best path; then fill up to max in order
     var pick = [];
     var firstOf = function (kind, node) {
-      var l = cands.filter(function (c) { return c.kind === kind && c.tells; });
+      var l = cands.filter(function (c) { return c.kind === kind && c.tells && !c.binds_method; });
       return (node && l.filter(function (c) { return c.cond[0] === node; })[0]) || l[0];
     };
     var path0 = firstOf('path');
     // the evidence on the same router as the path when there is one (the fault and its effect read together)
     [path0, firstOf('evidence', path0 && path0.cond[0])].forEach(function (c) { if (c && pick.indexOf(c) < 0) pick.push(c); });
-    if (!pick.length) pick.push(telling[0]);
+    if (!pick.length) pick.push(telling.filter(function (c) { return !c.binds_method; })[0] || telling[0]);
     pick.slice().forEach(function (p) {
       if (p.kind !== 'path') return;
       var bk = cands.filter(function (c) { return c.kind === 'backup' && c.cond[0] === p.cond[0] && c.pfx === p.pfx; })[0];
@@ -277,6 +284,10 @@
     if (/^\d+\.\d+\.\d+\.\d+\/\d+$/.test(s(pick[0].pfx))) out.focus.prefix = pick[0].pfx;
     out.status = out.verify.ok ? 'ok' : 'none';
     if (!out.verify.ok) { out.reason = 'the proposed check did not verify: ' + out.verify.problems.join('; '); out.check = null; }
+    else if (pick.every(function (c) { return c.kind === 'gone'; }))
+      out.warnings = ['the check only says that a route is gone: keep it only if the problem is about removing that route'];
+    else if (pick.some(function (c) { return c.binds_method; }))
+      out.warnings = ['the check names how a route is learned: a fix that reaches the same route another way would not count'];
     return out;
   }
 
@@ -286,7 +297,7 @@
   function init(broken, solved, opts) {
     opts = opts || {};
     var sg = suggest(broken, solved, opts);
-    if (sg.status !== 'ok') return { status: 'none', reason: sg.reason, suggest: sg };
+    if (sg.status !== 'ok') return { status: sg.status, reason: sg.reason, suggest: sg };
     var focus = opts.focus && opts.focus.node ? { node: opts.focus.node } : { node: sg.focus.node };
     if (opts.focus && opts.focus.prefix) focus.prefix = opts.focus.prefix; else if (!(opts.focus && opts.focus.node) && sg.focus.prefix) focus.prefix = sg.focus.prefix;
     var notes = sg.candidates.filter(function (c) { return c.in_check && c.note; }).map(function (c) { return c.note; });
