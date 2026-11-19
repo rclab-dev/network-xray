@@ -150,7 +150,9 @@ That writes:
       "type": "stdio",
       "command": "node",
       "args": [
-        "/path/to/network-xray/scripts/xray-mcp.js"
+        "/path/to/network-xray/scripts/xray-mcp.js",
+        "--path",
+        "/path/to/your-lab"
       ],
       "env": {}
     }

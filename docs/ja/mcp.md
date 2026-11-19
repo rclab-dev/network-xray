@@ -144,7 +144,9 @@ claude mcp add --scope project network-xray -- node /path/to/network-xray/script
       "type": "stdio",
       "command": "node",
       "args": [
-        "/path/to/network-xray/scripts/xray-mcp.js"
+        "/path/to/network-xray/scripts/xray-mcp.js",
+        "--path",
+        "/path/to/your-lab"
       ],
       "env": {}
     }
