@@ -42,7 +42,7 @@ function toolOk(name, args) {
 
 // a raw stdio session with a time limit: a hang shows up as a timeout instead of a stuck test run
 function session(lines, timeout) {
-  var r = cp.spawnSync(process.execPath, [SERVER], { input: lines.join('\n') + '\n', encoding: 'utf8', timeout: timeout || 10000 });
+  var r = cp.spawnSync(process.execPath, [SERVER], { input: lines.join('\n') + '\n', encoding: 'utf8', timeout: timeout || 10000, env: Object.assign({}, process.env, { NX_MCP_ALLOW_ANY_PATH: '1' }) });   // temp files and /dev/null: no folder limit here (mcp-path-root.test.js tests it)
   assert.strictEqual(r.error, undefined, 'server did not finish: ' + (r.error && r.error.message));
   assert.strictEqual(r.status, 0, r.stderr);
   var byId = {};
