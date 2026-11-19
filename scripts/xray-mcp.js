@@ -430,7 +430,7 @@ function checkPath(p) {
 var NOT_PROBLEM = 'not a problem.json (JSON object)';
 function loadProblem(p) {
   checkPath(p);   /* nx_mcp_path_root: problem.json is read under the same folder as the states */
-  try { return query.loadProblem(p); } catch (e) {
+  try { return query.loadProblem(p, { check: checkPath }); } catch (e) {
     if (/^problem\.json is not/.test((e && e.message) || '')) throw new Error(NOT_PROBLEM);
     throw e;
   }

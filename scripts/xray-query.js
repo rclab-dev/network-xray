@@ -1057,12 +1057,14 @@ function diffTable(res, color) {
 // ---- check (SolvedKit) ----------------------------------------------------------------------
 // The page's Solved rules (solved-check.js) on saved states, without the page: run = one state, verify = the
 // broken and the solved lab of the same problem. <problem.json> may be the file or the folder that has it.
-function loadProblem(input) {
+function loadProblem(input, opts) {
+  var chk = opts && typeof opts.check === 'function' ? opts.check : null;   /* nx_state_guard: the same hook as loadStates */
   if (!input) throw new QueryError('missing problem.json');
   var p = input, stat;
   try { stat = fs.statSync(p); } catch (e) { throw new QueryError('not found: ' + input); }
   if (stat.isDirectory()) { p = path.join(p, 'problem.json'); try { stat = fs.statSync(p); } catch (e) { throw new QueryError('no problem.json in ' + input); } }
   if (!stat.isFile()) throw new QueryError('not a regular file: ' + p);
+  if (chk) chk(p);   // the problem.json inside a folder is checked too (a link in it cannot lead outside)
   var obj;
   var text = readCapped(p);   /* nx_state_size_cap: the same 64 MB limit as a state file */
   try { obj = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (e) { throw new QueryError('problem.json is not valid JSON: ' + e.message); }

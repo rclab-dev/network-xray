@@ -361,3 +361,16 @@ test('mcp: the check tools read problem.json and the states only under the serve
     assert.match(r.content[0].text, /outside the folder this server reads/, name);
   }
 });
+
+test('mcp: a problem.json inside the server\'s folder that is a link to a file outside is refused', (t) => {
+  const L = tmpLab(t);
+  const mcp = require(path.join(__dirname, '..', 'scripts', 'xray-mcp.js'));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-solvedkit-link-'));
+  t.after(() => { mcp.setPathRoot(null); fs.rmSync(outside, { recursive: true, force: true }); });
+  const target = path.join(outside, 'problem.json'); fs.writeFileSync(target, JSON.stringify(P([ADJ])));
+  const lab2 = path.join(L.dir, 'lab2'); fs.mkdirSync(lab2);
+  try { fs.symlinkSync(target, path.join(lab2, 'problem.json')); } catch (e) { t.skip('no symlinks here (' + e.code + ')'); return; }
+  mcp.setPathRoot(L.dir);
+  const r = mcp.handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'check_run', arguments: { problem: lab2, path: L.solved } } }).result;
+  assert.strictEqual(r.isError, true); assert.match(r.content[0].text, /outside the folder this server reads/);
+});
