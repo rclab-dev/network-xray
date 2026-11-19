@@ -2,6 +2,10 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.5.0 — 2026-11-22
+
+- **SolvedKit — `xray-query.js check run` / `check verify` / `check suggest` / `check init`, MCP `check_run` / `check_verify` / `check_suggest` / `check_init`:** judge a lab's problem.json `check` on saved states without the page or a running lab (the same rules as the ✓ Solved mark). `run` answers solved / not solved / cannot judge with exit code 0 / 1 / 2; `verify` says whether a check fails on the broken lab and holds on the solved one, with a verdict per condition; `suggest` proposes the check from what the fix changed between a broken and a solved state (verified on both; it does not guess other ways to solve), and `init` puts it in a problem.json draft.
+
 ## v1.4.4 — 2026-11-20
 
 - **MCP:** the descriptions of `why_best_path` and `why_path` say which to pick (`why_best_path`: a quick look at one exact prefix and the reason stored in the data; `why_path`: also takes an address and compares the candidates step by step when the router gives no reason).
@@ -17,7 +21,6 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 
 ## v1.4.2 — 2026-11-19
 
-- **SolvedKit — `xray-query.js check run` / `check verify` / `check suggest` / `check init`, MCP `check_run` / `check_verify` / `check_suggest` / `check_init`:** judge a lab's problem.json `check` on saved states without the page or a running lab (the same rules as the ✓ Solved mark). `run` answers solved / not solved / cannot judge with exit code 0 / 1 / 2; `verify` says whether a check fails on the broken lab and holds on the solved one, with a verdict per condition; `suggest` proposes the check from what the fix changed between a broken and a solved state (verified on both; it does not guess other ways to solve), and `init` puts it in a problem.json draft.
 - **state_diff / `xray-query.js diff`:** an interface that is new is reported (`iface_added`), and one removed while it was already down is `iface_removed` (it was shown as `up → absent`). This was the known issue of v1.4.1.
 - **state_diff:** a recursive route whose resolution moved to another interface (no address given) is reported; an interface written by hand as `"up": "false"` counts as down. The docs say the order is by kind, not a traced cause.
 - **state_diff / `xray-query.js diff`:** the lab's management network can be given (`mgmt_subnet` / `--mgmt-subnet <cidr>`; netlab uses 192.168.121.0/24), as the collector's `--exclude-mgmt` already reads it from the topology. Without it nothing changes (172.20.20.0/24).
