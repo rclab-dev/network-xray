@@ -328,7 +328,7 @@ var NOT_STATE = 'not a network-xray state file';
 /* nx_mcp_path_root (v1.4.3): the server reads only under one folder - the --path / NX_MCP_PATH folder (a file's folder),
    else the folder it was started in. --allow-any-path (or NX_MCP_ALLOW_ANY_PATH=1) reads anywhere, as before.
    Symbolic links are followed first (realpath), so a link cannot lead outside. null = no limit (when used as a module). */
-var pathRoot = null;
+var pathRoot = null, ROOT_REFUSED = '\u0000root';   // started in / (or C:\): nothing is read without --path
 function sameOrUnder(p, root) {
   var a = process.platform === 'win32' ? p.toLowerCase() : p, b = process.platform === 'win32' ? root.toLowerCase() : root;
   return a === b || a.indexOf(b.slice(-1) === path.sep ? b : b + path.sep) === 0;
@@ -336,16 +336,18 @@ function sameOrUnder(p, root) {
 function checkPath(p) {
   if (pathRoot == null || p == null || p === '') return p;
   var real, root;
-  try { root = fs.realpathSync(pathRoot); } catch (e) { root = path.resolve(pathRoot); }
-  try { real = fs.realpathSync(path.resolve(p)); } catch (e) { real = path.resolve(p); }
+  if (pathRoot === ROOT_REFUSED) throw new Error('this server was started in the root of the file system: start it with --path <folder> (the folder your lab state is in), or --allow-any-path');
+  var rp = fs.realpathSync.native || fs.realpathSync;
+  try { root = rp(pathRoot); } catch (e) { root = path.resolve(pathRoot); }
+  try { real = rp(path.resolve(p)); } catch (e) { real = path.resolve(p); }
   var own = null;   // the server's own collect folder (what collect returns) is read too
-  if (collectDir) { try { own = fs.realpathSync(collectDir); } catch (e) { own = null; } }
+  if (collectDir) { try { own = rp(collectDir); } catch (e) { own = null; } }
   if (!sameOrUnder(real, root) && !(own && sameOrUnder(real, own))) throw new Error('outside the folder this server reads (' + root + '): start it with --path <folder>, or --allow-any-path');
   return p;
 }
 function loadStates(p) {
   checkPath(p);
-  try { return query.loadStates(p); } catch (e) {
+  try { return query.loadStates(p, { check: checkPath }); } catch (e) {
     if (/^(not valid JSON|no node state found|not a regular file or a directory)/.test((e && e.message) || '')) throw new Error(NOT_STATE);
     throw e;
   }
@@ -477,8 +479,12 @@ if (require.main === module) {
   }
   if (_cli.length) { console.error('xray-mcp.js: unknown option: ' + _cli[0] + "\nTry 'node scripts/xray-mcp.js --help'."); process.exit(2); }
   if (!_anyPath) {   /* nx_mcp_path_root */
-    var _isDir = false; try { _isDir = !!defaultPath && fs.statSync(defaultPath).isDirectory(); } catch (e) {}
+    var _isDir = /[\\/]$/.test(_def || ''); try { _isDir = _isDir || (!!defaultPath && fs.statSync(defaultPath).isDirectory()); } catch (e) {}
     pathRoot = defaultPath ? (_isDir ? defaultPath : path.dirname(defaultPath)) : process.cwd();
+    if (path.resolve(pathRoot) === path.parse(path.resolve(pathRoot)).root) {
+      console.error('xray-mcp.js: started in ' + pathRoot + ' without --path: the tools read nothing until it is started with --path <folder> (or --allow-any-path)');
+      pathRoot = ROOT_REFUSED;
+    }
   }
   var rl = readline.createInterface({ input: process.stdin, terminal: false });
   var write = function (res) { if (res) process.stdout.write(JSON.stringify(res) + '\n'); };

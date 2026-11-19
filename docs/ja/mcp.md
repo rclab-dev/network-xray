@@ -16,7 +16,7 @@
 **どのツールにも要るのは `path` だけです: `/path/to/network-xray/xray-states.js` (絶対パス) を渡してください。**
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab
 ```
 
 Cursor では、同じサーバを `.cursor/mcp.json` に書きます ([Cursor](#cursor))。
@@ -31,8 +31,9 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 ```
 
 **読むファイル:** 1 つのフォルダの下だけです。`--path` のフォルダ (ファイルならその置かれたフォルダ)、`--path` が無ければ
-サーバを起動したフォルダ。その外の `path` は誤りになります (シンボリックリンクは先にたどるので、外へは出られません)。
-ラボの state があるフォルダを `--path <folder>` で渡してください。v1.4.3 より前の様にクライアントが渡すどの path も読むには
+サーバを起動したフォルダ。その外の `path` は誤りになります。シンボリックリンクは先にたどり、フォルダの中のファイルも 1 つずつ確かめるので、外へは出られません。
+ファイルシステムの根で `--path` 無しに起動すると何も読みません。ラボの state があるフォルダを `--path <folder>` で渡してください
+(`xray.sh` なら network-xray のフォルダ)。v1.4.3 より前の様にクライアントが渡すどの path も読むには
 `--allow-any-path` (か `NX_MCP_ALLOW_ANY_PATH=1`) で起動します。64 MB を超える state のファイルは読みません。
 
 `docker run` や netlab の tool の時は state がコンテナの中にあります: 先に `curl` で写しを取り、そのファイルを
@@ -124,14 +125,14 @@ printf '%s\n' \
 ### Claude Code
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab
 ```
 
 これで、今のプロジェクトに自分だけのサーバとして追加されます (既定の `--scope local`)。すべてのプロジェクトで使うには
 `--scope user` を使います。`--scope project` を使うと、共有できるようにプロジェクトの `.mcp.json` に書き込みます:
 
 ```
-claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
+claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab
 ```
 
 書き込まれる内容:
@@ -164,7 +165,7 @@ Cursor は MCP のサーバをプロジェクトの `.cursor/mcp.json` (全プ�
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/your-lab"]
     }
   }
 }
@@ -185,7 +186,7 @@ Claude Desktop では `claude_desktop_config.json` に書きます (Settings →
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/your-lab"]
     }
   }
 }

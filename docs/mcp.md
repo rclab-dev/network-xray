@@ -18,7 +18,7 @@ With a lab running under `./xray.sh`, add the server, then give it the state fil
 **The one thing every tool needs is `path`: give it `/path/to/network-xray/xray-states.js` (an absolute path).**
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab
 ```
 
 In Cursor, put the same server in `.cursor/mcp.json` instead ([Cursor](#cursor)).
@@ -33,8 +33,9 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 ```
 
 **Which files it reads:** only under one folder - the `--path` folder (for a file, its folder), or without `--path` the
-folder the server was started in. A `path` outside it is an error (a symbolic link is followed first, so it cannot lead
-outside). Give `--path <folder>` for the folder your lab states are in. To read any path the client gives, as before
+folder the server was started in. A `path` outside it is an error: symbolic links are followed first, also for every file
+inside a folder, so they cannot lead outside. Started in the root of the file system without `--path`, it reads nothing.
+Give `--path <folder>` for the folder your lab states are in (with `xray.sh` that is the network-xray folder). To read any path the client gives, as before
 v1.4.3, start it with `--allow-any-path` (or `NX_MCP_ALLOW_ANY_PATH=1`). A state file over 64 MB is not read.
 
 With `docker run` or the netlab tool the state is inside the container: save a copy with `curl` first and give that
@@ -129,7 +130,7 @@ The reply to `initialize`:
 ### Claude Code
 
 ```
-claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
+claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab
 ```
 
 This adds the server for the current project, for you only (the default `--scope local`). Use `--scope user` to make
@@ -137,7 +138,7 @@ it available in all your projects. Use `--scope project` to write it to `.mcp.js
 shared:
 
 ```
-claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray
+claude mcp add --scope project network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab
 ```
 
 That writes:
@@ -170,7 +171,7 @@ in the same `mcpServers` form:
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/your-lab"]
     }
   }
 }
@@ -190,7 +191,7 @@ Desktop it goes in `claude_desktop_config.json` (Settings → Developer → Edit
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/your-lab"]
     }
   }
 }

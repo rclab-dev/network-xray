@@ -77,3 +77,48 @@ test('a state file over 64 MB is not read', function () {
   assert.throws(function () { query.loadStates(f); }, function (e) { return /too large to read/.test(e.message); });
   fs.rmSync(d, { recursive: true, force: true });
 });
+
+test('a link inside an allowed folder that points outside is not read (each file in the folder is checked)', function (t) {
+  var d = lab(), inDir = path.join(d, 'in2');
+  fs.mkdirSync(inDir);
+  try { fs.symlinkSync(path.join(d, 'out', 'b.json'), path.join(inDir, 'state_x.json')); } catch (e) { t.skip('cannot make a symbolic link here'); fs.rmSync(d, { recursive: true, force: true }); return; }
+  var r = call([], { cwd: inDir }, { path: inDir });
+  assert.ok(r.isError, JSON.stringify(r)); assert.match(JSON.stringify(r), /outside the folder this server reads/);
+  fs.rmSync(d, { recursive: true, force: true });
+});
+
+test('started in the root of the file system without --path: nothing is read, it asks for --path', function () {
+  var d = lab(), root = path.parse(os.tmpdir()).root;
+  var r = call([], { cwd: root }, { path: path.join(d, 'in', 'a.json') });
+  assert.ok(r.isError); assert.match(JSON.stringify(r), /root of the file system/);
+  assert.ok(!call(['--path', path.join(d, 'in')], { cwd: root }, { path: path.join(d, 'in', 'a.json') }).isError, 'with --path it reads');
+  fs.rmSync(d, { recursive: true, force: true });
+});
+
+test('--path ending in / is that folder even before it exists', function () {
+  var d = lab(), later = path.join(d, 'later') + path.sep;
+  var r = call(['--path', later], { cwd: os.tmpdir() }, { path: path.join(d, 'in', 'a.json') });
+  assert.ok(r.isError, 'the parent folder is not allowed');
+  fs.rmSync(d, { recursive: true, force: true });
+});
+
+test('a file over 64 MB inside a folder of FRR captures is not read either', function () {
+  var query = require(path.join(ROOT, 'scripts', 'xray-query.js'));
+  var d = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-bigfrr-')), r1 = path.join(d, 'r1');
+  fs.mkdirSync(r1);
+  var fd = fs.openSync(path.join(r1, 'show_ip_route.json'), 'w'); fs.ftruncateSync(fd, 64 * 1024 * 1024 + 1); fs.closeSync(fd);
+  assert.throws(function () { query.loadStates(d); }, function (e) { return /too large to read/.test(e.message); });
+  fs.rmSync(d, { recursive: true, force: true });
+});
+
+test('loadStates passes every file and folder inside a folder to opts.check before reading (any OS)', function () {
+  var query = require(path.join(ROOT, 'scripts', 'xray-query.js'));
+  var d = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-chk-'));
+  fs.writeFileSync(path.join(d, 'state_r1.json'), JSON.stringify(STATE.r1));
+  fs.mkdirSync(path.join(d, 'sub')); fs.writeFileSync(path.join(d, 'sub', 'show_ip_route.json'), '{}');
+  var seen = [];
+  query.loadStates(d, { check: function (p) { seen.push(path.relative(d, p)); } });
+  assert.deepStrictEqual(seen.sort(), ['state_r1.json', 'sub', path.join('sub', 'show_ip_route.json')].sort());
+  assert.throws(function () { query.loadStates(d, { check: function (p) { if (/state_r1/.test(p)) throw new Error('outside'); } }); }, /outside/);
+  fs.rmSync(d, { recursive: true, force: true });
+});

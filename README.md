@@ -929,13 +929,13 @@ the stateless 2026-07-28 revision is not implemented.
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/your-lab"]
     }
   }
 }
 ```
 
-With Claude Code: `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray` (on Windows, give the
+With Claude Code: `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab` (on Windows, give the
 `C:\...\scripts\xray-mcp.js` path). If you add it with `--scope project`, Claude Code asks once before it starts the server.
 Add `--path <state>` after `xray-mcp.js` (or set `NX_MCP_PATH`) and the tools read that state when the client gives no `path`; the server reads only under that folder (without `--path`, the folder it starts in; `--allow-any-path` reads anywhere) ([docs/mcp.md](docs/mcp.md)).
 
@@ -1830,12 +1830,12 @@ netlab のラボでは `--mgmt-subnet 192.168.121.0/24` を足します (netlab 
   "mcpServers": {
     "network-xray": {
       "command": "node",
-      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/network-xray"]
+      "args": ["/path/to/network-xray/scripts/xray-mcp.js", "--path", "/path/to/your-lab"]
     }
   }
 }
 ```
-Claude Code では `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/network-xray` (Windows は `C:\...\scripts\xray-mcp.js` のパス)。`--scope project` で足すと、起動の前に 1 度確認されます。
+Claude Code では `claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --path /path/to/your-lab` (Windows は `C:\...\scripts\xray-mcp.js` のパス)。`--scope project` で足すと、起動の前に 1 度確認されます。
 `xray-mcp.js` の後ろに `--path <state>` を足す (か `NX_MCP_PATH` を設定する) と、クライアントが `path` を渡さない時はその state を読みます。読むのはそのフォルダの下だけです (`--path` が無ければ起動したフォルダ・`--allow-any-path` でどこでも) ([docs/ja/mcp.md](docs/ja/mcp.md))。
 
 詳しく (`path` に渡せるファイル・`xray.sh` で動かしたラボ・ほかのクライアント): [docs/ja/mcp.md](docs/ja/mcp.md)。

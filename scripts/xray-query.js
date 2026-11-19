@@ -74,7 +74,22 @@ function readCapped(f) {
   if (st.size > MAX_STATE_BYTES) throw new QueryError('too large to read (over 64 MB): ' + f);
   return fs.readFileSync(f, 'utf8');
 }
-function loadStates(input) {
+/* nx_state_guard (v1.4.3): what a folder holds is checked before anything in it is read - each file or folder goes
+   through opts.check (the MCP server's folder limit: a link inside cannot lead outside) and no file is over 64 MB. */
+var MAX_GUARD_ENTRIES = 5000;
+function guardTree(dir, chk, depth, count) {
+  count = count || { n: 0 };
+  fs.readdirSync(dir).forEach(function (f) {
+    if (++count.n > MAX_GUARD_ENTRIES) throw new QueryError('too many files to read in ' + dir);
+    var full = path.join(dir, f), st;
+    if (chk) chk(full);
+    try { st = fs.statSync(full); } catch (e) { return; }
+    if (st.isFile() && st.size > MAX_STATE_BYTES) throw new QueryError('too large to read (over 64 MB): ' + full);
+    if (st.isDirectory() && depth > 0) guardTree(full, chk, depth - 1, count);
+  });
+}
+function loadStates(input, opts) {
+  var chk = opts && typeof opts.check === 'function' ? opts.check : null;
   if (!input) throw new QueryError('missing input (a state JSON file or a directory)');
   var stat;
   try { stat = fs.statSync(input); } catch (e) { throw new QueryError('not found: ' + input); }
@@ -88,6 +103,7 @@ function loadStates(input) {
   }
   var files = fs.readdirSync(input).sort();
   var out = Object.create(null);
+  guardTree(input, chk, 2);   /* nx_state_guard: before any file in the folder is read */
   var isFile = function (f) { try { return fs.statSync(path.join(input, f)).isFile(); } catch (e) { return false; } };
   files.filter(function (f) { return /^state_.+\.json$/.test(f) && isFile(f); }).forEach(function (f) {
     var s = parseText(readCapped(path.join(input, f)), f.slice(6, -5));
