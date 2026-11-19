@@ -519,7 +519,8 @@ AS 65003 is still there as the backup) is `both`.
 `check_suggest` takes the two states only and proposes the check from what changed
 ([how](problem-format.md#let-it-suggest-the-check)); for the same two q21 frames it proposes these two conditions.
 Each entry in `candidates` has `kind` (path / evidence / backup / gone), `tells`, `in_check`, and `binds_method`
-with a `note` when it names how a route is learned. `check_init` returns the same check inside a problem.json
+with a `note` when it names how a route is learned (such a candidate is not in the proposed check unless nothing else
+tells the two apart; `warnings` then says so). `check_init` returns the same check inside a problem.json
 draft; the client saves it.
 
 ### state_diff

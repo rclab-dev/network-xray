@@ -511,7 +511,8 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 `check_suggest` は 2 つの state だけを受け取り、変わった所から check を出します
 ([やり方](../problem-format.md#let-it-suggest-the-check))。同じ q21 の 2 枚では、上の 2 つの条件が出ます。
 `candidates` の 1 つずつに `kind` (path / evidence / backup / gone)・`tells`・`in_check` があり、経路の覚え方を
-名指しする条件には `binds_method` と `note` が付きます。`check_init` は同じ check を problem.json の下書きに入れて
+名指しする条件には `binds_method` と `note` が付きます (その条件は、他に見分けられる物が無い時だけ check に入り、その時は
+`warnings` に出ます)。`check_init` は同じ check を problem.json の下書きに入れて
 返します (保存はクライアント側)。
 
 ### state_diff

@@ -260,8 +260,9 @@ var TOOLS = [
       'state of the same lab (the state_diff changes the check can see: a route now selected through an interface, a BGP ' +
       'best path, an OSPF adjacency Full, a BGP session Established, an interface up; the old best path kept as a backup). ' +
       'Every candidate is judged on both states; check is the proposed check, verified to fail on broken and hold on solved ' +
-      '(status ok), or null with reason (status none). A condition marked binds_method names how a route is learned - keep ' +
-      'it only if the problem asks for that. skipped lists the changes it did not use and why. It cannot know other ways ' +
+      '(status ok), or null with reason (status none; cannot_judge when the solved state cannot be read). A candidate marked ' +
+      'binds_method names how a route is learned; it is not in the check unless nothing else tells (then warnings says so) - ' +
+      'add it only if the problem asks for that. skipped lists the changes it did not use and why. It cannot know other ways ' +
       'to solve the problem. Read-only.',
     inputSchema: {
       type: 'object',

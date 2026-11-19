@@ -139,8 +139,10 @@ Suggested check: ok (fails on broken, holds on solved)
   `--focus <node>` / `--prefix <p>` start from a router and a destination; `--max <n>` caps the check (default 3).
 - **`check init <broken> <solved>`** makes a problem.json draft with that check, `focus`, and empty `title_*`,
   `problem_*` and `id` for you to write. `--out <file>` writes it; an existing file is never overwritten.
-- It does not guess other ways to solve the problem. A condition that names how a route is learned (`protocol`, when
-  the fix changed it) is marked `binds_method`: keep it only if the problem asks for that (official example q11 does).
+- It does not guess other ways to solve the problem. When the fix changed how a route is learned, the condition that
+  names it (`protocol`) is a separate candidate marked `binds_method` and is not in the proposed check: a fix that
+  reaches the same route another way would not count. Add it only if the problem asks for that (official example q11 does).
+  When only such a condition, or only a route that is gone, tells the two states apart, it is used and `warnings` says so.
   A configured value (an OSPF timer, an area) is not a condition; the adjacency it brings is.
 - Changes the state does not show (a ping result, a router ID, a maximum-prefix value, a fail-over that needs a link to
   go down) cannot be suggested; nor can a router the collector cannot read.
