@@ -368,6 +368,11 @@ function why(states, node, prefix, vrf) {
     out.reason = null;
     out.note = 'the reason is not in the data (no reason stored for the best path)';
   }
+  /* nx_why_lp_note: a path with no local_pref - the router did not print one (FRR and IOS-XE leave the default out);
+     no value is filled in, the note says the default applies */
+  var noLp = paths.filter(function (r) { return r.local_pref == null || r.local_pref === ''; }).length;
+  if (noLp) out.local_pref_note = noLp + ' of ' + paths.length + ' path(s) ' + (noLp === 1 ? 'has' : 'have') + ' no local_pref: the router did not print one. ' +
+    'BGP then uses the default local preference (100, unless the router is configured with another default); network-xray does not fill it in.';
   out.candidates = paths.map(pathOut);
   return out;
 }

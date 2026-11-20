@@ -83,7 +83,7 @@ var TOOLS = [
       'For a step-by-step comparison of the candidates, or an address instead of a prefix, use why_path. ' +
       'Gives the BGP best path and the reason stored in the data ' +
       '(FRR selectionReason, or the IOS-XE collector\'s derived reason). If the data has no reason, reason is null ' +
-      'and a note says so; nothing is guessed. Read-only.',
+      'and a note says so; nothing is guessed. A path with no local_pref gets a local_pref_note (the default applies; no value is filled in). Read-only.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -5,6 +5,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 ## v1.5.0 — 2026-11-22
 
 - **SolvedKit — `xray-query.js check run` / `check verify` / `check suggest` / `check init`, MCP `check_run` / `check_verify` / `check_suggest` / `check_init`:** judge a lab's problem.json `check` on saved states without the page or a running lab (the same rules as the ✓ Solved mark). `run` answers solved / not solved / cannot judge with exit code 0 / 1 / 2; `verify` says whether a check fails on the broken lab and holds on the solved one, with a verdict per condition; `suggest` proposes the check from what the fix changed between a broken and a solved state (verified on both; it does not guess other ways to solve), and `init` puts it in a problem.json draft.
+- **MCP why_best_path / `xray-query.js why`:** a path with no `local_pref` (the router did not print one) gets a `local_pref_note`: BGP then uses the default local preference (100, unless the router is configured with another default); no value is filled in.
 
 ## v1.4.4 — 2026-11-20
 

@@ -330,6 +330,10 @@ r2–r3 のリンクが `ospf_state: "Down"` なのは、r3 に向けて OSPF �
 割り出したわけです。どちらかは `reason_source` で分かります。データにわけが無い時は `reason` が `null` になり、`note` が
 データにわけが無いことを示します。サーバがわけを推測することはありません。
 
+ルータが local preference を出さなかった経路 (FRR と IOS-XE は既定の値を出しません) には `local_pref` が無く、
+`local_pref_note` が、無い経路の数と、その時 BGP は既定の local preference を使うこと (100。ルータで別の既定を設定していればその値)
+を示します。サーバが値を埋めることはありません。
+
 ### list_routers
 
 入力: `path`。

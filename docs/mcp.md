@@ -337,6 +337,10 @@ when the prefix is in more than one VRF).
 from the printed columns. `reason_source` says which. If the data has no reason, `reason` is `null` and a `note` says
 the reason is not in the data. The server does not guess one.
 
+A path the router printed with no local preference (FRR and IOS-XE leave the default out) has no `local_pref`, and
+`local_pref_note` says how many paths have none and that BGP then uses the default local preference (100, unless the
+router is configured with another default). The server does not fill a value in.
+
 ### list_routers
 
 Input: `path`.

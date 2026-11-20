@@ -62,3 +62,24 @@ test('no stored reason: comparison, or null with a note', function () {
   assert.strictEqual(none.reason_source, null);
   assert.match(none.note, /later step not in the data/);
 });
+
+test('why: a path with no local_pref gets a local_pref_note, and no value is filled in', function () {
+  var st = state('frr', [
+    row({ next_hop: '10.0.0.1', local_pref: 150, best: true, status: '*>', reason: 'Local Pref' }),
+    row({ next_hop: '10.0.0.2', local_pref: undefined })
+  ]);
+  var w = q.why(st, 'r1', '203.0.113.0/24');
+  assert.match(w.local_pref_note, /^1 of 2 path\(s\) has no local_pref: the router did not print one\./);
+  assert.match(w.local_pref_note, /100, unless the router is configured with another default/);
+  var c = w.candidates.filter(function (x) { return x.next_hop === '10.0.0.2'; })[0];
+  assert.ok(!('local_pref' in c), 'the missing value is not filled in');
+  assert.strictEqual(w.best.local_pref, 150);
+});
+
+test('why: no local_pref_note when every path has a local_pref', function () {
+  var st = state('frr', [
+    row({ next_hop: '10.0.0.1', local_pref: 150, best: true, status: '*>', reason: 'Local Pref' }),
+    row({ next_hop: '10.0.0.2' })
+  ]);
+  assert.ok(!('local_pref_note' in q.why(st, 'r1', '203.0.113.0/24')));
+});
