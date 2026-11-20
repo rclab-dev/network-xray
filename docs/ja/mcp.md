@@ -34,7 +34,13 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 サーバを起動したフォルダ。その外の `path` は誤りになります。シンボリックリンクは先にたどり、フォルダの中のファイルも 1 つずつ確かめるので、外へは出られません。
 ファイルシステムの根で `--path` 無しに起動すると何も読みません。ラボの state があるフォルダを `--path <folder>` で渡してください
 (`xray.sh` なら network-xray のフォルダ)。v1.4.3 より前の様にクライアントが渡すどの path も読むには
-`--allow-any-path` (か `NX_MCP_ALLOW_ANY_PATH=1`) で起動します。64 MB を超える state のファイルは読みません。
+`--allow-any-path` (か `NX_MCP_ALLOW_ANY_PATH=1`・JSON の設定なら `"env": { "NX_MCP_ALLOW_ANY_PATH": "1" }`) で起動します。
+64 MB を超える state のファイルは読みません。
+
+`--path` にはフォルダ (その下を読む) か state のファイル (クライアントが `path` を渡さない時にそれを読み、その置かれたフォルダの下を読む)
+を渡せます。外の `path` は
+`outside the folder this server reads (<folder>): start it with --path <folder>, or --allow-any-path` と答えます。
+クライアントの設定の `--path` を見直すか、`--allow-any-path` で起動してください。
 
 `docker run` や netlab の tool の時は state がコンテナの中にあります: 先に `curl` で写しを取り、そのファイルを
 `path` に渡してください (コマンドは [state はどこから来るか](#state-はどこから来るか) にあります)。

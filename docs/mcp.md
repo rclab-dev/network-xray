@@ -37,7 +37,13 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 folder the server was started in. A `path` outside it is an error: symbolic links are followed first, also for every file
 inside a folder, so they cannot lead outside. Started in the root of the file system without `--path`, it reads nothing.
 Give `--path <folder>` for the folder your lab states are in (with `xray.sh` that is the network-xray folder). To read any path the client gives, as before
-v1.4.3, start it with `--allow-any-path` (or `NX_MCP_ALLOW_ANY_PATH=1`). A state file over 64 MB is not read.
+v1.4.3, start it with `--allow-any-path` (or `NX_MCP_ALLOW_ANY_PATH=1`; in a JSON config, `"env": { "NX_MCP_ALLOW_ANY_PATH": "1" }`).
+A state file over 64 MB is not read.
+
+`--path` takes a folder (the tools read under it) or a state file (the tools read it when the client gives no `path`,
+and read under its folder). A `path` outside answers
+`outside the folder this server reads (<folder>): start it with --path <folder>, or --allow-any-path`: check the
+`--path` in your client's settings, or start it with `--allow-any-path`.
 
 With `docker run` or the netlab tool the state is inside the container: save a copy with `curl` first and give that
 file as `path` (the command is under [Where the state comes from](#where-the-state-comes-from)).
