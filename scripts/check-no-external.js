@@ -36,6 +36,7 @@ const LINK_HOSTS = {
   'nodejs.org': 'Node.js install hint printed by xray.sh',
   'netlab.tools': 'reference in a code comment',
   'json-schema.org': '$schema identifier (not fetched)',
+  'glama.ai': '$schema identifier in glama.json (not fetched)',
   'www.w3.org': 'XML namespace / DTD identifiers (not fetched)',
   'tailwindcss.com': 'license banner of the vendored stylesheet',
   // reference comments in the vendored js/next.js
