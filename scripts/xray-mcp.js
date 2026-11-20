@@ -79,7 +79,9 @@ var TOOLS = [
   },
   {
     name: 'why_best_path',
-    description: 'For one node and prefix, give the BGP best path and the reason stored in the data ' +
+    description: 'Quick look: for one node and an exact prefix, the BGP best path and only the reason stored in the data. ' +
+      'For a step-by-step comparison of the candidates, or an address instead of a prefix, use why_path. ' +
+      'Gives the BGP best path and the reason stored in the data ' +
       '(FRR selectionReason, or the IOS-XE collector\'s derived reason). If the data has no reason, reason is null ' +
       'and a note says so; nothing is guessed. Read-only.',
     inputSchema: {
@@ -175,7 +177,8 @@ var TOOLS = [
   },
   {
     name: 'why_path',
-    description: 'Why one router selected its BGP path to a prefix: the selected path, the other candidates with their ' +
+    description: 'Full answer (prefer this to why_best_path for "why" questions): it also takes an address, and when the router gives no reason it compares the candidates step by step. ' +
+      'Why one router selected its BGP path to a prefix: the selected path, the other candidates with their ' +
       'attributes, the deciding step, and where that reason came from: reason_source "device" when the router reported it ' +
       '(FRR selectionReason), "derived" when the collector worked it out from what the router printed (Cisco IOS-XE prints ' +
       'no reason), "comparison" when network-xray inferred it by comparing the attributes in the data (Weight, LocPrf, ' +

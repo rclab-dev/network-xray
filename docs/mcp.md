@@ -7,7 +7,8 @@ client (Claude Code, Claude Desktop, or any other client that starts stdio serve
 which routers are up, what their OSPF and BGP neighbors are, which BGP path a router chose and why, and which route
 it uses for an address.
 
-It is **read-only**. It answers from state files the collectors have already written. It never logs in to a router,
+It is **read-only**. It answers from state files the collectors have already written (for a containerlab, netlab or
+Cisco CML lab); it does not look at your computer's own network. It never logs in to a router,
 never runs a command, never writes a file and opens no network socket. (The one exception is opt-in: `collect`, offered
 only with `--allow-collect`, runs the collector once: see [Read the lab again](#read-the-lab-again-collect-opt-in).) It uses the same functions as
 `scripts/xray-query.js`, so it gives the same answers.

@@ -2,6 +2,12 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.4.4 — 2026-11-20
+
+- **MCP:** the descriptions of `why_best_path` and `why_path` say which to pick (`why_best_path`: a quick look at one exact prefix and the reason stored in the data; `why_path`: also takes an address and compares the candidates step by step when the router gives no reason).
+- **Docs:** README links the quickest MCP setup; README and docs/mcp.md say what the MCP server reads (the state files the collector writes for a containerlab, netlab or Cisco CML lab), not your computer's own network.
+- **Docs:** README says netlab 26.11 and later have their own `network_xray` tool definition (it publishes the page on all host interfaces; this repository's defaults file uses 127.0.0.1 only), and with `validate: True` it keeps `network_xray/validate.json` up to date; docs/mcp.md: the `.mcp.json` that `claude mcp add` writes has `--path` too.
+
 ## v1.4.3 — 2026-11-19
 
 - **MCP (behaviour change):** the server reads only under one folder by default - the `--path` folder (for a file, its folder), or the folder it starts in. `--allow-any-path` (or `NX_MCP_ALLOW_ANY_PATH=1`) reads any path the client gives, as before. A state file over 64 MB is not read.
