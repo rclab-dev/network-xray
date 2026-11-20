@@ -85,7 +85,7 @@ program, or a second WSL distribution) can also block it. **(not verified)** Use
 
 `xray.sh` checks Docker before it deploys anything and stops with
 `cannot reach Docker: permission denied on /var/run/docker.sock - stopped, nothing was deployed.`: `xray.sh` and the
-collector run `docker` as your own user. With Docker Engine in the distribution, add your user to the `docker` group and open
+collector run `docker` as your current user. With Docker Engine in the distribution, add your user to the `docker` group and open
 a new shell (or run `wsl --shutdown` in PowerShell and start the distribution again):
 
 ```bash

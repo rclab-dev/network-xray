@@ -167,7 +167,7 @@ Cisco IOL nodes instead keep showing `  r1 not ready yet (IOL is booting, SSH no
 because the collector cannot tell this case apart from a router that is still booting.
 
 **Why.** `xray.sh` runs `containerlab deploy` with `sudo`, but it runs `docker ps` / `docker exec` (and the
-collector) as your own user. Your user needs access to the Docker socket.
+collector) as your current user. Your user needs access to the Docker socket.
 
 **What to do.** Add your user to the `docker` group and log in again:
 
@@ -210,7 +210,7 @@ picture follows a little more slowly than with FRR.
 ==> <container>: FRR did not start cleanly, restarting FRR (1/3) ...
 ```
 
-**Why.** FRR routers can also need a short while after start. `xray.sh` waits for them and restarts FRR if it did not
+**Why.** FRR routers can also need a short while after startup. `xray.sh` waits for them and restarts FRR if it did not
 start cleanly. Until FRR runs, the router cannot be read.
 
 **What to do.** Wait. If it still fails, `xray.sh` prints
@@ -228,7 +228,7 @@ On the page, clicking the node shows `network-xray does not read inside this dev
 
 **Why.** The collector picks a reader by the node's containerlab `kind`: `nokia_srlinux` (SR Linux),
 `cisco_iol` (Cisco IOL), and FRR for everything else. A node with no `vtysh` (for example an Alpine host,
-or another vendor's image) cannot be read, so it is drawn in the topology but has no DeepDive (the panel that opens when you click a router and shows inside it).
+or another vendor's image) cannot be read, so it is drawn in the topology but has no DeepDive (the panel that opens when you click a router and shows its internal state).
 
 **What to do.** Nothing, if the node is a host. This is expected and does not affect the other routers.
 

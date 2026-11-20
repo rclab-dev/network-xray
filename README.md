@@ -34,7 +34,7 @@ Recorded from a real FRR / containerlab lab and replayed in the browser. Three t
    You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull); see the [release page](https://github.com/rclab-dev/network-xray/releases/latest).
 
 > [!CAUTION]
-> Way 3 gives the container the Docker socket (root-equivalent on the host): use it on lab machines only. It only runs `show` commands. [Security notes](#security-notes)
+> Way 3 gives the container the Docker socket (root-equivalent on the host): use it on lab machines only. It sends only read-only commands (`show`; Cisco IOL also gets `terminal length 0` / `terminal width 0`, which set only its own SSH session). [Security notes](#security-notes)
 >
 > - **Why the socket:** to run `show` in each router's container ([FAQ](docs/faq.md#why-does-the-container-need-the-docker-socket), with three more ways to do without it).
 > - **No socket needed:** the recorded demo, the paste pages ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html)) and [GitHub Codespaces](#-live-lab--github-codespaces).
@@ -75,7 +75,7 @@ Needs a GitHub login · starts in about 2–3 minutes · runs a real 3-router FR
 - **Not for:** production monitoring; checking configurations before deployment (that is [Batfish](https://www.batfish.org/) — it reads configs, network-xray reads live state); collecting and querying state across many devices over time (that is [SuzieQ](https://github.com/netenglabs/suzieq) — tables of state; network-xray draws one router's decision); modelling a production network from its LSDB / BGP feeds and simulating failures (that is [Topolograph](https://github.com/Vadims06/topolograph) — a model of the network; network-xray reads a lab's routers as they are now); devices other than FRR / SR Linux / Cisco IOL, or in CML the IOS node types listed in the CML section (they appear in the topology, but are not read). Not read yet, even on those three: the IPv6 BGP table, IS-IS, EVPN, and VRFs on IOL. A `bridge`, `ovs-bridge` or `host` node with links is drawn as a node of its own (there is no router in it to read), so routers on a shared LAN behind it appear linked to the bridge, not to one another.
 - **What it reads** (read-only commands; the collector changes nothing. Only the example labs (their `exec:` lines), `xray.sh` and the `run.sh` in a release folder, right after deploying, restart FRR in a router whose FRR did not come up — see Troubleshooting):
   - FRR, through `docker exec <node> vtysh -c '…'`: `show ip bgp vrf all json` (for each path: `bestpath` and `selectionReason` — the winner and FRR's own reason — plus `locPrf`, `weight`, `path` (AS path), `origin`, `metric` and the next hop; the Best-Path Decision panel lines the candidates up on these), `show ip bgp vrf all summary json`, `show ip ospf vrf all neighbor json`, `show ip ospf vrf all interface json`, `show ip route vrf all json`, `show interface json`, `show running-config` (an FRR that does not answer `vrf all` in JSON is read with the plain command; the configuration is read only to see which protocols are configured, the BGP AS number and the configured static routes, and its text is not saved in the state or sent to the page); OSPFv3 on routers with `router ospf6`: `show ipv6 ospf6 vrf all neighbor json`, `show ipv6 ospf6 vrf all interface json`, `show ipv6 route vrf all json`. On a router with VRFs, the Routing table and the BGP Table show one VRF at a time: use the VRF buttons above them to switch (the management VRF `mgmt` gets no button). The IPv6 BGP table is not read.
-  - netlab `validate:` tests are judged like `netlab validate` does: the per-prefix form (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
+  - netlab `validate:` tests use the same per-prefix check as `netlab validate` (`show bgp ipv4 unicast <prefix> json`), where the winner is `bestpath.overall`.
   - SR Linux: `sr_cli 'info from state … | as json'`.
   - Cisco IOS-XE (containerlab kind `cisco_iol`), over SSH: plain-text `show` commands — see [Cisco IOS-XE (IOL)](#cisco-ios-xe-iol).
 
@@ -171,13 +171,13 @@ router at the forwarding decision (the deepdive).
   the default output) or to the MCP tools. The image also
   reads each router's running configuration every 30 s to choose OSPF or BGP (`show running-config` / `sr_cli 'info from
   running …'`, read-only; Cisco IOL from the last collected state, no second login).
-- Only starting a lab touches a router, and viewing it never does: see [Read-only](#read-only) below.
+- Viewing a lab only reads the routers; it never changes them. Only starting a lab can (it restarts FRR that did not come up): see [Read-only](#read-only) below.
 
 <a id="read-only"></a>
 ### Read-only: what it means, and the exceptions <!-- nx-readonly-20261108 -->
 
 network-xray reads; it does not configure. "Read-only" means the commands are fixed in the source: `show` on FRR and
-Cisco IOL, `info from state` / `info from running` on SR Linux, and `show running-config` on FRR for the image's 30 s
+Cisco IOL (on IOL also `terminal length 0` / `terminal width 0`, which set only its own SSH session), `info from state` / `info from running` on SR Linux, and `show running-config` on FRR for the image's 30 s
 check. Nothing on the router side enforces that (there is no allowlist), and the login it uses may be allowed to do more:
 the limit is the code. The exceptions, all on purpose:
 
@@ -253,7 +253,7 @@ replayed in the browser with no backend (steady → link down / router isolated 
 
 **You need:** Linux (or Windows with **WSL2** — [WSL2 guide](docs/windows-wsl2.md) — or a Linux VM) · **Docker** · **[containerlab](https://containerlab.dev/install/)** · **Node.js 18+** · about **2 GB of free memory** (each FRR router is a small container; measured with `docker stats` on FRR 8.4: about 20 MB per router, and the network-xray container about 30 MB between reads and, while it reads the routers (one Node.js reader per router), up to about 110 MB with 3 routers and 260 MB with 10; a memory limit on the container should be above that peak, e.g. `docker run --memory 300m` or `deploy.resources.limits.memory: 300m` in compose for up to 10 routers) · your user can run `docker` without `sudo` (the `docker` group: [how](docs/troubleshooting.md#docker-socket-permission)).
 
-**Which way?** **First time? Use `xray.sh` below.** To try an example lab, use `xray.sh` below: it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
+**Which way?** **First time? To try an example lab, use `xray.sh` below:** it deploys the lab and serves the page on port **8080**. To look at a lab that is **already running**, use the `docker run` line at the top (port **8600**) instead — `xray.sh` deploys the lab again (`containerlab deploy --reconfigure`), which wipes anything you changed by hand (or run `./xray.sh --attach <lab.clab.yml>`, which graphs the running lab without redeploying it). A problem downloaded from Releases runs with its own `run.sh` (port **50080**).
 
 > **Before you start:** use a lab machine — containerlab runs with `sudo`. `xray.sh` serves the page on this machine only (`127.0.0.1`, port 8080 by default). To open it from other machines, add `--bind 0.0.0.0`; the page has no login, so anyone who can reach the machine can then see the lab — keep it on a trusted network. `--interval <seconds>` reads the routers less often (default 1). [More](#security-notes)
 
@@ -312,8 +312,8 @@ The bundled defaults file publishes the page on the lab host only (`-p 127.0.0.1
 On a shared machine, keep the lab folder readable by you only (for example `chmod 700 <lab folder>`); the network-xray container still reads it, as root.
 
 In netlab the tool is named `network_xray` (underscore), because tool names are also used in environment variable names; the product, repository and image keep the name network-xray.
-netlab 26.11 and later also have their own `network_xray` tool definition ([netlab's page](https://netlab.tools/extool/network_xray/)): there `tools: network_xray:` alone starts network-xray (graph and DeepDive). netlab's own definition publishes the page on all host interfaces; network-xray's defaults file (above) on 127.0.0.1 only. That definition does not write `network-xray.json`: the band where network-xray checks the `validate:` tests itself (below) does not appear — netlab's own results from `network_xray/validate.json` (below) still do — and a `network-xray.json` you write yourself is not removed by `netlab down`. For network-xray's own check, keep the `defaults.sources.extra` line above (its tool definition also removes the file on `netlab down`). <!-- nx_readme_builtin_tool -->
-(if your topology already has a `defaults.sources.extra` list — the BGP Labs do — add the file to that list instead of a second line), then `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://localhost:8600/ in a browser on this host`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR, SR Linux and Cisco IOS-XE (containerlab kind `cisco_iol`): other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
+netlab 26.11 and later also have their own `network_xray` tool definition ([netlab's page](https://netlab.tools/extool/network_xray/)): there `tools: network_xray:` alone starts network-xray (graph and DeepDive). netlab's own definition publishes the page on all host interfaces; network-xray's defaults file above publishes it on 127.0.0.1 only. That definition does not write `network-xray.json`: the band where network-xray checks the `validate:` tests itself (below) does not appear — netlab's own results from `network_xray/validate.json` (below) still do — and a `network-xray.json` you write yourself is not removed by `netlab down`. For network-xray's own check, keep the `defaults.sources.extra` line above (its tool definition also removes the file on `netlab down`). <!-- nx_readme_builtin_tool -->
+If your topology already has a `defaults.sources.extra` list (the BGP Labs do), add the file to that list instead of adding a second line. Then run `netlab up`: when the lab is configured, netlab starts `ghcr.io/rclab-dev/network-xray:1` and prints `Open http://localhost:8600/ in a browser on this host`. It finds OSPF / BGP by itself (and follows you if you add BGP later), and `netlab down` removes it. With the `multilab` plugin (`plugin: [ multilab ]`, `defaults.multilab.id: N`) each lab gets its own port, 8600 + N (the plugin is needed: without it the labs' management addresses clash). Checked as a netlab tool with FRR labs (ipSpace BGP Labs 3-rr, an OSPF example); SR Linux routers are read too (checked with containerlab). network-xray reads FRR, SR Linux and Cisco IOS-XE (containerlab kind `cisco_iol`): other devices (Linux hosts, cEOS, …) are drawn in the topology and their DeepDive says so. A router that is stopped or does not answer is drawn grey with the reason; one that stops answering keeps its last state, marked as old, and the rest of the picture keeps updating. <!-- nx_v105_readme -->
 Without netlab (any running containerlab lab): `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` (`<lab>.clab.yml` = the topology file in the current folder, e.g. `q21-bgp-lp.clab.yml`; the page opens on this machine only; use `-p 8600:8600` to open it to other machines) — the page has no login, so use a trusted network for remote access. You can pin the image as `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (the digest is in that version's release notes; a made-up one will not pull) (see the [release page](https://github.com/rclab-dev/network-xray/releases/latest)). For the example labs (`examples/`) the problem band and **✓ Solved** show too (from the `problem.json` next to the topology); a lab without one has no band. The image is built for linux/amd64 and linux/arm64.
 If `netlab up` says the lab is already running, a lab with the same name is still up from another folder (`netlab status --all`): run `netlab down` there first.
 
@@ -412,7 +412,7 @@ Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in a
 - **Certificates:** CML's certificate is issued by CML itself for the name `cml-controller`, so a normal check fails. `--save-cert <file>` saves the
   certificate CML shows (nothing else is sent; compare the fingerprint with CML if you can), and `CML_CA_FILE=<file>` then accepts that one
   certificate only (a real CA in `CML_CA_FILE` is checked as usual). `--insecure` skips the check (only on a network you trust). Some security
-  software looks into HTTPS and shows its own certificate: cml-xray then says who issued what it sees. Let that software pass CML; use `--insecure` only as the last way.
+  software looks into HTTPS and shows its own certificate: cml-xray then says who issued what it sees. Configure that software to allow the connection to CML; use `--insecure` only as a last resort.
 - Port / address: `--port 8710`, `--listen 127.0.0.1` (this PC only; `0.0.0.0` to open it from another machine — by its IP address: the page
   answers to `localhost` and IP addresses only, and serves only its own files). The page has no login: with `0.0.0.0` anyone who can reach
   this PC can see the lab's state (the Pause button works from this PC only).
@@ -862,7 +862,7 @@ node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
 node scripts/xray-query.js diff demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json
 ```
 
-`diff` shows what changed from a baseline state you kept to the state now, heaviest first (an interface down, an
+`diff` shows what changed from a baseline state you kept to the state now, by kind with the most disruptive first (an interface down, an
 adjacency lost, a best path that moved, routes removed or moved), and says `none` when nothing changed; the MCP tool
 `state_diff` gives the same answer ([docs/mcp.md](docs/mcp.md#state_diff)). <!-- nx_state_diff -->
 
@@ -1059,7 +1059,7 @@ MCP のサーバでもあります: AI エージェントがラボの状態を�
    イメージは `ghcr.io/rclab-dev/network-xray@sha256:<digest>` (digest はその版のリリースノートに書いた値。作った値では取得できません) で固定できます。[リリースページ](https://github.com/rclab-dev/network-xray/releases/latest) を参照してください。
 
 > [!CAUTION]
-> 3 はコンテナに Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。打つのは `show` だけです。[詳しく](#security-notes-ja)
+> 3 はコンテナに Docker ソケット (ホスト上の root 権限と同等) を渡します。ラボ用の機械でだけ使ってください。打つのは読むだけの命令です (`show`・Cisco IOL には自分の SSH の session だけの設定 `terminal length 0` / `terminal width 0` も送ります)。[詳しく](#security-notes-ja)
 >
 > - **ソケットが要る訳:** 各ルータのコンテナで `show` を打つため ([FAQ](docs/ja/faq.md#コンテナに-docker-のソケットが要るのはなぜですか)・ソケットなしで使うほかの 3 つの道も)。
 > - **ソケットが要らない道:** 記録済みのデモ・貼る頁 ([`frr-paste.html`](https://rclab-dev.github.io/network-xray/frr-paste.html) · [`bgp-paste.html`](https://rclab-dev.github.io/network-xray/bgp-paste.html))・[GitHub Codespaces](#-ライブ-live-ラボ--github-codespaces)。
@@ -1183,7 +1183,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
   `xray-states.sig.js` を書きます。画面は `containerlab graph` が配る静的なファイルで、ブラウザは普通の HTTP GET で取ります。
 - WebSocket や push はありません。画面は小さな `.sig.js` を 1 秒ごと (簡単な方の `xray-graph.html` は 3 秒ごと) に読み、変わった時だけ
   `xray-states.js` を読み直します。`scripts/xray-query.js` と MCP サーバは同じ状態のファイルを読むだけです。
-- collector はルータを変えません。ルータに触るのはラボを立てる時だけです (下の [読むだけ](#read-only-ja))。image の時、状態のファイルはコンテナの中です
+- collector はルータを読むだけで、変えません。ルータを変えうるのはラボを立てる時だけです (起動しなかった FRR を起動し直す・下の [読むだけ](#read-only-ja))。image の時、状態のファイルはコンテナの中です
   (host からは `curl http://localhost:8600/static/xray-states.js`)。<!-- nx-how-it-works2-20261107 -->
   このファイルは頁のための JavaScript (`window.LIVE_STATES = {…};`) です。JSON が欲しい時は `node scripts/xray-query.js state <ファイル>`
   (出力は既定で JSON) か MCP のツールに渡してください。
@@ -1192,7 +1192,7 @@ FRRouting・**Nokia SR Linux**・**Cisco IOS-XE (IOL)** は実装済みです (�
 ### 読むだけ: その意味と例外
 
 network-xray は読むだけで、設定はしません。「読むだけ」とは、送るコマンドがソースで決まっているという意味です (FRR と
-Cisco IOL は `show`・SR Linux は `info from state` / `info from running`・image の 30 秒ごとの確かめは FRR の
+Cisco IOL は `show` (IOL には自分の SSH の session だけの設定 `terminal length 0` / `terminal width 0` も)・SR Linux は `info from state` / `info from running`・image の 30 秒ごとの確かめは FRR の
 `show running-config`)。ルータの側でそれを強いる物 (allowlist) はありません。使うログインはもっと多くの事ができる場合もあり、
 限っているのはコードです。例外 (どれも意図した物):
 
@@ -1790,7 +1790,7 @@ node scripts/xray-query.js why test/fixtures/iosxe-q15 r1 8.8.8.0/24
 node scripts/xray-query.js diff demo/bgp-lp/frameA.json demo/bgp-lp/frameB.json
 ```
 
-`diff` は、取っておいた基準の state から今までに変わった所を重い順に出します (落ちた interface・消えた隣接・動いた最良経路・
+`diff` は、取っておいた基準の state から今までに変わった所を種類ごとに影響の大きい順に出します (落ちた interface・消えた隣接・動いた最良経路・
 消えた / 変わった経路)。何も変わっていなければ `none` と言います。MCP の `state_diff` も同じ答えです ([docs/ja/mcp.md](docs/ja/mcp.md#state_diff))。 <!-- nx_state_diff -->
 
 変更 (Ansible の playbook・設定の投入) が何を変えたかを見るには、前の state を取っておき、次の読みの後に比べます:

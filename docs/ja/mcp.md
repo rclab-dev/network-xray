@@ -7,7 +7,7 @@
 ことを聞けます。どのルータが動いているか、OSPF と BGP のネイバーは何か、ルータがどの BGP の経路をなぜ選んだか、
 あるアドレスにどの経路を使うか、などです。
 
-**読むだけ**です。collector が既に書いた state のファイル (containerlab・netlab・Cisco CML のラボ) から答えます。手元の PC のネットワークを調べる道具ではありません。ルータにログインせず、コマンドを打たず、
+**読むだけ**です。collector が既に書いた state のファイル (containerlab・netlab・Cisco CML のラボ) から答えます。手元の PC のネットワークを調べる道具ではありません。既定ではルータにログインせず、コマンドを打たず、
 ファイルを書かず、ネットワークのソケットも開きません (例外は使う時だけ: `--allow-collect` を付けた時の `collect` は collector を 1 回走らせます。[ラボを読み直す](#ラボを読み直す-collect-使う時だけ))。`scripts/xray-query.js` と同じ関数を使うので、答えも同じです。
 
 ## よくある使い方 <!-- nx_mcp_usual -->
@@ -237,7 +237,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `bgp_neighbors` | `path`, `router?` | ルータごと: ピア・リモート AS・iBGP/eBGP・状態・受け取ったプレフィックスの数 |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | 集めたルーティングテーブルでの最長一致 |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | 選ばれた BGP の経路・ほかの候補と属性・決め手になったステップ・そのわけの出どころ |
-| `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | 基準の state から今までに変わった所 (重い順・何も変わっていなければ `none`) |
+| `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | 基準の state から今までに変わった所 (種類ごとに影響の大きい順・何も変わっていなければ `none`) |
 | `check_run` | `problem`, `path` | SolvedKit: problem.json の `check` で、この state のラボが解けているか (`solved` / `not_solved` / `cannot_judge`・条件ごとの結果) |
 | `check_verify` | `problem`, `broken`, `solved` | SolvedKit: `check` が壊れた版で不合格・解いた版で合格になるか (条件ごとに `tells` / `both` / `wrong` / `unknown`) |
 | `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: 直して変わった所から条件の候補と、両方の state で確かめた `check` の案 (`status` `ok`・出せなければ `none` と `reason`) |
@@ -522,7 +522,7 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 ### state_diff
 
 取っておいた基準から今の状態までに変わった所。基準は `before` に渡した物なら何でも (保存した state、または
-`keep_previous: true` を付けた `collect` の `previous`)。変わった所を先に、重い順に返し、何も変わっていなければ `none` が
+`keep_previous: true` を付けた `collect` の `previous`)。変わった所を先に、種類ごとに影響の大きい順に返し、何も変わっていなければ `none` が
 `true` です。例は、記録した q21 のラボで r1 の Local Preference を 1 つ変えた前と後です:
 
 ```

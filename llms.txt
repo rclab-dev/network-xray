@@ -53,7 +53,7 @@
   state files are inside the container: from the host, `curl http://localhost:8600/static/xray-states.js`. The image also
   reads each router's running configuration every 30 s to choose OSPF or BGP (`show running-config` / `sr_cli 'info from
   running …'`, read-only; Cisco IOL from the last collected state, no second login).
-- Only starting a lab touches a router: `./xray.sh` and a release's `run.sh`, right after deploy, restart FRR in a router
+- Viewing a lab only reads the routers; only starting a lab can change one: `./xray.sh` and a release's `run.sh`, right after deploy, restart FRR in a router
   whose FRR did not come up (the configuration is not changed). Viewing the lab never does.
 
 ## What it is

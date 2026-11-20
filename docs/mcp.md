@@ -8,9 +8,9 @@ which routers are up, what their OSPF and BGP neighbors are, which BGP path a ro
 it uses for an address.
 
 It is **read-only**. It answers from state files the collectors have already written (for a containerlab, netlab or
-Cisco CML lab); it does not look at your computer's own network. It never logs in to a router,
-never runs a command, never writes a file and opens no network socket. (The one exception is opt-in: `collect`, offered
-only with `--allow-collect`, runs the collector once: see [Read the lab again](#read-the-lab-again-collect-opt-in).) It uses the same functions as
+Cisco CML lab); it does not look at your computer's own network. By default it does not log in to a router,
+run a command, write a file or open a network socket. The one exception is opt-in: `collect`, offered
+only with `--allow-collect`, runs the collector once ( see [Read the lab again](#read-the-lab-again-collect-opt-in)). It uses the same functions as
 `scripts/xray-query.js`, so it gives the same answers.
 
 ## The usual setup <!-- nx_mcp_usual -->
@@ -244,7 +244,7 @@ If the assistant does not know which lab you mean, give the path again.
 | `bgp_neighbors` | `path`, `router?` | per router: peer, remote AS, iBGP/eBGP, state, prefixes received |
 | `route_lookup` | `path`, `router`, `destination`, `vrf?` | longest-prefix match in the collected routing table |
 | `why_path` | `path`, `router`, `prefix`, `vrf?` | the selected BGP path, the other candidates with their attributes, the deciding step and where that reason came from |
-| `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | what changed from a baseline state to now, heaviest first (`none` when nothing changed) |
+| `state_diff` | `before`, `after`, `router?`, `mgmt_subnet?` | what changed from a baseline state to now, by kind with the most disruptive first (`none` when nothing changed) |
 | `check_run` | `problem`, `path` | SolvedKit: is the lab solved in this state, by the problem.json `check` (`solved` / `not_solved` / `cannot_judge`, one result per condition) |
 | `check_verify` | `problem`, `broken`, `solved` | SolvedKit: does the `check` fail on the broken state and hold on the solved one (a verdict per condition: `tells` / `both` / `wrong` / `unknown`) |
 | `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: candidate conditions from what the fix changed, and a proposed `check` verified on both states (`status` `ok`, or `none` with `reason`) |
@@ -530,7 +530,7 @@ draft; the client saves it.
 ### state_diff
 
 What changed from a baseline you kept to the state now. The baseline is any path you pass as `before`: a state you
-saved, or `previous` from `collect` with `keep_previous: true`. The changes come first, heaviest first; `none` is
+saved, or `previous` from `collect` with `keep_previous: true`. The changes come first, by kind with the most disruptive first; `none` is
 `true` when nothing changed. Here the recorded q21 lab before and after one Local Preference changed on r1:
 
 ```

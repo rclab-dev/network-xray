@@ -9,7 +9,7 @@
 4. reads the routers again and asks again
 5. removes the lab (`--keep` leaves it running)
 
-> This shows the answer of problem q21. Solve q21 first if you want to.
+> This shows the solution to problem q21. Solve q21 first if you want to avoid spoilers.
 
 ```bash
 bash scripts/demo-locpref-flip.sh            # from the repository root
