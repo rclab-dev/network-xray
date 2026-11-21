@@ -1,5 +1,7 @@
 # HandsOn Pack: the problem format (problem.json, network-xray-lab/0)
 
+*English | [日本語](ja/problem-format.md)*
+
 A **HandsOn Pack** is a containerlab lab handed out as a problem to solve with network-xray: the lab's topology and
 configurations, and a `problem.json` next to them: a format, not a program (nothing to install beyond network-xray).
 This page is the format. To write the `check` from a broken and a

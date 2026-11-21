@@ -5,7 +5,7 @@
 形と道具:
 
 - **HandsOn Pack** は**形**で、プログラムではありません。containerlab のラボを問題として配る形で、トポロジーの隣に
-  `problem.json` を置きます ([その形](../problem-format.md))。network-xray のほかに入れる物はありません。
+  `problem.json` を置きます ([その形](problem-format.md))。network-xray のほかに入れる物はありません。
 - **SolvedKit** は**道具**です。壊れた版と直した版の状態から、`check` (いつ解けたとするか) を作ります。
 
 HandsOn Pack で演習を配り、SolvedKit で判定を作ります。片方だけでも使えます: check を手で書く、または HandsOn Pack
@@ -51,7 +51,7 @@ SolvedKit は、ネットワークの問題と解答はできたが「このラ�
 見分けられるかを言います。containerlab (と netlab) のラボと Cisco CML のラボで使えます。
 
 判定を使う先の 1 つが、ラボのトポロジーの隣に置く `problem.json` です。network-xray は図の上に問題を出し、直ると
-**✓ Solved** を出します ([problem-format.md](../problem-format.md))。採点の台本や CI でも、同じ check を `check run` で使えます。
+**✓ Solved** を出します ([problem-format.md](problem-format.md))。採点の台本や CI でも、同じ check を `check run` で使えます。
 
 - 壊れた版と直した版、2 つの保存した状態から check を**提案**します。何を入れるかを決めるのは作る人です。
 - 保存した状態の上で check を、頁と同じ決まりで**判定**し、check が壊れたラボと直したラボを見分けられるかを言います。
@@ -60,7 +60,7 @@ SolvedKit は、ネットワークの問題と解答はできたが「このラ�
 - 正しい答えを**全部は見つけません**。直した版の状態 1 つは、解き方の 1 つを示すだけです
   ([4 章](#4-なぜ-backup-の条件を入れるかなぜ解き方を縛らないか))。
 
-problem.json の形の全体は [problem-format.md](../problem-format.md) (英語) にあります。
+problem.json の形の全体は [problem-format.md](problem-format.md) にあります。
 
 **どのルータで。** 状態は network-xray が読む物から来ます: containerlab / netlab の FRR・Nokia SR Linux・Cisco IOL、
 Cisco CML のラボの IOS のノード (`iol-xe`・`ioll2-xe`・`iosv`・`iosvl2`・`csr1000v`・`cat8000v`)。ほかのノードは図に出ますが
@@ -318,7 +318,7 @@ submissions/carol.js 2
 }
 ```
 
-path・field・12 の op は [problem-format.md](../problem-format.md#check) にあります。よくある直し 3 つ:
+path・field・12 の op は [problem-format.md](problem-format.md#check) にあります。よくある直し 3 つ:
 
 1. **正しい答えが複数ある。** r1 が AS 65002 経由でも AS 65004 経由でも良いとします。直す前:
 
@@ -376,7 +376,7 @@ path・field・12 の op は [problem-format.md](../problem-format.md#check) に
   (隣接・経路) を条件にします。ping の結果は状態に入っていません。
 - **解く人に check は見える?** 配る problem.json に入っていれば見えます (ファイルを開けば読めます)。困る時は `check` を抜いた
   problem.json を配り、提出の後に自分で `check run` を流します ([5 章](#5-自分のラボで使う) の「解く人に check を見せたくない時」)。
-- **形の全体はどこ?** [problem-format.md](../problem-format.md) (英語)。
+- **形の全体はどこ?** [problem-format.md](problem-format.md)。
 
 ## 9. AI アシスタントから使う (MCP)
 

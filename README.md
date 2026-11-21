@@ -1030,7 +1030,7 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 
 **rclab-dev/network-xray** — containerlab と netlab のラボの BGP / OSPF の今の状態を見る道具です (FRR・SR Linux・Cisco IOL)。読むだけです。
 MCP のサーバでもあります: AI エージェントがラボの状態を読み、経路や隣接がなぜ今の形なのかを聞けます ([いちばん短い設定](docs/ja/mcp.md#よくある使い方))。読むのは network-xray の collector が containerlab・netlab・Cisco CML のラボについて書いた状態のファイルです。手元の PC のネットワークを調べる道具ではありません。
-**SolvedKit:** ラボを「解いたら ✓ が付く問題」にできます — 壊れた版と直した版の状態から判定 (check) の案を出し、頁なしでラボを判定します ([手引き](docs/ja/solvedkit.md))。 HandsOn Pack ([problem.json](docs/problem-format.md)) で演習を配り、SolvedKit で判定を作ります。
+**SolvedKit:** ラボを「解いたら ✓ が付く問題」にできます — 壊れた版と直した版の状態から判定 (check) の案を出し、頁なしでラボを判定します ([手引き](docs/ja/solvedkit.md))。 HandsOn Pack ([problem.json](docs/ja/problem-format.md)) で演習を配り、SolvedKit で判定を作ります。
 
 *[English](#network-xray) | 日本語*
 

@@ -10,6 +10,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **SolvedKit guide** (docs/solvedkit.md, English and Japanese): a first five minutes on the recorded q21 states, how to read the tables, why the check keeps a backup line, the flow on your own lab (containerlab, netlab, CML), editing the check, every error message with what to do, and questions authors ask.
 - **problem.json `solved_text_en` / `solved_text_ja`:** a short note shown under the problem only while the lab is solved (before `solved_cta`), with the same tags as the problem text; `check init` puts them in the draft empty. A problem handed out without a site of its own can explain the answer.
 - **HandsOn Pack:** the name for a containerlab lab handed out as a problem (the lab and a `problem.json`, as since v1.0.0); docs/problem-format.md, the SolvedKit guide (with a diagram) and README say how the two fit together: hand out exercises as a HandsOn Pack, and make their check with SolvedKit.
+- **docs/ja/problem-format.md:** the problem format in Japanese.
 - **`check init --out`:** makes the folder when it is not there; with `--format table` it no longer runs twice (the second run stopped with "already exists" after the file was written).
 
 ## v1.4.4 — 2026-11-20
