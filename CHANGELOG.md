@@ -2,6 +2,11 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.5.1 — 2026-11-22
+
+- **Image:** `docker run -i --rm -v <lab folder>:/lab:ro ghcr.io/rclab-dev/network-xray:1.5.1 mcp --path /lab` starts the MCP server on stdio (no page, no collector, no Docker socket); the image carries the `io.modelcontextprotocol.server.name` label.
+- **MCP Registry:** `server.json` for the official MCP Registry (`io.github.rclab-dev/network-xray`, the image above).
+
 ## v1.5.0 — 2026-11-22
 
 - **SolvedKit — `xray-query.js check run` / `check verify` / `check suggest` / `check init`, MCP `check_run` / `check_verify` / `check_suggest` / `check_init`:** judge a lab's problem.json `check` on saved states without the page or a running lab (the same rules as the ✓ Solved mark). `run` answers solved / not solved / cannot judge with exit code 0 / 1 / 2; `verify` says whether a check fails on the broken lab and holds on the solved one, with a verdict per condition; `suggest` proposes the check from what the fix changed between a broken and a solved state (verified on both; it does not guess other ways to solve), and `init` puts it in a problem.json draft.

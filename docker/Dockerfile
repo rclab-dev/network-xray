@@ -39,7 +39,8 @@ LABEL org.opencontainers.image.title="network-xray" \
       org.opencontainers.image.url="https://github.com/rclab-dev/network-xray" \
       org.opencontainers.image.source="https://github.com/rclab-dev/network-xray" \
       org.opencontainers.image.description="Browser view of a containerlab / netlab lab's control plane (OSPF/BGP neighbors, routes, why a best path won)" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.licenses="MIT" \
+      io.modelcontextprotocol.server.name="io.github.rclab-dev/network-xray"
 
 EXPOSE 8600
 # the graph server answers on the --port given to the entrypoint (default 8600); it starts after up to 2 min of waiting for the lab

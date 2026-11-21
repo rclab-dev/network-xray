@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # network-xray container entrypoint: watch a running containerlab / netlab lab and serve the graph on :8600.
 #   network-xray [--topo /lab/clab.yml] [--port 8600] [--proto auto|ospf|bgp|static] [--interval 2]
+#   network-xray mcp --path /lab [xray-mcp.js options]   (the MCP server on stdio: no page, no collector, no Docker socket)
 # - reads router state with `docker exec <node> vtysh -c 'show ...'` (FRR) / sr_cli (SR Linux) / SSH + show (Cisco IOS-XE): read-only, no config changes
 # - proto=auto: asks the routers every 30 s whether they run BGP or OSPF (a netlab lab may be started with --no-config
 #   and configured later), and restarts the collector when the answer changes
@@ -9,7 +10,9 @@ TOPO=/lab/clab.yml; PORT=8600; PROTO=auto; INTERVAL=2
 usage() {
   cat <<'EOF'
 usage: network-xray [--topo /lab/clab.yml] [--port 8600] [--proto auto|ospf|bgp|static] [--interval 2]
+       network-xray mcp --path /lab [--allow-any-path]
   watch a running containerlab / netlab lab and serve the graph (read-only show commands, no config changes)
+  mcp                 instead: the MCP server on stdio, reading the lab's state files under --path (docs/mcp.md)
   --topo <file>       the lab's topology file (default: /lab/clab.yml)
   --port <port>       port the graph is served on (default: 8600)
   --proto <proto>     auto | ospf | bgp | static (default: auto: ask the routers every 30 s)
@@ -17,6 +20,9 @@ usage: network-xray [--topo /lab/clab.yml] [--port 8600] [--proto auto|ospf|bgp|
   -h, --help          show this help
 EOF
 }
+# nx_image_mcp (v1.5.1): `docker run -i --rm -v <state folder>:/lab:ro ghcr.io/rclab-dev/network-xray mcp --path /lab` runs the
+# MCP server on stdio (MCP registries start the image this way); the rest of this script (page, collector) is not run
+if [ "${1-}" = mcp ]; then shift; exec node /opt/network-xray/scripts/xray-mcp.js "$@"; fi
 while [ $# -gt 0 ]; do
   case "$1" in
     --topo|--port|--proto|--interval)

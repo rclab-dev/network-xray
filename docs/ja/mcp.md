@@ -126,6 +126,19 @@ printf '%s\n' \
 {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"network-xray","version":"1"},"instructions":"Read-only questions about a network-xray lab from saved state files. No router is contacted."}}
 ```
 
+### image から (手元に Node が無くても) <!-- nx_image_mcp -->
+
+Docker の image は、最初の引数が `mcp` の時に MCP のサーバを stdio で起動します。ラボの state のファイルのあるフォルダを
+読むだけで mount し、`--path` に渡します (Docker のソケットは要りません。ファイルを読むだけです):
+
+```
+docker run -i --rm -v /path/to/your-lab:/lab:ro ghcr.io/rclab-dev/network-xray:1 mcp --path /lab
+```
+
+クライアントの JSON の設定では `"command": "docker"`、`"args": ["run", "-i", "--rm", "-v", "/path/to/your-lab:/lab:ro",
+"ghcr.io/rclab-dev/network-xray:1", "mcp", "--path", "/lab"]` です。この形では `collect` の道具は出ません (Docker のソケットが
+無いため)。MCP Registry の登録 (この repo の `server.json`) も、同じ形で image を起動します。
+
 ## クライアントの設定
 
 ### Claude Code

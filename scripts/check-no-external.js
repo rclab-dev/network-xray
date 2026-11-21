@@ -37,6 +37,7 @@ const LINK_HOSTS = {
   'netlab.tools': 'reference in a code comment',
   'json-schema.org': '$schema identifier (not fetched)',
   'glama.ai': '$schema identifier in glama.json (not fetched)',
+  'static.modelcontextprotocol.io': '$schema identifier in server.json (MCP Registry; not fetched)',
   'www.w3.org': 'XML namespace / DTD identifiers (not fetched)',
   'tailwindcss.com': 'license banner of the vendored stylesheet',
   // reference comments in the vendored js/next.js

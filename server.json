@@ -1,0 +1,46 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.rclab-dev/network-xray",
+  "description": "Why a BGP/OSPF route won in a containerlab, netlab or CML lab, from the lab's collected state",
+  "repository": {
+    "url": "https://github.com/rclab-dev/network-xray",
+    "source": "github"
+  },
+  "version": "1.5.1",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/rclab-dev/network-xray:1.5.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "-v",
+          "value": "{lab_state_dir}:/lab:ro",
+          "isRequired": true,
+          "description": "The folder with the lab's state files (xray-states.js), mounted read-only",
+          "variables": {
+            "lab_state_dir": {
+              "description": "Absolute path of the folder with the lab's state files (xray-states.js)",
+              "isRequired": true,
+              "format": "filepath"
+            }
+          }
+        }
+      ],
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        },
+        {
+          "type": "named",
+          "name": "--path",
+          "value": "/lab"
+        }
+      ]
+    }
+  ]
+}

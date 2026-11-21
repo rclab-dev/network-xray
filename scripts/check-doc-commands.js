@@ -265,7 +265,8 @@ function invocations(rawWords) {
         }
         if (a === '…' || a === '...') continue;
         if (/^(?:[\w.-]+(?::\d+)?\/)*network-xray(?::[\w.-]+)?(?:@sha256:[0-9a-f]+)?$/.test(a)) {
-          out.push({ script: 'docker/entrypoint.sh', args: rawWords.slice(j + 1), docker: a });
+          if (rawWords[j + 1] === 'mcp') out.push({ script: 'scripts/xray-mcp.js', args: rawWords.slice(j + 2), docker: a });   // nx_image_mcp: the entrypoint hands `mcp …` to the MCP server
+          else out.push({ script: 'docker/entrypoint.sh', args: rawWords.slice(j + 1), docker: a });
         }
         break;
       }

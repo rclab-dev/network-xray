@@ -132,6 +132,19 @@ The reply to `initialize`:
 {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"network-xray","version":"1"},"instructions":"Read-only questions about a network-xray lab from saved state files. No router is contacted."}}
 ```
 
+### From the image (no Node on your machine) <!-- nx_image_mcp -->
+
+The Docker image starts the MCP server on stdio when the first argument is `mcp`. Mount the folder with the lab's
+state files read-only and give it as `--path` (no Docker socket is needed: it reads files only):
+
+```
+docker run -i --rm -v /path/to/your-lab:/lab:ro ghcr.io/rclab-dev/network-xray:1 mcp --path /lab
+```
+
+In a client's JSON config, `"command": "docker"` and `"args": ["run", "-i", "--rm", "-v", "/path/to/your-lab:/lab:ro",
+"ghcr.io/rclab-dev/network-xray:1", "mcp", "--path", "/lab"]`. The `collect` tool is not offered this way (no Docker
+socket). The MCP Registry entry (`server.json` in this repository) starts the image the same way.
+
 ## Configure a client
 
 ### Claude Code
