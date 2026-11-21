@@ -2,15 +2,20 @@
 
 *English | [日本語](ja/solvedkit.md)*
 
-Two tools work together: a **HandsOn Pack** hands out a containerlab lab as a problem (the lab and a `problem.json`;
-[its format](problem-format.md)), and **SolvedKit** makes the check that says when it is solved. Hand out exercises as a
-HandsOn Pack, and make their check with SolvedKit. SolvedKit also works on its own, for containerlab and Cisco CML labs.
+A format and a tool:
+
+- **HandsOn Pack** is a **format**, not a program: a containerlab lab handed out as a problem, with a `problem.json` next
+  to its topology ([the format](problem-format.md)). Nothing to install beyond network-xray.
+- **SolvedKit** is a **tool**: it makes the `check` (when the lab counts as solved) from a broken and a fixed state.
+
+Hand out exercises as a HandsOn Pack, and make their check with SolvedKit. Either works without the other: write the
+check by hand, or use SolvedKit's `check run` on its own (for containerlab and Cisco CML labs) with no HandsOn Pack at all.
 
 ```mermaid
 flowchart LR
   A["Author: a lab, a broken version and a fixed version"] -->|writes the check by hand| P
-  A -->|"not sure how to write it"| S["SolvedKit: suggest, init, verify from the two states"]
-  S -->|the check in problem.json| P["HandsOn Pack: the lab + problem.json"]
+  A -->|"not sure how to write it"| S["SolvedKit (a tool): suggest, init, verify from the two states"]
+  S -->|the check in problem.json| P["HandsOn Pack (a format): the lab + problem.json"]
   P --> L["Solver: the problem on the page, then ✓ Solved"]
   S -.->|"or on its own: the organizer runs check run after a solver hands in"| R["check run"]
 ```

@@ -2,15 +2,20 @@
 
 *[English](../solvedkit.md) | 日本語*
 
-2 つの道具が組みになります。**HandsOn Pack** は containerlab のラボを問題として配る形 (ラボと `problem.json`。
-[その形](../problem-format.md)) で、**SolvedKit** は「解けた」を言う判定 (check) を作ります。HandsOn Pack で演習を配り、
-SolvedKit で判定を作ります。SolvedKit は単体でも、containerlab と Cisco CML のラボで使えます。
+形と道具:
+
+- **HandsOn Pack** は**形**で、プログラムではありません。containerlab のラボを問題として配る形で、トポロジーの隣に
+  `problem.json` を置きます ([その形](../problem-format.md))。network-xray のほかに入れる物はありません。
+- **SolvedKit** は**道具**です。壊れた版と直した版の状態から、`check` (いつ解けたとするか) を作ります。
+
+HandsOn Pack で演習を配り、SolvedKit で判定を作ります。片方だけでも使えます: check を手で書く、または HandsOn Pack
+なしで SolvedKit の `check run` だけを使う (containerlab と Cisco CML のラボ)。
 
 ```mermaid
 flowchart LR
   A["作る人: ラボ・壊れた版・直した版"] -->|check を自分で書く| P
-  A -->|"書き方に悩む"| S["SolvedKit: 2 つの状態から suggest・init・verify"]
-  S -->|problem.json の check| P["HandsOn Pack: ラボ + problem.json"]
+  A -->|"書き方に悩む"| S["SolvedKit (道具): 2 つの状態から suggest・init・verify"]
+  S -->|problem.json の check| P["HandsOn Pack (形): ラボ + problem.json"]
   P --> L["解く人: 頁に問題・解けたら ✓ Solved"]
   S -.->|"単体でも: 提出の後に主催側が check run"| R["check run"]
 ```

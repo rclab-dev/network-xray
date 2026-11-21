@@ -1,7 +1,8 @@
 # HandsOn Pack: the problem format (problem.json, network-xray-lab/0)
 
 A **HandsOn Pack** is a containerlab lab handed out as a problem to solve with network-xray: the lab's topology and
-configurations, and a `problem.json` next to them. This page is its format. To write the `check` from a broken and a
+configurations, and a `problem.json` next to them: a format, not a program (nothing to install beyond network-xray).
+This page is the format. To write the `check` from a broken and a
 fixed state of the lab, see [SolvedKit](solvedkit.md).
 
 Put a `problem.json` next to your `*.clab.yml` and network-xray shows the problem above the graph and, when the lab is fixed, a **✓ Solved** mark. Labs without a `problem.json` look exactly as before.
