@@ -167,3 +167,18 @@ test('fixes: interface field typo, ne / IPv6 / empty values, count_ge 0, only co
     assert.ok(lines.some(function (l) { return /address 10\.77\.77\.77 is not in the lab's files/.test(l); }), lines.join('\n'));
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('solved_text_en / solved_text_ja: strings with the problem-text tags; another tag or a non-string is reported', function () {
+  var root = makeRoot();
+  try {
+    var ok = good('qx'); ok.solved_text_en = 'r1 now prefers <code>10.10.0.20</code>.<br>LocPrf 150 wins.'; ok.solved_text_ja = '答え';
+    var ok2 = good('qx-solved'); ok2.solved_text_en = ok.solved_text_en; ok2.solved_text_ja = ok.solved_text_ja;
+    write(root, 'qx', ok); write(root, 'qx-solved', ok2);
+    assert.deepStrictEqual(problemsOf(root), { qx: [], 'qx-solved': [] });
+    var bad = good('qx'); bad.solved_text_en = 'see <a href=x>this</a>'; bad.solved_text_ja = 5;
+    write(root, 'qx', bad);
+    var p = problemsOf(root).qx.join('\n');
+    assert.match(p, /solved_text_en: tag <a href=x> is shown as text/);
+    assert.match(p, /solved_text_ja: not a non-empty string/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

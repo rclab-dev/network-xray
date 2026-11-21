@@ -101,6 +101,10 @@
   /* nx_solved_cta: problem.json solved_cta = one line under the problem, shown only while it is solved (+ RCL preview) */
   #nx-problem .nxp-solved-cta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px;padding-top:7px;border-top:1px dashed rgba(102,187,106,.45);font-size:13px;line-height:1.5}
   #nx-problem .nxp-solved-txt{color:#c8e6c9;flex:1 1 320px}
+  /* nx_solved_text: problem.json solved_text_<lang> = a few lines shown under the problem only while it is solved */
+  #nx-problem .nxp-solved-text{margin-top:8px;padding-top:7px;border-top:1px dashed rgba(102,187,106,.45);color:#c8e6c9;font-size:13px;line-height:1.55}
+  #nx-problem .nxp-solved-text code{background:rgba(255,255,255,.08);padding:0 4px;border-radius:3px}
+  #nx-problem .nxp-solved-text + .nxp-solved-cta{border-top:0;padding-top:0;margin-top:6px}
   #nx-problem .nxp-solved-link{color:#80deea;text-decoration:underline;text-underline-offset:2px}
   #nx-problem .nxp-solved-link:hover{color:#e0f7fa;text-decoration-thickness:2px}
   #nx-problem .nxp-solved-prev{flex:0 0 auto;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit;color:#0f1318;background:#66bb6a;border:0;border-radius:10px;padding:2px 10px}
@@ -982,7 +986,9 @@ window.__initNeXtOverview = function (data) {
     var b = host.querySelector('.nxp-solved');
     host.classList.toggle('nx-solved', !!window.__nxSolved);
     var sc = host.querySelector('.nxp-solved-cta');   /* nx_solved_cta */
-    if (!window.__nxSolved) { if (b) b.remove(); if (sc) sc.remove(); return; }
+    var st = host.querySelector('.nxp-solved-text');   /* nx_solved_text */
+    if (!window.__nxSolved) { if (b) b.remove(); if (sc) sc.remove(); if (st) st.remove(); return; }
+    nxSolvedText(host, st);
     nxSolvedCta(host, sc);
     var L = 'en'; try { L = localStorage.getItem('nx-lang') || 'en'; } catch (e) {}
     var txt = L === 'ja' ? '\u2713 \u89e3\u3051\u307e\u3057\u305f (Solved)' : '\u2713 Solved';
@@ -1021,6 +1027,22 @@ window.__initNeXtOverview = function (data) {
       b.textContent = L === 'ja' ? '\u25b6 \u52d5\u753b\u3067\u898b\u308b' : '\u25b6 Preview';
       b.onclick = function(){ nxSolvedPip(u); }; sc.appendChild(b);
     }
+  }
+  /* nx_solved_text (v1.5.0): problem.json solved_text_en / solved_text_ja = a short note (a few lines) shown under the problem
+     only while it is solved, before the solved_cta link - so a problem handed out without a site of its own can explain the
+     answer. A missing language falls back en <-> ja. Same tags as the problem text: <br> <code> <strong> <span> (no attributes);
+     anything else stays text. */
+  function nxSolvedTextHtml(pj, L){
+    if (!pj || typeof pj !== 'object') return '';
+    var o = L === 'ja' ? ['ja', 'en'] : ['en', 'ja'];
+    for (var i = 0; i < o.length; i++) { var v = pj['solved_text_' + o[i]]; if (typeof v === 'string' && v.trim()) return String(v).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }).replace(/&lt;([/]?)(br|code|strong|span)&gt;/g, '<$1$2>'); }
+    return '';
+  }
+  function nxSolvedText(host, st){
+    var L = nxSolvedLang(), html = nxSolvedTextHtml(window.__nxProblemJson, L);
+    if (!html) { if (st) st.remove(); return; }
+    if (!st) { st = document.createElement('div'); st.className = 'nxp-solved-text'; host.insertBefore(st, host.querySelector('.nxp-solved-cta')); }
+    if (st.getAttribute('data-k') !== L + '|' + html) { st.setAttribute('data-k', L + '|' + html); st.innerHTML = html; }
   }
   function nxIsRclLink(u){   /* https://routecrushlab.com/… (or a subdomain) only */
     try { var x = new URL(u), h = x.hostname.toLowerCase(); return x.protocol === 'https:' && (h === 'routecrushlab.com' || h.slice(-18) === '.routecrushlab.com'); } catch (e) { return false; }

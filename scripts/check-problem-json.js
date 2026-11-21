@@ -25,7 +25,7 @@ const FORMAT = 'network-xray-lab/0';
 const ID_PREFIX = 'rclab-dev/network-xray/';
 
 const STRING_KEYS = ['id', 'version', 'author', 'license', 'q_number', 'title_en', 'title_ja', 'problem_en', 'problem_ja',
-  'check_note_en', 'check_note_ja', 'rcl_qid', 'rcl_mode', 'ref', 'cta_label_en', 'cta_label_ja'];
+  'check_note_en', 'check_note_ja', 'solved_text_en', 'solved_text_ja', 'rcl_qid', 'rcl_mode', 'ref', 'cta_label_en', 'cta_label_ja'];
 const KNOWN_KEYS = new Set(['format', 'focus', 'check', 'solved_cta', ...STRING_KEYS]);
 const CTA_KEYS = new Set(['label_en', 'label_ja', 'url_en', 'url_ja']);
 
@@ -201,8 +201,8 @@ function checkProblem(pj, dirName, lab) {
   for (const k of Object.keys(pj)) if (!KNOWN_KEYS.has(k)) out.push(`${k}: unknown key`);
   for (const k of STRING_KEYS) if (k in pj && (typeof pj[k] !== 'string' || !pj[k].trim())) out.push(`${k}: not a non-empty string`);
   if (pj.id !== ID_PREFIX + dirName) out.push(`id: ${JSON.stringify(pj.id)} (expected "${ID_PREFIX}${dirName}")`);
-  for (const k of ['problem_en', 'problem_ja', 'title_en', 'title_ja']) if (typeof pj[k] === 'string') {
-    if (k.startsWith('problem')) checkProblemText(k, pj[k], out);
+  for (const k of ['problem_en', 'problem_ja', 'solved_text_en', 'solved_text_ja', 'title_en', 'title_ja']) if (typeof pj[k] === 'string') {
+    if (!k.startsWith('title')) checkProblemText(k, pj[k], out);   // solved_text_* (nx_solved_text): the same tags as the problem text
     else if (/[<>]/.test(pj[k])) out.push(`${k}: the title is plain text (no tags)`);
   }
   if ((pj.title_en || pj.title_ja) && !(pj.problem_en || pj.problem_ja)) out.push('problem_en/problem_ja: title without a problem text');
@@ -239,7 +239,7 @@ function checkProblem(pj, dirName, lab) {
   }
   if ('check' in pj) checkCheck(pj.check, lab, out);
   // addresses and prefixes named in the texts belong to this lab
-  for (const k of ['title_en', 'title_ja', 'problem_en', 'problem_ja', 'check_note_en', 'check_note_ja']) {
+  for (const k of ['title_en', 'title_ja', 'problem_en', 'problem_ja', 'solved_text_en', 'solved_text_ja', 'check_note_en', 'check_note_ja']) {
     if (typeof pj[k] !== 'string') continue;
     for (const m of pj[k].matchAll(/(?<![\d.])(\d{1,3}(?:\.\d{1,3}){3})(\/\d{1,2})?(?![\d])/g)) {
       const p = m[2] ? parsePrefix(m[0]) : null;

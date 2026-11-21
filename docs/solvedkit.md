@@ -217,7 +217,8 @@ A saved `xray-states.js`, a `state_<node>.json`, or a folder of them all work as
    problem is about, start from the router and destination: `--focus r1 --prefix 8.8.8.0/24`.
 4. `node scripts/xray-query.js check init broken.js solved.js --out <your lab folder>/problem.json`, then write
    the title, the problem text and `id` in it. One language is enough: a missing `title_en` / `title_ja` (or `problem_*`)
-   falls back to the other one.
+   falls back to the other one. `solved_text_en` / `solved_text_ja` (optional) is a short note shown once the lab is
+   solved, for example why the fix works.
 5. `node scripts/xray-query.js check verify <your lab folder>/problem.json broken.js solved.js --format table` must say
    `Check: ok`. Keep `broken.js` and `solved.js` next to the lab if you want to run this again in CI.
 6. Open the lab with network-xray, solve it once yourself, and see the ✓ Solved mark.

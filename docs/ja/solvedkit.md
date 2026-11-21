@@ -210,6 +210,7 @@ q21 なら r2 からの経路の Local Preference を上げる、ほかの方法
    ルータと宛先から始めます: `--focus r1 --prefix 8.8.8.0/24`。
 4. `node scripts/xray-query.js check init broken.js solved.js --out <ラボのフォルダ>/problem.json` の後、その中に
    題・問題の文・`id` を書きます。言葉は片方だけで良く、`title_en` / `title_ja` (と `problem_*`) の無い方はもう片方で出ます。
+   `solved_text_en` / `solved_text_ja` (省ける) は解けた時に出る短い文で、たとえば直し方がなぜ効くかを書きます。
 5. `node scripts/xray-query.js check verify <ラボのフォルダ>/problem.json broken.js solved.js --format table` が
    `Check: ok` になること。CI でまた流したいなら `broken.js` と `solved.js` をラボの隣に置いておきます。
 6. network-xray でラボを開き、自分で 1 回解いて ✓ Solved が出るのを見ます。

@@ -24,6 +24,7 @@ The official examples in [`examples/`](../examples) all use this format. You can
 | `focus` | no | `{"node": "r1", "prefix": "8.8.8.0/24"}` — `node` is the router whose DeepDive opens first. `prefix` is selected automatically in the Routing table of **any** router you open (once, when the row appears; not while you have another row selected), except where the row is the router's own destination: a connected / local route, a route out of `lo`, or a route with no outgoing interface. |
 | `check` | no | When the lab counts as solved (below). No `check` = no ✓ Solved mark. |
 | `check_note_en`, `check_note_ja` | no | A note for people (e.g. "Also try: ping 8.8.8.8 from r1"). Not used by the page. |
+| `solved_text_en`, `solved_text_ja` | no | A short note shown under the problem **only while the lab is solved** (before `solved_cta`), e.g. why the fix works. Same tags as the problem text; a missing language falls back to the other one. With it, a problem handed out without a site of its own still explains the answer. |
 | `solved_cta` | no | `{"label_en": "…", "label_ja": "…", "url_en": "https://…", "url_ja": "https://…"}` — one link shown under the problem **only while the lab is solved** (e.g. a step-by-step walkthrough of the same problem). The label is plain text; the part in `[square brackets]` is the link (if there are no brackets, the whole label is the link); only `http(s)` links; a missing language falls back to the other one. |
 
 The problem band appears when the file has a title or a problem text.

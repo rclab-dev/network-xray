@@ -304,6 +304,7 @@
     var problem = {
       format: 'network-xray-lab/0', id: s(opts.id),
       title_en: '', title_ja: '', problem_en: '', problem_ja: '',
+      solved_text_en: '', solved_text_ja: '',   /* nx_solved_text: shown under the problem once it is solved (optional) */
       focus: focus,
       check: sg.check,
       check_note_en: '', check_note_ja: ''

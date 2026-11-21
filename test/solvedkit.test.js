@@ -296,7 +296,7 @@ test('real states: the OSPF demo frames C -> D (r1-r2 back up) -> the route and 
 test('init: a draft with empty text fields, focus and the verified check; none passes the reason on', () => {
   const r = kit.init(BROKEN, SOLVED, { id: 'me/lab-1' });
   assert.strictEqual(r.status, 'ok');
-  assert.deepStrictEqual(Object.keys(r.problem), ['format', 'id', 'title_en', 'title_ja', 'problem_en', 'problem_ja', 'focus', 'check', 'check_note_en', 'check_note_ja']);
+  assert.deepStrictEqual(Object.keys(r.problem), ['format', 'id', 'title_en', 'title_ja', 'problem_en', 'problem_ja', 'solved_text_en', 'solved_text_ja', 'focus', 'check', 'check_note_en', 'check_note_ja']);
   assert.strictEqual(r.problem.id, 'me/lab-1');
   assert.deepStrictEqual(r.problem.focus, { node: 'r1', prefix: '2.2.2.2/32' });
   assert.strictEqual(kit.verify(r.problem, BROKEN, SOLVED).status, 'ok');
