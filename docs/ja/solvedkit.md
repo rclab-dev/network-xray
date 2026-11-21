@@ -35,9 +35,17 @@ problem.json の形の全体は [problem-format.md](../problem-format.md) (英�
 
 ## 2. はじめての 5 分
 
+**始める前に。** 要るのは Node 18 以上 (`node -v`) と network-xray の写しです。この手引きの命令は全部 network-xray の
+フォルダで打ちます:
+
+```
+git clone https://github.com/rclab-dev/network-xray.git
+cd network-xray
+```
+
 repo には q21 のラボ (BGP: r1 が r2 経由の経路を選ぶべき) の録画した状態が 2 つあります。
 `demo/bgp-lp/frameA.json` が直す前、`demo/bgp-lp/frameB.json` が直した後です。repo のフォルダで打ってください。
-要るのは Node 18 以上だけです。
+
 
 **1 手目: check を提案させる。**
 
@@ -182,11 +190,53 @@ q21 なら r2 からの経路の Local Preference を上げる、ほかの方法
    `solved.js` として保存します。
 3. `node scripts/xray-query.js check suggest broken.js solved.js --format table`。問題と関係の無い所までラボが変わる時は、
    ルータと宛先から始めます: `--focus r1 --prefix 8.8.8.0/24`。
-4. `node scripts/xray-query.js check init broken.js solved.js --out <ラボのフォルダ>/problem.json` の後、その中の
-   `title_en`・`title_ja`・`problem_en`・`problem_ja`・`id` を書きます。
+4. `node scripts/xray-query.js check init broken.js solved.js --out <ラボのフォルダ>/problem.json` の後、その中に
+   題・問題の文・`id` を書きます。言葉は片方だけで良く、`title_en` / `title_ja` (と `problem_*`) の無い方はもう片方で出ます。
 5. `node scripts/xray-query.js check verify <ラボのフォルダ>/problem.json broken.js solved.js --format table` が
    `Check: ok` になること。CI でまた流したいなら `broken.js` と `solved.js` をラボの隣に置いておきます。
 6. network-xray でラボを開き、自分で 1 回解いて ✓ Solved が出るのを見ます。
+
+**Cisco CML。** `cml-xray.js` は CML で動いているラボを、REST API とラボの管理ネットワーク経由で読みます
+(準備は [README](../../README.md#cisco-cml2-cml-free-でも)。要る[管理の網](../../README.md#cml-のラボに管理の網を足す)も):
+
+```
+export CML_HOST=<CML のアドレス> CML_USER=<CML のユーザ> CML_PASSWORD=<そのパスワード>
+export NX_IOS_USER=admin NX_IOS_PASSWORD=<ルータのパスワード>
+node cml-xray.js --save-cert cml.pem      # 1 回だけ
+export CML_CA_FILE=cml.pem
+node cml-xray.js --lab "<CML でのラボの題>"
+```
+
+動いている間、状態は `cml-view/xray-states.js` (`--out` のフォルダ) です。CML でラボを壊し、http://127.0.0.1:8710/ の
+頁に出たら `cp cml-view/xray-states.js broken.js`。直して待ち、`cp cml-view/xray-states.js solved.js`。あとは上と同じです。
+
+**解く人に見える物。** problem.json をラボのトポロジーのファイル (`<lab>.clab.yml`) の隣に置きます。解く人は network-xray
+でラボを立て (`./xray.sh <lab>.clab.yml` か image)、図の上に題と問題を見ます。check が約 10 秒成り立ち続けると
+✓ Solved が出ます。
+
+**CI で。** collector は `--watch` を付けなければ、動いているラボを 1 回読みます。出力のフォルダは network-xray の
+フォルダ (そこに `xray-states.js` を書く) で、3 つ目の引数はプロトコル (`bgp`、既定は `ospf`) です。containerlab の
+ある機械と公式の例 q21 で試した流れ:
+
+```
+containerlab deploy -t examples/q21-bgp-lp-solved/q21.clab.yml
+sleep 60                                               # BGP が落ち着くのを待つ
+node clab-xray-collect.js examples/q21-bgp-lp-solved/q21.clab.yml . bgp
+node scripts/xray-query.js check run examples/q21-bgp-lp-solved xray-states.js --format table
+containerlab destroy -t examples/q21-bgp-lp-solved/q21.clab.yml --cleanup
+```
+
+```
+Solved: solved
+  HOLDS  CONDITION
+  yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["best","eq",true],["as_path","eq","65002"]]
+  yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["as_path","eq","65003"]]
+```
+
+`check run` は 0 で終わるので、job は通ります。解いていない `examples/q21-bgp-lp` では `not solved` と出て 1 で終わります。
+
+**解く人に check を見せたくない時** (競技・採点する演習): `check` を抜いた problem.json を配り (問題は出て、✓ Solved は
+出ません)、全部入りの物は手元に置き、提出の後に解く人のラボの状態を保存して、自分の problem.json で `check run` を流します。
 
 ## 6. problem.json の check を直す
 
@@ -205,8 +255,19 @@ q21 なら r2 からの経路の Local Preference を上げる、ほかの方法
 
 path・field・12 の op は [problem-format.md](../problem-format.md#check) にあります。よくある直し 3 つ:
 
-1. **正しい答えが複数ある。** r1 が r2 経由でも r4 経由でも 8.8.8.0/24 に届いて良いなら、どちらか一方を名指す field
-   (ここでは `as_path`) を外し、大事な事を言う field (`best`、経路なら `out_iface`) を残すか、両方の行に合う形にします。
+1. **正しい答えが複数ある。** r1 が AS 65002 経由でも AS 65004 経由でも良いとします。直す前:
+
+   ```json
+   ["r1", "bgp_routes", "some", [["prefix", "eq", "8.8.8.0"], ["prefixlen", "eq", 24], ["best", "eq", true], ["as_path", "eq", "65002"]]]
+   ```
+
+   直した後 (`in` は並びを取ります):
+
+   ```json
+   ["r1", "bgp_routes", "some", [["prefix", "eq", "8.8.8.0"], ["prefixlen", "eq", 24], ["best", "eq", true], ["as_path", "in", ["65002", "65004"]]]]
+   ```
+
+   この直しの後も、録画した q21 の状態で `check verify` は `Check: ok` です。
 2. **やり方を求める。** 問題が「OSPF で」と言うなら、`suggest` が出した `protocol` の候補を足します: 経路の条件に
    `["protocol", "eq", "ospf"]`。
 3. **厳しすぎる条件を外す。** `check verify` で `wrong` になる条件や、ひとりでに変わる値 (タイマー・uptime) は、

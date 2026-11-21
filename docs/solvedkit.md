@@ -40,9 +40,17 @@ The full problem.json format is in [problem-format.md](problem-format.md).
 
 ## 2. Your first five minutes
 
+**Before you start.** You need Node 18 or later (`node -v`) and a copy of network-xray. Run every command in this guide
+from the network-xray folder:
+
+```
+git clone https://github.com/rclab-dev/network-xray.git
+cd network-xray
+```
+
 The repository has two recorded states of the q21 lab (BGP: r1 should prefer the path through r2):
 `demo/bgp-lp/frameA.json` is before the fix and `demo/bgp-lp/frameB.json` after it. Run these from the repository
-folder. You need Node 18 or later and nothing else.
+folder.
 
 **Step 1: let it suggest the check.**
 
@@ -190,10 +198,56 @@ A saved `xray-states.js`, a `state_<node>.json`, or a folder of them all work as
 3. `node scripts/xray-query.js check suggest broken.js solved.js --format table`. If the lab changes more than the
    problem is about, start from the router and destination: `--focus r1 --prefix 8.8.8.0/24`.
 4. `node scripts/xray-query.js check init broken.js solved.js --out <your lab folder>/problem.json`, then write
-   `title_en`, `title_ja`, `problem_en`, `problem_ja` and `id` in it.
+   the title, the problem text and `id` in it. One language is enough: a missing `title_en` / `title_ja` (or `problem_*`)
+   falls back to the other one.
 5. `node scripts/xray-query.js check verify <your lab folder>/problem.json broken.js solved.js --format table` must say
    `Check: ok`. Keep `broken.js` and `solved.js` next to the lab if you want to run this again in CI.
 6. Open the lab with network-xray, solve it once yourself, and see the ✓ Solved mark.
+
+**Cisco CML.** `cml-xray.js` reads a lab running in CML over its REST API and the lab's management network
+(the setup is in the [README](../README.md#cisco-cml2-cml-free-works), including the
+[management network](../README.md#add-a-management-network-to-a-cml-lab) it needs):
+
+```
+export CML_HOST=<your CML address> CML_USER=<your CML user> CML_PASSWORD=<its password>
+export NX_IOS_USER=admin NX_IOS_PASSWORD=<the routers' password>
+node cml-xray.js --save-cert cml.pem      # once
+export CML_CA_FILE=cml.pem
+node cml-xray.js --lab "<the lab's title in CML>"
+```
+
+While it runs, the state is `cml-view/xray-states.js` (the `--out` folder). Break the lab in CML, wait for the page at
+http://127.0.0.1:8710/ to show it, `cp cml-view/xray-states.js broken.js`; fix it, wait, `cp cml-view/xray-states.js solved.js`.
+The rest is the same as above.
+
+**What the solver sees.** Put the problem.json next to the lab's topology file (`<lab>.clab.yml`). The solver starts the
+lab with network-xray (`./xray.sh <lab>.clab.yml`, or the image) and sees the title and the problem above the graph; once
+the check has held for about 10 seconds, the ✓ Solved mark appears.
+
+**In CI.** The collector reads a running lab once when you leave out `--watch`. Its output folder is the network-xray
+folder (it writes `xray-states.js` there), and the third argument is the protocol (`bgp`, or `ospf`, the default). Tried
+on a host with containerlab and the official q21 example:
+
+```
+containerlab deploy -t examples/q21-bgp-lp-solved/q21.clab.yml
+sleep 60                                               # let BGP settle
+node clab-xray-collect.js examples/q21-bgp-lp-solved/q21.clab.yml . bgp
+node scripts/xray-query.js check run examples/q21-bgp-lp-solved xray-states.js --format table
+containerlab destroy -t examples/q21-bgp-lp-solved/q21.clab.yml --cleanup
+```
+
+```
+Solved: solved
+  HOLDS  CONDITION
+  yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["best","eq",true],["as_path","eq","65002"]]
+  yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["as_path","eq","65003"]]
+```
+
+`check run` exits 0, so the job passes; on the unsolved `examples/q21-bgp-lp` it says `not solved` and exits 1.
+
+**When solvers must not see the check** (a contest, a graded exercise): hand out a problem.json without `check` (the
+problem is still shown, with no ✓ Solved mark), keep the full one yourself, and after a solver hands in, save the state
+of their lab and run `check run` with your problem.json.
 
 ## 6. Editing the check in problem.json
 
@@ -212,9 +266,19 @@ condition in `all` holds. The draft from step 2:
 
 The paths, fields and the 12 ops are listed in [problem-format.md](problem-format.md#check). Three common edits:
 
-1. **Accept more than one right answer.** If r1 may reach 8.8.8.0/24 through r2 or through r4, drop the field that
-   names one of them (`as_path` here) and keep the one that says what matters (`best`, or a route's `out_iface`), or
-   write the condition so both rows match.
+1. **Accept more than one right answer.** Say r1 may prefer the path through AS 65002 or through AS 65004. Before:
+
+   ```json
+   ["r1", "bgp_routes", "some", [["prefix", "eq", "8.8.8.0"], ["prefixlen", "eq", 24], ["best", "eq", true], ["as_path", "eq", "65002"]]]
+   ```
+
+   After (`in` takes a list):
+
+   ```json
+   ["r1", "bgp_routes", "some", [["prefix", "eq", "8.8.8.0"], ["prefixlen", "eq", 24], ["best", "eq", true], ["as_path", "in", ["65002", "65004"]]]]
+   ```
+
+   `check verify` on the recorded q21 states still says `Check: ok` with this change.
 2. **Require the method.** If the problem says "by OSPF", add the `protocol` candidate that `suggest` listed:
    `["protocol", "eq", "ospf"]` in the route's condition.
 3. **Remove a condition that is too strict.** If `check verify` shows a condition as `wrong`, or a value that changes
