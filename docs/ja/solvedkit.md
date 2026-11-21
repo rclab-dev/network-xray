@@ -196,7 +196,8 @@ q21 なら r2 からの経路の Local Preference を上げる、ほかの方法
    `Check: ok` になること。CI でまた流したいなら `broken.js` と `solved.js` をラボの隣に置いておきます。
 6. network-xray でラボを開き、自分で 1 回解いて ✓ Solved が出るのを見ます。
 
-**Cisco CML。** `cml-xray.js` は CML で動いているラボを、REST API とラボの管理ネットワーク経由で読みます
+**Cisco CML。** `cml-xray.js` は CML のサーバの中ではなく、手元の機械で動かします。CML で動いているラボを、CML の
+REST API とラボの管理の網経由で読みます
 (準備は [README](../../README.md#cisco-cml2-cml-free-でも)。要る[管理の網](../../README.md#cml-のラボに管理の網を足す)も):
 
 ```
@@ -216,7 +217,12 @@ node cml-xray.js --lab "<CML でのラボの題>"
 
 **CI で。** collector は `--watch` を付けなければ、動いているラボを 1 回読みます。出力のフォルダは network-xray の
 フォルダ (そこに `xray-states.js` を書く) で、3 つ目の引数はプロトコル (`bgp`、既定は `ospf`) です。containerlab の
-ある機械と公式の例 q21 で試した流れ:
+ある機械と公式の例 q21 で、network-xray のフォルダで試した流れ:
+
+- `clab-xray-collect.js` は network-xray のフォルダの一番上にあります。
+- 2 つ目の引数 (`.`) は `xray-states.js` を書くフォルダで、network-xray のフォルダそのものです (そこにあるほかの
+  ファイルが要ります)。
+- `check run` には、problem.json のあるラボのフォルダか、problem.json のファイルそのものを渡します。
 
 ```
 containerlab deploy -t examples/q21-bgp-lp-solved/q21.clab.yml
@@ -309,8 +315,8 @@ path・field・12 の op は [problem-format.md](../problem-format.md#check) に
 - **ラボを変えたり、ルータにログインしたりする?** しません。渡されたファイルを読むだけです。
 - **ping の結果や設定の値は?** check が読むのは状態で、設定ではありません。値そのものではなく、その値がもたらす物
   (隣接・経路) を条件にします。ping の結果は状態に入っていません。
-- **解く人に check は見える?** problem.json はラボのフォルダにあるので、開けば読めます。目標が分かっても直し方が
-  分からない様に問題を書いてください。
+- **解く人に check は見える?** 配る problem.json に入っていれば見えます (ファイルを開けば読めます)。困る時は `check` を抜いた
+  problem.json を配り、提出の後に自分で `check run` を流します ([5 章](#5-自分のラボで使う) の「解く人に check を見せたくない時」)。
 - **形の全体はどこ?** [problem-format.md](../problem-format.md) (英語)。
 
 ## 9. AI アシスタントから使う (MCP)

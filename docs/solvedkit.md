@@ -204,7 +204,8 @@ A saved `xray-states.js`, a `state_<node>.json`, or a folder of them all work as
    `Check: ok`. Keep `broken.js` and `solved.js` next to the lab if you want to run this again in CI.
 6. Open the lab with network-xray, solve it once yourself, and see the ✓ Solved mark.
 
-**Cisco CML.** `cml-xray.js` reads a lab running in CML over its REST API and the lab's management network
+**Cisco CML.** `cml-xray.js` runs on your own machine, not on the CML server: it reads a lab running in CML over CML's
+REST API and the lab's management network
 (the setup is in the [README](../README.md#cisco-cml2-cml-free-works), including the
 [management network](../README.md#add-a-management-network-to-a-cml-lab) it needs):
 
@@ -226,7 +227,12 @@ the check has held for about 10 seconds, the ✓ Solved mark appears.
 
 **In CI.** The collector reads a running lab once when you leave out `--watch`. Its output folder is the network-xray
 folder (it writes `xray-states.js` there), and the third argument is the protocol (`bgp`, or `ospf`, the default). Tried
-on a host with containerlab and the official q21 example:
+on a host with containerlab and the official q21 example, from the network-xray folder:
+
+- `clab-xray-collect.js` is at the top of the network-xray folder.
+- Its second argument (`.`) is the folder it writes `xray-states.js` to: the network-xray folder itself (it needs the
+  other files there).
+- `check run` takes the lab folder that has the problem.json, or the problem.json file itself.
 
 ```
 containerlab deploy -t examples/q21-bgp-lp-solved/q21.clab.yml
@@ -324,8 +330,9 @@ after the page has stopped changing. The second is a lab that changes more than 
 - **Does it change my lab or log in to routers?** No. It reads the files you give it.
 - **What about a ping result or a configured value?** A check reads state, not configuration: check what the value
   brings (an adjacency, a route), not the value itself. Ping results are not in the state.
-- **Can the solver see the check?** problem.json is in the lab folder, so a solver who opens it can read it. Write the
-  problem so that knowing the target does not give away the fix.
+- **Can the solver see the check?** Yes, if it is in the problem.json you hand out: a solver who opens the file can read
+  it. When that matters, hand out a problem.json without `check` and run `check run` yourself after they hand in
+  ([section 5](#5-using-it-on-your-own-lab), "When solvers must not see the check").
 - **Where is the full format?** [problem-format.md](problem-format.md).
 
 ## 9. From an AI assistant (MCP)
