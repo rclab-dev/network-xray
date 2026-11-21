@@ -2,6 +2,19 @@
 
 *English | [日本語](ja/solvedkit.md)*
 
+Two tools work together: a **HandsOn Pack** hands out a containerlab lab as a problem (the lab and a `problem.json`;
+[its format](problem-format.md)), and **SolvedKit** makes the check that says when it is solved. Hand out exercises as a
+HandsOn Pack, and make their check with SolvedKit. SolvedKit also works on its own, for containerlab and Cisco CML labs.
+
+```mermaid
+flowchart LR
+  A["Author: a lab, a broken version and a fixed version"] -->|writes the check by hand| P
+  A -->|"not sure how to write it"| S["SolvedKit: suggest, init, verify from the two states"]
+  S -->|the check in problem.json| P["HandsOn Pack: the lab + problem.json"]
+  P --> L["Solver: the problem on the page, then ✓ Solved"]
+  S -.->|"or on its own: the organizer runs check run after a solver hands in"| R["check run"]
+```
+
 **In a hurry? Read [2. Your first five minutes](#2-your-first-five-minutes) only.**
 
 1. [What it is, and what it is not](#1-what-it-is-and-what-it-is-not)

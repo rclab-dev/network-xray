@@ -8,6 +8,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **MCP why_best_path / `xray-query.js why`:** a path with no `local_pref` (the router did not print one) gets a `local_pref_note`: BGP then uses the default local preference (100, unless the router is configured with another default); no value is filled in.
 - **Docs:** README and docs say Cisco IOL also gets `terminal length 0` / `terminal width 0` for its own SSH session (besides `show`), that viewing a lab only reads the routers, and that the MCP server reads nothing from routers by default (`collect` is the opt-in exception); `diff` lists changes by kind, the most disruptive first; clearer English in several places.
 - **SolvedKit guide** (docs/solvedkit.md, English and Japanese): a first five minutes on the recorded q21 states, how to read the tables, why the check keeps a backup line, the flow on your own lab (containerlab, netlab, CML), editing the check, every error message with what to do, and questions authors ask.
+- **HandsOn Pack:** the name for a containerlab lab handed out as a problem (the lab and a `problem.json`, as since v1.0.0); docs/problem-format.md, the SolvedKit guide (with a diagram) and README say how the two fit together: hand out exercises as a HandsOn Pack, and make their check with SolvedKit.
 - **`check init --out`:** makes the folder when it is not there; with `--format table` it no longer runs twice (the second run stopped with "already exists" after the file was written).
 
 ## v1.4.4 — 2026-11-20

@@ -2,6 +2,19 @@
 
 *[English](../solvedkit.md) | 日本語*
 
+2 つの道具が組みになります。**HandsOn Pack** は containerlab のラボを問題として配る形 (ラボと `problem.json`。
+[その形](../problem-format.md)) で、**SolvedKit** は「解けた」を言う判定 (check) を作ります。HandsOn Pack で演習を配り、
+SolvedKit で判定を作ります。SolvedKit は単体でも、containerlab と Cisco CML のラボで使えます。
+
+```mermaid
+flowchart LR
+  A["作る人: ラボ・壊れた版・直した版"] -->|check を自分で書く| P
+  A -->|"書き方に悩む"| S["SolvedKit: 2 つの状態から suggest・init・verify"]
+  S -->|problem.json の check| P["HandsOn Pack: ラボ + problem.json"]
+  P --> L["解く人: 頁に問題・解けたら ✓ Solved"]
+  S -.->|"単体でも: 提出の後に主催側が check run"| R["check run"]
+```
+
 **急ぐ人は [2. はじめての 5 分](#2-はじめての-5-分) だけ読んでください。**
 
 1. [これは何か、何でないか](#1-これは何か何でないか)
