@@ -1092,6 +1092,8 @@ function check(argv, opts) {
     var res = kit.init(b, a, so);
     if (o.out && res.status === 'ok') {
       if (fs.existsSync(o.out)) throw new QueryError('not written: ' + o.out + ' already exists (SolvedKit does not overwrite a problem.json)');
+      var outDir = path.dirname(path.resolve(o.out));   /* nx_init_out_dir: a folder that is not there yet is made (the lab folder of a new problem) */
+      if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
       fs.writeFileSync(o.out, JSON.stringify(res.problem, null, 2) + '\n');
       res.written = o.out;
     }
@@ -1176,6 +1178,7 @@ function run(argv, o) {
 // the text for --format table (same checks and errors as run())
 function runTable(argv, color, o) {
   var res = run(argv, o);
+  runTable.last = res;   /* nx_table_once: the exit code reads this result; running again would write check init's --out twice */
   if (argv[0] === 'diff') return diffTable(res, color);
   if (argv[0] === 'check') return checkTable(argv, res, color);
   return argv[0] === 'state' ? stateTable(loadStates(argv[1]), color) : argv[0] === 'ospf-if' ? ospfIfTable(res, color) : whyTable(res, color);
@@ -1215,7 +1218,7 @@ if (require.main === module) {
   } catch (e) {
     res = { error: (e && e.message) || String(e) }; code = 2;
   }
-  if (!code && opts && opts.args[0] === 'check') code = checkExit(opts.format === 'table' ? run(opts.args, opts) : res);
+  if (!code && opts && opts.args[0] === 'check') code = checkExit(opts.format === 'table' ? runTable.last : res);
   if (typeof res === 'string') process.stdout.write(res);
   else if (code && opts && opts.format === 'table') process.stderr.write('error: ' + plain(res.error) + '\n');
   else process.stdout.write(JSON.stringify(res, null, 2) + '\n');

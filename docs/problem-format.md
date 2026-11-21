@@ -83,6 +83,8 @@ A good check says "**the network now works**", not "**the user typed this exact 
 
 ## Check a lab without the page (SolvedKit)
 
+New to SolvedKit? Start with the step-by-step guide: [solvedkit.md](solvedkit.md) (日本語: [ja/solvedkit.md](ja/solvedkit.md)).
+
 `scripts/xray-query.js` judges a `check` with the same rules as the page, on saved states — no running lab, no
 browser, only Node. Give it the problem.json (or the folder that has it) and states the collector wrote
 (`xray-states.js`, `state_<node>.json`, or a folder of them):
@@ -138,7 +140,7 @@ Suggested check: ok (fails on broken, holds on solved)
   Exit code 0, or 1 when no condition it can use tells the two states apart (`reason` and `skipped` say why).
   `--focus <node>` / `--prefix <p>` start from a router and a destination; `--max <n>` caps the check (default 3).
 - **`check init <broken> <solved>`** makes a problem.json draft with that check, `focus`, and empty `title_*`,
-  `problem_*` and `id` for you to write. `--out <file>` writes it; an existing file is never overwritten.
+  `problem_*` and `id` for you to write. `--out <file>` writes it (the folder is made when it is not there); an existing file is never overwritten.
 - It does not guess other ways to solve the problem. When the fix changed how a route is learned, the condition that
   names it (`protocol`) is a separate candidate marked `binds_method` and is not in the proposed check: a fix that
   reaches the same route another way would not count. Add it only if the problem asks for that (official example q11 does).

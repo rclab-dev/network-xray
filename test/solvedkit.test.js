@@ -374,3 +374,15 @@ test('mcp: a problem.json inside the server\'s folder that is a link to a file o
   const r = mcp.handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'check_run', arguments: { problem: lab2, path: L.solved } } }).result;
   assert.strictEqual(r.isError, true); assert.match(r.content[0].text, /outside the folder this server reads/);
 });
+
+test('cli: check init --out makes a folder that is not there yet, and with --format table writes once and exits 0', (t) => {
+  const L = tmpLab(t);
+  const out = path.join(L.dir, 'newlab', 'sub', 'problem.json');
+  let r = q(['check', 'init', L.broken, L.solved, '--out', out, '--format', 'table']);
+  assert.strictEqual(r.code, 0, r.err);
+  assert.match(r.out, /written: /);
+  assert.strictEqual(r.err, '');
+  assert.strictEqual(kit.run(JSON.parse(fs.readFileSync(out, 'utf8')), SOLVED).status, 'solved');
+  r = q(['check', 'init', L.broken, L.solved, '--out', out, '--format', 'table']);
+  assert.strictEqual(r.code, 2); assert.match(r.err, /already exists/);
+});
