@@ -20,7 +20,18 @@ flowchart LR
   S -.->|"or on its own: the organizer runs check run after a solver hands in"| R["check run"]
 ```
 
-**In a hurry? Read [2. Your first five minutes](#2-your-first-five-minutes) only.**
+**Two ways in.**
+
+- **You want to solve a problem (Solver).** You need Linux with containerlab and Docker. Start the official example
+  and open http://localhost:8080/ (the problem is above the graph; ✓ Solved appears when you fix the lab):
+
+  ```
+  git clone https://github.com/rclab-dev/network-xray.git
+  cd network-xray
+  ./xray.sh examples/q21-bgp-lp/q21.clab.yml
+  ```
+
+- **You make problems (Author).** Read on. In a hurry? Read [2. Your first five minutes](#2-your-first-five-minutes) only.
 
 1. [What it is, and what it is not](#1-what-it-is-and-what-it-is-not)
 2. [Your first five minutes](#2-your-first-five-minutes)
@@ -55,6 +66,11 @@ job can use the same check with `check run`.
   [section 4](#4-why-the-check-keeps-a-backup-line-and-why-it-does-not-tie-down-the-solution).
 
 The full problem.json format is in [problem-format.md](problem-format.md).
+
+**Which routers.** The states come from what network-xray reads: FRR, Nokia SR Linux and Cisco IOL in containerlab or
+netlab, and the IOS nodes of a Cisco CML lab (`iol-xe`, `ioll2-xe`, `iosv`, `iosvl2`, `csr1000v`, `cat8000v`). Other nodes
+are drawn but not read: a condition on such a node cannot be judged (`check run` says `cannot judge`, for example
+`cannot read r1: not in the state`, and exits 2), so put the check on routers that are read.
 
 ## 2. Your first five minutes
 
@@ -140,6 +156,10 @@ tells = fails on broken, holds on solved; both = holds on both; wrong = fails on
 `Check: ok` means the lab gets the mark only after the fix. That is the whole loop: suggest, init, run, verify.
 
 ## 3. Reading the tables
+
+**How a check is built.** A good check usually has two parts. One says what must now be true: the main path (in q21,
+r1's best path to 8.8.8.0/24 goes through r2). The other says what must still be true: the backup (the path through r3
+is still there). The lab is solved only when both hold. The tables below show these parts as rows.
 
 **`check suggest` / `check init`**
 
@@ -244,6 +264,10 @@ The rest is the same as above.
 lab with network-xray (`./xray.sh <lab>.clab.yml`, or the image) and sees the title and the problem above the graph; once
 the check has held for about 10 seconds, the ✓ Solved mark appears.
 
+### Grading without the page (CLI or CI only)
+
+network-xray's page is not needed to judge a lab: the collector and `check run` are enough.
+
 **In CI.** The collector reads a running lab once when you leave out `--watch`. Its output folder is the network-xray
 folder (it writes `xray-states.js` there), and the third argument is the protocol (`bgp`, or `ospf`, the default). Tried
 on a host with containerlab and the official q21 example, from the network-xray folder:
@@ -271,8 +295,23 @@ Solved: solved
 `check run` exits 0, so the job passes; on the unsolved `examples/q21-bgp-lp` it says `not solved` and exits 1.
 
 **When solvers must not see the check** (a contest, a graded exercise): hand out a problem.json without `check` (the
-problem is still shown, with no ✓ Solved mark), keep the full one yourself, and after a solver hands in, save the state
-of their lab and run `check run` with your problem.json.
+problem is still shown, with no ✓ Solved mark) and keep the full one yourself. Each solver hands in the state of their
+lab (`cp xray-states.js <name>.js` in their network-xray folder). Then judge them all at once:
+
+```
+for f in submissions/*.js; do
+  node scripts/xray-query.js check run my-problem.json "$f" > /dev/null; rc=$?
+  echo "$f $rc"          # 0 solved, 1 not solved, 2 cannot judge
+done
+```
+
+Tried on the recorded q21 states (the broken one, the fixed one, and the fixed one with r1 missing):
+
+```
+submissions/alice.js 1
+submissions/bob.js 0
+submissions/carol.js 2
+```
 
 ## 6. Editing the check in problem.json
 

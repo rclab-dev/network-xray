@@ -20,7 +20,18 @@ flowchart LR
   S -.->|"単体でも: 提出の後に主催側が check run"| R["check run"]
 ```
 
-**急ぐ人は [2. はじめての 5 分](#2-はじめての-5-分) だけ読んでください。**
+**入口は 2 つ。**
+
+- **問題を解きたい (解く人)。** containerlab と Docker の入った Linux が要ります。公式の例を立てて http://localhost:8080/ を
+  開きます (図の上に問題・ラボを直すと ✓ Solved):
+
+  ```
+  git clone https://github.com/rclab-dev/network-xray.git
+  cd network-xray
+  ./xray.sh examples/q21-bgp-lp/q21.clab.yml
+  ```
+
+- **問題を作る (作る人)。** この先を読んでください。急ぐ人は [2. はじめての 5 分](#2-はじめての-5-分) だけ。
 
 1. [これは何か、何でないか](#1-これは何か何でないか)
 2. [はじめての 5 分](#2-はじめての-5-分)
@@ -50,6 +61,11 @@ SolvedKit は、ネットワークの問題と解答はできたが「このラ�
   ([4 章](#4-なぜ-backup-の条件を入れるかなぜ解き方を縛らないか))。
 
 problem.json の形の全体は [problem-format.md](../problem-format.md) (英語) にあります。
+
+**どのルータで。** 状態は network-xray が読む物から来ます: containerlab / netlab の FRR・Nokia SR Linux・Cisco IOL、
+Cisco CML のラボの IOS のノード (`iol-xe`・`ioll2-xe`・`iosv`・`iosvl2`・`csr1000v`・`cat8000v`)。ほかのノードは図に出ますが
+読みません。そのノードについての条件は判定できない (`check run` は `cannot judge`、例 `cannot read r1: not in the state`、
+終わりのコード 2) ので、check は読めるルータに置いてください。
 
 ## 2. はじめての 5 分
 
@@ -135,6 +151,10 @@ tells = fails on broken, holds on solved; both = holds on both; wrong = fails on
 `Check: ok` = 直した後にだけ印が付く、という意味です。流れはこれで全部です: suggest → init → run → verify。
 
 ## 3. 表の読み方
+
+**判定の作り。** 良い check はたいてい 2 つの部分でできています。1 つは今そうなっているべき事 = 本体の経路 (q21 なら、r1 の
+8.8.8.0/24 への best path が r2 経由)。もう 1 つはまだ残っているべき事 = 予備の経路 (r3 経由の経路がまだある)。両方が
+成り立つ時だけ解けたことになります。下の表は、この部分を行として見せます。
 
 **`check suggest` / `check init`**
 
@@ -234,6 +254,10 @@ node cml-xray.js --lab "<CML でのラボの題>"
 でラボを立て (`./xray.sh <lab>.clab.yml` か image)、図の上に題と問題を見ます。check が約 10 秒成り立ち続けると
 ✓ Solved が出ます。
 
+### 頁なしで採点する (CLI か CI だけ)
+
+ラボを判定するのに network-xray の頁は要りません。collector と `check run` で足ります。
+
 **CI で。** collector は `--watch` を付けなければ、動いているラボを 1 回読みます。出力のフォルダは network-xray の
 フォルダ (そこに `xray-states.js` を書く) で、3 つ目の引数はプロトコル (`bgp`、既定は `ospf`) です。containerlab の
 ある機械と公式の例 q21 で、network-xray のフォルダで試した流れ:
@@ -261,7 +285,23 @@ Solved: solved
 `check run` は 0 で終わるので、job は通ります。解いていない `examples/q21-bgp-lp` では `not solved` と出て 1 で終わります。
 
 **解く人に check を見せたくない時** (競技・採点する演習): `check` を抜いた problem.json を配り (問題は出て、✓ Solved は
-出ません)、全部入りの物は手元に置き、提出の後に解く人のラボの状態を保存して、自分の problem.json で `check run` を流します。
+出ません)、全部入りの物は手元に置きます。解く人はそれぞれ自分のラボの状態を出します (network-xray のフォルダで
+`cp xray-states.js <名前>.js`)。それをまとめて判定します:
+
+```
+for f in submissions/*.js; do
+  node scripts/xray-query.js check run my-problem.json "$f" > /dev/null; rc=$?
+  echo "$f $rc"          # 0 解けた・1 解けていない・2 判定できない
+done
+```
+
+録画した q21 の状態 (壊れた版・直した版・直した版から r1 を抜いた物) で試した結果:
+
+```
+submissions/alice.js 1
+submissions/bob.js 0
+submissions/carol.js 2
+```
 
 ## 6. problem.json の check を直す
 
