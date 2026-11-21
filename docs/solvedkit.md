@@ -386,6 +386,9 @@ after the page has stopped changing. The second is a lab that changes more than 
   `check run` judges one reading.
 - **Can I use it in CI?** Yes. `check run` and `check verify` exit 0 / 1 / 2 and need only Node and the files.
 - **Does it change my lab or log in to routers?** No. It reads the files you give it.
+- **When does `suggest` find nothing?** When the fix makes no difference in the state network-xray reads. In our tries
+  that was the case for some problems about IPv6, BFD, eBGP multihop, route reflectors, BGP wedgies, remove-private-as
+  and route servers: `suggest` says `none`, and you write the check by hand ([section 6](#6-editing-the-check-in-problemjson)).
 - **What about a ping result or a configured value?** A check reads state, not configuration: check what the value
   brings (an adjacency, a route), not the value itself. Ping results are not in the state.
 - **Can the solver see the check?** Yes, if it is in the problem.json you hand out: a solver who opens the file can read

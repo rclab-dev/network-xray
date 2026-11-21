@@ -372,6 +372,9 @@ path・field・12 の op は [problem-format.md](problem-format.md#check) にあ
 - **頁は ✓ Solved を出す前に待つ?** はい。check が成り立ち続けるのを約 10 秒待ちます。`check run` は 1 回の読みで判定します。
 - **CI で使える?** 使えます。`check run` と `check verify` は 0 / 1 / 2 で終わり、要るのは Node とファイルだけです。
 - **ラボを変えたり、ルータにログインしたりする?** しません。渡されたファイルを読むだけです。
+- **`suggest` が何も見つけないのは?** 直す前と後で、network-xray が読む状態に差が出ない時です。試した中では、IPv6・BFD・
+  eBGP multihop・route reflector・BGP wedgies・remove-private-as・route server の一部の問題がそうでした。`suggest` は `none` と
+  言うので、check は手で書きます ([6 章](#6-problemjson-の-check-を直す))。
 - **ping の結果や設定の値は?** check が読むのは状態で、設定ではありません。値そのものではなく、その値がもたらす物
   (隣接・経路) を条件にします。ping の結果は状態に入っていません。
 - **解く人に check は見える?** 配る problem.json に入っていれば見えます (ファイルを開けば読めます)。困る時は `check` を抜いた
