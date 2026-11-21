@@ -102,9 +102,10 @@
   #nx-problem .nxp-solved-cta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:8px;padding-top:7px;border-top:1px dashed rgba(102,187,106,.45);font-size:13px;line-height:1.5}
   #nx-problem .nxp-solved-txt{color:#c8e6c9;flex:1 1 320px}
   /* nx_solved_text: problem.json solved_text_<lang> = a few lines shown under the problem only while it is solved */
-  #nx-problem .nxp-solved-text{margin-top:8px;padding-top:7px;border-top:1px dashed rgba(102,187,106,.45);color:#c8e6c9;font-size:13px;line-height:1.55}
+  #nx-problem .nxp-solved-text{margin-top:10px;padding:8px 11px;background:rgba(102,187,106,.10);border-left:3px solid #66bb6a;border-radius:4px;color:#dcedc8;font-size:13px;line-height:1.55}
   #nx-problem .nxp-solved-text code{background:rgba(255,255,255,.08);padding:0 4px;border-radius:3px}
-  #nx-problem .nxp-solved-text + .nxp-solved-cta{border-top:0;padding-top:0;margin-top:6px}
+  #nx-problem .nxp-solved-text + .nxp-solved-cta{border-top:0;padding-top:0;margin-top:9px}
+  @media (max-width:600px){ #nx-problem .nxp-solved-text + .nxp-solved-cta{margin-top:14px} }
   #nx-problem .nxp-solved-link{color:#80deea;text-decoration:underline;text-underline-offset:2px}
   #nx-problem .nxp-solved-link:hover{color:#e0f7fa;text-decoration-thickness:2px}
   #nx-problem .nxp-solved-prev{flex:0 0 auto;cursor:pointer;font-weight:600;font-size:12px;font-family:inherit;color:#0f1318;background:#66bb6a;border:0;border-radius:10px;padding:2px 10px}
@@ -1018,7 +1019,8 @@ window.__initNeXtOverview = function (data) {
     sc.setAttribute('data-k', key); sc.innerHTML = '';
     var mm = /^([\s\S]*?)\[(.+?)\]([\s\S]*)$/.exec(t) || ['', '', t, ''];
     var tx = document.createElement('span'); tx.className = 'nxp-solved-txt';
-    tx.appendChild(document.createTextNode('\u25b6 ' + mm[1]));
+    var withPrev = !!(pj.rcl_qid && nxIsRclLink(u));   /* nx_solved_text: one \u25b6 only - with the Preview button the button carries it */
+    tx.appendChild(document.createTextNode((withPrev ? '' : '\u25b6 ') + mm[1]));
     var a = document.createElement('a'); a.className = 'nxp-solved-link'; a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = mm[2]; tx.appendChild(a);
     if (mm[3]) tx.appendChild(document.createTextNode(mm[3]));
     sc.appendChild(tx);

@@ -90,3 +90,17 @@ test('solved_text: Japanese is picked on the 日本語 toggle', function () {
   p.paint(true);
   assert.strictEqual(p.host.querySelector('.nxp-solved-text').innerHTML, 'にほんご');
 });
+
+test('solved_cta: one \u25b6 only - the line has none when the Preview button carries it, and keeps it without the button', function () {
+  var line = function (pj) {
+    var p = page(pj); p.paint(true);
+    var sc = p.host.querySelector('.nxp-solved-cta'), tx = sc.children[0];
+    return { text: tx.children[0].textContent, buttons: sc.children.length - 1 };
+  };
+  var rcl = line({ title_en: 't', rcl_qid: 'q21', solved_text_en: 'why', solved_cta: { label_en: 'Try [the lab]', url_en: 'https://routecrushlab.com/lab/pl/q21' } });
+  assert.strictEqual(rcl.buttons, 1);
+  assert.strictEqual(rcl.text, 'Try ');
+  var own = line({ title_en: 't', solved_cta: { label_en: 'See [more]', url_en: 'https://example.com/x' } });
+  assert.strictEqual(own.buttons, 0);
+  assert.strictEqual(own.text, '\u25b6 See ');
+});
