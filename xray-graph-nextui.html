@@ -484,6 +484,11 @@ window.__xrayGraphBoot = function () {
      Labs without a focus (your own lab) keep the highest-degree node. */
   try { var _sf = window.XRAY_PROBLEM && window.XRAY_PROBLEM.focus && window.XRAY_PROBLEM.focus.node;
         if (_sf && NAMES.indexOf(String(_sf)) >= 0) start = String(_sf); } catch (e) {}
+  /* nx_deeplink (v1.6): ?node=r2 / #node=r2 opens that router first (only a router in this lab); ?prefix= is picked by
+     xray-api once the DeepDive is drawn. Routers are opened the page's way (showNode), never twice in a row. */
+  try { var _dl = window.xrayCore.parseDeepLink ? window.xrayCore.parseDeepLink(location.search, location.hash) : {};
+        if (_dl.node && NAMES.indexOf(_dl.node) >= 0) start = _dl.node; } catch (e) {}
+  window.xrayDeepLinkOpenNode = function (id) { if (id !== window.__xrayCurNode) showNode(id); };
   showNode(start);
 
   // ---- wire up the NeXt UI overview (once nx + data are ready) ----

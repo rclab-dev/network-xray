@@ -71,6 +71,7 @@
       openDeepDive: function () { send('openDeepDive', []); },
       openDeepDiveFor: function (nodeId) { send('openDeepDiveFor', [nodeId]); },
       closeDeepDive: function () { send('closeDeepDive', []); },
+      selectPrefix: function (prefix) { send('selectPrefix', [prefix]); },
       startPolling: function (fetcher, ms) {
         stopPolling();
         function tick() {

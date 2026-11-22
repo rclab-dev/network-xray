@@ -698,6 +698,7 @@
     _lastState = state;
     _paintBgpTable();   // Seam C: keep the BGP table in sync with the snapshot
     _localize(document.body);
+    _maybeDeepLink();   // nx_deeplink: ?node= / ?deepdive=1 / ?prefix= once, after the first state is on screen
   }
 
   // Poll a fetcher for fresh data and apply it on an interval. Returns a stop() fn.
@@ -794,10 +795,67 @@
       openDeepDive: openDeepDive,
       openDeepDiveFor: openDeepDiveFor,
       closeDeepDive: closeDeepDive,
+      selectPrefix: selectPrefix,
       startPolling: startPolling,
       stopPolling: stopPolling
     };
   }
+
+  /* nx_deeplink (v1.6): a link can say which router, whether to open the DeepDive and which prefix to pick:
+       ?node=r1&deepdive=1&prefix=8.8.8.0/24   (or the same after #, which wins over ? and can change without a reload)
+     Names are only used if the picture has them (a router in the config, a row in the Routing table / BGP table);
+     anything else is ignored. A page that opens routers its own way can set window.xrayDeepLinkOpenNode(nodeId). */
+  function parseDeepLink(search, hash) {
+    var out = {}, i, parts = [String(search || '').replace(/^\?/, ''), String(hash || '').replace(/^#/, '')];
+    for (i = 0; i < parts.length; i++) {
+      parts[i].split('&').forEach(function (kv) {
+        if (!kv) return;
+        var j = kv.indexOf('='), k = j < 0 ? kv : kv.slice(0, j), v = j < 0 ? '' : kv.slice(j + 1);
+        try { k = decodeURIComponent(k); v = decodeURIComponent(v.replace(/\+/g, ' ')); } catch (e) { return; }
+        if (k === 'node' && /^[A-Za-z0-9_.:-]{1,64}$/.test(v)) out.node = v;
+        else if (k === 'prefix' && /^[0-9A-Fa-f:.]{2,45}(\/\d{1,3})?$/.test(v)) out.prefix = v;
+        else if (k === 'deepdive') out.deepdive = (v === '1' || v === 'true' || v === '');
+      });
+    }
+    return out;
+  }
+  // Pick a prefix the way a click on its Routing-table row does (purple arrow, ECMP arrows, decision follow), and open
+  // its Best-Path decision when the BGP table has it. Only rows that are on the page are used. Returns true if picked.
+  function selectPrefix(prefix) {
+    if (!prefix) return false;
+    var hit = false, i, rows = document.querySelectorAll('#de-routing-panel .de-rt-tbl tr[data-prefix]');
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].getAttribute('data-prefix') === prefix) { rows[i].click(); hit = true; break; }
+    }
+    var key = window._xrayBgpKey || function (r) { return r.prefix; };
+    var bgp = (window._xrayLastBgpRoutes || []).some(function (r) { return r && key(r) === prefix; });
+    if (bgp && typeof window.xrayBgpShowDecision === 'function') {
+      try { window.xrayBgpShowDecision(prefix); hit = true; } catch (e) {}
+    }
+    return hit;
+  }
+  var _deepLinkDone = false;
+  function applyDeepLink(link) {
+    link = link || parseDeepLink(window.location && window.location.search, window.location && window.location.hash);
+    if (!link.node && !link.deepdive && !link.prefix) return false;
+    var known = function (id) { return !!(_lastConfig && (_lastConfig.nodes || []).some(function (n) { return n.id === id; })); };
+    if (link.node && typeof window.xrayDeepLinkOpenNode === 'function') { try { window.xrayDeepLinkOpenNode(link.node); } catch (e) {} }
+    else if (link.node && known(link.node)) openDeepDiveFor(link.node, _lastState || undefined);
+    else if (link.deepdive && _lastConfig) openDeepDive();
+    if (link.prefix) {
+      var n = 0;
+      (function tryPick() { if (selectPrefix(link.prefix) || ++n > 20) return; setTimeout(tryPick, 250); })();   // the table fills in after the DeepDive opens
+    }
+    return true;
+  }
+  function _maybeDeepLink() {
+    if (_deepLinkDone || !_lastConfig || !window.location) return;
+    _deepLinkDone = true;
+    setTimeout(function () { try { applyDeepLink(); } catch (e) {} }, 300);
+  }
+  try {
+    window.addEventListener('hashchange', function () { try { applyDeepLink(parseDeepLink('', window.location.hash)); } catch (e) {} });
+  } catch (e) {}
 
   window.xrayCore = {
     applyTheme: applyTheme,
@@ -809,6 +867,9 @@
     openDeepDive: openDeepDive,
     openDeepDiveFor: openDeepDiveFor,
     closeDeepDive: closeDeepDive,
+    selectPrefix: selectPrefix,
+    applyDeepLink: applyDeepLink,
+    parseDeepLink: parseDeepLink,
     startPolling: startPolling,
     stopPolling: stopPolling
   };

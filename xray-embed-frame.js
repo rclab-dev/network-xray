@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   var KEY = 'xray-embed', VERSION = 1;
-  var CALLS = { applyState: 1, setTopology: 1, setTrace: 1, openDeepDive: 1, openDeepDiveFor: 1, closeDeepDive: 1 };
+  var CALLS = { applyState: 1, setTopology: 1, setTrace: 1, openDeepDive: 1, openDeepDiveFor: 1, closeDeepDive: 1, selectPrefix: 1 };
   var doc = root.document;
   var parentOrigin = '';
   try { parentOrigin = new root.URLSearchParams(root.location.search).get('origin') || ''; } catch (e) {}
