@@ -14,6 +14,8 @@
 8. `./xray.sh` runs containerlab with `sudo`. If it asks for a password, stop and tell the user; do not try to get around it (`SUDO= ./xray.sh …` only when the user's account can run containerlab without sudo).
 
 ## Task → command
+- Why an OSPF adjacency is not up: MCP `ospf_interfaces` / `ospf_neighbors` (or `node scripts/xray-query.js ospf-if <state>`): `wrong` names the value that must match on both ends and does not (area, MTU, hello, dead, network type, auth), e.g. `r1 Ethernet0/1 ⇔ r2 Ethernet0/1: OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20`; `mismatch_details.odd_end` guesses which end is odd (an inference, with a note). A value the router did not report is not compared.
+- Which BGP session is down: MCP `bgp_neighbors`: `wrong` lists each session that is not Established with its state, e.g. `r1 → 10.0.0.2 (AS 65002): BGP Active`. It gives the state, not the cause.
 - Try an example lab: `./xray.sh examples/q21-bgp-lp/q21.clab.yml` (deploys it) → http://localhost:8080/ . Check first, starting nothing: `./xray.sh --check examples/q21-bgp-lp/q21.clab.yml`.
 - Look at a containerlab lab that is already running: `./xray.sh --attach <lab.clab.yml>` (port 8080; no sudo, since it does not deploy; works with `--bind` / `--interval`; the collector writes `xray-states.js` in the repository folder as usual; stops with "is not running" if the lab is not up) or, in the lab folder, `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd)":/lab:ro -p 127.0.0.1:8600:8600 ghcr.io/rclab-dev/network-xray:1 --topo /lab/<lab>.clab.yml` → http://localhost:8600/ .
 - A netlab lab: the netlab tool (see Start); do not use `./xray.sh` on it (it would redeploy what netlab configured).

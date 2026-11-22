@@ -3,6 +3,7 @@
 **rclab-dev/network-xray** — live BGP / OSPF state viewer for containerlab and netlab labs (FRR, SR Linux, Cisco IOL). Read-only.
 Also an MCP server: lets AI agents read the lab state and ask why a route or adjacency is the way it is ([quickest setup](docs/mcp.md#the-usual-setup)). It reads the state files network-xray's collector writes for a containerlab, netlab or Cisco CML lab; it does not look at your computer's own network.
 **SolvedKit:** turn your lab into a puzzle with a solved check — it proposes the check from a broken and a fixed state of the lab, and judges a lab without the page ([guide](docs/solvedkit.md)). Hand out exercises as a HandsOn Pack ([problem.json](docs/problem-format.md)), and make their check with SolvedKit.
+**Why is an OSPF adjacency not coming up?** It compares the values both ends must share — area, MTU, hello and dead intervals, network type, authentication — and names the one that differs, e.g. `r1 Ethernet0/1 ⇔ r2 Ethernet0/1: OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20`. **Which BGP session is down?** It lists each session that is not Established with its state, e.g. `r1 → 10.0.0.2 (AS 65002): BGP Active` (the state, not the cause).
 
 **Why did BGP pick this path?** network-xray shows, for a network lab, which path each router chose, what the other candidates were, and why. It reads the live state of the FRR, Nokia SR Linux and Cisco IOL routers in your containerlab or netlab lab and draws it in the browser.
 
@@ -1031,6 +1032,7 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 **rclab-dev/network-xray** — containerlab と netlab のラボの BGP / OSPF の今の状態を見る道具です (FRR・SR Linux・Cisco IOL)。読むだけです。
 MCP のサーバでもあります: AI エージェントがラボの状態を読み、経路や隣接がなぜ今の形なのかを聞けます ([いちばん短い設定](docs/ja/mcp.md#よくある使い方))。読むのは network-xray の collector が containerlab・netlab・Cisco CML のラボについて書いた状態のファイルです。手元の PC のネットワークを調べる道具ではありません。
 **SolvedKit:** ラボを「解いたら ✓ が付く問題」にできます — 壊れた版と直した版の状態から判定 (check) の案を出し、頁なしでラボを判定します ([手引き](docs/ja/solvedkit.md))。 HandsOn Pack ([problem.json](docs/ja/problem-format.md)) で演習を配り、SolvedKit で判定を作ります。
+**OSPF の隣接が上がらないのはなぜ?** 両端でそろっていないといけない値 (area・MTU・hello と dead の間隔・network type・認証) を比べ、違う物を名指します。例 `r1 Ethernet0/1 ⇔ r2 Ethernet0/1: OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20`。**どの BGP のセッションが落ちている?** Established でないセッションを、その状態とともに並べます。例 `r1 → 10.0.0.2 (AS 65002): BGP Active` (状態であって、原因ではありません)。
 
 *[English](#network-xray) | 日本語*
 
