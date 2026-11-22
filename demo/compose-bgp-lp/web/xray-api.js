@@ -841,7 +841,6 @@
   var _deepLinkDone = false;
   function applyDeepLink(link) {
     link = link || parseDeepLink(window.location && window.location.search, window.location && window.location.hash);
-    if ((link.view === 'deepdive' || _deepView()) && !link.deepdive) { link = Object.assign({}, link); link.deepdive = true; }   // view=deepdive opens it
     if (!link.node && !link.deepdive && !link.prefix) return false;
     var known = function (id) { return !!(_lastConfig && (_lastConfig.nodes || []).some(function (n) { return n.id === id; })); };
     if (link.node && typeof window.xrayDeepLinkOpenNode === 'function') { try { window.xrayDeepLinkOpenNode(link.node); } catch (e) {} }
@@ -859,22 +858,41 @@
      so the DeepDive's top is at the top. */
   function _embedOn() { return !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed')); }
   function _deepView() { return !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed-deep')); }
-  /* nx_embed_view_deep (v1.6): ?embed=1&view=deepdive = the X-Ray answer first, for a dashboard panel 300-500 px high. The
-     overview (data-nx-overview) is hidden, the DeepDive opens, and it is shrunk (CSS zoom, never above 1) to the frame's
-     width and the height under it; measured again when the frame is resized. */
-  var DEEP_EXTRA = 28;   // link labels and "Powered by" drawn just under the DeepDive box
-  function _fitDeepDive() {
-    var de = document.querySelector('.xray-deep-engine');
-    if (!de || !de.getBoundingClientRect) return 0;
-    var box = (de.closest && de.closest('.topology')) || de;
-    box.style.zoom = '';
-    var w = de.offsetWidth || 0, h = (de.offsetHeight || 0) + DEEP_EXTRA;
-    if (!w || !h) return 0;
-    // the DeepDive is scrolled to just under a fixed bar (the replay bar), so it has the frame's height under that bar
-    var k = Math.min(1, ((window.innerWidth || w) - 8) / w, ((window.innerHeight || h) - _fixedTop() - 8) / h);
-    k = Math.max(0.3, k);
-    box.style.zoom = k < 0.995 ? k.toFixed(3) : '';
+  /* nx_embed_view_deep (v1.6): ?embed=1&view=deepdive = the X-Ray answer first, for a dashboard panel 300-500 px high.
+     Shrinking the drawn page moves the DeepDive's arrows and labels (the engine places them by measuring the screen), so
+     the page is shown again in a frame of its own at its own size (?embed=1&deepdive=1, the same node= / prefix= ...),
+     which opens the DeepDive and scrolls to it, and only that frame is scaled down (transform) to this frame's height.
+     Inside it nothing is shrunk, so arrows and labels sit where they do at full size. embed.html is nested only when it
+     reads ?state= (with the JavaScript embed the page talks to this frame). */
+  var DEEP_H = 700;   // the replay bar, the DeepDive and its labels, at their own size
+  var _nested = null;
+  function _innerUrl() {
+    var q = String(window.location.search || '').replace(/^\?/, '').split('&').filter(function (kv) { return kv && !/^(view|deepdive)=/.test(kv); });
+    q.push('deepdive=1');
+    return window.location.pathname + '?' + q.join('&') + (window.location.hash || '');
+  }
+  function _sizeNested() {
+    if (!_nested) return 0;
+    var H = window.innerHeight || DEEP_H, W = window.innerWidth || 1200, k = Math.min(1, H / DEEP_H);
+    _nested.style.width = Math.ceil(W / k) + 'px';
+    _nested.style.height = Math.ceil(H / k) + 'px';
+    _nested.style.transform = k < 0.995 ? 'scale(' + k.toFixed(3) + ')' : '';
     return k;
+  }
+  function _nestDeepView() {
+    if (_nested || !document.body) return null;
+    if (window.__nxEmbedFrame && !/(^|[?&])state=/.test(String(window.location.search || ''))) return null;   // the JavaScript embed
+    var f = document.createElement('iframe');
+    f.id = 'nx-deep-frame';
+    f.setAttribute('title', 'network-xray DeepDive');
+    f.style.cssText = 'position:fixed;left:0;top:0;border:0;margin:0;transform-origin:0 0;background:#0f1318;z-index:2147483000';
+    f.src = _innerUrl();
+    _nested = f;
+    _sizeNested();
+    document.body.appendChild(f);
+    window.addEventListener('resize', _sizeNested);
+    window.addEventListener('hashchange', function () { try { f.contentWindow.location.hash = window.location.hash; } catch (e) {} });
+    return f;
   }
   // the height a bar fixed at the top of the frame covers (the demos' RECORDED REPLAY bar), else 0
   function _fixedTop() {
@@ -882,7 +900,7 @@
     if (!b || !b.getBoundingClientRect || typeof window.getComputedStyle !== 'function') return 0;
     try { return window.getComputedStyle(b).position === 'fixed' ? Math.max(0, b.getBoundingClientRect().bottom) : 0; } catch (e) { return 0; }
   }
-  function _placeDeepDive() { if (_deepView()) _fitDeepDive(); return _showDeepDive(); }
+  function _placeDeepDive() { return _showDeepDive(); }
   function _showDeepDive() {
     var de = document.querySelector('.xray-deep-engine');
     if (!de || !de.getBoundingClientRect || typeof window.scrollTo !== 'function') return false;
@@ -891,7 +909,7 @@
     return true;
   }
   function _maybeDeepLink() {
-    if (_deepLinkDone || !_lastConfig || !window.location) return;
+    if (_deepLinkDone || !_lastConfig || !window.location || _deepView()) return;
     _deepLinkDone = true;
     setTimeout(function () {
       try { var sk = parseDeepLink(window.location.search, window.location.hash).skin; if (sk) setSkin(sk); } catch (e) {}   // after the page's own default skin
@@ -922,7 +940,7 @@
     if (on && !document.getElementById('nx-embed-css')) {
       var st = document.createElement('style');
       st.id = 'nx-embed-css';
-      st.textContent = 'html.nx-embed [data-nx-chrome]{display:none!important}html.nx-embed-deep [data-nx-overview]{display:none!important}';
+      st.textContent = 'html.nx-embed [data-nx-chrome]{display:none!important}html.nx-embed-deep [data-nx-overview]{display:none!important}html.nx-embed-deep,html.nx-embed-deep body{overflow:hidden!important}';
       (document.head || root).appendChild(st);
     }
     if (on) root.classList.add('nx-embed'); else root.classList.remove('nx-embed');
@@ -932,7 +950,9 @@
   try {
     var _el = window.location ? parseDeepLink(window.location.search, window.location.hash) : {};
     if (_el.embed) applyEmbedMode(true, _el.view);
-    if (_el.embed && _el.view === 'deepdive') window.addEventListener('resize', function () { try { _fitDeepDive(); } catch (e) {} });
+    if (_el.embed && _el.view === 'deepdive') {
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _nestDeepView); else _nestDeepView();
+    }
   } catch (e) {}
   try {
     window.addEventListener('hashchange', function () { try { applyDeepLink(parseDeepLink('', window.location.hash)); } catch (e) {} });
@@ -953,6 +973,7 @@
     applyDeepLink: applyDeepLink,
     parseDeepLink: parseDeepLink,
     applyEmbedMode: applyEmbedMode,
+    _innerUrl: _innerUrl,
     startPolling: startPolling,
     stopPolling: stopPolling
   };

@@ -8,6 +8,7 @@
   var KEY = 'xray-embed', VERSION = 1;
   var CALLS = { applyState: 1, setTopology: 1, setTrace: 1, openDeepDive: 1, openDeepDiveFor: 1, closeDeepDive: 1, selectPrefix: 1, setSkin: 1 };
   var doc = root.document;
+  root.__nxEmbedFrame = true;   // xray-api.js: ?embed=1&view=deepdive does not nest the page the JavaScript embed talks to
   var parentOrigin = '';
   try { parentOrigin = new root.URLSearchParams(root.location.search).get('origin') || ''; } catch (e) {}
   if (!parentOrigin) parentOrigin = root.location.origin;

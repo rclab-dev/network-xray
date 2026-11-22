@@ -73,45 +73,54 @@ test('?embed=1 + a link that opens a router scrolls this frame to the DeepDive (
   assert.deepStrictEqual(t.scrolls, []);
 });
 
-// view=deepdive: a fake DeepDive 1100 x 560 inside a .topology box, in a frame 800 x 400
-function loadDeep(search, size) {
-  const t = load(search);
-  const box = { style: {} };
-  const deep = { offsetWidth: 1100, offsetHeight: 560, closest: (sel) => (sel === '.topology' ? box : null), getBoundingClientRect: () => ({ top: 40 }) };
-  t.win.document.querySelector = (sel) => (sel === '.xray-deep-engine' ? deep : null);
-  t.win.innerWidth = size ? size[0] : 800; t.win.innerHeight = size ? size[1] : 400; t.win.pageYOffset = 0;
-  return Object.assign(t, { box });
+// view=deepdive: the page is shown again in a frame of its own (not shrunk inside), and that frame is scaled
+function loadNest(search, size, opts) {
+  opts = opts || {};
+  const cls = new Set(), byId = {}, kids = [], listeners = {};
+  const head = { kids: [], appendChild(e) { this.kids.push(e); if (e.id) byId[e.id] = e; } };
+  const body = { appendChild(e) { kids.push(e); if (e.id) byId[e.id] = e; } };
+  const document = {
+    readyState: 'complete', currentScript: null, head, body,
+    documentElement: { classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), contains: (c) => cls.has(c) } },
+    querySelector: () => null, querySelectorAll: () => [], getElementById: (id) => byId[id] || null,
+    createElement: (tag) => ({ tagName: String(tag).toUpperCase(), id: '', textContent: '', style: {}, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }),
+    addEventListener() {},
+  };
+  const win = {
+    document, location: { search: search || '', hash: opts.hash || '', pathname: opts.pathname || '/demo/index-bgp-lp.html' },
+    innerWidth: size[0], innerHeight: size[1], setTimeout() {}, JSON,
+    addEventListener: (ev, fn) => { (listeners[ev] = listeners[ev] || []).push(fn); },
+  };
+  if (opts.embedFrame) win.__nxEmbedFrame = true;
+  win.window = win;
+  vm.runInNewContext(SRC, win);
+  return { win, cls, kids, listeners, frame: kids.filter((k) => k.id === 'nx-deep-frame')[0] };
 }
 
-test('?embed=1&view=deepdive hides the overview (data-nx-overview); view without embed=1, or another view, does nothing', () => {
-  let t = load('?embed=1&view=deepdive');
+test('?embed=1&view=deepdive shows the page again in a frame at its own size: view removed, deepdive=1, node / prefix kept', () => {
+  const t = loadNest('?embed=1&view=deepdive&node=r1&prefix=8.8.8.0%2F24', [800, 400]);
   assert.ok(t.cls.has('nx-embed') && t.cls.has('nx-embed-deep'));
-  assert.match(t.head.kids[0].textContent, /html\.nx-embed-deep \[data-nx-overview\]\{display:none!important\}/);
-  assert.ok(!load('?view=deepdive').cls.has('nx-embed-deep'));
-  assert.ok(!load('?embed=1&view=other').cls.has('nx-embed-deep'));
-  assert.strictEqual(load('', '').win.xrayCore.parseDeepLink('?view=deepdive', '').view, 'deepdive');
+  assert.ok(t.frame, 'no frame');
+  assert.strictEqual(t.frame.src, '/demo/index-bgp-lp.html?embed=1&node=r1&prefix=8.8.8.0%2F24&deepdive=1');
+  assert.match(t.frame.style.cssText, /position:fixed/);
+  // scaled to the frame's height: k = 400 / 700; the inner page is the frame's size / k
+  assert.strictEqual(t.frame.style.transform, 'scale(0.571)');
+  assert.strictEqual(t.frame.style.width, Math.ceil(800 / (400 / 700)) + 'px');
+  assert.strictEqual(t.frame.style.height, '700px');
+  t.win.innerHeight = 900; t.listeners.resize.forEach((f) => f());   // a taller frame: its own size, not scaled
+  assert.strictEqual(t.frame.style.transform, '');
+  assert.strictEqual(t.frame.style.height, '900px');
 });
 
-test('view=deepdive opens the DeepDive without deepdive=1 and shrinks it to the frame (never above 1, not below 0.3)', () => {
-  let t = loadDeep('?embed=1&view=deepdive');
-  const opened = [];
-  t.win.xrayDeepLinkOpenNode = (id) => opened.push(id);
-  t.win.xrayCore.applyDeepLink({ node: 'r1' });
-  t.run();
-  assert.deepStrictEqual(opened, ['r1']);
-  // it is scrolled to the top (no fixed bar here): min(1, (800 - 8) / 1100, (400 - 0 - 8) / (560 + 28)) = min(0.72, 0.667) = 0.667
-  assert.strictEqual(t.box.style.zoom, '0.667');
-  t = loadDeep('?embed=1&view=deepdive', [1600, 1200]);   // a big frame: left at its own size
-  t.win.xrayCore.applyDeepLink({});
-  t.run();
-  assert.strictEqual(t.box.style.zoom, '');
-  t = loadDeep('?embed=1&view=deepdive', [300, 150]);   // tiny: not below 0.3
-  t.win.xrayCore.applyDeepLink({});
-  t.run();
-  assert.strictEqual(t.box.style.zoom, '0.300');
-  t = loadDeep('?embed=1');   // embed=1 without view: scrolled to, not shrunk
-  t.win.xrayDeepLinkOpenNode = () => {};
-  t.win.xrayCore.applyDeepLink({ node: 'r1' });
-  t.run();
-  assert.strictEqual(t.box.style.zoom, undefined);
+test('view=deepdive: deepdive= already in the link is not doubled; no embed=1 / another view = no frame', () => {
+  assert.strictEqual(loadNest('?embed=1&deepdive=1&view=deepdive', [800, 400]).frame.src, '/demo/index-bgp-lp.html?embed=1&deepdive=1');
+  assert.strictEqual(loadNest('?view=deepdive', [800, 400]).frame, undefined);
+  assert.strictEqual(loadNest('?embed=1&view=other', [800, 400]).frame, undefined);
+  assert.strictEqual(loadNest('?embed=1', [800, 400]).frame, undefined);
+});
+
+test('embed.html: nested only when it reads ?state= (the JavaScript embed talks to this frame)', () => {
+  assert.strictEqual(loadNest('?embed=1&view=deepdive&origin=https%3A%2F%2Fa.example', [800, 400], { embedFrame: true, pathname: '/embed.html' }).frame, undefined);
+  const t = loadNest('?state=xray-states.json&embed=1&view=deepdive&node=r2', [800, 400], { embedFrame: true, pathname: '/embed.html' });
+  assert.strictEqual(t.frame.src, '/embed.html?state=xray-states.json&embed=1&node=r2&deepdive=1');
 });
