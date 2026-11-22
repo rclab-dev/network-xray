@@ -79,7 +79,7 @@ function runCollect(extra, tmpRoot) {
     assert.strictEqual(path.basename(c.states.r1.out), 'safe-r1.json');
     if (POSIX) assert.strictEqual(fs.statSync(sdir).mode & 0o077, 0, 'state dir is 0700');
     // the only files written to the output directory are xray-states.js and its small xray-states.sig.js (next to the collector already there)
-    assert.deepStrictEqual(fs.readdirSync(c.out).sort(), ['clab-collect.js', 'xray-states.js', 'xray-states.sig.js']);
+    assert.deepStrictEqual(fs.readdirSync(c.out).sort(), ['clab-collect.js', 'xray-states.js', 'xray-states.json', 'xray-states.sig.js']);
   });
 });
 

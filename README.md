@@ -614,6 +614,21 @@ view.openDeepDive();                                      // inside the router
 
 `config` / `state` shapes are in **[DATA-CONTRACT.md](./DATA-CONTRACT.md)**.
 
+### Into Grafana
+
+Two ways, nothing to build on the Grafana side:
+
+- **The picture** — put the page in a panel that shows a URL in an iframe (tried with Grafana 12: the community panels
+  *Video* `innius-video-panel` with the iFrame source, and *HTML graphics* `gapit-htmlgraphics-panel` with an `<iframe>`):
+  `http://<host>:8600/?embed=1&node=r1` opens r1's DeepDive with the page's chrome hidden (the DeepDive is drawn under the topology: make the panel tall enough). Nothing to set on the
+  network-xray side (it sends no X-Frame-Options); if your Grafana sends a Content-Security-Policy, add the network-xray
+  host to Grafana's `frame-src`. Avoid the Text panel's `disable_sanitize_html`
+  (Grafana discourages it and Grafana Cloud does not allow it).
+- **The numbers** — the collector also writes `xray-states.json` (the same states as plain JSON, see
+  [DATA-CONTRACT.md](./DATA-CONTRACT.md#xray-statesjson-schema-1)), served at `http://<host>:8600/static/xray-states.json`.
+  Read it with the Infinity data source using its **Backend** parser (Grafana's server fetches it, so the browser's
+  CORS rules do not apply): `states` into a Table, `nodes` and `edges` (two queries) into a Node graph.
+
 ## Examples (the gallery)
 
 Open `index.html` for the gallery, or open a page directly:
@@ -1637,6 +1652,21 @@ view.openDeepDive();                                      // ルータの中へ
 ```
 
 `config` / `state` の形は **[DATA-CONTRACT.md](./DATA-CONTRACT.md)** にあります。
+
+### Grafana に入れる
+
+Grafana の側で作る物はありません。2 通り:
+
+- **絵** — URL を iframe で出すパネル (Grafana 12 で試した community のパネル: *Video* `innius-video-panel` の iFrame、
+  *HTML graphics* `gapit-htmlgraphics-panel` に `<iframe>`) に
+  `http://<host>:8600/?embed=1&node=r1` を入れると、頁の飾りを隠して r1 の DeepDive が開きます (DeepDive はトポロジの下に描かれるので、パネルは高めに)。network-xray は
+  X-Frame-Options を付けないので、頁の側の設定は要りません。Grafana が Content-Security-Policy を送る時は、Grafana の
+  `frame-src` に network-xray の場所を足します。Text パネルの `disable_sanitize_html` は使わない (Grafana が勧めておらず、
+  Grafana Cloud では使えない)。
+- **数** — collector は `xray-states.json` も書きます (同じ状態の素の JSON・[DATA-CONTRACT.md](./DATA-CONTRACT.md#xray-statesjson-schema-1))。
+  `http://<host>:8600/static/xray-states.json` で取れます。Infinity data source の **Backend** の parser で読む
+  (Grafana のサーバーが取りに行くので、ブラウザの CORS は掛からない): `states` を Table に、`nodes` と `edges`
+  (query 2 つ) を Node graph に。
 
 ## 例(ギャラリー)
 

@@ -485,6 +485,25 @@ OSPF/static demos.
 `{ prefix, nexthop, status }` の配列(またはスナップショット連動の `function(state)`)を渡すと、
 ファサードが engine 既存スタイルで箱を注入・再描画します。OSPF/static のデモでは不要です。
 
+### xray-states.json (schema 1)
+
+**EN** — `clab-xray-collect.js` writes `xray-states.json` next to `xray-states.js` on every round (`--no-json` turns
+it off). `states` is exactly the object the page reads as `window.LIVE_STATES`; `nodes` / `edges` use the column names
+Grafana's Node graph reads and come from the topology's links. A new field may be added; a change that breaks a reader
+raises `schema`.
+
+**JA** — `clab-xray-collect.js` は毎回 `xray-states.js` の隣に `xray-states.json` も書きます (`--no-json` で止める)。
+`states` は頁が `window.LIVE_STATES` として読む物そのもの。`nodes` / `edges` は Grafana の Node graph が読む列名で、
+トポロジの links から作ります。項目は増えることがあり、読む側が壊れる変更の時は `schema` を上げます。
+
+```json
+{ "schema": 1, "generated": "2026-11-22T07:00:00.000Z",
+  "states": { "r1": { "success": true, "target_node": "r1", "interfaces": { "eth1": { "up": true } } } },
+  "nodes":  [ { "id": "r1", "title": "r1", "mainstat": "read" } ],
+  "edges":  [ { "id": "r1:eth1-r2:eth1", "source": "r1", "target": "r2", "mainstat": "up" } ] }
+```
+`mainstat`: node = `read` / `unread` (the collector could not read the router this round); edge = `up` / `down` (either end down) / `unknown` (no interface state).
+
 ---
 
 ## 6. Bring your own data / 自分のデータで使う
