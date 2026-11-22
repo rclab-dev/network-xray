@@ -8,7 +8,7 @@ A format and a tool:
   to its topology ([the format](problem-format.md)). Nothing to install beyond network-xray.
 - **SolvedKit** is a **tool**: it makes the `check` (when the lab counts as solved) from a broken and a fixed state.
 
-Hand out exercises as a HandsOn Pack, and make their check with SolvedKit. Either works without the other: write the
+**Hand out exercises as a HandsOn Pack, and make their check with SolvedKit.** Either works without the other: write the
 check by hand, or use SolvedKit's `check run` on its own (for containerlab and Cisco CML labs) with no HandsOn Pack at all.
 
 ```mermaid
@@ -36,7 +36,7 @@ flowchart LR
 1. [What it is, and what it is not](#1-what-it-is-and-what-it-is-not)
 2. [Your first five minutes](#2-your-first-five-minutes)
 3. [Reading the tables](#3-reading-the-tables)
-4. [Why the check keeps a backup line, and why it does not tie down the solution](#4-why-the-check-keeps-a-backup-line-and-why-it-does-not-tie-down-the-solution)
+4. [Why the check keeps a backup line, and why it allows more than one way to solve](#4-why-the-check-keeps-a-backup-line-and-why-it-allows-more-than-one-way-to-solve)
 5. [Using it on your own lab](#5-using-it-on-your-own-lab)
 6. [Editing the check in problem.json](#6-editing-the-check-in-problemjson)
 7. [When something goes wrong](#7-when-something-goes-wrong)
@@ -63,7 +63,7 @@ job can use the same check with `check run`.
 - It is **not** a grader of how someone solved the problem. It looks at what the network does in the end, not at the
   commands that were typed.
 - It does **not** find every correct answer. One fixed state shows one way to solve the problem; see
-  [section 4](#4-why-the-check-keeps-a-backup-line-and-why-it-does-not-tie-down-the-solution).
+  [section 4](#4-why-the-check-keeps-a-backup-line-and-why-it-allows-more-than-one-way-to-solve).
 
 The full problem.json format is in [problem-format.md](problem-format.md).
 
@@ -169,7 +169,7 @@ is still there). The lab is solved only when both hold. The tables below show th
 | | `-` | a candidate that also works, left out (add it by hand if you want it) |
 | KIND | `path` | a route is now selected through an interface, or a BGP best path is the one the fix made |
 | | `evidence` | an OSPF adjacency is Full, a BGP session is Established, or an interface is up, in the fixed state |
-| | `backup` | the old best path is still there (see [section 4](#4-why-the-check-keeps-a-backup-line-and-why-it-does-not-tie-down-the-solution)) |
+| | `backup` | the old best path is still there (see [section 4](#4-why-the-check-keeps-a-backup-line-and-why-it-allows-more-than-one-way-to-solve)) |
 | | `gone` | a route that disappeared; used only when nothing else tells the two states apart |
 | TELLS | `yes` | fails on the broken state and holds on the fixed one |
 | | `no` | holds on both (normal for `backup`) |
@@ -194,7 +194,7 @@ be read in the state).
 
 `Check: ok` needs at least one `tells` and no `wrong`.
 
-## 4. Why the check keeps a backup line, and why it does not tie down the solution
+## 4. Why the check keeps a backup line, and why it allows more than one way to solve
 
 The backup row does not tell broken from fixed (TELLS `no`), and it is in the check on purpose. Without it, another
 way to "fix" q21 would also get the mark: cut r1's link to r3, and the path through AS 65003 disappears, so the path
@@ -221,7 +221,7 @@ moment you want:
 |---|---|
 | `./xray.sh <lab>.clab.yml` (containerlab) | `xray-states.js` in the network-xray folder |
 | the image (`docker run … ghcr.io/rclab-dev/network-xray`) | inside the container: `curl -s http://localhost:8600/static/xray-states.js > broken.js` |
-| netlab with network-xray's defaults file | the image again: `curl -s http://localhost:8600/static/xray-states.js > broken.js` |
+| netlab with network-xray's defaults file | the image again: `curl -s http://localhost:8600/static/xray-states.js > broken.js`. If the state includes netlab's management network, add `--mgmt-subnet 192.168.121.0/24` to `check suggest` so changes on it are left out |
 | Cisco CML (`node cml-xray.js …`) | `xray-states.js` in the `--out` folder (default `./cml-view`) |
 | the MCP server with `--allow-collect` | `collect` with `keep_previous: true` keeps the state before as `previous` |
 

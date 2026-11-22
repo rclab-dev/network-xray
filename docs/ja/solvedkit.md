@@ -8,7 +8,7 @@
   `problem.json` を置きます ([その形](problem-format.md))。network-xray のほかに入れる物はありません。
 - **SolvedKit** は**道具**です。壊れた版と直した版の状態から、`check` (いつ解けたとするか) を作ります。
 
-HandsOn Pack で演習を配り、SolvedKit で判定を作ります。片方だけでも使えます: check を手で書く、または HandsOn Pack
+**HandsOn Pack で演習を配り、SolvedKit で判定を作ります。** 片方だけでも使えます: check を手で書く、または HandsOn Pack
 なしで SolvedKit の `check run` だけを使う (containerlab と Cisco CML のラボ)。
 
 ```mermaid
@@ -215,7 +215,7 @@ q21 なら r2 からの経路の Local Preference を上げる、ほかの方法
 |---|---|
 | `./xray.sh <lab>.clab.yml` (containerlab) | network-xray のフォルダの `xray-states.js` |
 | image (`docker run … ghcr.io/rclab-dev/network-xray`) | コンテナの中: `curl -s http://localhost:8600/static/xray-states.js > broken.js` |
-| netlab (network-xray の defaults ファイル) | これも image: `curl -s http://localhost:8600/static/xray-states.js > broken.js` |
+| netlab (network-xray の defaults ファイル) | これも image: `curl -s http://localhost:8600/static/xray-states.js > broken.js`。状態に netlab の管理の網が入っている時は、`check suggest` に `--mgmt-subnet 192.168.121.0/24` を足す (その網の変化を候補に入れない) |
 | Cisco CML (`node cml-xray.js …`) | `--out` のフォルダ (既定 `./cml-view`) の `xray-states.js` |
 | MCP のサーバ (`--allow-collect`) | `collect` に `keep_previous: true` で、前の状態が `previous` に残る |
 
