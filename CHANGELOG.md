@@ -2,7 +2,7 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## v1.6.0 — 2026-11-22
+## v1.6.0 — 2026-11-23
 
 - **MCP:** the description of `ospf_neighbors` says first what it lists, names what it returns, and points to `ospf_interfaces` for why an adjacency is missing. The `path` argument says what it takes, with an example, and that it may be left empty when the server was started with `--path` / `NX_MCP_PATH` (it no longer names that folder, so the tool definitions are the same wherever the server starts). The answers are unchanged (same keys).
 - **Collector: `xray-states.json`:** the collector also writes the states as plain JSON next to `xray-states.js`, on every round: versioned (`schema` 1), `states` the same object the page reads, the X-Ray answers (`routes` with why each won, `adjacencies` with what is wrong, from xray-query), `nodes` / `edges` in the columns Grafana's Node graph reads. `xray.sh` serves it at `/static/xray-states.json`; `--no-json` leaves it out. See DATA-CONTRACT.md.
