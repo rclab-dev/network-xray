@@ -2,15 +2,12 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## v1.6.1 — 2026-11-22
+## v1.6.0 — 2026-11-22
 
 - **MCP:** the description of `ospf_neighbors` says first what it lists, names what it returns, and points to `ospf_interfaces` for why an adjacency is missing. The `path` argument says what it takes, with an example, and that it may be left empty when the server was started with `--path` / `NX_MCP_PATH` (it no longer names that folder, so the tool definitions are the same wherever the server starts). The answers are unchanged (same keys).
 - **Collector: `xray-states.json`:** the collector also writes the states as plain JSON next to `xray-states.js`, on every round: versioned (`schema` 1), `states` the same object the page reads, `nodes` / `edges` in the columns Grafana's Node graph reads. `xray.sh` serves it at `/static/xray-states.json`; `--no-json` leaves it out. See DATA-CONTRACT.md.
 - **Grafana:** README section on putting the page in an iframe panel (`?embed=1&node=`) and reading `xray-states.json` with the Infinity data source (Backend parser, so no CORS).
 - **`?embed=1`:** a link that opens a router (`node=` / `deepdive=1`) scrolls the frame to the DeepDive, so it is in view in an iframe of normal height.
-
-## v1.6.0 — 2026-11-22
-
 - **Embed with a URL only:** `embed.html?state=<URL>&poll=<seconds>` reads one JSON (config, topology, trace, state) and draws it, for a page that cannot run script (a dashboard panel). Only the site that serves `embed.html` is read, or a site listed in `embed-allow.json` next to it; an example is `embed.html?state=embed-state-example.json`.
 - **Links:** `?node=r1&deepdive=1&prefix=8.8.8.0/24` (or after `#`) opens that router, the DeepDive and that prefix on `embed.html`, the containerlab graph page and the demos; a name that is not in the picture is ignored.
 - **`?embed=1`:** the containerlab graph page and the demos hide their title, intro, top bar and footer, for an iframe.
