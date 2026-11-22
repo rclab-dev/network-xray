@@ -817,6 +817,7 @@
         else if (k === 'prefix' && /^[0-9A-Fa-f:.]{2,45}(\/\d{1,3})?$/.test(v)) out.prefix = v;
         else if (k === 'deepdive') out.deepdive = (v === '1' || v === 'true' || v === '');
         else if (k === 'embed') out.embed = (v === '1' || v === 'true' || v === '');
+        else if (k === 'view' && v === 'deepdive') out.view = v;
         else if (k === 'skin' && /^[A-Za-z0-9_-]{1,32}$/.test(v)) out.skin = v;
       });
     }
@@ -840,6 +841,7 @@
   var _deepLinkDone = false;
   function applyDeepLink(link) {
     link = link || parseDeepLink(window.location && window.location.search, window.location && window.location.hash);
+    if ((link.view === 'deepdive' || _deepView()) && !link.deepdive) { link = Object.assign({}, link); link.deepdive = true; }   // view=deepdive opens it
     if (!link.node && !link.deepdive && !link.prefix) return false;
     var known = function (id) { return !!(_lastConfig && (_lastConfig.nodes || []).some(function (n) { return n.id === id; })); };
     if (link.node && typeof window.xrayDeepLinkOpenNode === 'function') { try { window.xrayDeepLinkOpenNode(link.node); } catch (e) {} }
@@ -849,13 +851,32 @@
       var n = 0;
       (function tryPick() { if (selectPrefix(link.prefix) || ++n > 20) return; setTimeout(tryPick, 250); })();   // the table fills in after the DeepDive opens
     }
-    if ((link.node || link.deepdive) && _embedOn()) { setTimeout(_showDeepDive, 400); setTimeout(_showDeepDive, 1200); }
+    if ((link.node || link.deepdive) && _embedOn()) { setTimeout(_placeDeepDive, 400); setTimeout(_placeDeepDive, 1200); }
     return true;
   }
   /* nx_embed_show_deep (v1.6.1): in an iframe (?embed=1) the DeepDive is drawn under the topology, below the frame's height.
      When a link opens a router there, scroll this frame (only this one: scrollIntoView would also scroll the embedding page)
      so the DeepDive's top is at the top. */
   function _embedOn() { return !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed')); }
+  function _deepView() { return !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed-deep')); }
+  /* nx_embed_view_deep (v1.6): ?embed=1&view=deepdive = the X-Ray answer first, for a dashboard panel 300-500 px high. The
+     overview (data-nx-overview) is hidden, the DeepDive opens, and it is shrunk (CSS zoom, never above 1) to the frame's
+     width and the height under it; measured again when the frame is resized. */
+  var DEEP_EXTRA = 28;   // link labels and "Powered by" drawn just under the DeepDive box
+  function _fitDeepDive() {
+    var de = document.querySelector('.xray-deep-engine');
+    if (!de || !de.getBoundingClientRect) return 0;
+    var box = (de.closest && de.closest('.topology')) || de;
+    box.style.zoom = '';
+    var w = de.offsetWidth || 0, h = (de.offsetHeight || 0) + DEEP_EXTRA;
+    if (!w || !h) return 0;
+    var top = de.getBoundingClientRect().top + (window.pageYOffset || 0);
+    var k = Math.min(1, ((window.innerWidth || w) - 8) / w, ((window.innerHeight || h) - top - 4) / h);
+    k = Math.max(0.3, k);
+    box.style.zoom = k < 0.995 ? k.toFixed(3) : '';
+    return k;
+  }
+  function _placeDeepDive() { if (_deepView()) _fitDeepDive(); return _showDeepDive(); }
   function _showDeepDive() {
     var de = document.querySelector('.xray-deep-engine');
     if (!de || !de.getBoundingClientRect || typeof window.scrollTo !== 'function') return false;
@@ -889,19 +910,24 @@
   }
   /* nx_embed_mode (v1.6): ?embed=1 hides the page's own title, intro, top bar and footer (marked data-nx-chrome) so an
      iframe shows just the picture and the DeepDive. The replay buttons and the DeepDive's "Powered by" stay. */
-  function applyEmbedMode(on) {
+  function applyEmbedMode(on, view) {
     var root = document.documentElement;
     if (!root || !root.classList) return false;
     if (on && !document.getElementById('nx-embed-css')) {
       var st = document.createElement('style');
       st.id = 'nx-embed-css';
-      st.textContent = 'html.nx-embed [data-nx-chrome]{display:none!important}';
+      st.textContent = 'html.nx-embed [data-nx-chrome]{display:none!important}html.nx-embed-deep [data-nx-overview]{display:none!important}';
       (document.head || root).appendChild(st);
     }
     if (on) root.classList.add('nx-embed'); else root.classList.remove('nx-embed');
+    if (on && view === 'deepdive') root.classList.add('nx-embed-deep'); else root.classList.remove('nx-embed-deep');
     return !!on;
   }
-  try { if (window.location && parseDeepLink(window.location.search, window.location.hash).embed) applyEmbedMode(true); } catch (e) {}
+  try {
+    var _el = window.location ? parseDeepLink(window.location.search, window.location.hash) : {};
+    if (_el.embed) applyEmbedMode(true, _el.view);
+    if (_el.embed && _el.view === 'deepdive') window.addEventListener('resize', function () { try { _fitDeepDive(); } catch (e) {} });
+  } catch (e) {}
   try {
     window.addEventListener('hashchange', function () { try { applyDeepLink(parseDeepLink('', window.location.hash)); } catch (e) {} });
   } catch (e) {}
