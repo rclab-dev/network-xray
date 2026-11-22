@@ -7,6 +7,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **Image:** `docker run -i --rm -v <lab folder>:/lab:ro ghcr.io/rclab-dev/network-xray:1.5.1 mcp --path /lab` starts the MCP server on stdio (no page, no collector, no Docker socket); the image carries the `io.modelcontextprotocol.server.name` label.
 - **MCP Registry:** `server.json` for the official MCP Registry (`io.github.rclab-dev/network-xray`, the image above).
 - **DeepDive:** the Routing table is no longer rebuilt when a collect round brings the same routes (it was every 3 s on a live lab): text selected in it, its scroll position and hover stay.
+- **DeepDive:** the LSDB panel is drawn above the link beams and their labels (a link label could sit on top of it).
 
 ## v1.5.0 — 2026-11-22
 
