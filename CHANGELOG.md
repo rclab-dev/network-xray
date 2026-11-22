@@ -2,6 +2,13 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.6.0 — (not released yet)
+
+- **Embed with a URL only:** `embed.html?state=<URL>&poll=<seconds>` reads one JSON (config, topology, trace, state) and draws it, for a page that cannot run script (a dashboard panel). Only the site that serves `embed.html` is read, or a site listed in `embed-allow.json` next to it; an example is `embed.html?state=embed-state-example.json`.
+- **Links:** `?node=r1&deepdive=1&prefix=8.8.8.0/24` (or after `#`) opens that router, the DeepDive and that prefix on `embed.html`, the containerlab graph page and the demos; a name that is not in the picture is ignored.
+- **`?embed=1`:** the containerlab graph page and the demos hide their title, intro, top bar and footer, for an iframe.
+- **`?skin=<id>` and `setSkin`:** an embedding page can pick a preset skin or pass a skin object. The iframe embed (`xray-embed.js`) gets `selectPrefix` and `setSkin`.
+
 ## v1.5.3 — 2026-11-22
 
 - **Collector:** only `srl` / `nokia_srlinux` nodes go to the SR Linux reader; Nokia SR OS kinds (`nokia_sros`, `nokia_srsim`) are not SR Linux.
