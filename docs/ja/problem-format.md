@@ -120,10 +120,10 @@ node scripts/xray-query.js check init    demo/bgp-lp/frameA.json demo/bgp-lp/fra
 
 ```
 Suggested check: ok (fails on broken, holds on solved)
-  USE  KIND    TELLS  CONDITION
-  *    path    yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["best",~
-  -    path    yes    r1 routing_table some [["prefix","eq","8.8.8.0/24"],["selected","eq",true],[~
-  *    backup  no     r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["as_pat~
+  USE  KIND    TELLS APART  CONDITION
+  *    path    yes          r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["~
+  -    path    yes          r1 routing_table some [["prefix","eq","8.8.8.0/24"],["selected","eq",t~
+  *    backup  no           r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["~
 ```
 
 - **`check suggest <broken> <solved>`** は、条件に使える変化を 1 つずつ、解けた状態から、この頁の言うやり方で書きます。種類は次のとおりです: **path** (今 interface 経由で選ばれている経路、または BGP の best path)、**evidence** (OSPF の隣接が Full・BGP のセッションが Established・interface が up)、**backup** (古い best path がまだある。それを消したら解けたことにならないように)、**gone** (消えた経路。ほかに 2 つを見分ける物が無い時だけ使う)。候補はどれも、両方の状態で判定します。提案の `check` (`*`) は、最初の path・同じルータの evidence・BGP の best path の backup でできていて、壊れた版で成り立たず、解けた版で成り立つことを確かめてあります。終わりのコードは 0 です。使える条件のどれでも 2 つの状態を見分けられない時は 1 です (わけは `reason` と `skipped` が言います)。`--focus <node>` / `--prefix <p>` で、ルータと宛先から始めます。`--max <n>` で check の数の上限を決めます (既定は 3)。

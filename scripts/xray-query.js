@@ -1117,11 +1117,11 @@ function checkTable(argv, res, color) {
     out.push(title((argv[1] === 'init' ? 'problem.json draft: ' : 'Suggested check: ') + (res.status === 'ok' ? 'ok (fails on broken, holds on solved)' : 'none'), color));
     if (res.reason) out.push(textLine('  ' + res.reason));
     (sg.warnings || []).forEach(function (w) { out.push(textLine('  warning: ' + w)); });
-    if (sg.candidates.length) out = out.concat(renderTable([{ head: 'USE', key: 'use' }, { head: 'KIND', key: 'kind' }, { head: 'TELLS', key: 't' }, { head: 'CONDITION', key: 'cond' }],
+    if (sg.candidates.length) out = out.concat(renderTable([{ head: 'USE', key: 'use' }, { head: 'KIND', key: 'kind' }, { head: 'TELLS APART', key: 't' }, { head: 'CONDITION', key: 'cond' }],
       sg.candidates.map(function (c) { return { use: c.in_check ? '*' : '', kind: c.kind, t: c.tells ? 'yes' : 'no', cond: condText(c.cond) + (c.binds_method ? ' (names how)' : '') }; }), color, '  '));
     if (sg.skipped.length) out.push('', textLine('not used: ' + sg.skipped.length + ' change(s) - see --format json (skipped)'));
-    if (argv[1] === 'init' && res.status === 'ok') out.push('', textLine(res.written ? 'written: ' + res.written : 'use --out <problem.json> to write it, or --format json'), textLine('to write by hand: ' + res.todo.join('; ')));
-    out.push('', textLine('* = in the proposed check; TELLS = fails on broken, holds on solved'));
+    if (argv[1] === 'init' && res.status === 'ok') out.push('', textLine(res.written ? 'written: ' + res.written : 'use --out <problem.json> to write it, or --format json'), textLine('still to fill in by hand: ' + res.todo.join('; ')));
+    out.push('', textLine('* = in the proposed check; TELLS APART yes = fails on broken, holds on solved (no = holds on both)'));
     return out.join('\n') + '\n';
   }
   if (argv[1] === 'run') {
@@ -1134,7 +1134,7 @@ function checkTable(argv, res, color) {
     res.problems.forEach(function (p) { out.push(textLine('  ' + p)); });
     if (res.conditions.length) out = out.concat(renderTable([{ head: 'BROKEN', key: 'b' }, { head: 'SOLVED', key: 's' }, { head: 'VERDICT', key: 'v' }, { head: 'CONDITION', key: 'cond' }],
       res.conditions.map(function (c) { return { b: mark(c.broken), s: mark(c.solved), v: c.verdict, cond: condText(c.cond) }; }), color, '  '));
-    out.push('', textLine('tells = fails on broken, holds on solved; both = holds on both; wrong = fails on solved'));
+    out.push('', textLine('tells = fails on broken, holds on solved; both = holds on both; wrong = fails on solved'), textLine('both is fine next to a tells (a backup line); wrong = the fixed lab would never be marked solved'));
   }
   return out.join('\n') + '\n';
 }

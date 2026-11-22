@@ -89,12 +89,12 @@ node scripts/xray-query.js check suggest demo/bgp-lp/frameA.json demo/bgp-lp/fra
 
 ```
 Suggested check: ok (fails on broken, holds on solved)
-  USE  KIND    TELLS  CONDITION
-  *    path    yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["best",~
-  -    path    yes    r1 routing_table some [["prefix","eq","8.8.8.0/24"],["selected","eq",true],[~
-  *    backup  no     r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["as_pat~
+  USE  KIND    TELLS APART  CONDITION
+  *    path    yes          r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["~
+  -    path    yes          r1 routing_table some [["prefix","eq","8.8.8.0/24"],["selected","eq",t~
+  *    backup  no           r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["~
 
-* = in the proposed check; TELLS = fails on broken, holds on solved
+* = in the proposed check; TELLS APART yes = fails on broken, holds on solved (no = holds on both)
 ```
 
 条件を 3 つ見つけ、そのうち 2 つ (`*`) を提案の check に入れました。r1 の 8.8.8.0/24 への best path が AS 65002 経由に
@@ -111,7 +111,7 @@ node scripts/xray-query.js check init demo/bgp-lp/frameA.json demo/bgp-lp/frameB
 
 ```
 written: mylab/problem.json
-to write by hand: title_en / title_ja; problem_en / problem_ja; id (e.g. "yourname/yourrepo/lab-1")…
+still to fill in by hand: title_en / title_ja; problem_en / problem_ja; id (e.g. "yourname/yourrep~
 ```
 
 下書きには check が入り、`title_*`・`problem_*`・`id` が空で入っています (自分で書く所)。フォルダが無ければ作ります。
@@ -146,6 +146,7 @@ Check: ok (broken: not solved, solved: solved)
   yes     yes     both     r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["a~
 
 tells = fails on broken, holds on solved; both = holds on both; wrong = fails on solved
+both is fine next to a tells (a backup line); wrong = the fixed lab would never be marked solved
 ```
 
 `Check: ok` = 直した後にだけ印が付く、という意味です。流れはこれで全部です: suggest → init → run → verify。

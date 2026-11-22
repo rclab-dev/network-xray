@@ -133,10 +133,10 @@ node scripts/xray-query.js check init    demo/bgp-lp/frameA.json demo/bgp-lp/fra
 
 ```
 Suggested check: ok (fails on broken, holds on solved)
-  USE  KIND    TELLS  CONDITION
-  *    path    yes    r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["best",~
-  -    path    yes    r1 routing_table some [["prefix","eq","8.8.8.0/24"],["selected","eq",true],[~
-  *    backup  no     r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["as_pat~
+  USE  KIND    TELLS APART  CONDITION
+  *    path    yes          r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["~
+  -    path    yes          r1 routing_table some [["prefix","eq","8.8.8.0/24"],["selected","eq",t~
+  *    backup  no           r1 bgp_routes some [["prefix","eq","8.8.8.0"],["prefixlen","eq",24],["~
 ```
 
 - **`check suggest <broken> <solved>`** writes each change it can use as a condition, from the solved state, the way

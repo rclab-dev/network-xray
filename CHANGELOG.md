@@ -2,6 +2,11 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.5.2 — 2026-11-22
+
+- **SolvedKit tables (`--format table` only):** the column TELLS is now TELLS APART, the legends under the tables say more, and `check init` says "still to fill in by hand". The JSON output and the MCP tools are unchanged (same keys).
+- **SolvedKit guide:** the HandsOn Pack / SolvedKit line in bold; on netlab, `--mgmt-subnet 192.168.121.0/24` when the state includes the management network; a plainer section 4 heading.
+
 ## v1.5.1 — 2026-11-22
 
 - **Image:** `docker run -i --rm -v <lab folder>:/lab:ro ghcr.io/rclab-dev/network-xray:1.5.1 mcp --path /lab` starts the MCP server on stdio (no page, no collector, no Docker socket); the image carries the `io.modelcontextprotocol.server.name` label.
