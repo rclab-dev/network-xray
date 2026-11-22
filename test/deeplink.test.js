@@ -125,3 +125,13 @@ test('the iframe embed passes selectPrefix through (host API + frame allow-list)
   assert.match(HOST_SRC, /selectPrefix: function \(prefix\) \{ send\('selectPrefix', \[prefix\]\); \}/);
   assert.match(SRC, /selectPrefix: selectPrefix,\s*\n\s*startPolling: startPolling/);   // on the view renderTopology returns (the frame calls view[cmd])
 });
+
+test('the standalone page, the :8600 page, the BGP demos and the replay bar start on a linked router that is in the lab', () => {
+  const R = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  for (const f of ['xray-graph.html', 'xray-graph-nextui.html', 'demo/index.html', 'demo/index-bgp.html', 'demo/index-bgp-lp.html', 'demo/bgp-lp/page.html.tmpl']) {
+    const s = R(f);
+    assert.match(s, /if \(_dl\.node && NAMES\.indexOf\(_dl\.node\) >= 0\) start = _dl\.node;/, f);
+    assert.match(s, /window\.xrayDeepLinkOpenNode = function \(id\) \{/, f);
+  }
+  assert.match(R('demo/replay-bar.js'), /if \(dl\.node && FRAMES\[0\] && FRAMES\[0\]\[dl\.node\]\) focus = dl\.node;/);
+});

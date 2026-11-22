@@ -62,7 +62,7 @@ once(/  function withStates\(base, done\)\{\n[^\n]*createElement\('script'\);\n(
 // 1c) a line to the Best-Path Decision demo (English / Japanese), and the topology box fits a phone
 once(/  <div class="ov" id="ov"><\/div>\n/,
   '  <style>.nx-next a{color:#4dd0e1}</style>\n'
-  + '  <p class="sub nx-next" data-i18n="next_demo">Why one BGP path wins over another: the <a href="index-bgp-lp.html">Best-Path Decision demo</a>.</p>\n'
+  + '  <p class="sub nx-next" data-i18n="next_demo" data-nx-chrome>Why one BGP path wins over another: the <a href="index-bgp-lp.html">Best-Path Decision demo</a>.</p>\n'
   + '  <div class="ov" id="ov"></div>\n'
   + '<script>/* nx_demo_fit_ov: on a narrow screen (a phone) the 560px topology box is zoomed to the page width, so it no\n'
   + '   longer spills sideways (the DeepDive below keeps its own sideways scroll and the note about it). */\n'

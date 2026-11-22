@@ -815,6 +815,7 @@
         if (k === 'node' && /^[A-Za-z0-9_.:-]{1,64}$/.test(v)) out.node = v;
         else if (k === 'prefix' && /^[0-9A-Fa-f:.]{2,45}(\/\d{1,3})?$/.test(v)) out.prefix = v;
         else if (k === 'deepdive') out.deepdive = (v === '1' || v === 'true' || v === '');
+        else if (k === 'embed') out.embed = (v === '1' || v === 'true' || v === '');
       });
     }
     return out;
@@ -853,6 +854,21 @@
     _deepLinkDone = true;
     setTimeout(function () { try { applyDeepLink(); } catch (e) {} }, 300);
   }
+  /* nx_embed_mode (v1.6): ?embed=1 hides the page's own title, intro, top bar and footer (marked data-nx-chrome) so an
+     iframe shows just the picture and the DeepDive. The replay buttons and the DeepDive's "Powered by" stay. */
+  function applyEmbedMode(on) {
+    var root = document.documentElement;
+    if (!root || !root.classList) return false;
+    if (on && !document.getElementById('nx-embed-css')) {
+      var st = document.createElement('style');
+      st.id = 'nx-embed-css';
+      st.textContent = 'html.nx-embed [data-nx-chrome]{display:none!important}';
+      (document.head || root).appendChild(st);
+    }
+    if (on) root.classList.add('nx-embed'); else root.classList.remove('nx-embed');
+    return !!on;
+  }
+  try { if (window.location && parseDeepLink(window.location.search, window.location.hash).embed) applyEmbedMode(true); } catch (e) {}
   try {
     window.addEventListener('hashchange', function () { try { applyDeepLink(parseDeepLink('', window.location.hash)); } catch (e) {} });
   } catch (e) {}
@@ -870,6 +886,7 @@
     selectPrefix: selectPrefix,
     applyDeepLink: applyDeepLink,
     parseDeepLink: parseDeepLink,
+    applyEmbedMode: applyEmbedMode,
     startPolling: startPolling,
     stopPolling: stopPolling
   };

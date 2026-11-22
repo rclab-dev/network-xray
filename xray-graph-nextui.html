@@ -178,14 +178,14 @@
 </head>
 <body class="is-xray-mode">
 <div class="wrap">
-  <div class="topbar">
+  <div class="topbar" data-nx-chrome>
     <button type="button" class="lang-btn" id="lang-toggle">日本語</button>
   </div>
-  <h1><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small data-i18n="subtitle">(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
-  <p class="sub" data-i18n="intro">The topology view = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
+  <h1 data-nx-chrome><span class="x">X-Ray</span> graph — <span id="labname">{{ .Name }}</span> <small data-i18n="subtitle">(containerlab NeXt UI × X-Ray DeepDive)</small></h1>
+  <p class="sub" data-i18n="intro" data-nx-chrome>The topology view = the stock <b>containerlab graph</b> (NeXt UI), any size. <b>Click any node</b> to look
     <b>inside the router</b> below — OSPF/BGP adjacencies, LSDB, route decision. The topology view is commodity; X-Ray adds the per-node DeepDive. Node labels come from the topology file (clab.yml <code>nodes:</code>), not the device hostname.</p>
 
-  <div id="nx-problem"></div>
+  <div id="nx-problem" data-nx-chrome></div>
   <div id="nx-validate"></div>
   <div class="ov-frame">
     <div class="ov-bar">
@@ -195,14 +195,14 @@
     </div>
     <div id="clab-topology"></div>
   </div>
-  <p class="hint" data-i18n="hint">▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
+  <p class="hint" data-i18n="hint" data-nx-chrome>▲ topology view (NeXt UI) &nbsp;·&nbsp; <b>click a node</b> &nbsp;·&nbsp; ▼ X-Ray DeepDive</p>
 
   <div id="peers"></div>
   <div class="nx-synth-badge" id="nx-synth-badge" role="status">Sample view — not connected to the routers</div>
   <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
   <div class="err" id="err"></div>
 
-  <footer class="rcl-footer" data-i18n="footer">
+  <footer class="rcl-footer" data-i18n="footer" data-nx-chrome>
     This X-Ray view is open-source (<a href="https://github.com/rclab-dev/network-xray" target="_blank" rel="noopener">network-xray</a>).
   </footer>
 </div>

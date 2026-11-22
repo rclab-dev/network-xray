@@ -146,6 +146,9 @@
       var core = root.xrayCore;
       if (core && typeof core.applyState === 'function' && root.__xrayCurNode) {
         clearInterval(poll);
+        /* nx_deeplink (v1.6): a ?node= / #node= that is in the recording wins over the page's own focus router */
+        try { var dl = core.parseDeepLink ? core.parseDeepLink(root.location.search, root.location.hash) : {};
+              if (dl.node && FRAMES[0] && FRAMES[0][dl.node]) focus = dl.node; } catch (e) {}
         if (root.__xrayShowNode && FRAMES[0] && FRAMES[0][focus]) root.__xrayShowNode(focus);
         ctl.start();
       }
