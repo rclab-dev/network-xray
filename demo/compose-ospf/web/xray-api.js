@@ -849,6 +849,18 @@
       var n = 0;
       (function tryPick() { if (selectPrefix(link.prefix) || ++n > 20) return; setTimeout(tryPick, 250); })();   // the table fills in after the DeepDive opens
     }
+    if ((link.node || link.deepdive) && _embedOn()) { setTimeout(_showDeepDive, 400); setTimeout(_showDeepDive, 1200); }
+    return true;
+  }
+  /* nx_embed_show_deep (v1.6.1): in an iframe (?embed=1) the DeepDive is drawn under the topology, below the frame's height.
+     When a link opens a router there, scroll this frame (only this one: scrollIntoView would also scroll the embedding page)
+     so the DeepDive's top is at the top. */
+  function _embedOn() { return !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed')); }
+  function _showDeepDive() {
+    var de = document.querySelector('.xray-deep-engine');
+    if (!de || !de.getBoundingClientRect || typeof window.scrollTo !== 'function') return false;
+    var top = de.getBoundingClientRect().top + (window.pageYOffset || 0) - 4;
+    window.scrollTo(0, Math.max(0, top));
     return true;
   }
   function _maybeDeepLink() {

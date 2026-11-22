@@ -11,18 +11,20 @@ const ROOT = path.join(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'xray-api.js'), 'utf8');
 
 function load(search, hash) {
+  const timers = [], scrolls = [], deep = { getBoundingClientRect: () => ({ top: 900 }) };
   const cls = new Set(), byId = {}, head = { kids: [], appendChild(e) { this.kids.push(e); if (e.id) byId[e.id] = e; } };
   const el = () => ({ classList: { add() {}, remove() {}, contains: () => false }, style: {}, setAttribute() {}, appendChild() {}, querySelector: () => null, querySelectorAll: () => [] });
   const document = {
     currentScript: null, head, body: el(),
     documentElement: { classList: { add: (c) => cls.add(c), remove: (c) => cls.delete(c), contains: (c) => cls.has(c) } },
-    querySelector: () => null, querySelectorAll: () => [], getElementById: (id) => byId[id] || null,
+    querySelector: (sel) => (sel === '.xray-deep-engine' ? deep : null), querySelectorAll: () => [], getElementById: (id) => byId[id] || null,
     createElement: () => ({ id: '', textContent: '' }), addEventListener() {},
   };
-  const win = { document, location: { search: search || '', hash: hash || '' }, setTimeout() {}, addEventListener() {}, JSON };
+  const win = { document, location: { search: search || '', hash: hash || '' }, setTimeout: (fn) => timers.push(fn), addEventListener() {}, JSON,
+    pageYOffset: 100, scrollTo: (x, y) => scrolls.push([x, y]) };
   win.window = win;
   vm.runInNewContext(SRC, win);
-  return { win, cls, head };
+  return { win, cls, head, timers, scrolls, run() { while (timers.length) timers.shift()(); } };
 }
 
 test('?embed=1 (or #embed=1) turns on the embed look once; no flag leaves the page alone', () => {
@@ -49,3 +51,24 @@ for (const f of PAGES) {
     for (const tag of marked) assert.doesNotMatch(tag, /topo|deep-engine|replay|peers|clab-topology|ov-frame|id="ov"/, tag);
   });
 }
+
+test('?embed=1 + a link that opens a router scrolls this frame to the DeepDive (it is drawn under the topology)', () => {
+  let t = load('?embed=1');
+  t.win.xrayDeepLinkOpenNode = () => {};
+  t.win.xrayCore.applyDeepLink({ node: 'r1', deepdive: true });
+  t.run();
+  assert.deepStrictEqual(t.scrolls[0], [0, 996]);   // the DeepDive's top (900 on screen + 100 scrolled) - 4
+  t = load('?embed=1');
+  t.win.xrayCore.applyDeepLink({ deepdive: true });   // nothing rendered: openDeepDive is skipped, the scroll still aims at the DeepDive
+  t.run();
+  assert.strictEqual(t.scrolls.length, 2);
+  t = load('');   // not embedded: the page is not scrolled
+  t.win.xrayDeepLinkOpenNode = () => {};
+  t.win.xrayCore.applyDeepLink({ node: 'r1' });
+  t.run();
+  assert.deepStrictEqual(t.scrolls, []);
+  t = load('?embed=1');   // a prefix alone does not scroll
+  t.win.xrayCore.applyDeepLink({ prefix: '8.8.8.0/24' });
+  t.timers.length = Math.min(t.timers.length, 0);
+  assert.deepStrictEqual(t.scrolls, []);
+});
