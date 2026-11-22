@@ -11392,7 +11392,7 @@ function xrayDeepMode() {
     if (typeof localStorage === "undefined") return "simple";
     return localStorage.getItem("routecrush_deepdive_mode") === "simple" ? "simple" : "normal";
   } catch (e) {
-    return "simple";
+    return "normal";   /* nx_storage_blocked: storage blocked (a sandboxed iframe) = no choice stored = the default, Standard */
   }
 }
 
@@ -12139,9 +12139,18 @@ function xrayEnsureBgpTableBox(config) {
 
 var _DE_BGP_FS_STEPS = [ .85, 1, 1.15, 1.3, 1.5, 1.75 ];
 
+/* nx_storage_blocked (v1.6): a sandboxed iframe (an MCP Apps host, a dashboard panel) throws on localStorage: read it in try */
+function _deBgpStoredFontSize() {
+  try {
+    return parseFloat(localStorage.getItem("routecrush_de_bgp_fs"));
+  } catch (e) {
+    return NaN;
+  }
+}
+
 function _deBgpApplyFontSize(v) {
   if (v == null) {
-    v = parseFloat(localStorage.getItem("routecrush_de_bgp_fs"));
+    v = _deBgpStoredFontSize();
     if (!(v > 0)) v = 1;
   }
   [ "de-bgp-panel", "de-bgp-decision-panel" ].forEach(function(id) {
@@ -12152,7 +12161,7 @@ function _deBgpApplyFontSize(v) {
 
 function deBgpFontZoom(e, dir) {
   if (e && e.stopPropagation) e.stopPropagation();
-  var cur = parseFloat(localStorage.getItem("routecrush_de_bgp_fs"));
+  var cur = _deBgpStoredFontSize();
   if (!(cur > 0)) cur = 1;
   var i = 0, best = 1e9;
   for (var k = 0; k < _DE_BGP_FS_STEPS.length; k++) {
