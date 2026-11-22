@@ -617,18 +617,19 @@ view.openDeepDive();                                      // inside the router
 
 ### Into Grafana
 
-Two ways, nothing to build on the Grafana side:
+Tried with Grafana OSS 12; nothing to build on the Grafana side.
 
-- **The picture** — put the page in a panel that shows a URL in an iframe (tried with Grafana 12: the community panels
-  *Video* `innius-video-panel` with the iFrame source, and *HTML graphics* `gapit-htmlgraphics-panel` with an `<iframe>`):
-  `http://<host>:8600/?embed=1&node=r1` opens r1's DeepDive with the page's chrome hidden (the DeepDive is drawn under the topology: make the panel tall enough). Nothing to set on the
-  network-xray side (it sends no X-Frame-Options); if your Grafana sends a Content-Security-Policy, add the network-xray
-  host to Grafana's `frame-src`. Avoid the Text panel's `disable_sanitize_html`
-  (Grafana discourages it and Grafana Cloud does not allow it).
-- **The numbers** — the collector also writes `xray-states.json` (the same states as plain JSON, see
-  [DATA-CONTRACT.md](./DATA-CONTRACT.md#xray-statesjson-schema-1)), served at `http://<host>:8600/static/xray-states.json`.
-  Read it with the Infinity data source using its **Backend** parser (Grafana's server fetches it, so the browser's
-  CORS rules do not apply): `states` into a Table, `nodes` and `edges` (two queries) into a Node graph.
+- **The X-Ray answer in a panel** — a panel that shows a URL in an iframe (the community panel *Video*
+  `innius-video-panel`, iFrame source) with `http://<host>:8600/?embed=1&view=deepdive&node=r1` (add `&prefix=8.8.8.0/24`
+  for a route): the DeepDive of r1 fits the panel - what is wrong, the routing table, the Best-Path Decision. network-xray
+  sends no X-Frame-Options; if your Grafana sends a Content-Security-Policy, add the network-xray host to its `frame-src`.
+  Avoid the Text panel's `disable_sanitize_html` (Grafana discourages it; Grafana Cloud does not allow it).
+- **The answers as tables and a graph** — the collector writes `xray-states.json` next to `xray-states.js`
+  (`http://<host>:8600/static/xray-states.json`, [DATA-CONTRACT.md](./DATA-CONTRACT.md#xray-statesjson-schema-1)). Read it with
+  the Infinity data source, **Backend** parser (Grafana's server fetches it, so no CORS):
+  - root `routes` → a Table: router, prefix, next hop and **why it won** (e.g. `BGP: Local Pref (100 vs 50)`);
+  - root `adjacencies` → a Table: **what is wrong** on each adjacency (e.g. OSPF down, `hello 10 ⇔ 5, dead 40 ⇔ 20`), BGP state;
+  - roots `nodes` and `edges` (two queries) → a Node graph: red, thick links = down or mismatched; each router shows its issue count.
 
 ## Examples (the gallery)
 
@@ -1657,18 +1658,19 @@ view.openDeepDive();                                      // ルータの中へ
 
 ### Grafana に入れる
 
-Grafana の側で作る物はありません。2 通り:
+Grafana OSS 12 で試しました。Grafana の側で作る物はありません。
 
-- **絵** — URL を iframe で出すパネル (Grafana 12 で試した community のパネル: *Video* `innius-video-panel` の iFrame、
-  *HTML graphics* `gapit-htmlgraphics-panel` に `<iframe>`) に
-  `http://<host>:8600/?embed=1&node=r1` を入れると、頁の飾りを隠して r1 の DeepDive が開きます (DeepDive はトポロジの下に描かれるので、パネルは高めに)。network-xray は
-  X-Frame-Options を付けないので、頁の側の設定は要りません。Grafana が Content-Security-Policy を送る時は、Grafana の
-  `frame-src` に network-xray の場所を足します。Text パネルの `disable_sanitize_html` は使わない (Grafana が勧めておらず、
-  Grafana Cloud では使えない)。
-- **数** — collector は `xray-states.json` も書きます (同じ状態の素の JSON・[DATA-CONTRACT.md](./DATA-CONTRACT.md#xray-statesjson-schema-1))。
-  `http://<host>:8600/static/xray-states.json` で取れます。Infinity data source の **Backend** の parser で読む
-  (Grafana のサーバーが取りに行くので、ブラウザの CORS は掛からない): `states` を Table に、`nodes` と `edges`
-  (query 2 つ) を Node graph に。
+- **X-Ray の答えをパネルに** — URL を iframe で出すパネル (community の *Video* `innius-video-panel` の iFrame) に
+  `http://<host>:8600/?embed=1&view=deepdive&node=r1` (経路なら `&prefix=8.8.8.0/24` も) を入れると、r1 の DeepDive が
+  パネルに収まります (何が悪いか・経路表・Best-Path Decision)。network-xray は X-Frame-Options を付けません。Grafana が
+  Content-Security-Policy を送る時は、その `frame-src` に network-xray の場所を足します。Text パネルの
+  `disable_sanitize_html` は使わない (Grafana が勧めておらず、Grafana Cloud では使えない)。
+- **答えを表と図に** — collector は `xray-states.js` の隣に `xray-states.json` も書きます
+  (`http://<host>:8600/static/xray-states.json`・[DATA-CONTRACT.md](./DATA-CONTRACT.md#xray-statesjson-schema-1))。Infinity data
+  source の **Backend** の parser で読む (Grafana のサーバーが取りに行くので CORS は掛からない):
+  - root `routes` → Table: ルータ・prefix・次の hop・**勝った理由** (例 `BGP: Local Pref (100 vs 50)`)
+  - root `adjacencies` → Table: 隣接ごとの**何が悪いか** (例 OSPF down・`hello 10 ⇔ 5, dead 40 ⇔ 20`)・BGP の状態
+  - root `nodes` と `edges` (query 2 つ) → Node graph: 赤く太い線 = down か食い違い・ルータに問題の数
 
 ## 例(ギャラリー)
 
