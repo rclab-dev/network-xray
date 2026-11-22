@@ -2,6 +2,12 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.5.3 — 2026-11-22
+
+- **Collector:** only `srl` / `nokia_srlinux` nodes go to the SR Linux reader; Nokia SR OS kinds (`nokia_sros`, `nokia_srsim`) are not SR Linux.
+- **llms.txt:** a section on SolvedKit and HandsOn Pack for AI agents; the release notes carry the image digest from v1.1.9 on (it said v1.1.10).
+- **SolvedKit guide:** an example of making a check with an AI assistant (MCP).
+
 ## v1.5.2 — 2026-11-22
 
 - **SolvedKit tables (`--format table` only):** the column TELLS is now TELLS APART, the legends under the tables say more, and `check init` says "still to fill in by hand". The JSON output and the MCP tools are unchanged (same keys).

@@ -388,3 +388,11 @@ MCP のサーバ ([mcp.md](mcp.md)) にも同じ 4 つが、読むだけの道�
 `check_verify` (`problem`・`broken`・`solved`)・`check_suggest` と `check_init` (`broken`・`solved`、省ける `focus`・
 `prefix`・`mgmt_subnet`)。`check_init` は下書きを JSON で返し、ファイルは書きません。ファイルはサーバが読むフォルダ
 (その `--path`) の下に置きます。たとえば「broken.js と solved.js から check を提案して、確かめて」と聞きます。
+
+**AI アシスタントとの例。** 利用者は、サーバが読むラボのフォルダに `broken.js` と `solved.js` を保存してあります。
+
+1. 利用者:「broken.js と solved.js から、このラボの解けた判定を作って」。
+2. アシスタントは `check_suggest` (`broken`・`solved`) を呼び、候補を見せます: それぞれが何を言うか、どれが 2 つの状態を見分けるか。
+3. `check_init` を呼び、problem.json の下書きを見せます (題と問題の文は利用者が書く所として空)。
+4. その下書きに `check_verify` を呼び、`ok` (か、どの条件が `wrong` か) を見せます。
+5. 利用者が題と問題の文を書いて保存します。check を通すためにアシスタントがラボを変えることはしません。

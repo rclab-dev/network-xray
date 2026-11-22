@@ -404,3 +404,13 @@ The MCP server ([mcp.md](mcp.md)) has the same four as read-only tools: `check_r
 `prefix`, `mgmt_subnet`). `check_init` returns the draft as JSON; it does not write a file. The files must be under the
 folder the server reads (its `--path`). Ask, for example: "Suggest a check from broken.js and solved.js, then verify
 it."
+
+**An example with an AI assistant.** The user saved `broken.js` and `solved.js` in the lab folder the server reads.
+
+1. The user asks: "Make a solved check for this lab from broken.js and solved.js."
+2. The assistant calls `check_suggest` (`broken`, `solved`) and shows the candidates: what each says, and which tell the
+   two states apart.
+3. It calls `check_init` and shows the draft problem.json, with the title and problem text left for the user.
+4. It calls `check_verify` on that draft and shows `ok` (or which condition is `wrong`).
+5. The user writes the title and the problem text and saves the file; the assistant does not change the lab to make
+   the check pass.
