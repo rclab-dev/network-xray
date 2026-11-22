@@ -22,8 +22,8 @@
 var fs = require('fs'), cp = require('child_process'), path = require('path'), os = require('os');
 
 // flags (--watch / --interval N / --exclude-mgmt / --mgmt-subnet <cidr>) may appear in any order
-var argv = process.argv.slice(2), validateFile = '', watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = [], pos = [], serialCollect = false;
-var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>] [--validate <file>] [--serial]\n' +
+var argv = process.argv.slice(2), noJson = false, validateFile = '', watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = [], pos = [], serialCollect = false;
+var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>] [--validate <file>] [--serial] [--no-json]\n' +
   '  proto                ospf | bgp | static (default: ospf)\n' +
   '  --watch              keep collecting (default: collect once)\n' +
   '  --interval <secs>    seconds between rounds with --watch (default: 1)\n' +
@@ -31,6 +31,7 @@ var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] 
   '  --mgmt-subnet <cidr> leave out this management network\n' +
   '  --validate <file>    netlab topology JSON with validate: tests (network-xray.json)\n' +
   '  --serial             read the routers one at a time (default: all at once)\n' +
+  '  --no-json            do not write xray-states.json (the same states as plain JSON, for other tools)\n' +
   '  -h, --help           show this help\n' +
   '  env: NX_IOS_INTERVAL (seconds between Cisco IOS reads, default 10), NX_CYCLE_WAIT_MS (default 4000)';
 var HINT = "Try 'node clab-xray-collect.js --help'.";
@@ -41,6 +42,7 @@ for (var ai = 0; ai < argv.length; ai++) {
 for (ai = 0; ai < argv.length; ai++) {
   if (argv[ai] === '--watch') watch = true;
   else if (argv[ai] === '--validate') validateFile = argv[++ai] || '';   /* nx_netlab_validate: netlab topology JSON with validate: tests */
+  else if (argv[ai] === '--no-json') noJson = true;   /* nx_states_json: no xray-states.json */
   else if (argv[ai] === '--serial') serialCollect = true;   /* nx_collect_parallel: old one-node-at-a-time collect */
   else if (argv[ai] === '--interval') intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000;
   else if (argv[ai] === '--exclude-mgmt') mgmtArg = ['--exclude-mgmt'];                       // drop clab mgmt IF (172.20.20.0/24)
@@ -583,6 +585,32 @@ function pairOspfIfaces(nodes, states, adj) {
   require(path.join(__dirname, 'clab-collect.js')).pairOspfIfaces(states, named);
 }
 
+/* nx_states_json (v1.6.1): xray-states.json = the states the page reads, as plain JSON, for other tools (a Grafana Infinity
+   data source, a script). Written with xray-states.js on every round, from the same serialized states (states equal by
+   construction). Versioned: schema 1 = { schema, generated, states: { <node>: <state> }, nodes: [...], edges: [...] }.
+   nodes / edges carry the column names Grafana's Node graph reads (id, title, mainstat / id, source, target, mainstat)
+   and come from the topology's links. --no-json turns it off. See DATA-CONTRACT.md. */
+var JSON_DEST = path.join(outDir, 'xray-states.json');
+function statesDoc(sj, states) {
+  var ns = nodes.filter(function (n) { return n in states; }).map(function (n) {
+    var st = states[n] || {};
+    return { id: n, title: n, mainstat: st.success === false ? 'unread' : 'read' };
+  });
+  var seen = {}, es = [];
+  nodes.forEach(function (a) {
+    (adj[a] || []).forEach(function (l) {
+      var k1 = a + ':' + l.iface, k2 = l.peer + ':' + l.peerIface, id = k1 < k2 ? k1 + '-' + k2 : k2 + '-' + k1;
+      if (seen[id]) return;
+      seen[id] = true;
+      var ia = ((states[a] || {}).interfaces || {})[l.iface], ib = ((states[l.peer] || {}).interfaces || {})[l.peerIface];
+      var up = (ia && ib) ? (ia.up !== false && ib.up !== false ? 'up' : 'down') : 'unknown';
+      es.push({ id: id, source: a, target: l.peer, mainstat: up });
+    });
+  });
+  return '{"schema":1,"generated":' + JSON.stringify(new Date().toISOString()) + ',"states":' + sj.json +
+    ',"nodes":' + JSON.stringify(ns) + ',"edges":' + JSON.stringify(es) + '}\n';
+}
+
 function writeStates(states, live, sj) {   // sj: statesJson(states), when the caller already has it
   lastStates = states; lastLive = live;
   if (!sj) sj = statesJson(states);
@@ -595,6 +623,7 @@ function writeStates(states, live, sj) {   // sj: statesJson(states), when the c
     (valRes ? 'window.XRAY_VALIDATE = ' + JSON.stringify(valRes) + ';\n' : '') +
     (tierRes ? 'window.XRAY_TIERS = ' + JSON.stringify(tierRes) + ';\n' : '');   /* nx_problem_check + nx_netlab_validate (2026-10-06): focus + check (Solved) */
   writeAtomic(dest, 'window.LIVE_STATES = ' + sj.json + ';\n' + extra);
+  if (!noJson) writeAtomic(JSON_DEST, statesDoc(sj, states));   /* nx_states_json */
   sigGen++;
   Object.keys(sj.parts).forEach(function (n) { if (sj.parts[n] !== sigLastParts[n]) sigNodes[n] = (sigNodes[n] || 0) + 1; });
   Object.keys(sigNodes).forEach(function (n) { if (!(n in sj.parts)) delete sigNodes[n]; });
