@@ -101,7 +101,7 @@ test('?embed=1&view=deepdive shows the page again in a frame at its own size: vi
   const t = loadNest('?embed=1&view=deepdive&node=r1&prefix=8.8.8.0%2F24', [800, 400]);
   assert.ok(t.cls.has('nx-embed') && t.cls.has('nx-embed-deep'));
   assert.ok(t.frame, 'no frame');
-  assert.strictEqual(t.frame.src, '/demo/index-bgp-lp.html?embed=1&node=r1&prefix=8.8.8.0%2F24&deepdive=1');
+  assert.strictEqual(t.frame.src, '/demo/index-bgp-lp.html?embed=1&node=r1&prefix=8.8.8.0%2F24&deepdive=1&view=deepdive-frame');
   assert.match(t.frame.style.cssText, /position:fixed/);
   // scaled to the frame's height: k = 400 / 700; the inner page is the frame's size / k
   assert.strictEqual(t.frame.style.transform, 'scale(0.571)');
@@ -113,7 +113,7 @@ test('?embed=1&view=deepdive shows the page again in a frame at its own size: vi
 });
 
 test('view=deepdive: deepdive= already in the link is not doubled; no embed=1 / another view = no frame', () => {
-  assert.strictEqual(loadNest('?embed=1&deepdive=1&view=deepdive', [800, 400]).frame.src, '/demo/index-bgp-lp.html?embed=1&deepdive=1');
+  assert.strictEqual(loadNest('?embed=1&deepdive=1&view=deepdive', [800, 400]).frame.src, '/demo/index-bgp-lp.html?embed=1&deepdive=1&view=deepdive-frame');
   assert.strictEqual(loadNest('?view=deepdive', [800, 400]).frame, undefined);
   assert.strictEqual(loadNest('?embed=1&view=other', [800, 400]).frame, undefined);
   assert.strictEqual(loadNest('?embed=1', [800, 400]).frame, undefined);
@@ -122,5 +122,14 @@ test('view=deepdive: deepdive= already in the link is not doubled; no embed=1 / 
 test('embed.html: nested only when it reads ?state= (the JavaScript embed talks to this frame)', () => {
   assert.strictEqual(loadNest('?embed=1&view=deepdive&origin=https%3A%2F%2Fa.example', [800, 400], { embedFrame: true, pathname: '/embed.html' }).frame, undefined);
   const t = loadNest('?state=xray-states.json&embed=1&view=deepdive&node=r2', [800, 400], { embedFrame: true, pathname: '/embed.html' });
-  assert.strictEqual(t.frame.src, '/embed.html?state=xray-states.json&embed=1&node=r2&deepdive=1');
+  assert.strictEqual(t.frame.src, '/embed.html?state=xray-states.json&embed=1&node=r2&deepdive=1&view=deepdive-frame');
+});
+
+test('view=deepdive-frame (the frame itself): hides the overview and the page chrome, does not nest again', () => {
+  const t = loadNest('?embed=1&node=r1&deepdive=1&view=deepdive-frame', [1400, 700]);
+  assert.ok(t.cls.has('nx-embed') && t.cls.has('nx-embed-deep'));
+  assert.ok(!t.cls.has('nx-embed-outer'));
+  assert.strictEqual(t.frame, undefined);
+  const o = loadNest('?embed=1&view=deepdive', [800, 400]);
+  assert.ok(o.cls.has('nx-embed-outer'));   // only the page that holds the frame stops scrolling
 });

@@ -817,7 +817,7 @@
         else if (k === 'prefix' && /^[0-9A-Fa-f:.]{2,45}(\/\d{1,3})?$/.test(v)) out.prefix = v;
         else if (k === 'deepdive') out.deepdive = (v === '1' || v === 'true' || v === '');
         else if (k === 'embed') out.embed = (v === '1' || v === 'true' || v === '');
-        else if (k === 'view' && v === 'deepdive') out.view = v;
+        else if (k === 'view' && (v === 'deepdive' || v === 'deepdive-frame')) out.view = v;
         else if (k === 'skin' && /^[A-Za-z0-9_-]{1,32}$/.test(v)) out.skin = v;
       });
     }
@@ -857,7 +857,6 @@
      When a link opens a router there, scroll this frame (only this one: scrollIntoView would also scroll the embedding page)
      so the DeepDive's top is at the top. */
   function _embedOn() { return !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed')); }
-  function _deepView() { return !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed-deep')); }
   /* nx_embed_view_deep (v1.6): ?embed=1&view=deepdive = the X-Ray answer first, for a dashboard panel 300-500 px high.
      Shrinking the drawn page moves the DeepDive's arrows and labels (the engine places them by measuring the screen), so
      the page is shown again in a frame of its own at its own size (?embed=1&deepdive=1, the same node= / prefix= ...),
@@ -868,7 +867,7 @@
   var _nested = null;
   function _innerUrl() {
     var q = String(window.location.search || '').replace(/^\?/, '').split('&').filter(function (kv) { return kv && !/^(view|deepdive)=/.test(kv); });
-    q.push('deepdive=1');
+    q.push('deepdive=1', 'view=deepdive-frame');   // the frame hides the overview as well, and does not nest again
     return window.location.pathname + '?' + q.join('&') + (window.location.hash || '');
   }
   function _sizeNested() {
@@ -888,6 +887,7 @@
     f.style.cssText = 'position:fixed;left:0;top:0;border:0;margin:0;transform-origin:0 0;background:#0f1318;z-index:2147483000';
     f.src = _innerUrl();
     _nested = f;
+    document.documentElement.classList.add('nx-embed-outer');
     _sizeNested();
     document.body.appendChild(f);
     window.addEventListener('resize', _sizeNested);
@@ -909,7 +909,7 @@
     return true;
   }
   function _maybeDeepLink() {
-    if (_deepLinkDone || !_lastConfig || !window.location || _deepView()) return;
+    if (_deepLinkDone || !_lastConfig || !window.location || _nested) return;   // the frame opens the link, not this page
     _deepLinkDone = true;
     setTimeout(function () {
       try { var sk = parseDeepLink(window.location.search, window.location.hash).skin; if (sk) setSkin(sk); } catch (e) {}   // after the page's own default skin
@@ -940,11 +940,11 @@
     if (on && !document.getElementById('nx-embed-css')) {
       var st = document.createElement('style');
       st.id = 'nx-embed-css';
-      st.textContent = 'html.nx-embed [data-nx-chrome]{display:none!important}html.nx-embed-deep [data-nx-overview]{display:none!important}html.nx-embed-deep,html.nx-embed-deep body{overflow:hidden!important}';
+      st.textContent = 'html.nx-embed [data-nx-chrome]{display:none!important}html.nx-embed-deep [data-nx-overview]{display:none!important}html.nx-embed-outer,html.nx-embed-outer body{overflow:hidden!important}';
       (document.head || root).appendChild(st);
     }
     if (on) root.classList.add('nx-embed'); else root.classList.remove('nx-embed');
-    if (on && view === 'deepdive') root.classList.add('nx-embed-deep'); else root.classList.remove('nx-embed-deep');
+    if (on && (view === 'deepdive' || view === 'deepdive-frame')) root.classList.add('nx-embed-deep'); else root.classList.remove('nx-embed-deep');
     return !!on;
   }
   try {
