@@ -38,11 +38,14 @@ test('xray-states.json carries the same states as xray-states.js, versioned, wit
     assert.ok(!isNaN(Date.parse(doc.generated)), 'generated is a date');
     assert.deepStrictEqual(doc.states, JSON.parse(js), 'states equal to LIVE_STATES');
     assert.deepStrictEqual(doc.nodes.map(function (n) { return n.id; }).sort(), ['r1', 'r2', 'r3']);
-    assert.ok(doc.nodes.every(function (n) { return n.title === n.id && n.mainstat === 'read'; }));
+    assert.ok(doc.nodes.every(function (n) { return n.title === n.id && /^(ok|d+ issues?)$/.test(n.mainstat) && /^#/.test(n.color); }));
+    assert.ok(Array.isArray(doc.routes) && Array.isArray(doc.adjacencies), 'the X-Ray answers (routes / adjacencies) are there');
     var e = {};
     doc.edges.forEach(function (x) { e[[x.source, x.target].sort().join('-')] = x.mainstat; });
     assert.strictEqual(doc.edges.length, 2, 'one edge per link');
     assert.strictEqual(e['r1-r2'], 'down', 'r2 eth1 down -> the r1-r2 edge is down');
+    var red = doc.edges.filter(function (x) { return x.color === '#ef4444' && x.thickness === 4; }).map(function (x) { return [x.source, x.target].sort().join('-'); });
+    assert.deepStrictEqual(red, ['r1-r2'], 'the down edge is drawn red and thick');
     assert.strictEqual(e['r1-r3'], 'up');
   } finally { fs.rmSync(r.dir, { recursive: true, force: true }); }
 });
