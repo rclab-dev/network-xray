@@ -796,6 +796,7 @@
       openDeepDiveFor: openDeepDiveFor,
       closeDeepDive: closeDeepDive,
       selectPrefix: selectPrefix,
+      setSkin: setSkin,
       startPolling: startPolling,
       stopPolling: stopPolling
     };
@@ -816,6 +817,7 @@
         else if (k === 'prefix' && /^[0-9A-Fa-f:.]{2,45}(\/\d{1,3})?$/.test(v)) out.prefix = v;
         else if (k === 'deepdive') out.deepdive = (v === '1' || v === 'true' || v === '');
         else if (k === 'embed') out.embed = (v === '1' || v === 'true' || v === '');
+        else if (k === 'skin' && /^[A-Za-z0-9_-]{1,32}$/.test(v)) out.skin = v;
       });
     }
     return out;
@@ -852,7 +854,26 @@
   function _maybeDeepLink() {
     if (_deepLinkDone || !_lastConfig || !window.location) return;
     _deepLinkDone = true;
-    setTimeout(function () { try { applyDeepLink(); } catch (e) {} }, 300);
+    setTimeout(function () {
+      try { var sk = parseDeepLink(window.location.search, window.location.hash).skin; if (sk) setSkin(sk); } catch (e) {}   // after the page's own default skin
+      try { applyDeepLink(); } catch (e) {}
+    }, 300);
+  }
+  /* nx_set_skin (v1.6): setSkin('containerlab') picks a preset by id; setSkin({colors:{...}, protocolOrder}) takes a skin
+     object (SKIN-CONTRACT.md). Only the id (letters/digits), the #rrggbb colors and protocolOrder are passed on, through
+     XraySkin.apply (needs xray-skin.js), which does not write localStorage. ?skin=<id> does the same for a preset.
+     Returns true if a skin was applied; an unknown id or no xray-skin.js does nothing. */
+  var _inSetSkin = false;
+  function setSkin(skin) {
+    var XS = window.XraySkin;
+    if (!XS || _inSetSkin) return false;   // XraySkin.apply calls xrayCore.setSkin when the engine is missing: no loop
+    var raw = typeof skin === 'string' ? XS.presetById(skin) : skin;
+    if (!raw || typeof raw !== 'object') return false;
+    var safe = { id: (typeof raw.id === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(raw.id)) ? raw.id : 'custom',
+                 colors: (raw.colors && typeof raw.colors === 'object') ? raw.colors : {}, protocolOrder: raw.protocolOrder };
+    _inSetSkin = true;
+    try { XS.apply(safe); } finally { _inSetSkin = false; }
+    return true;
   }
   /* nx_embed_mode (v1.6): ?embed=1 hides the page's own title, intro, top bar and footer (marked data-nx-chrome) so an
      iframe shows just the picture and the DeepDive. The replay buttons and the DeepDive's "Powered by" stay. */
@@ -884,6 +905,7 @@
     openDeepDiveFor: openDeepDiveFor,
     closeDeepDive: closeDeepDive,
     selectPrefix: selectPrefix,
+    setSkin: setSkin,
     applyDeepLink: applyDeepLink,
     parseDeepLink: parseDeepLink,
     applyEmbedMode: applyEmbedMode,

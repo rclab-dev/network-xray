@@ -123,7 +123,7 @@ test('#node=... after load is followed (hashchange)', () => {
 test('the iframe embed passes selectPrefix through (host API + frame allow-list)', () => {
   assert.match(FRAME_SRC, /var CALLS = \{[^}]*\bselectPrefix: 1\b/);
   assert.match(HOST_SRC, /selectPrefix: function \(prefix\) \{ send\('selectPrefix', \[prefix\]\); \}/);
-  assert.match(SRC, /selectPrefix: selectPrefix,\s*\n\s*startPolling: startPolling/);   // on the view renderTopology returns (the frame calls view[cmd])
+  assert.match(SRC, /selectPrefix: selectPrefix,(\s*\n\s*\w+: \w+,)*\s*\n\s*startPolling: startPolling/);   // on the view renderTopology returns (the frame calls view[cmd])
 });
 
 test('the standalone page, the :8600 page, the BGP demos and the replay bar start on a linked router that is in the lab', () => {
