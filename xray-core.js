@@ -2552,9 +2552,16 @@ function _xrayPaintRoutingPanel(s) {
       'style="width:100%;box-sizing:border-box;margin:0 0 4px 0;background:rgba(0,8,16,0.9);color:inherit;border:1px solid rgba(var(--xto-link-rgb,0,229,255),0.4);border-radius:3px;padding:2px 5px;font:inherit;font-size:11px">' +
       '<div class="de-rt-counts" style="font-size:10px;opacity:.75;margin:0 0 5px 0;line-height:1.6">' + rtRows.filter(function (r) { return r && !r._cand; }).length + " routes · " + _cnt + "</div>";
   }
-  el.innerHTML = '<div class="de-rt-hd">Routing table</div>' + _fTools + '<table class="de-rt-tbl"><tbody>' + rowsHtml + "</tbody></table>" + _rvHtml;
+  /* nx_rt_same_html (v1.5.1): a collect round with the same routes does not rebuild the board - the text selected in it,
+     its scroll position and hover stay (it was rebuilt every round, every 3 s on a live lab). Rebuilt when the HTML differs
+     or something else replaced the board's content (its first child is not the one written here). */
+  var _rtHtml = '<div class="de-rt-hd">Routing table</div>' + _fTools + '<table class="de-rt-tbl"><tbody>' + rowsHtml + "</tbody></table>" + _rvHtml;
+  var _rtSame = el._nxRtHtml === _rtHtml && !!el.firstChild && el.firstChild === el._nxRtFirst;
+  if (!_rtSame) { el.innerHTML = _rtHtml; el._nxRtHtml = _rtHtml; el._nxRtFirst = el.firstChild; }
   var _fIn = el.querySelector(".de-rt-find");
-  if (_fIn) {
+  if (_fIn && _rtSame) {
+    /* same board: the filter box keeps its text, focus and listeners */
+  } else if (_fIn) {
     _fIn.value = window._xrayRtFind || "";
     _fIn.addEventListener("input", function () { window._xrayRtFind = _fIn.value; _xrayRtFindApply(); });
     _fIn.addEventListener("click", function (e) { e.stopPropagation(); });
