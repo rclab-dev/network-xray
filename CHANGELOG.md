@@ -5,11 +5,12 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 ## v1.5.2 — 2026-11-22
 
 - **SolvedKit tables (`--format table` only):** the column TELLS is now TELLS APART, the legends under the tables say more, and `check init` says "still to fill in by hand". The JSON output and the MCP tools are unchanged (same keys).
+- **`./xray.sh snapshot <name>`:** saves the lab's state now as `<name>.js` (SolvedKit's broken and solved states) from a lab started with `./xray.sh`, or with `--url http://localhost:8600` from the image or the netlab tool. An existing file is not overwritten; nothing is started.
 - **SolvedKit guide:** the HandsOn Pack / SolvedKit line in bold; on netlab, `--mgmt-subnet 192.168.121.0/24` when the state includes the management network; a plainer section 4 heading.
 
 ## v1.5.1 — 2026-11-22
 
-- **Image:** `docker run -i --rm -v <lab folder>:/lab:ro ghcr.io/rclab-dev/network-xray:1.5.1 mcp --path /lab` starts the MCP server on stdio (no page, no collector, no Docker socket); the image carries the `io.modelcontextprotocol.server.name` label.
+- **Image:** `docker run -i --rm -v <lab folder>:/lab:ro ghcr.io/rclab-dev/network-xray:1 mcp --path /lab` starts the MCP server on stdio (no page, no collector, no Docker socket); the image carries the `io.modelcontextprotocol.server.name` label.
 - **MCP Registry:** `server.json` for the official MCP Registry (`io.github.rclab-dev/network-xray`, the image above).
 - **DeepDive:** the Routing table is no longer rebuilt when a collect round brings the same routes (it was every 3 s on a live lab): text selected in it, its scroll position and hover stay.
 - **DeepDive:** the LSDB panel is drawn above the link beams and their labels (a link label could sit on top of it).

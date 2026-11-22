@@ -214,9 +214,9 @@ q21 なら r2 からの経路の Local Preference を上げる、ほかの方法
 
 | network-xray の動かし方 | 状態のある所 |
 |---|---|
-| `./xray.sh <lab>.clab.yml` (containerlab) | network-xray のフォルダの `xray-states.js` |
+| `./xray.sh <lab>.clab.yml` (containerlab) | network-xray のフォルダの `xray-states.js`。別の端末で `./xray.sh snapshot broken` と打つと `broken.js` に保存 |
 | image (`docker run … ghcr.io/rclab-dev/network-xray`) | コンテナの中: `curl -s http://localhost:8600/static/xray-states.js > broken.js` |
-| netlab (network-xray の defaults ファイル) | これも image: `curl -s http://localhost:8600/static/xray-states.js > broken.js`。状態に netlab の管理の網が入っている時は、`check suggest` に `--mgmt-subnet 192.168.121.0/24` を足す (その網の変化を候補に入れない) |
+| netlab (network-xray の defaults ファイル) | これも image: `./xray.sh snapshot broken --url http://localhost:8600` (か上の `curl` の行)。状態に netlab の管理の網が入っている時は、`check suggest` に `--mgmt-subnet 192.168.121.0/24` を足す (その網の変化を候補に入れない) |
 | Cisco CML (`node cml-xray.js …`) | `--out` のフォルダ (既定 `./cml-view`) の `xray-states.js` |
 | MCP のサーバ (`--allow-collect`) | `collect` に `keep_previous: true` で、前の状態が `previous` に残る |
 
@@ -224,9 +224,9 @@ q21 なら r2 からの経路の Local Preference を上げる、ほかの方法
 
 **流れ。**
 
-1. ラボを立て、問題として出す形に壊します。頁が壊れた状態を見せたら保存: `cp xray-states.js broken.js` (か上の `curl` の行)。
+1. ラボを立て、問題として出す形に壊します。頁が壊れた状態を見せたら保存: `./xray.sh snapshot broken` (image か netlab なら `--url http://localhost:8600` を足す)。
 2. 解く人がするだろうやり方で直します。頁が変化を見せるまで待ち (BGP や OSPF は落ち着くまで数十秒かかることがあります)、
-   `solved.js` として保存します。
+   `./xray.sh snapshot solved` で保存します。
 3. `node scripts/xray-query.js check suggest broken.js solved.js --format table`。問題と関係の無い所までラボが変わる時は、
    ルータと宛先から始めます: `--focus r1 --prefix 8.8.8.0/24`。
 4. `node scripts/xray-query.js check init broken.js solved.js --out <ラボのフォルダ>/problem.json` の後、その中に

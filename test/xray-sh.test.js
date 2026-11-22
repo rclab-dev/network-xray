@@ -733,3 +733,47 @@ test('xray.sh: --help and the common failure messages match the snapshot', { ski
   assert.strictEqual(got, want, 'xray.sh usage or messages differ from ' + path.relative(ROOT, SNAPSHOT) +
     '. If the change is on purpose: NX_UPDATE_SNAPSHOT=1 node --test test/xray-sh.test.js, then review and commit the snapshot.');
 });
+
+// nx_snapshot (v1.5.2): ./xray.sh snapshot <name> saves the collector's state as <name>.js (SolvedKit's broken / solved)
+test('xray.sh snapshot: saves this checkout\'s xray-states.js as <name>.js, never overwrites, starts nothing', { skip: SKIP }, async function () {
+  var env = setup();
+  var r = await run(env, 'xray.sh', ['snapshot', 'broken']);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.stderr, /no state yet: .*xray-states\.js - start the lab with \.\/xray\.sh/);
+  var state = 'window.LIVE_STATES = {"r1":{"interfaces":{}}};\n';
+  fs.writeFileSync(path.join(env.here, 'xray-states.js'), state);
+  r = await run(env, 'xray.sh', ['snapshot', 'broken']);
+  assert.strictEqual(r.code, 0, r.stderr);
+  assert.match(r.stdout, /saved broken\.js/);
+  assert.strictEqual(fs.readFileSync(path.join(env.here, 'broken.js'), 'utf8'), state);
+  r = await run(env, 'xray.sh', ['snapshot', 'broken.js']);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.stderr, /not written: broken\.js already exists/);
+  fs.writeFileSync(path.join(env.here, 'xray-states.js'), '<html>not a state</html>\n');
+  r = await run(env, 'xray.sh', ['snapshot', 'other']);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.stderr, /not a network-xray state file/);
+  assert.ok(!fs.existsSync(path.join(env.here, 'other.js')));
+  assert.deepStrictEqual(r.calls, [], 'no containerlab / docker / sudo');
+  r = await run(env, 'xray.sh', ['snapshot']);
+  assert.strictEqual(r.code, 2);
+  r = await run(env, 'xray.sh', ['snapshot', 'x', '--nope']);
+  assert.strictEqual(r.code, 2);
+});
+
+test('xray.sh snapshot --url: reads the page of the image / netlab tool (/static/xray-states.js)', { skip: SKIP || (!which('curl') && 'needs curl') }, async function () {
+  var env = setup();
+  var state = 'window.LIVE_STATES = {"r9":{}};\n';
+  var http = require('http');
+  var srv = http.createServer(function (q, s) { if (q.url === '/static/xray-states.js') { s.end(state); } else { s.statusCode = 404; s.end(); } });
+  await new Promise(function (ok) { srv.listen(0, '127.0.0.1', ok); });
+  try {
+    var url = 'http://127.0.0.1:' + srv.address().port;
+    var r = await run(env, 'xray.sh', ['snapshot', 'solved', '--url', url + '/']);
+    assert.strictEqual(r.code, 0, r.stderr);
+    assert.strictEqual(fs.readFileSync(path.join(env.here, 'solved.js'), 'utf8'), state);
+    r = await run(env, 'xray.sh', ['snapshot', 'x', '--url', 'localhost:8600']);
+    assert.strictEqual(r.code, 2);
+    assert.match(r.stderr, /--url must start with http/);
+  } finally { srv.close(); }
+});

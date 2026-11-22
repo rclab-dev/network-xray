@@ -12,6 +12,7 @@
 #   --interval <seconds>  how often the collector reads the routers (whole seconds). default: 1
 #   --check               only check what this run needs (docker, containerlab, node, port, topology,
 #                         IOL image) and say what to fix; nothing is started or changed. exit 0 = ready
+#   ./xray.sh snapshot <name> [--url <page>]   save the lab's state now as <name>.js (SolvedKit's broken / solved)
 #   --attach              do not deploy: collect from and graph the lab that is already running (the lab named
 #                         in the topology), so changes made by hand in the routers are kept
 #   The options may come before, between or after lab / port / template.
@@ -42,8 +43,47 @@ usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] 
   --attach              do not deploy: graph the lab that is already running (changes made by hand are kept)
   -h, --help            show this help
   env: SUDO= (privilege prefix, default sudo), NX_IOS_INTERVAL (Cisco IOS read interval, default 10)
+       ./xray.sh snapshot <name> [--url <page address>]   save the lab's state now as <name>.js (for SolvedKit)
 EOF
 }
+# nx_snapshot (v1.5.2): ./xray.sh snapshot <name> saves the state the running collector last wrote as <name>.js in the
+# current folder (SolvedKit's broken / solved states). Without --url: this checkout's xray-states.js (a lab started with
+# ./xray.sh). With --url: the page of the image or the netlab tool (e.g. http://localhost:8600). An existing file is
+# never overwritten. Nothing is deployed or started.
+if [ "${1-}" = snapshot ]; then
+  shift; SN=""; SURL=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -h|--help) echo "usage: ./xray.sh snapshot <name> [--url <page address>]"
+                 echo "  save the lab's state now as <name>.js in this folder (a lab started with ./xray.sh;"
+                 echo "  --url http://localhost:8600 for the image or the netlab tool). An existing file is not overwritten."; exit 0 ;;
+      --url) [ $# -ge 2 ] || { echo "--url needs a value, e.g. http://localhost:8600" >&2; exit 2; }; SURL="$2"; shift 2 ;;
+      --url=*) SURL="${1#--url=}"; shift ;;
+      -?*) echo "xray.sh snapshot: unknown option: $1" >&2; echo "Try './xray.sh snapshot --help'." >&2; exit 2 ;;
+      *) [ -z "$SN" ] || { echo "xray.sh snapshot: give one name (e.g. broken)" >&2; exit 2; }; SN="$1"; shift ;;
+    esac
+  done
+  [ -n "$SN" ] || { echo "usage: ./xray.sh snapshot <name> [--url <page address>]   (e.g. ./xray.sh snapshot broken)" >&2; exit 2; }
+  case "$SN" in *.js) ;; *) SN="$SN.js" ;; esac
+  [ -e "$SN" ] && { echo "not written: $SN already exists (pick another name or move it away)" >&2; exit 1; }
+  STMP="$SN.tmp.$$"
+  if [ -n "$SURL" ]; then
+    case "$SURL" in http://*|https://*) ;; *) echo "--url must start with http:// or https://: $SURL" >&2; exit 2 ;; esac
+    SURL="${SURL%/}"
+    curl -fsS --max-time 15 "$SURL/static/xray-states.js" -o "$STMP" 2>/dev/null \
+      || curl -fsS --max-time 15 "$SURL/xray-states.js" -o "$STMP" 2>/dev/null \
+      || { rm -f "$STMP"; echo "could not read the state from $SURL (is the page running there?)" >&2; exit 1; }
+  else
+    SSRC="$HERE/xray-states.js"
+    [ -f "$SSRC" ] || { echo "no state yet: $SSRC - start the lab with ./xray.sh in another terminal first (for the image or netlab: --url http://localhost:8600)" >&2; exit 1; }
+    [ -n "$(find "$SSRC" -mmin +1 2>/dev/null)" ] && echo "note: the collector last wrote it over a minute ago - is ./xray.sh still running?" >&2
+    cp "$SSRC" "$STMP"
+  fi
+  head -c 40 "$STMP" | grep -q 'window.LIVE_STATES' || { rm -f "$STMP"; echo "not a network-xray state file (it should start with window.LIVE_STATES)" >&2; exit 1; }
+  mv "$STMP" "$SN"
+  echo "saved $SN - when you have both: node scripts/xray-query.js check suggest broken.js solved.js --format table"
+  exit 0
+fi
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;

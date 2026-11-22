@@ -220,9 +220,9 @@ moment you want:
 
 | How you run network-xray | Where the state is |
 |---|---|
-| `./xray.sh <lab>.clab.yml` (containerlab) | `xray-states.js` in the network-xray folder |
+| `./xray.sh <lab>.clab.yml` (containerlab) | `xray-states.js` in the network-xray folder: in another terminal, `./xray.sh snapshot broken` saves it as `broken.js` |
 | the image (`docker run … ghcr.io/rclab-dev/network-xray`) | inside the container: `curl -s http://localhost:8600/static/xray-states.js > broken.js` |
-| netlab with network-xray's defaults file | the image again: `curl -s http://localhost:8600/static/xray-states.js > broken.js`. If the state includes netlab's management network, add `--mgmt-subnet 192.168.121.0/24` to `check suggest` so changes on it are left out |
+| netlab with network-xray's defaults file | the image again: `./xray.sh snapshot broken --url http://localhost:8600` (or the `curl` line above). If the state includes netlab's management network, add `--mgmt-subnet 192.168.121.0/24` to `check suggest` so changes on it are left out |
 | Cisco CML (`node cml-xray.js …`) | `xray-states.js` in the `--out` folder (default `./cml-view`) |
 | the MCP server with `--allow-collect` | `collect` with `keep_previous: true` keeps the state before as `previous` |
 
@@ -231,9 +231,9 @@ A saved `xray-states.js`, a `state_<node>.json`, or a folder of them all work as
 **The flow.**
 
 1. Start the lab and break it the way the problem will be given. Wait until the page shows the broken state, then save
-   it: `cp xray-states.js broken.js` (or the `curl` line above).
+   it: `./xray.sh snapshot broken` (with the image or netlab: add `--url http://localhost:8600`).
 2. Fix it the way you expect a solver to. Wait until the page shows the change (BGP and OSPF can take tens of seconds
-   to settle), then save it as `solved.js`.
+   to settle), then `./xray.sh snapshot solved`.
 3. `node scripts/xray-query.js check suggest broken.js solved.js --format table`. If the lab changes more than the
    problem is about, start from the router and destination: `--focus r1 --prefix 8.8.8.0/24`.
 4. `node scripts/xray-query.js check init broken.js solved.js --out <your lab folder>/problem.json`, then write
