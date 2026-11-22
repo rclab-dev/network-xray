@@ -2,6 +2,10 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## v1.6.1 — 2026-11-22
+
+- **MCP:** the description of `ospf_neighbors` says first what it lists, names what it returns, and points to `ospf_interfaces` for why an adjacency is missing. The `path` argument says what it takes, with an example, and that it may be left empty when the server was started with `--path` / `NX_MCP_PATH` (it no longer names that folder, so the tool definitions are the same wherever the server starts). The answers are unchanged (same keys).
+
 ## v1.6.0 — 2026-11-22
 
 - **Embed with a URL only:** `embed.html?state=<URL>&poll=<seconds>` reads one JSON (config, topology, trace, state) and draws it, for a page that cannot run script (a dashboard panel). Only the site that serves `embed.html` is read, or a site listed in `embed-allow.json` next to it; an example is `embed.html?state=embed-state-example.json`.

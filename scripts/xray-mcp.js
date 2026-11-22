@@ -58,7 +58,7 @@ console.log = console.error;
 console.info = console.error;
 
 var READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
-var PATH_PROP = { type: 'string', description: 'Same input as lab_state' };
+var PATH_PROP = { type: 'string', description: "The lab's state: an xray-states.js, a state_<node>.json, a folder of them, or a folder of saved FRR show ... json files, e.g. lab/xray-states.js" };
 
 var TOOLS = [
   {
@@ -70,7 +70,7 @@ var TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'A state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR show ... json files' }
+        path: PATH_PROP
       },
       required: ['path'],
       additionalProperties: false
@@ -112,8 +112,11 @@ var TOOLS = [
   },
   {
     name: 'ospf_neighbors',
-    description: 'Starts with `wrong`: what is wrong, for OSPF and interfaces, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ); empty when nothing is. ' + 'Then OSPF neighbors per router as collected: neighbor router ID, address, state (e.g. Full), ' +
-      'interface, and DR/BDR role and peer node name when known. All routers, or one with `router`. Read-only.',
+    description: 'List the OSPF neighbors each router has, as collected: for each neighbor its router ID, address, state (e.g. Full), ' +
+      'interface, DR/BDR role and peer node name when known. All routers, or one with `router`. The answer starts with `wrong`: ' +
+      'each problem for OSPF and interfaces with a `text` line (an interface down, an OSPF interface that faces a neighbor and has ' +
+      'no adjacency, a Full adjacency whose ends still differ); empty when nothing is. To see why an adjacency is missing (the ' +
+      'values both ends must share, such as MTU or hello), use ospf_interfaces. Read-only: answers from the state files, no router is contacted.',
     inputSchema: {
       type: 'object',
       properties: { path: PATH_PROP, router: { type: 'string', description: 'Only this router, e.g. r1 (default: all routers)' } },
@@ -331,7 +334,7 @@ function withDefaultPath(t) {
   var props = t.inputSchema && t.inputSchema.properties;
   if (!props || !props.path) return t;
   var c = JSON.parse(JSON.stringify(t));
-  c.inputSchema.properties.path.description += ' (optional here: the server was started with ' + defaultPath + ')';
+  c.inputSchema.properties.path.description += '. Optional here: leave it empty to read the state the server was started with (--path / NX_MCP_PATH)';   /* nx_mcp_path_desc_stable (v1.6.1): no folder name in the text */
   c.inputSchema.required = c.inputSchema.required.filter(function (k) { return k !== 'path'; });
   return c;
 }

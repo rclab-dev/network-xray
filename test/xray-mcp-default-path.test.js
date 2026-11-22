@@ -30,12 +30,13 @@ test('no default path: path stays required and a call without it is an error (as
   assert.deepStrictEqual(plain(rpc('tools/list').tools), plain(mcp.TOOLS), 'the list is exactly the one without a default');
 });
 
-test('with a default path: path is optional in tools/list (and names the default), state_diff is unchanged', function () {
+test('with a default path: path is optional in tools/list (the text says so, without the folder: the definitions stay the same), state_diff is unchanged', function () {
   mcp.setDefaultPath(Q15);
   ['lab_state', 'why_best_path', 'list_routers', 'ospf_neighbors', 'ospf_interfaces', 'bgp_neighbors', 'route_lookup', 'why_path'].forEach(function (n) {
     var t = listed(n);
     assert.ok(t.inputSchema.required.indexOf('path') < 0, n + ': path still required');
-    assert.ok(t.inputSchema.properties.path.description.indexOf(Q15) >= 0, n + ': the description names the default');
+    assert.match(t.inputSchema.properties.path.description, /Optional here: leave it empty/, n + ': the description says path may be empty');
+    assert.ok(t.inputSchema.properties.path.description.indexOf(Q15) < 0, n + ': no folder name in the description (nx_mcp_path_desc_stable)');
   });
   assert.deepStrictEqual(listed('state_diff').inputSchema.required, ['before', 'after']);
   assert.deepStrictEqual(mcp.TOOLS.filter(function (t) { return t.name === 'lab_state'; })[0].inputSchema.required, ['path'], 'TOOLS itself is not changed');
