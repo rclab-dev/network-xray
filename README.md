@@ -587,6 +587,7 @@ Messages go only to the frame's origin and are taken only from it. A working pag
 | `deepdive=1` | opens the DeepDive | the same |
 | `prefix=8.8.8.0/24` | picks that prefix, as a click on its Routing-table row does; its Best-Path Decision opens when the BGP table has it | the same |
 | `embed=1` | hides the page's title, intro, top bar and footer (the replay buttons and the DeepDive stay) | the :8600 page, the demos (`embed.html` has none) |
+| `embed=1&view=deepdive` | the X-Ray answer first, for a dashboard panel: the topology is hidden, the DeepDive opens and is shrunk to the frame | the :8600 page, the demos, `embed.html` |
 | `skin=containerlab` | a preset skin (`signature`, `containerlab`, `flat-docs`, `accessible`) | pages that load `xray-skin.js` |
 | `state=…&poll=3` | the JSON to draw, read again every 3 s | `embed.html` |
 
@@ -1627,6 +1628,7 @@ x.openDeepDive();  x.on('deepdive', e => console.log(e.open));          // ほ�
 | `deepdive=1` | DeepDive を開く | 同じ |
 | `prefix=8.8.8.0/24` | その経路を選ぶ (Routing table の行を押したのと同じ)・BGP の表にあれば Best-Path Decision も開く | 同じ |
 | `embed=1` | 頁の見出し・説明・上の帯・足を隠す (再生のボタンと DeepDive は残る) | :8600 の頁・デモ (`embed.html` には元から無い) |
+| `embed=1&view=deepdive` | X-Ray の答えを先に (ダッシュボードの枠向け): 全体図を隠し、DeepDive を開いて枠に合わせて縮める | :8600 の頁・デモ・`embed.html` |
 | `skin=containerlab` | 決まった skin (`signature`・`containerlab`・`flat-docs`・`accessible`) | `xray-skin.js` を読む頁 |
 | `state=…&poll=3` | 描く JSON・3 秒ごとに読み直す | `embed.html` |
 
