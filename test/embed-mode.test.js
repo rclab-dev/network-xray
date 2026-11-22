@@ -99,8 +99,8 @@ test('view=deepdive opens the DeepDive without deepdive=1 and shrinks it to the 
   t.win.xrayCore.applyDeepLink({ node: 'r1' });
   t.run();
   assert.deepStrictEqual(opened, ['r1']);
-  // min(1, (800 - 8) / 1100, (400 - 40 - 4) / (560 + 28)) = min(0.72, 0.605) = 0.605
-  assert.strictEqual(t.box.style.zoom, '0.605');
+  // it is scrolled to the top (no fixed bar here): min(1, (800 - 8) / 1100, (400 - 0 - 8) / (560 + 28)) = min(0.72, 0.667) = 0.667
+  assert.strictEqual(t.box.style.zoom, '0.667');
   t = loadDeep('?embed=1&view=deepdive', [1600, 1200]);   // a big frame: left at its own size
   t.win.xrayCore.applyDeepLink({});
   t.run();

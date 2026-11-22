@@ -870,17 +870,23 @@
     box.style.zoom = '';
     var w = de.offsetWidth || 0, h = (de.offsetHeight || 0) + DEEP_EXTRA;
     if (!w || !h) return 0;
-    var top = de.getBoundingClientRect().top + (window.pageYOffset || 0);
-    var k = Math.min(1, ((window.innerWidth || w) - 8) / w, ((window.innerHeight || h) - top - 4) / h);
+    // the DeepDive is scrolled to just under a fixed bar (the replay bar), so it has the frame's height under that bar
+    var k = Math.min(1, ((window.innerWidth || w) - 8) / w, ((window.innerHeight || h) - _fixedTop() - 8) / h);
     k = Math.max(0.3, k);
     box.style.zoom = k < 0.995 ? k.toFixed(3) : '';
     return k;
+  }
+  // the height a bar fixed at the top of the frame covers (the demos' RECORDED REPLAY bar), else 0
+  function _fixedTop() {
+    var b = document.getElementById('replaybar');
+    if (!b || !b.getBoundingClientRect || typeof window.getComputedStyle !== 'function') return 0;
+    try { return window.getComputedStyle(b).position === 'fixed' ? Math.max(0, b.getBoundingClientRect().bottom) : 0; } catch (e) { return 0; }
   }
   function _placeDeepDive() { if (_deepView()) _fitDeepDive(); return _showDeepDive(); }
   function _showDeepDive() {
     var de = document.querySelector('.xray-deep-engine');
     if (!de || !de.getBoundingClientRect || typeof window.scrollTo !== 'function') return false;
-    var top = de.getBoundingClientRect().top + (window.pageYOffset || 0) - 4;
+    var top = de.getBoundingClientRect().top + (window.pageYOffset || 0) - _fixedTop() - 4;
     window.scrollTo(0, Math.max(0, top));
     return true;
   }
