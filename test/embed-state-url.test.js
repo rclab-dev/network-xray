@@ -36,6 +36,7 @@ function frame(search, files) {
     fetch: (u, opts) => {
       fetched.push({ u, opts });
       const f = files[u];
+      if (f === 'REJECT') return Promise.reject(new TypeError('Failed to fetch'));   // what fetch does on a redirect with redirect: 'error'
       if (f === undefined) return Promise.resolve({ ok: false, status: 404, url: u, text: () => Promise.resolve(''), json: () => Promise.resolve({}) });
       const o = typeof f === 'string' ? { status: 200, body: f } : f;
       return Promise.resolve({ ok: o.status === 200, status: o.status, url: o.url || u, text: () => Promise.resolve(o.body), json: () => Promise.resolve(JSON.parse(o.body)) });
@@ -137,4 +138,19 @@ test('embed-state-example.json (next to embed.html) is a network-xray state file
   assert.strictEqual(j.version, 1);
   assert.ok(Array.isArray(j.config.nodes) && j.config.nodes.some((n) => n.target));
   assert.ok(j.topology && j.trace && j.state);
+});
+
+test('no redirect is followed: both reads ask fetch to fail on a redirect (it would already reach a site that is not allowed)', async () => {
+  const other = 'https://grafana.example/api/xray.json';
+  const allow = 'https://xray.example/static/embed-allow.json';
+  const t = frame('?state=' + encodeURIComponent(other), { [allow]: JSON.stringify({ origins: ['https://grafana.example'] }), [other]: JSON.stringify(SNAP) });
+  await settle();
+  assert.deepStrictEqual(t.fetched.map((f) => [f.u, f.opts.redirect, f.opts.credentials]), [[allow, 'error', 'omit'], [other, 'error', 'omit']]);
+});
+
+test('a fetch that fails (as a redirect does with redirect: error) draws nothing and says so as text', async () => {
+  const t = frame('?state=xray-snapshot.json', { [URL_SNAP]: 'REJECT' });
+  await settle();
+  assert.deepStrictEqual(t.calls, []);
+  assert.match(t.msg(), /state: Failed to fetch/);
 });

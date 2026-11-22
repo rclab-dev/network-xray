@@ -58,7 +58,8 @@
      poll = read it again every N seconds (2-300; none = once); it is drawn again only when the text changed.
      The URL is read only if it is on this frame's own origin, or on an origin listed in embed-allow.json next to
      embed.html ({"origins": ["https://grafana.example"]}) — only whoever serves embed.html can add one, a link cannot.
-     http(s) only, no cookies, read as JSON (never run, never put in as HTML). */
+     http(s) only, no cookies, no redirects (a redirect is an error: following it would already send a request to a site
+     that is not allowed), read as JSON (never run, never put in as HTML). */
   var ORIGIN_RE = /^https?:\/\/[^\/?#\s@]+$/;
   function stateMsg(text) {
     var el = doc.getElementById('nx-state-msg');
@@ -74,7 +75,7 @@
   function loadAllow() {
     var u;
     try { u = new root.URL('embed-allow.json', root.location.href).href; } catch (e) { return Promise.resolve([]); }
-    return root.fetch(u, { credentials: 'omit', cache: 'no-store' })
+    return root.fetch(u, { credentials: 'omit', cache: 'no-store', redirect: 'error' })
       .then(function (r) { return r.ok ? r.json() : {}; })
       .then(function (j) { return (j && Array.isArray(j.origins) ? j.origins : []).filter(function (o) { return typeof o === 'string' && ORIGIN_RE.test(o); }); },
         function () { return []; });
@@ -132,7 +133,7 @@
       allowP.then(function (allow) {
         var href = checkStateUrl(raw, allow);
         if (!href) { stateMsg(NOT_HERE); fail(NOT_HERE); return; }
-        return root.fetch(href, { credentials: 'omit', cache: 'no-store' }).then(function (r) {
+        return root.fetch(href, { credentials: 'omit', cache: 'no-store', redirect: 'error' }).then(function (r) {   // a redirect is not followed (it would already reach a site that is not allowed)
           if (r.url && !checkStateUrl(r.url, allow)) throw new Error(NOT_HERE + ' (redirected)');
           if (!r.ok) throw new Error('state: HTTP ' + r.status);
           return r.text();
