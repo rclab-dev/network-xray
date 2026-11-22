@@ -271,7 +271,7 @@ nodes = nodes.filter(function (n) {   /* nx_isolated_nodes + nx_graph_hide */
 });
 if (hidden.length) console.error('   left out (label graph-hide, no links): ' + hidden.map(shown).join(', '));
 if (!nodes.length) { console.error('!! no routers in ' + topoPath); process.exit(1); }
-function isSrl(kind) { return /srl|srlinux|nokia/i.test(kind || ''); }
+function isSrl(kind) { return /srl|srlinux/i.test(kind || ''); }   // nx_srl_kind (v1.5.3): srl / nokia_srlinux only - nokia_sros / nokia_srsim are not SR Linux (no sr_cli)
 // containerlab short iface (e1-1) -> SR Linux routed subinterface (ethernet-1/1.0)
 function srlIface(x) {
   var m = /^e(\d+)-(\d+)$/.exec(x);
