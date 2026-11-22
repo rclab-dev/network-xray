@@ -630,8 +630,11 @@ function nxAnswers(states) {
         if (seen[id]) return;
         seen[id] = true;
         var w = (oi.wrong || []).filter(function (x) { return (x.node === rt.router && x.iface === f.interface) || (x.node === f.peer && x.iface === f.peer_interface); })[0];
-        adjs.push({ id: id, protocol: 'ospf', a: rt.router, a_iface: f.interface, b: f.peer, b_iface: f.peer_interface || '',
-          state: f.neighbors_adjacent > 0 ? 'up' : 'down', neighbor_state: f.neighbor_state || null, mismatch: f.mismatch || [], text: w ? w.text : '' });
+        var up = f.neighbors_adjacent > 0;
+        adjs.push({ id: id, protocol: 'ospf', between: rt.router + ' ' + f.interface + ' ⇔ ' + f.peer + ' ' + (f.peer_interface || ''), state: up ? 'up' : 'down',
+          detail: w ? String(w.text).replace(/^[^:]*⇔[^:]*:/, '').trim() : (up ? 'OSPF ' + (f.neighbor_state || 'up') : 'OSPF no adjacency'),   /* the sentence a person reads (X-Ray's) */
+          a: rt.router, a_iface: f.interface, b: f.peer, b_iface: f.peer_interface || '', neighbor_state: f.neighbor_state || null,
+          mismatch_keys: f.mismatch || [] });   /* for a program: which parameters differ */
       });
     });
   } catch (e) {}
@@ -639,8 +642,9 @@ function nxAnswers(states) {
     var bn = nxQuery.bgpNeighbors(states);
     (bn.routers || []).forEach(function (rt) {
       (rt.peers || []).forEach(function (pr) {
-        adjs.push({ id: rt.router + '>' + pr.peer, protocol: 'bgp', a: rt.router, peer: pr.peer, remote_as: pr.remote_as, type: pr.type || '',
-          state: pr.established ? 'up' : 'down', bgp_state: pr.state || '', prefixes_received: pr.prefixes_received });
+        adjs.push({ id: rt.router + '>' + pr.peer, protocol: 'bgp', between: rt.router + ' ⇔ ' + pr.peer + (pr.remote_as != null ? ' (AS ' + pr.remote_as + ')' : ''),
+          state: pr.established ? 'up' : 'down', detail: (pr.type ? pr.type + ' ' : '') + (pr.state || '') + (pr.established && pr.prefixes_received != null ? ', ' + pr.prefixes_received + (pr.prefixes_received === 1 ? ' prefix' : ' prefixes') + ' received' : ''),
+          a: rt.router, peer: pr.peer, remote_as: pr.remote_as, bgp_state: pr.state || '', prefixes_received: pr.prefixes_received });
       });
     });
   } catch (e) {}
@@ -650,7 +654,7 @@ function statesDoc(sj, states) {
   var ans = nxAnswers(states);
   var adjs = ans ? ans.adjacencies : [];
   var issues = {};
-  adjs.forEach(function (a) { if (a.state === 'down' || (a.mismatch && a.mismatch.length)) { issues[a.a] = (issues[a.a] || 0) + 1; if (a.b) issues[a.b] = (issues[a.b] || 0) + 1; } });
+  adjs.forEach(function (a) { if (a.state === 'down' || (a.mismatch_keys && a.mismatch_keys.length)) { issues[a.a] = (issues[a.a] || 0) + 1; if (a.b) issues[a.b] = (issues[a.b] || 0) + 1; } });
   var ns = nodes.filter(function (n) { return n in states; }).map(function (n) {
     var st = states[n] || {}, k = issues[n] || 0;
     return { id: n, title: n, mainstat: st.success === false ? 'unread' : (k ? k + (k === 1 ? ' issue' : ' issues') : 'ok'),
@@ -666,10 +670,10 @@ function statesDoc(sj, states) {
       var ia = ((states[a] || {}).interfaces || {})[l.iface], ib = ((states[l.peer] || {}).interfaces || {})[l.peerIface];
       var up = (ia && ib) ? (ia.up !== false && ib.up !== false ? 'up' : 'down') : 'unknown';
       var o = adjs.filter(function (x) { return x.protocol === 'ospf' && x.id === id; })[0];
-      var bad = up === 'down' || (o && (o.state === 'down' || (o.mismatch && o.mismatch.length)));
+      var bad = up === 'down' || (o && (o.state === 'down' || (o.mismatch_keys && o.mismatch_keys.length)));
       es.push({ id: id, source: a, target: l.peer,
-        mainstat: o ? 'OSPF ' + (o.state === 'up' ? (o.neighbor_state || 'up') : 'down' + (o.mismatch.length ? ': ' + o.mismatch.join(', ') : '')) : up,
-        secondarystat: o && o.text ? o.text : '',
+        mainstat: o ? 'OSPF ' + (o.state === 'up' ? (o.neighbor_state || 'up') : 'down' + (o.mismatch_keys.length ? ': ' + o.mismatch_keys.join(', ') : '')) : up,
+        secondarystat: o && o.detail ? o.detail : '',
         color: up === 'unknown' ? '#9ca3af' : (bad ? '#ef4444' : '#22c55e'), thickness: bad ? 4 : 2 });
     });
   });

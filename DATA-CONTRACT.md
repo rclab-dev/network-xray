@@ -491,7 +491,7 @@ OSPF/static demos.
 it off). Besides the states, it carries the answers X-Ray gives, taken from `scripts/xray-query.js` (nothing new is
 inferred): **`routes`** = every selected route of every router with why it won (BGP: the deciding step and the two values
 compared, from `why`; OSPF: the out-interface cost), **`adjacencies`** = each OSPF interface pair (up / down, the
-mismatched parameters and X-Ray's sentence, from `ospf-if`) and each BGP session (state). `nodes` / `edges` use the
+mismatched parameters and X-Ray's sentence, from `ospf-if`) and each BGP session (state). For a person: `between` and `detail` (sentences); for a program: `state`, `mismatch_keys`, `bgp_state` and the ends. `nodes` / `edges` use the
 columns Grafana's Node graph reads (`color` / `thickness`: red and thick = down or mismatched). `routes` /
 `adjacencies` are left out where `scripts/xray-query.js` is not next to the collector. A field may be added; a change
 that breaks a reader raises `schema`.
@@ -499,7 +499,7 @@ that breaks a reader raises `schema`.
 **JA** — `clab-xray-collect.js` は毎回 `xray-states.js` の隣に `xray-states.json` も書きます (`--no-json` で止める)。
 状態に加えて、X-Ray の答えを `scripts/xray-query.js` から入れます (新しく推論しない): **`routes`** = 各ルータの選ばれた
 経路と勝った理由 (BGP は決め手の段と比べた 2 つの値 = `why` と同じ・OSPF は出口 IF の cost)、**`adjacencies`** = OSPF の
-IF の組ごと (up / down・食い違う設定・X-Ray の文 = `ospf-if` と同じ) と BGP のセッションごと (状態)。`nodes` / `edges` は
+IF の組ごと (up / down・食い違う設定・X-Ray の文 = `ospf-if` と同じ) と BGP のセッションごと (状態)。人が読む欄 = `between` と `detail` (文)・プログラムが読む欄 = `state`・`mismatch_keys`・`bgp_state` と両端。`nodes` / `edges` は
 Grafana の Node graph が読む列 (`color` / `thickness`: 赤く太い = down か食い違い)。`scripts/xray-query.js` が collector の
 隣に無い時は `routes` / `adjacencies` を省きます。項目は増えることがあり、読む側が壊れる変更の時は `schema` を上げます。
 
@@ -508,13 +508,15 @@ Grafana の Node graph が読む列 (`color` / `thickness`: 赤く太い = down 
   "states": { "r1": { "...": "the same object as window.LIVE_STATES.r1" } },
   "routes": [ { "router": "r1", "prefix": "8.8.8.0/24", "protocol": "bgp", "next_hop": "10.11.0.20", "out_iface": "eth2",
                 "reason": "BGP: Local Pref (100 vs 50)", "deciding_step": "Local Pref" } ],
-  "adjacencies": [ { "id": "r1:eth1-r2:eth1", "protocol": "ospf", "a": "r1", "a_iface": "eth1", "b": "r2", "b_iface": "eth1",
-                     "state": "down", "mismatch": ["hello", "dead"],
-                     "text": "r1 eth1 ⇔ r2 eth1: OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20" },
-                   { "id": "r1>10.10.0.20", "protocol": "bgp", "a": "r1", "peer": "10.10.0.20", "remote_as": 65002, "state": "up", "bgp_state": "Established" } ],
+  "adjacencies": [ { "id": "r1:eth1-r2:eth1", "protocol": "ospf", "between": "r1 eth1 ⇔ r2 eth1", "state": "down",
+                     "detail": "OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20",
+                     "a": "r1", "a_iface": "eth1", "b": "r2", "b_iface": "eth1", "neighbor_state": null, "mismatch_keys": ["hello", "dead"] },
+                   { "id": "r1>10.10.0.20", "protocol": "bgp", "between": "r1 ⇔ 10.10.0.20 (AS 65002)", "state": "up",
+                     "detail": "eBGP Established, 1 prefix received", "a": "r1", "peer": "10.10.0.20", "remote_as": 65002,
+                     "bgp_state": "Established", "prefixes_received": 1 } ],
   "nodes": [ { "id": "r1", "title": "r1", "mainstat": "1 issue", "secondarystat": "3 routes", "color": "#ef4444" } ],
   "edges": [ { "id": "r1:eth1-r2:eth1", "source": "r1", "target": "r2", "mainstat": "OSPF down: hello, dead",
-               "secondarystat": "r1 eth1 ⇔ r2 eth1: OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20", "color": "#ef4444", "thickness": 4 } ] }
+               "secondarystat": "OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20", "color": "#ef4444", "thickness": 4 } ] }
 ```
 
 ---
