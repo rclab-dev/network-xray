@@ -585,6 +585,17 @@ A client that draws MCP Apps says so when it starts (the `io.modelcontextprotoco
   the conversation. It reads the same `path` as the other tools, under the same folder.
 - The text answers are unchanged. A client that does not draw MCP Apps gets exactly the tools it got before (no `view_data`, no resources).
 
+Checked in November 2026 (the tools answer / the picture shows):
+
+| Client | Tools | Picture |
+|---|---|---|
+| Cursor (Agent chat, 3.24) | yes | yes |
+| Claude Desktop (6.28) | yes | yes |
+| Claude Code (CLI) | yes | no (it does not draw MCP Apps: text answers only) |
+| Codex (CLI) | yes | no (text answers only) |
+
+Other clients have not been checked yet. In Cursor, ask in its own Agent chat: the Claude Code panel inside Cursor is Claude Code.
+
 
 If a tool call has bad input (a missing or unknown file, an unknown router, a missing argument, an argument that is
 not a string, or a destination that is not an address), the reply has `isError: true` and an `{"error": "..."}` text
