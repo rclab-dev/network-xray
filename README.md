@@ -1,5 +1,7 @@
 # network-xray
 
+[![rclab-dev/network-xray MCP server](https://glama.ai/mcp/servers/rclab-dev/network-xray/badges/score.svg)](https://glama.ai/mcp/servers/rclab-dev/network-xray)
+
 **rclab-dev/network-xray** — live BGP / OSPF state viewer for containerlab and netlab labs (FRR, SR Linux, Cisco IOL). Read-only.
 Also an MCP server: lets AI agents read the lab state and ask why a route or adjacency is the way it is ([quickest setup](docs/mcp.md#the-usual-setup)). It reads the state files network-xray's collector writes for a containerlab, netlab or Cisco CML lab; it does not look at your computer's own network.
 **SolvedKit:** turn your lab into a puzzle with a solved check — it proposes the check from a broken and a fixed state of the lab, and judges a lab without the page ([guide](docs/solvedkit.md)). Hand out exercises as a HandsOn Pack ([problem.json](docs/problem-format.md)), and make their check with SolvedKit.
