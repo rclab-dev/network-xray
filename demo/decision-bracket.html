@@ -80,9 +80,12 @@
 
 <script>
 "use strict";
+/* nx_steps_in_frame (v1.7): shown inside a picture (an MCP Apps host) there is no URL: the page that opens it sets
+   window.__nxBracketSearch to the query it would have had (?d=...&lang=...). */
+var NX_QS = (typeof window.__nxBracketSearch === "string" && window.__nxBracketSearch) || location.search;
 // ── i18n (rule/chrome wording uses standard protocol terms) ──
 var LANG = (function(){
-  var q = new URLSearchParams(location.search).get('lang');
+  var q = new URLSearchParams(NX_QS).get('lang');
   if (q === 'en' || q === 'ja') return q;
   return 'en';   // default = en (OSS); link with ?lang=ja for Japanese
 })();
@@ -138,7 +141,7 @@ var DEFAULT = {
 };
 // ?d=<base64url(JSON)> lets a caller inject measured values. Falls back to DEFAULT if malformed.
 function loadData(){
-  var d = new URLSearchParams(location.search).get('d');
+  var d = new URLSearchParams(NX_QS).get('d');
   if (!d) return DEFAULT;
   try {
     var b = d.replace(/-/g,'+').replace(/_/g,'/');
@@ -205,7 +208,7 @@ document.getElementById('hTitle').textContent = T.title;
 document.getElementById('hSub').innerHTML = T.sub;
 // lang toggle
 (function(){
-  function lnk(l,txt){ var on = (LANG===l)?' class="on"':''; var u = new URLSearchParams(location.search); u.set('lang',l); return '<a href="?'+u.toString()+'"'+on+'>'+txt+'</a>'; }
+  function lnk(l,txt){ var on = (LANG===l)?' class="on"':''; var u = new URLSearchParams(NX_QS); u.set('lang',l); return '<a href="?'+u.toString()+'"'+on+'>'+txt+'</a>'; }
   document.getElementById('langbar').innerHTML = lnk('ja','日本語') + lnk('en','EN');
 })();
 

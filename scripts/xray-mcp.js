@@ -397,6 +397,12 @@ function viewHtml() {
     var js = fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/<\/script/gi, '<\\/script');
     html = html.replace(mark, function () { return '<script>\n' + js + '\n</script>'; });
   });
+  // decision-bracket.html as text (window.__nxBracketHtml): "See all decision steps" opens it over the picture; every "<" is
+  // written \u003c so the text cannot end the script element
+  var bmark = '<!-- nx-inline-text:decision-bracket.html -->';
+  if (html.split(bmark).length !== 2) throw new Error('ui/view.html: expected one ' + bmark);
+  var bracket = fs.readFileSync(path.join(ROOT, 'decision-bracket.html'), 'utf8');
+  html = html.replace(bmark, function () { return '<script>\nwindow.__nxBracketHtml = ' + JSON.stringify(bracket).replace(/</g, '\\u003c') + ';\n</script>'; });
   viewHtmlCache = html;
   return html;
 }

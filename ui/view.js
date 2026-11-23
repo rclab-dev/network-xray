@@ -6,11 +6,21 @@
  * about with its DeepDive open; a prefix in the arguments is picked as a click on its Routing-table row picks it. Names are
  * only used if the lab has them. Nothing is fetched, no URL is opened; what the host sends is drawn by the engine, which
  * escapes it, and messages to the person are set as text.
+ *
+ * The DeepDive is laid out for the width it is drawn at, and a host's frame is narrow (Cursor: about 790 px), where its
+ * panels overlap. Shrinking the drawn page moves its arrows (the engine places them by measuring the screen), so the page
+ * draws the picture in a frame of its own (the same HTML, srcdoc) at DRAW_W px wide and scales only that frame to fit.
+ * If that frame does not start (a host that does not allow it), the picture is drawn here directly as before.
  */
 (function (root) {
   'use strict';
   var doc = root.document, host = root.parent;
-  var nextId = 1, waiting = {}, args = null, drawnFor = null;
+  root.__nxMcpApp = true;   // xray-api.js: "See all decision steps" opens over the picture (no new window in an MCP Apps host)
+  var nextId = 1, waiting = {}, args = null, drawnFor = null, lastData = null, drawnWidth = 0, redrawTimer = null;
+  var INNER = root.__nxInner === true;   // the frame this page draws the picture in
+  var DRAW_W = 1240, FRAME_WAIT = 3000;
+  var PAGE = INNER || !doc.documentElement ? '' : '<!doctype html>\n' + doc.documentElement.outerHTML;   // before anything is drawn
+  var inner = null, innerReady = false, innerH = 0, wrap = null, direct = false;
 
   function msg(text, isErr) {
     var el = doc.getElementById('nx-view-msg');
@@ -27,8 +37,20 @@
   }
   function notify(method, params) { post({ method: method, params: params || {} }); }
 
+  // the height the picture needs: the bottom of what is shown (the html element's scrollHeight is never below the frame's
+  // own height, so the host could never make the frame smaller)
+  function contentHeight() {
+    var b = doc.body, h = 0;
+    if (b && b.children) Array.prototype.forEach.call(b.children, function (el) {
+      if (el.tagName === 'SCRIPT' || !el.getBoundingClientRect) return;
+      var r = el.getBoundingClientRect();
+      if (r.height) h = Math.max(h, r.bottom + (root.pageYOffset || 0));
+    });
+    return Math.ceil(h) + 4;
+  }
   function sendSize() {
-    var h = Math.max(doc.documentElement.scrollHeight || 0, doc.body ? doc.body.scrollHeight || 0 : 0);
+    if (INNER) return;
+    var h = contentHeight() > 4 ? contentHeight() : Math.max(doc.documentElement.scrollHeight || 0, doc.body ? doc.body.scrollHeight || 0 : 0);
     var w = doc.documentElement.scrollWidth || 0;
     if (h) notify('ui/notifications/size-changed', { width: w, height: h });
   }
@@ -91,6 +113,8 @@
   }
 
   function draw(data) {
+    lastData = data;
+    drawnWidth = root.innerWidth || 0;
     var lab = build(data);
     if (!lab.names.length) { msg('No routers in this lab state.', true); return; }
     var want = args && (args.node || args.router);
@@ -104,6 +128,56 @@
     root.setTimeout(sendSize, 600);
   }
 
+  /* the host may draw the picture at one width and show it at another (Cursor draws it in a folded part of the answer):
+     the DeepDive is laid out for the width it is drawn at, so it is drawn again when the width changes (not shrunk:
+     shrinking moves its arrows) */
+  function redrawIfWider() {
+    if (inner) { scaleFrame(); return; }
+    var w = root.innerWidth || 0;
+    if (!lastData || !w || Math.abs(w - drawnWidth) < 20) return;
+    if (redrawTimer) root.clearTimeout(redrawTimer);
+    redrawTimer = root.setTimeout(function () { redrawTimer = null; try { draw(lastData); } catch (e) {} }, 250);
+  }
+  if (root.addEventListener) root.addEventListener('resize', redrawIfWider);
+
+  // ---- framed drawing (outer page) ----
+  function scaleFrame() {
+    if (!inner || !wrap) return;
+    var k = Math.min(1, ((root.innerWidth || DRAW_W) - 2) / DRAW_W), h = innerH || 640;
+    inner.style.height = h + 'px';
+    inner.style.transform = k < 0.995 ? 'scale(' + k.toFixed(3) + ')' : '';
+    wrap.style.height = Math.ceil(h * k) + 'px';
+    root.setTimeout(sendSize, 50);
+  }
+  function drawFramed(data) {
+    if (direct || INNER || !PAGE || !doc.createElement || !doc.body) return false;
+    lastData = data;
+    if (inner && innerReady) { inner.contentWindow.postMessage({ nxDraw: { data: data, args: args || {} } }, '*'); return true; }
+    if (inner) return true;   // starting: it draws when it says ready
+    wrap = doc.createElement('div');
+    wrap.id = 'nx-view-wrap';
+    wrap.style.cssText = 'position:relative;overflow:hidden;width:100%';
+    inner = doc.createElement('iframe');
+    inner.setAttribute('title', 'network-xray DeepDive');
+    inner.style.cssText = 'border:0;margin:0;display:block;transform-origin:0 0;width:' + DRAW_W + 'px;height:640px';
+    var tag = 'scr' + 'ipt';   // not written whole: this file is itself inlined into a script element of the page
+    inner.srcdoc = PAGE.replace('<head>', '<head><' + tag + '>window.__nxInner = true;</' + tag + '>');
+    wrap.appendChild(inner);
+    var topo = doc.querySelector && doc.querySelector('.topology');
+    if (topo) topo.style.display = 'none';
+    doc.body.appendChild(wrap);
+    scaleFrame();
+    root.setTimeout(function () {   // the frame did not start: draw here
+      if (innerReady || direct) return;
+      direct = true;
+      try { doc.body.removeChild(wrap); } catch (e) {}
+      if (topo) topo.style.display = '';
+      inner = null; wrap = null;
+      try { draw(lastData); } catch (e) { msg('The picture could not be drawn: ' + ((e && e.message) || e), true); }
+    }, FRAME_WAIT);
+    return true;
+  }
+
   function onResult() {
     var key = JSON.stringify(args || {});
     if (key === drawnFor) return;
@@ -114,13 +188,26 @@
     request('tools/call', { name: 'view_data', arguments: a }).then(function (r) {
       var d = r && r.structuredContent;
       if (!r || r.isError || !d) { msg('The picture could not get the lab state' + (d && d.error ? ': ' + d.error : '.') + ' The answer above still holds.', true); return; }
-      try { draw(d); } catch (e) { msg('The picture could not be drawn: ' + ((e && e.message) || e), true); }
+      try { if (!drawFramed(d)) draw(d); else msg(''); } catch (e) { msg('The picture could not be drawn: ' + ((e && e.message) || e), true); }
     }, function (e) {
       msg('This app cannot read the lab state through the host (' + ((e && e.message) || 'tools/call refused') + '). The answer above still holds.', true);
     });
   }
 
   root.addEventListener('message', function (e) {
+    var d0 = e.data;
+    if (!INNER && inner && e.source === inner.contentWindow && d0 && typeof d0 === 'object') {   // from the frame this page made
+      if (d0.nxReady) { innerReady = true; if (lastData) inner.contentWindow.postMessage({ nxDraw: { data: lastData, args: args || {} } }, '*'); }
+      if (typeof d0.nxHeight === 'number' && d0.nxHeight > 0) { innerH = Math.min(4000, Math.ceil(d0.nxHeight)); scaleFrame(); }
+      return;
+    }
+    if (INNER) {   // the frame: only the page that made it, only the drawing
+      if (e.source !== host || !d0 || typeof d0 !== 'object' || !d0.nxDraw) return;
+      args = d0.nxDraw.args && typeof d0.nxDraw.args === 'object' ? d0.nxDraw.args : {};
+      try { draw(d0.nxDraw.data); } catch (err) { msg('The picture could not be drawn: ' + ((err && err.message) || err), true); }
+      root.setTimeout(function () { host.postMessage({ nxHeight: contentHeight() }, '*'); }, 900);
+      return;
+    }
     if (e.source !== host) return;   // only the host
     var m = e.data;
     if (!m || typeof m !== 'object' || m.jsonrpc !== '2.0') return;
@@ -131,9 +218,12 @@
     }
     if (m.method === 'ui/notifications/tool-input') { var p = m.params && m.params.arguments; args = p && typeof p === 'object' ? p : {}; return; }
     if (m.method === 'ui/notifications/tool-result') { if (!args) args = {}; onResult(); return; }
+    if (m.method === 'ui/notifications/host-context-changed') { root.setTimeout(redrawIfWider, 0); return; }
     if (m.method === 'ui/resource-teardown' && m.id != null) { post({ id: m.id, result: {} }); return; }
     if (m.id != null && m.method) post({ id: m.id, error: { code: -32601, message: 'Method not found' } });   // other requests
   });
+
+  if (INNER) { host.postMessage({ nxReady: true }, '*'); root.__nxView = { build: build }; return; }
 
   request('ui/initialize', {
     protocolVersion: '2026-01-26',
@@ -141,5 +231,5 @@
     appCapabilities: {}
   }).then(function () { notify('ui/notifications/initialized'); }, function (e) { msg('The host did not start the picture: ' + ((e && e.message) || e), true); });
 
-  root.__nxView = { build: build };   // for the tests
+  root.__nxView = { build: build, redrawIfWider: redrawIfWider };   // for the tests
 })(typeof window !== 'undefined' ? window : this);

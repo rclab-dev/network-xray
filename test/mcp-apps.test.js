@@ -50,8 +50,8 @@ test('resources/read gives one HTML in the MCP Apps type, with the engine inline
   var c = s[3].result.contents[0];
   assert.strictEqual(c.mimeType, 'text/html;profile=mcp-app');
   var html = c.text;
-  assert.strictEqual((html.match(/<script>/g) || []).length, 6);
-  assert.strictEqual((html.match(/<\/script/gi) || []).length, 6);   // every closer is one of the six: none inside the inlined files
+  assert.strictEqual((html.match(/<script>/g) || []).length, 7);   // the six files + decision-bracket.html as text
+  assert.strictEqual((html.match(/<\/script/gi) || []).length, 7);   // every closer is one of the seven: none inside the inlined files
   var outside = html.replace(/<script>[\s\S]*?<\/script>/g, '');   // the page around the six inline scripts
   assert.doesNotMatch(outside, /<script[^>]+src=|<link[^>]+href=|@import|\bsrc=|\bnx-inline:/);
   assert.ok(html.indexOf('window.xrayCore') > 0 && html.indexOf('clabXray') > 0 && html.indexOf('ui/initialize') > 0);

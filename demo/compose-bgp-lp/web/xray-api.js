@@ -233,9 +233,44 @@
     return '<div class="de-bgp-bracket-pop" data-bgp-pop>' +
       '<div class="bp-h">' + head + '<button type="button" class="bp-x" data-bgp-x title="close (ESC)">✕</button></div>' +
       rows +
-      '<a class="bp-more" href="' + tier3Href + '" target="_blank" rel="noopener" data-bgp-more>' + more + ' ⧉</a>' +
+      '<a class="bp-more" href="' + tier3Href + '" target="_blank" rel="noopener" data-bgp-more>' + more + stepsMark() + '</a>' +
       '</div>';
   }
+  /* nx_steps_in_frame (v1.7): "See all decision steps" opens decision-bracket.html in a new window. In a frame (an MCP Apps
+     host, ?embed=1) a new window is not allowed or not wanted, so the steps open over the picture instead, and the link
+     has no new-window mark. In an MCP Apps host there is no URL: the page carries decision-bracket.html as text
+     (window.__nxBracketHtml) and passes the query to it. */
+  function _inFrame() { return !!(window.__nxMcpApp || (document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('nx-embed'))); }
+  function stepsMark() { return _inFrame() ? '' : ' ⧉'; }
+  function openDecisionSteps(href) {
+    href = String(href || '');
+    if (!_inFrame()) { window.open(href, '_blank', 'noopener'); return; }
+    var old = document.getElementById('nx-steps');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var box = document.createElement('div');
+    box.id = 'nx-steps';
+    box.setAttribute('role', 'dialog');
+    box.style.cssText = 'position:fixed;left:3%;top:3%;width:94%;height:94%;z-index:2147483600;background:#0f1318;border:1px solid #26c6da;border-radius:8px;box-shadow:0 6px 30px rgba(0,0,0,.6);display:flex;flex-direction:column';
+    var x = document.createElement('button');
+    x.type = 'button';
+    x.textContent = _bgpLang() === 'ja' ? '✕ 閉じる' : '✕ Close';
+    x.style.cssText = 'align-self:flex-end;margin:6px 8px;background:#1c2736;color:#e8ecf0;border:1px solid #455a64;border-radius:4px;padding:3px 10px;cursor:pointer;pointer-events:auto';
+    var f = document.createElement('iframe');
+    f.setAttribute('title', 'Best-Path decision steps');
+    f.style.cssText = 'flex:1;width:100%;border:0;border-top:1px solid #26323f';
+    if (typeof window.__nxBracketHtml === 'string' && window.__nxBracketHtml) {
+      var q = href.indexOf('?') >= 0 ? href.slice(href.indexOf('?')) : '', tag = 'scr' + 'ipt';
+      f.srcdoc = window.__nxBracketHtml.replace('<head>', '<head><' + tag + '>window.__nxBracketSearch = ' + JSON.stringify(q).replace(/</g, '\\u003c') + ';</' + tag + '>');
+    } else f.src = href;
+    function close() { if (box.parentNode) box.parentNode.removeChild(box); document.removeEventListener('keydown', onKey); }
+    function onKey(ev) { if (ev.key === 'Escape') close(); }
+    x.onclick = close;
+    document.addEventListener('keydown', onKey);
+    box.appendChild(x); box.appendChild(f);
+    document.body.appendChild(box);
+  }
+  window.xrayOpenDecisionSteps = openDecisionSteps;
+  window.xrayDecisionStepsMark = stepsMark;
   function _closeBgpPop() {
     var o = document.querySelectorAll('.de-bgp-bracket-pop.open');
     for (var i = 0; i < o.length; i++) o[i].classList.remove('open');
@@ -251,7 +286,7 @@
   function _bgpPanelClick(e) {
     var t = e.target;
     if (t.closest('[data-bgp-x]')) { e.stopPropagation(); _closeBgpPop(); return; }
-    if (t.closest('[data-bgp-more]')) { e.preventDefault(); e.stopPropagation(); var a = t.closest('[data-bgp-more]'); window.open(a.href, '_blank', 'noopener'); return; }
+    if (t.closest('[data-bgp-more]')) { e.preventDefault(); e.stopPropagation(); var a = t.closest('[data-bgp-more]'); openDecisionSteps(a.getAttribute('href') || ''); return; }
     var crit = t.closest('[data-bgp-crit]');
     if (crit) {
       e.stopPropagation();

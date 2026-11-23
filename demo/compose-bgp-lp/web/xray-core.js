@@ -12714,7 +12714,7 @@ function xrayBgpReasonHtml(p, dec, grp) {
       var _seeAll = "";
       if (window.xrayCore) {
         var _saJa = (document.documentElement.getAttribute("lang") || "en") === "ja";
-        _seeAll = '<a class="bp-more" href="' + _href + '" target="_blank" rel="noopener" onclick="event.preventDefault();event.stopPropagation();window.open(this.href,\'_blank\',\'noopener\');">' + (_saJa ? "判定の全ステップを見る" : "See all decision steps") + " ⧉</a>";
+        _seeAll = '<a class="bp-more" href="' + _href + '" target="_blank" rel="noopener" onclick="event.preventDefault();event.stopPropagation();(window.xrayOpenDecisionSteps||function(h){window.open(h,\'_blank\',\'noopener\');})(this.getAttribute(\'href\'));">' + (_saJa ? "判定の全ステップを見る" : "See all decision steps") + (window.xrayDecisionStepsMark ? window.xrayDecisionStepsMark() : " ⧉") + "</a>";   /* nx_steps_in_frame */
       }
       return '<div class="bgp-reason">★ ' + pH + " → best path by " + _btn + cmp + "</div>" + chainHtml + _seeAll + xrayBgpBracketPopHtml(dec, _href);
     }

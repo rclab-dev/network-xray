@@ -19,14 +19,14 @@ const DATA = {
 };
 
 function view() {
-  const sent = [], calls = [], listeners = [];
+  const sent = [], calls = [], listeners = [], other = {};
   const msgEl = { textContent: '', className: '', style: {} };
   const host = { postMessage(m) { sent.push(JSON.parse(JSON.stringify(m))); } };
   const win = {
     parent: host, JSON, Promise,
-    setTimeout: (fn) => fn(),
+    setTimeout: (fn) => fn(), clearTimeout() {}, innerWidth: 1200,
     document: { documentElement: { scrollHeight: 700, scrollWidth: 900 }, body: { scrollHeight: 650 }, getElementById: (id) => (id === 'nx-view-msg' ? msgEl : null) },
-    addEventListener: (ev, fn) => { if (ev === 'message') listeners.push(fn); },
+    addEventListener: (ev, fn) => { if (ev === 'message') listeners.push(fn); else (other[ev] = other[ev] || []).push(fn); },
     clabXray: { deepViews: (cfg, id, o) => { calls.push(['deepViews', id, cfg.nodes.length, cfg.networks.length]); return [{ scene: { config: { nodes: cfg.nodes.slice(), xray: {} }, topo: {} } }]; } },
     xrayCore: {
       renderTopology: (sel, c) => calls.push(['render', sel, c.xray.protocol || null]),
@@ -38,7 +38,7 @@ function view() {
   win.window = win;
   vm.runInNewContext(SRC, win);
   const fromHost = (m, source) => listeners.forEach((f) => f({ source: source || host, data: Object.assign({ jsonrpc: '2.0' }, m) }));
-  return { win, sent, calls, msgEl, fromHost, last: (method) => sent.filter((m) => m.method === method).pop() };
+  return { win, sent, calls, msgEl, fromHost, last: (method) => sent.filter((m) => m.method === method).pop(), resize(w) { win.innerWidth = w; (other.resize || []).forEach((f) => f()); } };
 }
 
 async function start(v, args, viewData) {
@@ -106,4 +106,17 @@ test('messages from anyone but the host are ignored; the same result twice is dr
   assert.strictEqual(v.sent.filter((m) => m.method === 'tools/call').length, n);
   v.fromHost({ id: 99, method: 'ui/resource-teardown', params: {} });
   assert.deepStrictEqual(v.sent.pop(), { id: 99, result: {}, jsonrpc: '2.0' });
+});
+
+test('the picture is drawn again when the frame gets a different width (laid out for that width, not shrunk)', async () => {
+  const v = view();
+  await start(v, { node: 'r1' }, (id) => ({ id, result: { structuredContent: DATA } }));
+  const renders = () => v.calls.filter((c) => c[0] === 'render').length;
+  assert.strictEqual(renders(), 1);
+  v.resize(1210); assert.strictEqual(renders(), 1);   // under 20 px: not drawn again
+  v.resize(790); assert.strictEqual(renders(), 2);    // narrower: drawn again at that width
+  assert.deepStrictEqual(v.calls.filter((c) => c[0] === 'open').map((c) => c[1]), ['r1', 'r1']);
+  v.fromHost({ method: 'ui/notifications/host-context-changed', params: { containerDimensions: { width: 600 } } });
+  v.win.innerWidth = 600; v.fromHost({ method: 'ui/notifications/host-context-changed', params: {} });
+  assert.strictEqual(renders(), 3);
 });
