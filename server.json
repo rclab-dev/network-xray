@@ -6,11 +6,11 @@
     "url": "https://github.com/rclab-dev/network-xray",
     "source": "github"
   },
-  "version": "1.6.1",
+  "version": "1.7.0",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/rclab-dev/network-xray:1.6.1",
+      "identifier": "ghcr.io/rclab-dev/network-xray:1.7.0",
       "transport": {
         "type": "stdio"
       },

@@ -993,6 +993,10 @@ Add `--path <state>` after `xray-mcp.js` (or set `NX_MCP_PATH`) and the tools re
 
 More detail (which files `path` can point at, a lab running with `xray.sh`, other clients): [docs/mcp.md](docs/mcp.md).
 
+A client that draws MCP Apps (the `io.modelcontextprotocol/ui` extension) also gets a picture under the answer of `lab_state`, `why_best_path`, `why_path`
+and `ospf_neighbors`: the X-Ray view of that router, with the prefix picked. It is one HTML resource that loads nothing from outside; no URL is
+returned and the answers the model reads are the same. Other clients see the tools as before ([docs/mcp.md](docs/mcp.md#a-picture-in-the-chat-mcp-apps)). <!-- nx_mcp_apps -->
+
 Then ask, for example, "use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15" or "why does r1 pick
 its path to 8.8.8.0/24?" or "which route does r1 use for 8.8.8.8?". Relative paths are resolved from the server's working directory, so absolute paths are safest.
 
@@ -1937,6 +1941,10 @@ Claude Code では `claude mcp add network-xray -- node /path/to/network-xray/sc
 `xray-mcp.js` の後ろに `--path <state>` を足す (か `NX_MCP_PATH` を設定する) と、クライアントが `path` を渡さない時はその state を読みます。読むのはそのフォルダの下だけです (`--path` が無ければ起動したフォルダ・`--allow-any-path` でどこでも) ([docs/ja/mcp.md](docs/ja/mcp.md))。
 
 詳しく (`path` に渡せるファイル・`xray.sh` で動かしたラボ・ほかのクライアント): [docs/ja/mcp.md](docs/ja/mcp.md)。
+
+MCP Apps (`io.modelcontextprotocol/ui` の拡張) を描けるクライアントには、`lab_state`・`why_best_path`・`why_path`・`ospf_neighbors` の答えの下に絵も出ます:
+そのルータの X-Ray の画面 (経路は選んだ状態)。外から何も読まない HTML 1 枚で、URL は返さず、モデルが読む答えは同じ。ほかのクライアントではツールは今のまま
+([docs/ja/mcp.md](docs/ja/mcp.md#チャットの中の絵-mcp-apps))。 <!-- nx_mcp_apps -->
 
 例:「use lab_state on /path/to/network-xray/test/fixtures/iosxe-q15」「r1 はなぜ 8.8.8.0/24 にその経路を選ぶ?」「r1 は 8.8.8.8 にどの経路を使う?」。相対パスはサーバの作業ディレクトリから解決するので、絶対パスが確実です。
 

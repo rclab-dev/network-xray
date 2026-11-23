@@ -572,6 +572,19 @@ compared (172.20.20.0/24 unless you give `mgmt_subnet`; a netlab lab uses `192.1
 BGP peers are told apart by address and VRF. The same changes come from `node scripts/xray-query.js diff <before> <after> [router]`
 (`--format table` for people); errors are worded the way each tool words them (see Errors).
 ## Errors
+## A picture in the chat (MCP Apps) <!-- nx_mcp_apps -->
+
+A client that draws MCP Apps says so when it starts (the `io.modelcontextprotocol/ui` extension, `text/html;profile=mcp-app`). For that client only:
+
+- `lab_state`, `why_best_path`, `why_path` and `ospf_neighbors` point at the resource `ui://network-xray/view.html`; the client shows it under the answer.
+- The page is the X-Ray view of the router the tool was about (`node` / `router`; for `lab_state`, the most connected one), with `prefix` picked when the
+  tool had one (the Best-Path Decision opens when the BGP table has it).
+- It is one HTML file with the engine inside: it loads nothing from outside and declares no CSP, so the client's default (nothing allowed) applies.
+  No URL is returned and the server still opens no socket.
+- To draw, the page asks for the lab state with `view_data`, a tool the client keeps from the model (visibility `app`): the lab state does not go into
+  the conversation. It reads the same `path` as the other tools, under the same folder.
+- The text answers are unchanged. A client that does not draw MCP Apps gets exactly the tools it got before (no `view_data`, no resources).
+
 
 If a tool call has bad input (a missing or unknown file, an unknown router, a missing argument, an argument that is
 not a string, or a destination that is not an address), the reply has `isError: true` and an `{"error": "..."}` text

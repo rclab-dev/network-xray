@@ -562,6 +562,19 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 (比べなかった物がある時だけのキー)。BGP の相手はアドレスと VRF で見分けます。同じ変化は `node scripts/xray-query.js diff <before> <after> [router]` でも
 (人向けは `--format table`)。エラーの言い方はツールごとです (エラーの節)。
 ## エラー
+## チャットの中の絵 (MCP Apps) <!-- nx_mcp_apps -->
+
+MCP Apps を描けるクライアントは、始めにそれを伝えます (`io.modelcontextprotocol/ui` の拡張・`text/html;profile=mcp-app`)。そのクライアントにだけ:
+
+- `lab_state`・`why_best_path`・`why_path`・`ospf_neighbors` が資源 `ui://network-xray/view.html` を指し、クライアントが答えの下に出します。
+- 中身は、ツールが聞いたルータ (`node` / `router`・`lab_state` は一番つながりの多いルータ) の X-Ray の画面。ツールに `prefix` があればその経路を
+  選んだ状態 (BGP の表にあれば Best-Path Decision も開く)。
+- エンジンを中に入れた HTML 1 枚: 外から何も読まず、CSP も宣言しない = クライアントの既定 (何も許さない) のまま。URL は返さず、サーバは
+  今まで通りソケットを開きません。
+- 絵は `view_data` (クライアントがモデルに見せないツール・visibility `app`) でラボの状態を取ります = ラボの状態は会話に入りません。
+  読むのはほかのツールと同じ `path`・同じフォルダの中だけ。
+- 文字の答えは変わりません。MCP Apps を描かないクライアントのツールは今と同じ (`view_data` も資源も出ない)。
+
 
 ツールの呼び出しの入力が悪い時 (ファイルが無い・知らないファイル・知らないルータ・引数が足りない・引数が文字列でない・
 destination がアドレスでない) は、返事に `isError: true` が付き、`structuredContent` の代わりに `{"error": "..."}` の
