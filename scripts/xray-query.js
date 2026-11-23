@@ -506,6 +506,7 @@ function whyPath(states, router, destination, vrf) {
   }
   if (steps) out.steps = steps;
   if (out.selected && out.selected.multipath) out.multipath = true;
+  if (w.local_pref_note) out.local_pref_note = w.local_pref_note;   /* nx_why_lp_note (v1.7.0): the comparison takes a missing local_pref as the default - say so, as why_best_path does */
   return out;
 }
 
