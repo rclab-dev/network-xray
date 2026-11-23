@@ -487,21 +487,21 @@ OSPF/static demos.
 
 ### xray-states.json (schema 1)
 
-**EN** — `clab-xray-collect.js` writes `xray-states.json` next to `xray-states.js` on every round (`--no-json` turns
-it off). Besides the states, it carries the answers X-Ray gives, taken from `scripts/xray-query.js` (nothing new is
+**EN** — `clab-xray-collect.js` writes `xray-states.json` next to `xray-states.js` whenever `xray-states.js` is rewritten (`--no-json` turns
+it off). With `--watch` that is only when something changed, so `generated` = the time of the last change, not of the last read. Besides the states, it carries the answers X-Ray gives, taken from `scripts/xray-query.js` (nothing new is
 inferred): **`routes`** = every selected route of every router with why it won (BGP: the deciding step and the two values
 compared, from `why`; OSPF: the out-interface cost), **`adjacencies`** = each OSPF interface pair (up / down, the
 mismatched parameters and X-Ray's sentence, from `ospf-if`) and each BGP session (state). For a person: `between` and `detail` (sentences); for a program: `state`, `mismatch_keys`, `bgp_state` and the ends. `nodes` / `edges` use the
-columns Grafana's Node graph reads (`color` / `thickness`: red and thick = down or mismatched). `routes` /
-`adjacencies` are left out where `scripts/xray-query.js` is not next to the collector. A field may be added; a change
+columns Grafana's Node graph reads (`color` / `thickness`: red and thick = down or mismatched; grey = a link whose interfaces were not read, or a router that could not be read). `routes` /
+`adjacencies` are left out where `scripts/xray-query.js` is found neither next to the collector nor in the Docker image (`/opt/network-xray/scripts`). A field may be added; a change
 that breaks a reader raises `schema`.
 
-**JA** — `clab-xray-collect.js` は毎回 `xray-states.js` の隣に `xray-states.json` も書きます (`--no-json` で止める)。
+**JA** — `clab-xray-collect.js` は `xray-states.js` を書き直すたびに隣に `xray-states.json` も書きます (`--no-json` で止める)。`--watch` では変化があった時だけ書くので、`generated` = 最後に変わった時刻 (最後に読んだ時刻ではない)。
 状態に加えて、X-Ray の答えを `scripts/xray-query.js` から入れます (新しく推論しない): **`routes`** = 各ルータの選ばれた
 経路と勝った理由 (BGP は決め手の段と比べた 2 つの値 = `why` と同じ・OSPF は出口 IF の cost)、**`adjacencies`** = OSPF の
 IF の組ごと (up / down・食い違う設定・X-Ray の文 = `ospf-if` と同じ) と BGP のセッションごと (状態)。人が読む欄 = `between` と `detail` (文)・プログラムが読む欄 = `state`・`mismatch_keys`・`bgp_state` と両端。`nodes` / `edges` は
-Grafana の Node graph が読む列 (`color` / `thickness`: 赤く太い = down か食い違い)。`scripts/xray-query.js` が collector の
-隣に無い時は `routes` / `adjacencies` を省きます。項目は増えることがあり、読む側が壊れる変更の時は `schema` を上げます。
+Grafana の Node graph が読む列 (`color` / `thickness`: 赤く太い = down か食い違い・灰 = IF が読めていない線 / 読めなかったルータ)。`scripts/xray-query.js` が collector の
+隣にも Docker の像の中 (`/opt/network-xray/scripts`) にも無い時は `routes` / `adjacencies` を省きます。項目は増えることがあり、読む側が壊れる変更の時は `schema` を上げます。
 
 ```json
 { "schema": 1, "generated": "2026-11-22T08:00:00.000Z",

@@ -57,3 +57,11 @@ test('--no-json leaves xray-states.json out (xray-states.js is still written)', 
     assert.ok(!fs.existsSync(path.join(r.out, 'xray-states.json')));
   } finally { fs.rmSync(r.dir, { recursive: true, force: true }); }
 });
+
+test('the Docker image: the entrypoint drops scripts/ from the copy it runs, the collector reads the image\'s own scripts/', function () {
+  var ep = fs.readFileSync(path.join(__dirname, '..', 'docker', 'entrypoint.sh'), 'utf8');
+  var src = fs.readFileSync(path.join(__dirname, '..', 'clab-xray-collect.js'), 'utf8');
+  var at = /^SRC=(\S+);/m.exec(ep);
+  assert.ok(at && /rm -rf [^\n]*"\$WORK\/scripts"/.test(ep), 'the copy the image runs has no scripts/');
+  assert.ok(src.indexOf("'" + at[1] + "/scripts/xray-query.js'") >= 0, 'the collector falls back to ' + at[1] + '/scripts/xray-query.js');
+});

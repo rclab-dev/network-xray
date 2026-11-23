@@ -590,11 +590,14 @@ function pairOspfIfaces(nodes, states, adj) {
    Written with xray-states.js on every round, from the same serialized states (states equal by construction).
    Versioned: schema 1 = { schema, generated, states, routes, adjacencies, nodes, edges } (see DATA-CONTRACT.md).
    routes / adjacencies come from scripts/xray-query.js (whyPath, ospfInterfaces, bgpNeighbors) - nothing new is inferred
-   here; where that file is not next to the collector (the demo copies) they are left out. nodes / edges carry the column
+   here; the Docker image runs the collector from a copy without scripts/, so the image's own /opt/network-xray/scripts is
+   tried next; where neither is there (the demo copies) they are left out. nodes / edges carry the column
    names Grafana's Node graph reads. --no-json turns it off. */
 var JSON_DEST = path.join(outDir, 'xray-states.json');
 var nxQuery = null;
-try { nxQuery = require(path.join(__dirname, 'scripts', 'xray-query.js')); } catch (e) { nxQuery = null; }
+[path.join(__dirname, 'scripts', 'xray-query.js'), '/opt/network-xray/scripts/xray-query.js'].some(function (f) {
+  try { nxQuery = require(f); return true; } catch (e) { nxQuery = null; return false; }
+});
 function nxAnswers(states) {
   var routes = [], adjs = [];
   if (!nxQuery) return null;
