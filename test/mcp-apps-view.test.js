@@ -57,6 +57,9 @@ test('ui/initialize, then initialized; the tool result asks for view_data with t
   const v = view();
   assert.deepStrictEqual(v.sent[0].method, 'ui/initialize');
   assert.strictEqual(v.sent[0].params.clientInfo.name, 'network-xray');
+  assert.deepStrictEqual(v.sent[0].params.appInfo, { name: 'network-xray', version: '1' });   // required by the spec's types (Claude Desktop checks it)
+  assert.strictEqual(v.sent[0].params.protocolVersion, '2026-01-26');
+  assert.ok(v.sent.some((m) => m.method === 'ui/notifications/size-changed'), 'the size is sent at once');
   const call = await start(v, { path: '/lab/x', node: 'r1', prefix: '8.8.8.0/24', other: 'x' });
   assert.ok(v.last('ui/notifications/initialized'));
   assert.deepStrictEqual(call.params, { name: 'view_data', arguments: { path: '/lab/x' } });

@@ -225,11 +225,20 @@
 
   if (INNER) { host.postMessage({ nxReady: true }, '*'); root.__nxView = { build: build }; return; }
 
+  // the MCP Apps handshake as the spec's types have it (ext-apps spec.types.ts): appInfo, appCapabilities and
+  // protocolVersion are required; a host that checks them strictly (Claude Desktop) does not answer without appInfo.
+  // clientInfo is kept for hosts that read the older name. The size is sent at once and on every change, as the
+  // official App does: a host may keep the frame at height 0 until it hears one.
   request('ui/initialize', {
     protocolVersion: '2026-01-26',
+    appInfo: { name: 'network-xray', version: '1' },
     clientInfo: { name: 'network-xray', version: '1' },
     appCapabilities: {}
-  }).then(function () { notify('ui/notifications/initialized'); }, function (e) { msg('The host did not start the picture: ' + ((e && e.message) || e), true); });
+  }).then(function () { notify('ui/notifications/initialized'); sendSize(); }, function (e) { msg('The host did not start the picture: ' + ((e && e.message) || e), true); sendSize(); });
+  sendSize();
+  if (typeof root.ResizeObserver === 'function' && doc.body) {
+    try { new root.ResizeObserver(function () { sendSize(); }).observe(doc.body); } catch (e) {}
+  }
 
   root.__nxView = { build: build, redrawIfWider: redrawIfWider };   // for the tests
 })(typeof window !== 'undefined' ? window : this);
