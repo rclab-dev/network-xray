@@ -2,7 +2,7 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## v1.7.0 — 2026-11-23
+## v1.7.0 — 2026-11-24
 
 - **MCP: a picture in the chat (MCP Apps):** a client that draws MCP Apps (the `io.modelcontextprotocol/ui` extension) gets the X-Ray view of the router under the answer of `lab_state`, `why_best_path`, `why_path` and `ospf_neighbors`, with the prefix picked. One HTML resource (`ui://network-xray/view.html`) that loads nothing from outside; the lab state reaches it through `view_data`, a tool kept from the model. No URL is returned, the text answers are the same, and other clients see the tools as before.
 - **Docker image: `xray-states.json`:** carries `routes` and `adjacencies` (in v1.6.0 the image left them out, so the Grafana tables of why each route won and what is wrong were empty). DATA-CONTRACT.md: with `--watch`, `generated` is the time of the last change; a grey edge is a link whose interfaces were not read.
