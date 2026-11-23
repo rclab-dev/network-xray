@@ -338,7 +338,68 @@ function withDefaultPath(t) {
   c.inputSchema.required = c.inputSchema.required.filter(function (k) { return k !== 'path'; });
   return c;
 }
-function tools() { var t = allowCollect ? TOOLS.concat([COLLECT_TOOL]) : TOOLS; return defaultPath ? t.map(withDefaultPath) : t; }
+/* nx_mcp_apps (v1.7): a picture for the person, for MCP clients that draw MCP Apps (the io.modelcontextprotocol/ui
+   extension). Only when the client says so in initialize: four tools point at one HTML resource (ui://network-xray/view.html,
+   the engine inlined: it loads nothing from outside, and no CSP is declared, so the host's default lets it reach nothing),
+   and view_data (visible to the picture only, not to the model) gives the picture the lab's state. The answers the model
+   reads do not change, no URL is returned and no socket is opened. A client that does not say so sees exactly the tools
+   it saw before. */
+var UI_EXT = 'io.modelcontextprotocol/ui', UI_MIME = 'text/html;profile=mcp-app', VIEW_URI = 'ui://network-xray/view.html';
+var UI_TOOLS = { lab_state: 1, why_best_path: 1, why_path: 1, ospf_neighbors: 1 };
+var VIEW_MAX = 2 * 1024 * 1024;   // the state view_data passes to the picture, as JSON text
+var uiClient = false;
+var VIEW_DATA_TOOL = {
+  name: 'view_data',
+  description: 'For the network-xray picture only (not for the model): the lab state and its links, to draw. Read-only.',
+  inputSchema: {
+    type: 'object',
+    properties: { path: PATH_PROP },
+    required: ['path'],
+    additionalProperties: false
+  },
+  annotations: READ_ONLY,
+  _meta: { ui: { resourceUri: VIEW_URI, visibility: ['app'] } }
+};
+function clientDrawsUi(caps) {
+  var e = caps && caps.extensions && caps.extensions[UI_EXT];
+  return !!(e && Array.isArray(e.mimeTypes) && e.mimeTypes.indexOf(UI_MIME) >= 0);
+}
+function withUi(t) {
+  if (!UI_TOOLS[t.name]) return t;
+  var c = Object.assign({}, t);
+  c._meta = { ui: { resourceUri: VIEW_URI } };
+  return c;
+}
+function tools() {
+  var t = allowCollect ? TOOLS.concat([COLLECT_TOOL]) : TOOLS;
+  if (uiClient) t = t.map(withUi).concat([VIEW_DATA_TOOL]);
+  return defaultPath ? t.map(withDefaultPath) : t;
+}
+// the lab state and its links in the containerlab graph shape the picture reads (nodes [{name}], links [{source, target, ...}])
+function viewData(states) {
+  if (JSON.stringify(states).length > VIEW_MAX) throw new Error('the lab state is too big to draw here (more than 2 MB); the answers above still hold');
+  var names = Object.keys(states), links = (query.summarize(states).links || []).map(function (l) {
+    return { source: l.a, target: l.b, source_endpoint: l.a_iface || '', target_endpoint: l.b_iface || '' };
+  });
+  links.forEach(function (l) { [l.source, l.target].forEach(function (n) { if (n && names.indexOf(n) < 0) names.push(n); }); });
+  return { nodes: names.map(function (n) { return { name: n }; }), links: links, states: states };
+}
+// ui/view.html with the engine files put in place of their markers (read once). "</script" inside a file would end the
+// inline script early, so it is written "<\/script" (the same text to JavaScript).
+var VIEW_PARTS = ['xray-core.js', 'xray-api.js', 'xray-i18n.js', 'xray-skin.js', 'clab-xray-bridge.js', 'ui/view.js'];
+var viewHtmlCache = null;
+function viewHtml() {
+  if (viewHtmlCache) return viewHtmlCache;
+  var html = fs.readFileSync(path.join(ROOT, 'ui', 'view.html'), 'utf8');
+  VIEW_PARTS.forEach(function (p) {
+    var mark = '<!-- nx-inline:' + p + ' -->';
+    if (html.split(mark).length !== 2) throw new Error('ui/view.html: expected one ' + mark);
+    var js = fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/<\/script/gi, '<\\/script');
+    html = html.replace(mark, function () { return '<script>\n' + js + '\n</script>'; });
+  });
+  viewHtmlCache = html;
+  return html;
+}
 
 /* the collector needs its per-vendor collectors next to the output: a directory only this user can open (made once),
    with one sub-directory per topology holding copies of them - a lab page served from the repo keeps its own
@@ -452,6 +513,7 @@ function callTool(name, args) {
   args = args || {};
   if (defaultPath && !/^(state_diff|check_verify|check_suggest|check_init)$/.test(name) && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
   if (name === 'lab_state') return query.summarize(loadStates(str(args, 'path', true)));
+  if (name === 'view_data') return viewData(loadStates(str(args, 'path', true)));   /* nx_mcp_apps */
   if (name === 'why_best_path') {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);
     return query.why(loadStates(p), node, prefix, str(args, 'vrf', false));
@@ -508,9 +570,10 @@ function handle(msg) {
   var result, error;
   switch (msg.method) {
     case 'initialize':
+      uiClient = clientDrawsUi(params.capabilities);   /* nx_mcp_apps */
       result = {
         protocolVersion: PROTOCOL_VERSIONS.indexOf(params.protocolVersion) >= 0 ? params.protocolVersion : PROTOCOL_VERSIONS[0],
-        capabilities: { tools: { listChanged: false } },
+        capabilities: uiClient ? { tools: { listChanged: false }, resources: { listChanged: false } } : { tools: { listChanged: false } },
         serverInfo: SERVER_INFO,
         instructions: allowCollect
           ? 'Questions about a network-xray lab from saved state files. The collect tool reads a running lab\'s routers again (read-only show commands) and returns a new path for the other tools.'
@@ -522,6 +585,14 @@ function handle(msg) {
       break;
     case 'tools/list':
       result = { tools: tools() };
+      break;
+    case 'resources/list':   /* nx_mcp_apps: the one picture */
+      result = { resources: [{ uri: VIEW_URI, name: 'network-xray view', mimeType: UI_MIME, description: 'The X-Ray picture of the lab (topology and the DeepDive) for MCP Apps hosts' }] };
+      break;
+    case 'resources/read':
+      if (params.uri !== VIEW_URI) { error = { code: -32002, message: 'Resource not found' }; break; }
+      try { result = { contents: [{ uri: VIEW_URI, mimeType: UI_MIME, text: viewHtml() }] }; }
+      catch (e) { error = { code: -32603, message: 'the picture is not available: ' + ((e && e.message) || e) }; }
       break;
     case 'tools/call':
       if (!tools().some(function (t) { return t.name === params.name; })) {
@@ -608,5 +679,6 @@ if (require.main === module) {
 
 module.exports = { handle: handle, handleLine: handleLine, TOOLS: TOOLS, COLLECT_TOOL: COLLECT_TOOL,
   setAllowCollect: function (on) { allowCollect = !!on; }, checkPath: checkPath,
+  setUiClient: function (on) { uiClient = !!on; }, viewHtml: viewHtml, VIEW_URI: VIEW_URI, UI_MIME: UI_MIME,
   setDefaultPath: function (p) { defaultPath = p ? path.resolve(p) : null; },
   setPathRoot: function (p) { pathRoot = p ? path.resolve(p) : null; } };
