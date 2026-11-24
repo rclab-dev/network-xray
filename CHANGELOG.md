@@ -2,12 +2,18 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## Unreleased
+## v1.8.0 — 2026-11-25
 
 - **`wrong`: routes whose next hop is not reachable:** a BGP prefix whose paths the router marks not valid (an inaccessible next hop) and that nothing else installs, and a static route that is not installed while nothing else is (an interface that is down stays its own line). A next hop the router resolves recursively (through OSPF, a static route) is valid and not listed. An installed route whose recursive next hop is resolved only through the containerlab management network is a warning. Read from the state the collectors already write.
 - **MCP `lab_state`:** optional `only_problems: true` returns only `wrong` and `counts`. Without it the answer is unchanged.
 - **Best-Path: eBGP > iBGP:** after MED, the DeepDive, the single-node panel and `why_path` compare eBGP over iBGP when every path still compared says how it was learned. The collector records it as `bgp_routes[].peer_type` (FRR `pathFrom`; the `i` in the IOS-XE status; a confederation peer counts with iBGP). A state without `peer_type` is explained as before. DATA-CONTRACT §4.4.
 - **MCP `why_path`:** `summary`, the answer in one line (the path, and the step that chose it with the two values), and `peer` on each path, the router its next hop belongs to.
+- **Pasted BGP table: a blank LocPrf:** is the default the router compares with, read from the table header (`Default local pref N`; 100 when the header is not pasted), not a fixed 100. Such routes are marked `local_pref_default`.
+- **BGP state not in the data:** a paste of only the BGP table has no session state; the node panel, the logic lines and the DeepDive now say `?` (without the fault colour) instead of Idle or NOT CONFIGURED.
+- **MCP `why_path`:** "First path received" and "Nothing to Select" are not a `deciding_step` (nothing was compared): the comparison gives it (e.g. `"Only path"`) and the text is kept in `device_reason`.
+- **Node panel:** shows a router's own OSPF area only (a third router no longer shows another router's area).
+- **Static DeepDive:** says "(nexthop unreachable)" only when the data says the next hop is not reachable (a static route can stay out of the RIB for other reasons).
+- **README:** the opening says what it explains (why the routers are in the state they are in), with MCP, SolvedKit and Grafana as other doors to the same state; "MCP security at a glance" (en / ja); the 13 MCP tools as 9 that read the state and 4 for a solved check; the mcpservers.org badge. Pull requests: the same policy in softer words, and the release notes name the person who opened the issue (unless they would rather not be named). DATA-CONTRACT 4.4: what network-xray compares itself (up to MED, then eBGP > iBGP) and what it takes from the router.
 
 ## v1.7.0 — 2026-11-24
 
