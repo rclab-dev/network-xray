@@ -1179,7 +1179,7 @@ function _xrayPeerRouterLines(nodeId, nodeIfaces, s) {
     if (lo) lines.push({
       text: "Lo: " + _escapeHtml(lo.ip)
     });
-    var area = s[nodeId + "_area"] || s.r2_area;
+    var area = s[nodeId + "_area"];   /* this node's own area only (another node's area is not this one's) */
     if (area !== undefined && area !== null) {
       lines.push({
         text: "area " + _escapeHtml(area),
