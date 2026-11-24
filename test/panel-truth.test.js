@@ -68,3 +68,15 @@ test('peer panel: a router without its own area shows no area (not r2_area)', fu
   var r2 = joinText(ctx._xrayPeerRouterLines('r2', [], { protocol: 'ospf', has_full: true, r2_area: '0.0.0.1' }));
   assert.match(r2, /area 0\.0\.0\.1/);
 });
+
+test('static DeepDive: "nexthop unreachable" only when the data says so; no Config line when the next hop was not from a static route', function () {
+  var ctx = sandbox();
+  var base = { protocol: 'static', route_resolution: { resolved: false, target: '192.0.2.99' }, interfaces: {}, config_next_hop: '192.0.2.1' };
+  var plain = joinText(ctx.xrayStaticDeepLines(Object.assign({}, base), { target: '192.0.2.99' }));
+  assert.match(plain, /NOT INSTALLED/);
+  assert.doesNotMatch(plain, /nexthop unreachable/);
+  var down = joinText(ctx.xrayStaticDeepLines(Object.assign({ nh_reachable: false }, base), { target: '192.0.2.99' }));
+  assert.match(down, /nexthop unreachable/);
+  var peer = joinText(ctx.xrayStaticDeepLines(Object.assign({ config_next_hop_from: 'peer' }, base), { target: '192.0.2.99' }));
+  assert.doesNotMatch(peer, /Config:/);
+});

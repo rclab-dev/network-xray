@@ -3138,13 +3138,16 @@ function xrayStaticDeepLines(s, opts) {
       text: '> Out: <span class="de-hl">' + _escapeHtml(rr.out_iface || "?") + "</span>"
     });
   } else {
-    var cfgNh = s.config_next_hop || "";
+    /* config_next_hop = the next hop of the configured default route. A producer that filled it from somewhere else
+       (config_next_hop_from !== "static") does not say a static route is configured -> no Config line. The reason is
+       written only when the data says the next hop is not reachable; other reasons (e.g. a better route) are not guessed. */
+    var cfgNh = s.config_next_hop_from && s.config_next_hop_from !== "static" ? "" : (s.config_next_hop || "");
     if (cfgNh) {
       lines.push({
         text: '> Config: <span class="de-dim">S 0.0.0.0/0 via ' + _escapeHtml(cfgNh) + "</span>"
       });
       lines.push({
-        text: '> RIB: <span style="color:#ff4444">NOT INSTALLED</span> <span class="de-dim">(nexthop unreachable)</span>',
+        text: '> RIB: <span style="color:#ff4444">NOT INSTALLED</span>' + (s.nh_reachable === false || s.static_nh_valid === false || s.r1_ping_ok === false ? ' <span class="de-dim">(nexthop unreachable)</span>' : ""),
         style: "color:#ff6b35;font-weight:700"
       });
     } else {
