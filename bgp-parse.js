@@ -197,7 +197,7 @@
       lan_iface: primaryPeer ? primaryPeer.iface : 'eth0',
       bgp_configured: !(sum.neighbors.length === 0 && /^%/m.test(summaryText || '')),   // "% BGP instance not found" = no BGP here
       is_established: anyEst,
-      bgp_state: anyEst ? 'Established' : (primaryPeer ? primaryPeer.state : 'Idle'),
+      bgp_state: anyEst ? 'Established' : (primaryPeer ? primaryPeer.state : null),   // no summary pasted = not known (a table alone does not show the session)
       pfx_rcvd: totalPfx,
       // OSPF-family fields off (BGP has no hello/LSDB)
       neighbor_state: 'None', has_full: false, ospf_configured: false, ospf_active_on_interface: false,

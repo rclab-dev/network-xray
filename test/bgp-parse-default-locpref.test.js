@@ -1,6 +1,7 @@
 // bgp-parse-default-locpref.test.js — FRR leaves the LocPrf column blank when a path has no LOCAL_PREF
 // (e.g. learned over eBGP). The router compares it with its default local preference, which the table
-// header prints ("Default local pref N"). The paste parser must use that N, not a fixed 100,. Run: node --test
+// header prints ("Default local pref N"). The paste parser must use that N, not a fixed 100, and must not
+// invent a session state when only the table was pasted. Run: node --test
 'use strict';
 var test = require('node:test');
 var assert = require('node:assert');
@@ -55,3 +56,7 @@ test('no header pasted: blank LocPrf falls back to 100 (the FRR default)', funct
   assert.strictEqual(t.routes[0].local_pref, 100);
 });
 
+test('only the table pasted (no summary): the session state is not invented', function () {
+  var st = load().build('', TABLE_200, 'r2').state;
+  assert.strictEqual(st.bgp_state, null);
+});

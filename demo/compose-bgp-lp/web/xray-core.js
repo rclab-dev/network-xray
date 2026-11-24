@@ -390,7 +390,8 @@ function xrayEvaluateState(s) {
   if (protocol === "bgp") {
     state.bgpEstablished = !!s.is_established;
     state.bgpPhase = state.bgpEstablished ? "established" : "idle";
-    state.bgpStatus = state.bgpEstablished ? "Established" : s.bgp_state ? s.bgp_state : "NOT CONFIGURED";
+    /* the state is not in the data (e.g. only the table was pasted): say "?" rather than a state the router did not report */
+    state.bgpStatus = state.bgpEstablished ? "Established" : s.bgp_state ? s.bgp_state : s.bgp_configured === false ? "NOT CONFIGURED" : "?";
     state.bgpConfigured = s.bgp_configured !== false;
   }
   // nx_hello_ifup_moved (2026-09-25): the ifUp early-return was BEFORE the ospf/bgp block,
@@ -1189,7 +1190,7 @@ function _xrayPeerRouterLines(nodeId, nodeIfaces, s) {
     var estField = nodeId + "_established";
     var est = s[estField] !== undefined ? !!s[estField] : !!s.is_established;
     lines.push({
-      text: "BGP: " + (est ? '<span class="hl">Established</span>' : '<span class="warn">' + _escapeHtml(s.bgp_state || "Idle") + "</span>")
+      text: "BGP: " + (est ? '<span class="hl">Established</span>' : s.bgp_state ? '<span class="warn">' + _escapeHtml(s.bgp_state) + "</span>" : '<span class="dim">?</span>')   /* not in the data: "?" (neither OK nor a fault) */
     });
     var lo = nodeIfaces.find(function(i) {
       return i.name === "lo";
@@ -3046,8 +3047,8 @@ function xrayBgpLogicLines(s) {
   var lines = [];
   var h = window._lastXrayHierarchy || xrayEvaluateState(s);
   lines.push({
-    text: "BGP: " + (s.is_established ? "Established" : _escapeHtml(s.bgp_state || h.bgpStatus || "Idle")),
-    cls: (s.is_established || h.bgpEstablished) ? "hl" : "warn"
+    text: "BGP: " + (s.is_established ? "Established" : _escapeHtml(s.bgp_state || h.bgpStatus || "?")),
+    cls: (s.is_established || h.bgpEstablished) ? "hl" : (s.bgp_state || (h.bgpStatus && h.bgpStatus !== "?")) ? "warn" : "dim"
   });
   lines.push({
     text: "Ping: " + (s.ping_ok ? "OK" : "FAIL"),
@@ -4012,10 +4013,14 @@ function xrayBgpDeepLines(s, opts) {
     lines.push({
       text: '<span class="re-bgp-head" style="cursor:pointer" onclick="window._xrayReBgpToggle && window._xrayReBgpToggle()"><span class="re-bgp-ind">' + (window._reBgpOpen ? "\u25bc" : "\u25b6") + '</span> BGP: ' + _nbAgg + "</span>"
     });
-  } else {
+  } else if (s.bgp_state || (h.bgpStatus && h.bgpStatus !== "?")) {
     lines.push({
-      text: '> BGP: <span style="color:#ff4444">' + _escapeHtml(s.bgp_state || h.bgpStatus || "Idle") + "</span>",
+      text: '> BGP: <span style="color:#ff4444">' + _escapeHtml(s.bgp_state || h.bgpStatus) + "</span>",
       style: "color:#ff6b35;font-weight:700"
+    });
+  } else {   /* the state is not in the data: "?" without the fault colour */
+    lines.push({
+      text: '> BGP: <span class="de-dim">?</span>'
     });
   }
 
