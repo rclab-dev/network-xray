@@ -34,6 +34,7 @@
     "down":   "#555555"
   },
   "protocolOrder": "bgp-top",
+  "surface": "dark",
 
   "engineShape":  "cylinder",
   "processGlyph": "double-circle",
@@ -67,6 +68,21 @@
   (`--xto-ospf` … `--xto-down`)化し `skin.colors` から流し込む。
 - Color values are `#rrggbb` hex. The UI validates on import (§6); the engine trusts them.
   / 色は `#rrggbb`。UI が import 時に検査(§6)、engine は信頼して使う。
+
+### 2b. `surface` — the ground of the single-node panel / 単ノードパネルの地 (v1.8.1)
+
+| value | meaning / 意味 |
+|---|---|
+| `dark` (default) | the single-node panel (`xray-node-panel.js`: the 2D picture and its tables) keeps its own dark ground / 既定の暗い地 |
+| `light` | the panel is drawn on a light ground: the reader also sets its structural tokens (`--xnp-bg`, `--xnp-fg`, `--xnp-border`, `--xnp-accent`, `--xnp-route-fg`, `--xnp-sel-bg`, `--xnp-decider`, `--xnp-decider-strong`, `--xnp-note`) / 明るい地 (構造の色も入れる) |
+
+- **EN** — Only the single-node panel follows the surface. The DeepDive and the topology stay dark whatever the
+  skin (their glow needs a dark ground); they still take the six `colors`. A light skin's colors must read as text
+  on white (the panel prints the winner in the `ospf` color, the BGP header in `bgp`, secondary text in `down`).
+  Added in v1.8.1 as an optional key: a skin without it is `dark`, so every older skin looks as before (§8).
+- **JA** — 地に従うのは単ノードパネルだけ。DeepDive と全体図はどの skin でも暗い地 (光る線が暗い地を前提) で、6 色だけ
+  受ける。明るい skin の色は白地で文字として読める濃さにする。v1.8.1 で足した任意の鍵 = 無ければ `dark` (古い skin は
+  そのまま)。
 
 ---
 
@@ -206,7 +222,7 @@ build script does not generate `xrayCore`. RouteCrushLab itself has no `xrayCore
 
 ## 7. Bundled presets / 同梱プリセット (data only)
 
-Default + 2, each a plain skin object (no engine code). / 既定+2、各々プレーンなスキン
+The default and the presets below (`containerlab` is described in README), each a plain skin object (no engine code). / 既定と下のプリセット、各々プレーンなスキン
 オブジェクト(engine コードなし):
 
 1. **`signature`** (default) — cylinder · double-circle · `bgp-top` · green/purple/gray. The
@@ -216,6 +232,9 @@ Default + 2, each a plain skin object (no engine code). / 既定+2、各々プ�
 3. **`accessible`** — high-contrast / CVD-safe palette, `idle` and `down` also easily
    distinguishable; does not rely on color alone (Phase 2: `labeled-square` shows protocol
    names). / 高コントラスト・色覚配慮、idle/down も識別容易、色だけに頼らない。
+4. **`slate-light`** (v1.8.1) — `surface: "light"`: the single-node panel on light grey and white, BGP violet, the
+   winner in green; colors dark enough to read as text on white. The DeepDive stays dark (§2b). / 単ノードパネルを明るい
+   地 (淡い灰と白・BGP は紫・勝ち筋は緑) で。DeepDive は暗いまま。
 
 **UGC kill-metric**: do people actually make / share skins? If not, Phase 3 (a shared theme
 ecosystem) folds. Ship export/import first; do not build a hosted market up front. / UGC

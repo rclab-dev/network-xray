@@ -43,7 +43,7 @@ test('setSkin(id) applies that preset; an unknown id does nothing', () => {
   assert.deepStrictEqual(t.store, {});   // never written to localStorage
 });
 
-test('setSkin(object) passes only an id, #rrggbb colors and protocolOrder', () => {
+test('setSkin(object) passes only an id, #rrggbb colors, protocolOrder and surface', () => {
   const t = load();
   const evil = { id: '"><img src=x onerror=alert(1)>', colors: { link: '#112233', ospf: 'red;background:url(x)' }, protocolOrder: 'ospf-top', engineShape: '<svg onload=alert(1)>', rules: { x: 1 } };
   assert.strictEqual(t.core.setSkin(evil), true);
@@ -54,6 +54,11 @@ test('setSkin(object) passes only an id, #rrggbb colors and protocolOrder', () =
   assert.strictEqual(s.protocolOrder, 'ospf-top');
   assert.notStrictEqual(s.engineShape, evil.engineShape);
   assert.deepStrictEqual(Object.assign({}, s.rules), {});
+  assert.strictEqual(s.surface, 'dark');                  // nx_skin_surface: not given = dark
+  assert.strictEqual(t.core.setSkin({ colors: {}, surface: 'light' }), true);
+  assert.strictEqual(t.engine[1].surface, 'light');
+  assert.strictEqual(t.core.setSkin({ colors: {}, surface: 'url(x)' }), true);
+  assert.strictEqual(t.engine[2].surface, 'dark');
   assert.strictEqual(t.core.setSkin(null), false);
   assert.strictEqual(t.core.setSkin(42), false);
 });

@@ -112,6 +112,13 @@
       <div id="colors"></div>
 
       <div class="sep"></div>
+      <h2>Ground</h2>
+      <div class="row"><label class="k" for="surface">surface</label>
+        <select id="surface"><option value="dark">dark</option><option value="light">light</option></select></div>
+      <div class="k-note">The ground of the single-node panel (<code>xray-node-panel.js</code>: the 2D picture and its tables).
+        The DeepDive and the topology stay dark either way.</div>
+
+      <div class="sep"></div>
       <h2>Process order <span class="k-note" style="text-transform:none;font-weight:400">— Phase 2</span></h2>
       <div class="k-note">Choosing the BGP/OSPF stacking order on border routers (and the shape axis)
         arrives in Phase 2. Phase 1 ships the color axis; the default order is <b>BGP top / OSPF bottom</b>.</div>
@@ -206,6 +213,7 @@ var PV_STATES = {"ospf": {"success": true, "scenario": "demo", "r3_neighbor_stat
   });
 
   function syncControls() {
+    var sfc = document.getElementById('surface'); if (sfc) sfc.value = skin.surface === 'light' ? 'light' : 'dark';   /* nx_skin_surface */
     S.COLOR_KEYS.forEach(function (k) {
       var v = skin.colors[k];
       var c = colorsBox.querySelector('input[data-k="' + k + '"]');
@@ -345,6 +353,12 @@ var PV_STATES = {"ospf": {"success": true, "scenario": "demo", "r3_neighbor_stat
   }
 
   // ── input wiring ──
+  document.getElementById('surface').addEventListener('change', function (e) {   /* nx_skin_surface */
+    skin.surface = e.target.value === 'light' ? 'light' : 'dark'; skin.id = 'custom';
+    var pid = S.matchPresetId(skin); if (pid) skin.id = pid;
+    document.querySelectorAll('#presets button').forEach(function (b) { b.classList.toggle('cur', b.getAttribute('data-preset') === pid); });
+    applyLive(); persist();
+  });
   colorsBox.addEventListener('input', function (e) {
     var t = e.target, k = t.getAttribute('data-k') || t.getAttribute('data-hk'); if (!k) return;
     var v = t.value;

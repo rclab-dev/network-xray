@@ -1,4 +1,4 @@
-/* xray-skin.js — X-Ray Core skin layer (Phase 1: colors + protocolOrder)
+/* xray-skin.js — X-Ray Core skin layer (Phase 1: colors + protocolOrder + surface)
  *
  * The representation layer for the X-Ray gallery. A "skin" is a small plain object
  * (frozen shape = SKIN-CONTRACT.md) that picks colors + process stacking order.
@@ -21,6 +21,14 @@
 
   var STORAGE_KEY = 'xray.skin';
   var COLOR_KEYS = ['ospf', 'bgp', 'static', 'link', 'idle', 'down'];
+  /* nx_skin_surface (v1.8.1): the ground the single-node panel (xray-node-panel.js, the 2D picture and its tables) is
+     drawn on. 'dark' = the panel's own defaults; 'light' = these structural tokens. The DeepDive and the topology stay
+     dark whatever the surface (their glow needs a dark ground). SKIN-CONTRACT.md §2b. */
+  var SURFACES = {
+    dark: null,
+    light: { fg: '#1e2430', bg: '#ffffff', border: '#d3d9e2', accent: '#5b3fc4', 'route-fg': '#333b4a', 'sel-bg': '#edf8f0',
+             decider: '#e08a00', 'decider-strong': '#b86e00', note: '#4f5f7a' }
+  };
   // The last skin actually applied this session. May differ from localStorage when a page applies a
   // default view without persisting it (e.g. the containerlab drop-in). UIs that highlight "the current
   // skin" should read current() so the highlight tracks what's on screen, not just what's stored.
@@ -30,7 +38,7 @@
   var SIGNATURE = {
     id: 'signature',
     colors: { ospf: '#39ff14', bgp: '#a855f7', static: '#888888', link: '#00e5ff', idle: '#ff8c00', down: '#555555' },
-    protocolOrder: 'bgp-top',
+    protocolOrder: 'bgp-top', surface: 'dark',
     engineShape: 'cylinder', processGlyph: 'double-circle', rules: {}
   };
 
@@ -55,6 +63,13 @@
       id: 'accessible',
       colors: { ospf: '#009e73', bgp: '#cc79a7', static: '#000000', link: '#56b4e9', idle: '#e69f00', down: '#999999' },
       protocolOrder: 'bgp-top', engineShape: 'cylinder', processGlyph: 'double-circle', rules: {}
+    },
+    {
+      // Slate (light) — the single-node panel on a light ground (light grey + violet, the winner in green). The colors
+      // are dark enough to read as text on white; the DeepDive keeps its dark ground and uses the same six colors.
+      id: 'slate-light',
+      colors: { ospf: '#16803a', bgp: '#6d4fd8', static: '#7a8494', link: '#7c8aa0', idle: '#e08a00', down: '#667085' },
+      protocolOrder: 'bgp-top', surface: 'light', engineShape: 'cylinder', processGlyph: 'double-circle', rules: {}
     }
   ];
 
@@ -69,6 +84,7 @@
       id: (typeof raw.id === 'string' && raw.id) ? raw.id : 'custom',
       colors: {},
       protocolOrder: raw.protocolOrder === 'ospf-top' ? 'ospf-top' : 'bgp-top',
+      surface: raw.surface === 'light' ? 'light' : 'dark',   /* nx_skin_surface: anything else = dark (older skins have none) */
       engineShape: SIGNATURE.engineShape,
       processGlyph: SIGNATURE.processGlyph,
       rules: {}
@@ -96,7 +112,7 @@
     var s = normalize(skin);
     for (var i = 0; i < PRESETS.length; i++) {
       var p = normalize(PRESETS[i]);
-      if (p.protocolOrder !== s.protocolOrder) continue;
+      if (p.protocolOrder !== s.protocolOrder || p.surface !== s.surface) continue;
       var same = true;
       for (var j = 0; j < COLOR_KEYS.length; j++) {
         if (p.colors[COLOR_KEYS[j]] !== s.colors[COLOR_KEYS[j]]) { same = false; break; }
@@ -151,7 +167,9 @@
     // --xnp-decider / --xnp-route-fg stay at the panel defaults (deferred).
     var st = doc.getElementById('xnp-skin-vars');
     if (!st) { st = doc.createElement('style'); st.id = 'xnp-skin-vars'; (doc.head || doc.documentElement).appendChild(st); }
-    st.textContent = '.xnp-root{' +
+    var sf = SURFACES[s.surface] || null, chrome = '';   /* nx_skin_surface: a light ground also sets the structural tokens */
+    if (sf) Object.keys(sf).forEach(function (k) { chrome += '--xnp-' + k + ':' + sf[k] + ' !important;'; });
+    st.textContent = '.xnp-root{' + chrome +
       '--xnp-ospf:' + s.colors.ospf + ' !important;' +
       '--xnp-ok:' + s.colors.ospf + ' !important;' +
       '--xnp-bgp:' + s.colors.bgp + ' !important;' +
@@ -190,6 +208,7 @@
   global.XraySkin = {
     STORAGE_KEY: STORAGE_KEY,
     COLOR_KEYS: COLOR_KEYS,
+    SURFACES: SURFACES,
     SIGNATURE: SIGNATURE,
     PRESETS: PRESETS,
     isHex: isHex,

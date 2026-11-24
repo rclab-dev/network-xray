@@ -2352,7 +2352,7 @@ function _xrayPaintSkinPanel() {
   if (!window.XraySkin) { el.innerHTML = ""; el._xraySkinWired = false; return; }
   if (el._xraySkinWired) { _xraySkinSyncSel(); return; }
   el._xraySkinWired = true;
-  var LABELS = { signature: "Signature", containerlab: "containerlab", "flat-docs": "Flat / Docs", accessible: "Accessible" };
+  var LABELS = { signature: "Signature", containerlab: "containerlab", "flat-docs": "Flat / Docs", accessible: "Accessible", "slate-light": "Slate (light)" };
   var ids = (window.XraySkin.PRESETS || []).map(function(p) { return p.id; });
   var items = ids.map(function(id) {
     return '<button type="button" class="de-skin-item" data-skin="' + id + '">' + (LABELS[id] || id) + "</button>";

@@ -956,7 +956,7 @@
     }, 300);
   }
   /* nx_set_skin (v1.6): setSkin('containerlab') picks a preset by id; setSkin({colors:{...}, protocolOrder}) takes a skin
-     object (SKIN-CONTRACT.md). Only the id (letters/digits), the #rrggbb colors and protocolOrder are passed on, through
+     object (SKIN-CONTRACT.md). Only the id (letters/digits), the #rrggbb colors, protocolOrder and surface (dark / light) are passed on, through
      XraySkin.apply (needs xray-skin.js), which does not write localStorage. ?skin=<id> does the same for a preset.
      Returns true if a skin was applied; an unknown id or no xray-skin.js does nothing. */
   var _inSetSkin = false;
@@ -966,7 +966,8 @@
     var raw = typeof skin === 'string' ? XS.presetById(skin) : skin;
     if (!raw || typeof raw !== 'object') return false;
     var safe = { id: (typeof raw.id === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(raw.id)) ? raw.id : 'custom',
-                 colors: (raw.colors && typeof raw.colors === 'object') ? raw.colors : {}, protocolOrder: raw.protocolOrder };
+                 colors: (raw.colors && typeof raw.colors === 'object') ? raw.colors : {}, protocolOrder: raw.protocolOrder,
+                 surface: raw.surface === 'light' ? 'light' : 'dark' };   /* nx_skin_surface (v1.8.1) */
     _inSetSkin = true;
     try { XS.apply(safe); } finally { _inSetSkin = false; }
     return true;
