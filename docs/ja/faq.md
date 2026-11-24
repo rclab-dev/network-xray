@@ -233,8 +233,8 @@ MIT です (copyright RouteCrushLab)。NeXt UI の graph (`xray-graph-nextui.htm
 
 ### コードで貢献できますか?
 
-1 人で保守している小さな道具です。生の出力を添えて issue を開いてください。修正はここで行い、プルリクエストは
-マージしません。公開済みの版は MIT のままで、fork は歓迎です。[Scope & maintenance](../../README.md#scope--maintenance) を参照してください。
+issue や案を歓迎します。生の出力を添えて issue を開いてください。修正はここで行い、Release の文に issue を開いた人の名前を書きます
+(書かれたくなければ書きません)。作者を 1 人に保つためプルリクエストはマージしませんが、案を見せる形として出すのは構いません。公開済みの版は MIT のままで、fork は歓迎です。[Scope & maintenance](../../README.md#scope--maintenance) を参照してください。
 
 ### 絵がおかしい。どう報告すればいいですか?
 

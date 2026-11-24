@@ -352,7 +352,9 @@ Each entry in `bgp_routes[]` carries the visible attributes (`prefix`, `next_hop
 | `reason` | string | **(iii) best-path reason authority.** The reason stored for the best route: FRR's own `show bgp … json` `paths[].bestpath.selectionReason` (e.g. `Local Pref`, `MED`, `Older Path`, `Router ID`), or, for Cisco IOS-XE (which prints none), the step the collector worked out from the printed columns (`state.nos = 'ios-xe'` tells the readers which). This is the field the collectors write and the panels / `xray-query.js` read; `sel_reason` is read as a synonym. When present it is the FIRST authority for naming the decider. 保存された選択理由 (FRR 自身の selectionReason、IOS-XE では collector が表示の列から割り出した段)。collector が書き、画面と `xray-query.js` が読む欄 (`sel_reason` も同じ物として読む)。存在すれば決定理由の第一権威。 |
 
 **Best-path reason: authority vs. derivation / ベストパス理由の権威と導出.**
-The Best-Path Decision panel names the deciding criterion and renders the full FRR default order
+The Best-Path Decision panel names the deciding criterion and lists the full FRR default order as a ladder; network-xray
+itself compares the visible attributes only up to MED, and a step after MED is named only from `reason` (below) or left
+unnamed ("a step the table does not show") — the same split as the README's "What the router reports, and what network-xray works out" table:
 (Weight → LocPref → Local route → AS-Path → Origin → MED → eBGP&gt;iBGP → IGP metric → **Older Path\* (RFC 5004)** →
 Router ID → Neighbor IP; \* Older Path only between eBGP paths, skipped with `bgp bestpath compare-routerid` — FRR's
 `bgp_path_info_cmp()`).
@@ -591,7 +593,7 @@ collectors: [the list](#fields-the-bundled-collectors-do-not-fill) / 自分で�
 - **EN** This OSS copy is a **comment-free distribution build**; the fully-commented source
   lives inside RouteCrushLab. — **JA** この OSS コピーは**コメント無しの配布ビルド**で、
   フルコメント版ソースは RouteCrushLab 内にあります。
-- **EN** Issues are read but carry no SLA, and **pull requests are not accepted** (single
-  copyright holder, for relicensing). Forking is welcome under the MIT license.
-  — **JA** Issue は読みますが SLA なし、**PR は受け付けません**(再ライセンスのため単一著作権者)。
+- **EN** Issues are read but carry no SLA, and **pull requests are not merged** (single
+  copyright holder, for relicensing); a pull request is still a fine way to show an idea. Forking is welcome under the MIT license.
+  — **JA** Issue は読みますが SLA なし、**PR はマージしません**(再ライセンスのため単一著作権者)。案を見せる形として出すのは構いません。
   MIT のもとで fork は歓迎します。

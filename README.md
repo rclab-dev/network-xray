@@ -1,10 +1,9 @@
 # network-xray
 
-[![rclab-dev/network-xray MCP server](https://glama.ai/mcp/servers/rclab-dev/network-xray/badges/score.svg)](https://glama.ai/mcp/servers/rclab-dev/network-xray)
+[![rclab-dev/network-xray MCP server](https://glama.ai/mcp/servers/rclab-dev/network-xray/badges/score.svg)](https://glama.ai/mcp/servers/rclab-dev/network-xray) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/rclab-dev/network-xray)
 
-**rclab-dev/network-xray** — live BGP / OSPF state viewer for containerlab and netlab labs (FRR, SR Linux, Cisco IOL). Read-only.
-Also an MCP server: lets AI agents read the lab state and ask why a route or adjacency is the way it is ([quickest setup](docs/mcp.md#the-usual-setup)). It reads the state files network-xray's collector writes for a containerlab, netlab or Cisco CML lab; it does not look at your computer's own network.
-**SolvedKit:** turn your lab into a puzzle with a solved check — it proposes the check from a broken and a fixed state of the lab, and judges a lab without the page ([guide](docs/solvedkit.md)). Hand out exercises as a HandsOn Pack ([problem.json](docs/problem-format.md)), and make their check with SolvedKit.
+**rclab-dev/network-xray** — explains, to people and to AI agents, why the routers in a containerlab or netlab lab are in the state they are in: which BGP path each router chose and why, and which OSPF adjacency is missing and what differs (FRR, SR Linux, Cisco IOL). Read-only.
+The same state through other doors: an MCP server for AI agents ([quickest setup](docs/mcp.md#the-usual-setup)), [SolvedKit](docs/solvedkit.md) for a solved check (hand exercises out as a HandsOn Pack), and [Grafana](#into-grafana) or any page by embedding. It is a part that fits into what you already run; it does not configure the network.
 **Why is an OSPF adjacency not coming up?** It compares the values both ends must share — area, MTU, hello and dead intervals, network type, authentication — and names the one that differs, e.g. `r1 Ethernet0/1 ⇔ r2 Ethernet0/1: OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20`. **Which BGP session is down?** It lists each session that is not Established with its state, e.g. `r1 → 10.0.0.2 (AS 65002): BGP Active` (the state, not the cause).
 
 **Why did BGP pick this path?** network-xray shows, for a network lab, which path each router chose, what the other candidates were, and why. It reads the live state of the FRR, Nokia SR Linux and Cisco IOL routers in your containerlab or netlab lab and draws it in the browser.
@@ -107,7 +106,7 @@ The IPv6 BGP table is not read.
 | Node.js | 18 and 24 (for `xray.sh` / the collector without the image; the tests run on both, and CI and the image use 24) |
 
 <a id="maintenance-policy"></a>
-This is a small tool kept by one person. Please open an issue with the raw output and I'll make the fix here; pull requests aren't merged, because the project keeps a single copyright holder.
+Issues and ideas are very welcome: open one with the raw output and I'll make the fix here, and the release notes name you (unless you'd rather not be named). The code keeps a single author so the license stays simple, so pull requests aren't merged; a pull request is still a fine way to show an idea.
 Released versions stay MIT, and forks are welcome.
 
 **Walkthrough:** [See why BGP picked that path — a browser X-ray for your containerlab lab](https://dev.to/routecrushlab/see-why-bgp-picked-that-path-a-browser-x-ray-for-your-containerlab-lab-3e) (dev.to)
@@ -968,11 +967,23 @@ with code 2.
 
 ### MCP server (stdio)
 
+**MCP security at a glance** <!-- nx_mcp_safety -->
+
+| Question | Answer |
+|---|---|
+| Does it change the routers? | No. The MCP server reads state files and never contacts a router. The collector that writes them sends only fixed read commands (`show` and the like); the few exceptions, such as restarting FRR in a router where it did not come up when an example lab starts, are listed under [Read-only](#read-only). |
+| Which files can the AI read? | Only under `--path` (or `NX_MCP_PATH`; without either, the folder the server started in), and anywhere only with `--allow-any-path`. A state file over 64 MB is not read, and the server writes no files. It does not look at your computer's own network. |
+| Can the AI make it read the routers? | Not by default: `collect` is off so that an AI does not go and read the routers on its own. Start the server with `--allow-collect` to offer it; it uses the same read commands on a running containerlab lab. |
+| Does anything leave your machine? | No. The tools make no network connections, and the MCP Apps picture loads nothing from outside. |
+| Passwords? | The MCP server needs none and reads none. The collector takes router logins from environment variables (`NX_IOS_USER` / `NX_IOS_PASSWORD`, `CML_USER` / `CML_PASSWORD`). |
+| Why does the page's image need the Docker socket? | containerlab's routers are read with `docker exec`, so the collector needs the socket. It gives the same power as any user who can run `docker` (root on the host): use it on lab machines only. The image's `mcp` mode does not need it. |
+| Who can open the page? | `xray.sh` and the `docker run` line in this README serve it on this machine only (`127.0.0.1`); it has no login. Use `--bind 0.0.0.0` only on a network you trust. |
+
 `scripts/xray-mcp.js` serves the same questions to an MCP client (Claude Desktop, Claude Code, …) over stdio,
-with no dependencies. Tools: `lab_state` (`path`), `why_best_path` (`path`, `node`, `prefix`, optional `vrf`),
+with no dependencies. It has 13 tools: 9 that read the lab state and 4 for a solved check (`check_run`, `check_verify`, `check_suggest`, `check_init`; see [SolvedKit](docs/solvedkit.md)). The ones that read the state: `lab_state` (`path`), `why_best_path` (`path`, `node`, `prefix`, optional `vrf`),
 `list_routers` (`path`), `ospf_neighbors`, `ospf_interfaces` and `bgp_neighbors` (`path`, optional `router`), `route_lookup`
 (`path`, `router`, `destination`, optional `vrf`: the longest match in the routing table the collector saved), and
-`why_path` (`path`, `router`, `prefix`, optional `vrf`: the selected BGP path, the other candidates and the deciding step).
+`why_path` (`path`, `router`, `prefix`, optional `vrf`: the selected BGP path, the other candidates and the deciding step), and `state_diff` (`before`, `after`: what changed from a state you kept).
 It is read-only: it only reads the path it is given, never runs commands on routers and never writes files.
 Started with `--allow-collect`, it also offers `collect` (`topology`, optional `proto`): it reads a running containerlab lab's routers again with the collector's read-only commands (this tool reads the local Docker) and returns a new `path` for the other tools ([docs/mcp.md](docs/mcp.md#read-the-lab-again-collect-opt-in)). <!-- nx_mcp_collect -->
 It speaks the initialize-based MCP revisions (2024-11-05 to 2025-11-25), which current MCP clients use over stdio;
@@ -1081,9 +1092,8 @@ The DeepDive shows a small "Powered by RCL" link in its bottom-right corner. You
 
 # 日本語
 
-**rclab-dev/network-xray** — containerlab と netlab のラボの BGP / OSPF の今の状態を見る道具です (FRR・SR Linux・Cisco IOL)。読むだけです。
-MCP のサーバでもあります: AI エージェントがラボの状態を読み、経路や隣接がなぜ今の形なのかを聞けます ([いちばん短い設定](docs/ja/mcp.md#よくある使い方))。読むのは network-xray の collector が containerlab・netlab・Cisco CML のラボについて書いた状態のファイルです。手元の PC のネットワークを調べる道具ではありません。
-**SolvedKit:** ラボを「解いたら ✓ が付く問題」にできます — 壊れた版と直した版の状態から判定 (check) の案を出し、頁なしでラボを判定します ([手引き](docs/ja/solvedkit.md))。 HandsOn Pack ([problem.json](docs/ja/problem-format.md)) で演習を配り、SolvedKit で判定を作ります。
+**rclab-dev/network-xray** — containerlab と netlab のラボのルータが、なぜ今の状態なのかを、人と AI エージェントに説明する道具です: 各ルータがどの BGP の経路をなぜ選んだか、どの OSPF の隣接が無く、何が違うか (FRR・SR Linux・Cisco IOL)。読むだけです。
+同じ状態を別の口からも: AI エージェント向けの MCP のサーバ ([いちばん短い設定](docs/ja/mcp.md#よくある使い方))・判定を作る [SolvedKit](docs/ja/solvedkit.md) (演習は HandsOn Pack で配れます)・埋め込みで [Grafana](#grafana-に入れる) などの頁へ。今ある仕組みに組み込む部品で、ネットワークの設定は変えません。
 **OSPF の隣接が上がらないのはなぜ?** 両端でそろっていないといけない値 (area・MTU・hello と dead の間隔・network type・認証) を比べ、違う物を名指します。例 `r1 Ethernet0/1 ⇔ r2 Ethernet0/1: OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20`。**どの BGP のセッションが落ちている?** Established でないセッションを、その状態とともに並べます。例 `r1 → 10.0.0.2 (AS 65002): BGP Active` (状態であって、原因ではありません)。
 
 *[English](#network-xray) | 日本語*
@@ -1182,7 +1192,7 @@ IPv6 の BGP の表は読みません。
 | Node.js | 18 と 24 (`xray.sh` / イメージを使わない collector。試験は両方で流し、CI とイメージは 24) |
 
 <a id="maintenance-policy-ja"></a>
-1 人で保守している小さな道具です。生の出力を添えて issue を開いてください。修正はここで行い、Pull Request はマージしません (著作権を 1 人に保つため)。
+issue や案を歓迎します。生の出力を添えて issue を開いてください。修正はここで行い、Release の文に issue を開いた人の名前を書きます (書かれたくなければ書きません)。ライセンスを単純に保つため作者を 1 人にしているので Pull Request はマージしませんが、案を見せる形として PR を出すのは構いません。
 公開済みの版は MIT のままで、フォークは歓迎します。
 
 **解説記事:** [network-xray の紹介 (Zenn)](https://zenn.dev/routecrushlab/articles/network-xray-oss)
@@ -1928,7 +1938,19 @@ netlab のラボでは `--mgmt-subnet 192.168.121.0/24` を足します (netlab 
 
 ### MCP サーバ (stdio)
 
-`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。ツール: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors`・`ospf_interfaces`・`bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。`--allow-collect` を付けて起動した時だけ `collect` (`topology`・任意で `proto`) も出ます: 動いている containerlab のラボのルータを collector の読むだけのコマンドで読み直し (このツールは手元の Docker を読みます)、ほかのツールに渡す新しい `path` を返します ([docs/ja/mcp.md](docs/ja/mcp.md))。<!-- nx_mcp_collect -->initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
+**MCP の安全、ひと目で** <!-- nx_mcp_safety -->
+
+| 問い | 答え |
+|---|---|
+| ルータを変える? | 変えません。MCP のサーバは状態のファイルを読むだけで、ルータには繋ぎません。そのファイルを書く collector が送るのも、決まった読むコマンド (`show` など) だけです。例外 (例のラボを立てた時に、起動しなかった FRR を起動し直す等) は [読むだけ](#read-only-ja) にまとめてあります。 |
+| AI はどのファイルを読める? | `--path` (か `NX_MCP_PATH`。どちらも無ければ起動したフォルダ) の下だけです。どこでも読めるのは `--allow-any-path` の時だけ。64 MB を超える状態のファイルは読まず、ファイルは書きません。手元の PC のネットワークは調べません。 |
+| AI がルータを読みに行ける? | 初めはできません。AI が自分の判断でルータを読みに行かない様に、`collect` は切ってあります。`--allow-collect` で起動した時だけ出て、動いている containerlab のラボを同じ読むコマンドで読みます。 |
+| 外に何か出る? | 出ません。道具は外に通信せず、MCP Apps の絵も外の物を読み込みません。 |
+| パスワードは? | MCP のサーバは使わず、読みもしません。collector はルータのログインを環境変数 (`NX_IOS_USER` / `NX_IOS_PASSWORD`・`CML_USER` / `CML_PASSWORD`) から取ります。 |
+| 頁の像に Docker の socket が要るのはなぜ? | containerlab のルータは `docker exec` で読むので、collector に socket が要ります。`docker` を使える人と同じ力 (host の root と同じ) になるので、ラボのマシンだけで使ってください。像の `mcp` の口には要りません。 |
+| 頁は誰が開ける? | `xray.sh` と、この README の `docker run` の行では、このマシンだけ (`127.0.0.1`) に出します。ログインはありません。`--bind 0.0.0.0` は信頼できる網でだけ。 |
+
+`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。道具は 13: ラボの状態を読む 9 と、判定 (solved check) の 4 (`check_run`・`check_verify`・`check_suggest`・`check_init`。[SolvedKit](docs/ja/solvedkit.md))。状態を読む物: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors`・`ospf_interfaces`・`bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)・`state_diff` (`before`・`after`: 取っておいた状態から何が変わったか)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。`--allow-collect` を付けて起動した時だけ `collect` (`topology`・任意で `proto`) も出ます: 動いている containerlab のラボのルータを collector の読むだけのコマンドで読み直し (このツールは手元の Docker を読みます)、ほかのツールに渡す新しい `path` を返します ([docs/ja/mcp.md](docs/ja/mcp.md))。<!-- nx_mcp_collect -->initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
 
 ```json
 {

@@ -1,7 +1,7 @@
 # Contributing
 
-Issues are welcome, and fixes are made in this repository.
-Pull requests are not merged: the project keeps a single copyright holder. Forks are welcome.
+Issues and ideas are welcome, and fixes are made in this repository; the release notes name the person who opened the issue (unless they'd rather not be named).
+Pull requests are not merged, because the code keeps a single author so the license stays simple; a pull request is still a fine way to show an idea. Forks are welcome.
 
 A bug report one maintainer can act on has:
 
