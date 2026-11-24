@@ -490,6 +490,8 @@ The answer has the selected path, the other `candidates` with their attributes, 
 the router printed (Cisco IOS-XE prints no reason; the same reason `why_best_path` returns), `"comparison"` when network-xray
 inferred it by comparing the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or `null` with a note when neither
 says. With `"device"` or `"derived"`, `comparison` adds what the attribute comparison says, as a cross-check.
+"First path received" and "Nothing to Select" are not a step that decided between paths (nothing was compared), so they
+are not a `deciding_step`: the comparison gives it (e.g. `"Only path"`) and the text is kept in `device_reason`.
 
 ```json
 {"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"why_path","arguments":{"path":"test/fixtures/iosxe-q15","router":"r1","prefix":"8.8.8.0/24"}}}
@@ -510,9 +512,9 @@ says. With `"device"` or `"derived"`, `comparison` adds what the attribute compa
     "best": true
   },
   "candidates": [],
-  "deciding_step": "First path received",
-  "reason_source": "derived",
-  "comparison": "Only path"
+  "device_reason": "First path received",
+  "deciding_step": "Only path",
+  "reason_source": "comparison"
 }
 ```
 

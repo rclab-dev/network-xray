@@ -486,6 +486,9 @@ function whyPath(states, router, destination, vrf) {
       (r.vrf || 'default') === (w.vrf || 'default');
   })[0];
   var stored = storedReason(best);
+  // "First path received" / "Nothing to Select" are not a step that decided between paths (FRR prints them when
+  // nothing was compared) -> not a deciding_step; the attribute comparison says what it is (e.g. "Only path")
+  if (/^(First path received|Nothing to Select)$/i.test(stored)) { out.device_reason = stored; stored = ''; }
   var devReason = (s.nos == null || s.nos === 'frr') ? stored : '';   // FRR reported it
   var derived = s.nos === 'ios-xe' ? stored : '';                     // the IOS-XE collector worked it out (IOS prints none)
   if (!out.selected) {

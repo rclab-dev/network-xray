@@ -482,6 +482,8 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 わけを出さない・`why_best_path` と同じわけ) は `"derived"`、network-xray がデータの属性 (Weight・LocPrf・AS-Path・Origin・MED)
 を比べて割り出した時は `"comparison"`、どちらでもない時は `null` で note が付きます。`"device"` と `"derived"` の時は、
 属性を比べた結果を `comparison` に添えます (突き合わせ用)。
+"First path received" と "Nothing to Select" は経路を比べて決めた段ではない (何も比べていない) ので `deciding_step` にせず、
+比べた結果 (例 `"Only path"`) を入れ、その文は `device_reason` に残します。
 
 ```json
 {"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"why_path","arguments":{"path":"test/fixtures/iosxe-q15","router":"r1","prefix":"8.8.8.0/24"}}}
@@ -502,9 +504,9 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
     "best": true
   },
   "candidates": [],
-  "deciding_step": "First path received",
-  "reason_source": "derived",
-  "comparison": "Only path"
+  "device_reason": "First path received",
+  "deciding_step": "Only path",
+  "reason_source": "comparison"
 }
 ```
 
