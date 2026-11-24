@@ -249,7 +249,7 @@ If the assistant does not know which lab you mean, give the path again.
 
 | Tool | Input | Returns |
 |---|---|---|
-| `lab_state` | `path` | `wrong` first (what is wrong, one `text` line each), then nodes and interfaces, links, OSPF adjacencies, BGP sessions, counts |
+| `lab_state` | `path`, `only_problems` (optional) | `wrong` first (what is wrong, one `text` line each), then nodes and interfaces, links, OSPF adjacencies, BGP sessions, counts. `only_problems: true` returns only `wrong` and `counts` |
 | `why_best_path` | `path`, `node`, `prefix`, `vrf?` | BGP best path for the prefix and the reason stored with it |
 | `list_routers` | `path` | router names, which protocols have state, whether a routing table was collected, row counts |
 | `ospf_neighbors` | `path`, `router?` | per router: neighbor ID, address, state, interface, DR/BDR role, peer node |
@@ -321,7 +321,7 @@ Input: `path`.
 
 The r2–r3 link has `ospf_state: "Down"` because OSPF is not running toward r3. Only eBGP runs on that link.
 
-`wrong` comes first in `lab_state`, `ospf_interfaces`, `ospf_neighbors` and `bgp_neighbors`: an interface that is down, an OSPF interface that faces a neighbor (not passive) and has no adjacency, with the values both ends must share and do not (e.g. `"r1 eth1 ⇔ r2 eth1: OSPF no adjacency — hello 2 ⇔ 3"`), a Full adjacency whose ends still differ, and a BGP session that is not Established. It is empty when nothing is wrong (as here). An adjacency that never came up is not in a neighbor table, so `ospf_full` / `ospf_total` alone can read "all Full": `ospf_ifaces_expected`, `ospf_ifaces_full` and `ospf_ifaces_without_adjacency` count the OSPF interfaces (from `ospf_ifaces`; this capture has none, hence 0).
+`wrong` comes first in `lab_state`, `ospf_interfaces`, `ospf_neighbors` and `bgp_neighbors`: an interface that is down, an OSPF interface that faces a neighbor (not passive) and has no adjacency, with the values both ends must share and do not (e.g. `"r1 eth1 ⇔ r2 eth1: OSPF no adjacency — hello 2 ⇔ 3"`), a Full adjacency whose ends still differ, a BGP session that is not Established, and a route that cannot be used because its next hop is not reachable: a BGP prefix whose paths the router marks not valid (an inaccessible next hop; a next hop the router resolves recursively is valid and not listed) and that nothing else installs, a static route that is not installed while nothing else is (its interface not down), and, as a warning, an installed route whose recursive next hop is resolved only through the containerlab management network. It is empty when nothing is wrong (as here). An adjacency that never came up is not in a neighbor table, so `ospf_full` / `ospf_total` alone can read "all Full": `ospf_ifaces_expected`, `ospf_ifaces_full` and `ospf_ifaces_without_adjacency` count the OSPF interfaces (from `ospf_ifaces`; this capture has none, hence 0).
 
 ### why_best_path
 

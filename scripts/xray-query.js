@@ -160,7 +160,58 @@ function ospfExpected(states) {
   return out;
 }
 function wrongList(states, names) {
-  return wrongListBase(states, names).concat(ospfDbWrong(states, names));
+  return wrongListBase(states, names).concat(ospfDbWrong(states, names), nhWrong(states, names));
+}
+/* nx_nh_wrong (v1.8): routes that cannot be used because the next hop is not reachable - read from what the state already has.
+   - a BGP prefix whose paths are all marked not valid by the router (FRR / IOS: the next hop is inaccessible) and that has no
+     route in the routing table either. The router's valid flag already counts a next hop it resolves recursively (through OSPF,
+     a static route ...), so such a path is valid and not listed here.
+   - a static route that is not installed while nothing else is installed for that prefix, and whose outgoing interface is not
+     down (an interface that is down is already its own line)
+   - an installed route whose recursive next hop is resolved only through the containerlab management network (warn) */
+function nhWrong(states, names) {
+  var out = [];
+  names.forEach(function (n) {
+    var st = states[n], rt = Array.isArray(st.routing_table) ? st.routing_table : [];
+    var ifs = st.interfaces && typeof st.interfaces === 'object' ? st.interfaces : {};
+    var inRib = Object.create(null);
+    rt.forEach(function (r) { if (r && r.selected && r.prefix) inRib[(r.vrf || '') + '|' + r.prefix] = true; });
+    var byPfx = Object.create(null);
+    (Array.isArray(st.bgp_routes) ? st.bgp_routes : []).forEach(function (r) {
+      if (!r || !r.prefix) return;
+      var p = /\//.test(r.prefix) || r.prefixlen == null ? String(r.prefix) : r.prefix + '/' + r.prefixlen, k = (r.vrf || '') + '|' + p;
+      (byPfx[k] = byPfx[k] || { prefix: p, vrf: r.vrf || '', rows: [] }).rows.push(r);
+    });
+    Object.keys(byPfx).sort().forEach(function (k) {
+      var g = byPfx[k];
+      if (inRib[k] || g.rows.some(function (r) { return r.valid !== false; })) return;
+      g.rows.forEach(function (r) {
+        var row = { kind: 'down', protocol: 'bgp', node: n, prefix: g.prefix, next_hop: r.next_hop || '' };
+        if (g.vrf) row.vrf = g.vrf;
+        row.text = n + ' ' + g.prefix + ' via ' + (r.next_hop || '?') + ': BGP next hop not reachable (the path is not used)';
+        out.push(row);
+      });
+    });
+    rt.forEach(function (r) {
+      if (!r || !r.prefix || !/^static$/i.test(r.protocol || '')) return;
+      var k = (r.vrf || '') + '|' + r.prefix;
+      if (!r.selected) {
+        if (inRib[k] || (r.out_iface && ifs[r.out_iface] && ifs[r.out_iface].up === false)) return;
+        var row = { kind: 'down', protocol: 'route', node: n, prefix: r.prefix, next_hop: r.next_hop || '' };
+        if (r.vrf) row.vrf = r.vrf;
+        row.text = n + ' ' + r.prefix + (r.next_hop ? ' via ' + r.next_hop : '') + ': static route not installed (next hop not reachable)';
+        out.push(row);
+      }
+    });
+    rt.forEach(function (r) {
+      if (!r || !r.selected || !r.resolved_via || !r.resolved_via.via_mgmt) return;
+      var row = { kind: 'warn', protocol: 'route', node: n, prefix: r.prefix, next_hop: r.next_hop || '' };
+      if (r.vrf) row.vrf = r.vrf;
+      row.text = n + ' ' + r.prefix + ' via ' + (r.next_hop || '?') + ': the next hop is reached only through the containerlab management network (not inside the lab)';
+      out.push(row);
+    });
+  });
+  return out;
 }
 function wrongListBase(states, names) {
   var out = [], seen = Object.create(null);

@@ -2,6 +2,11 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## Unreleased
+
+- **`wrong`: routes whose next hop is not reachable:** a BGP prefix whose paths the router marks not valid (an inaccessible next hop) and that nothing else installs, and a static route that is not installed while nothing else is (an interface that is down stays its own line). A next hop the router resolves recursively (through OSPF, a static route) is valid and not listed. An installed route whose recursive next hop is resolved only through the containerlab management network is a warning. Read from the state the collectors already write.
+- **MCP `lab_state`:** optional `only_problems: true` returns only `wrong` and `counts`. Without it the answer is unchanged.
+
 ## v1.7.0 — 2026-11-24
 
 - **MCP: a picture in the chat (MCP Apps):** a client that draws MCP Apps (the `io.modelcontextprotocol/ui` extension) gets the X-Ray view of the router under the answer of `lab_state`, `why_best_path`, `why_path` and `ospf_neighbors`, with the prefix picked. One HTML resource (`ui://network-xray/view.html`) that loads nothing from outside; the lab state reaches it through `view_data`, a tool kept from the model. No URL is returned, the text answers are the same, and other clients see the tools as before.

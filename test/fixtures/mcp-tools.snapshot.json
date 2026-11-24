@@ -1,13 +1,17 @@
 [
   {
     "name": "lab_state",
-    "description": "Read a network-xray lab state (read-only) and summarize it. Starts with `wrong`: what is wrong, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ, a BGP session not Established); empty when nothing is. Then nodes and interfaces, links, OSPF adjacencies, BGP sessions and counts. An adjacency that never came up is not in a neighbor table, so counts also has ospf_ifaces_expected (OSPF interfaces that face a neighbor, not passive), ospf_ifaces_full and ospf_ifaces_without_adjacency. No router is contacted.",
+    "description": "Read a network-xray lab state (read-only) and summarize it. Starts with `wrong`: what is wrong, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ, a BGP session not Established, a route that cannot be used because its next hop is not reachable); empty when nothing is. only_problems: true returns only wrong and counts. Then nodes and interfaces, links, OSPF adjacencies, BGP sessions and counts. An adjacency that never came up is not in a neighbor table, so counts also has ospf_ifaces_expected (OSPF interfaces that face a neighbor, not passive), ospf_ifaces_full and ospf_ifaces_without_adjacency. No router is contacted.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "path": {
           "type": "string",
           "description": "The lab's state: an xray-states.js, a state_<node>.json, a folder of them, or a folder of saved FRR show ... json files, e.g. lab/xray-states.js"
+        },
+        "only_problems": {
+          "type": "boolean",
+          "description": "true = return only wrong and counts (no nodes, links or adjacency lists). Default false"
         }
       },
       "required": [

@@ -63,14 +63,15 @@ var PATH_PROP = { type: 'string', description: "The lab's state: an xray-states.
 var TOOLS = [
   {
     name: 'lab_state',
-    description: 'Read a network-xray lab state (read-only) and summarize it. ' + 'Starts with `wrong`: what is wrong, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ, a BGP session not Established); empty when nothing is. ' +
+    description: 'Read a network-xray lab state (read-only) and summarize it. ' + 'Starts with `wrong`: what is wrong, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ, a BGP session not Established, a route that cannot be used because its next hop is not reachable); empty when nothing is. only_problems: true returns only wrong and counts. ' +
       'Then nodes and interfaces, links, OSPF adjacencies, BGP sessions and counts. An adjacency that never came up is not in a ' +
       'neighbor table, so counts also has ospf_ifaces_expected (OSPF interfaces that face a neighbor, not passive), ospf_ifaces_full and ' +
       'ospf_ifaces_without_adjacency. No router is contacted.',
     inputSchema: {
       type: 'object',
       properties: {
-        path: PATH_PROP
+        path: PATH_PROP,
+        only_problems: { type: 'boolean', description: 'true = return only wrong and counts (no nodes, links or adjacency lists). Default false' }   /* nx_nh_wrong */
       },
       required: ['path'],
       additionalProperties: false
@@ -518,7 +519,12 @@ function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = args || {};
   if (defaultPath && !/^(state_diff|check_verify|check_suggest|check_init)$/.test(name) && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
-  if (name === 'lab_state') return query.summarize(loadStates(str(args, 'path', true)));
+  if (name === 'lab_state') {   /* nx_nh_wrong: only_problems = wrong and counts only */
+    var op = args.only_problems;
+    if (op != null && typeof op !== 'boolean') throw new Error('argument only_problems must be true or false');
+    var sm = query.summarize(loadStates(str(args, 'path', true)));
+    return op ? { wrong: sm.wrong, counts: sm.counts } : sm;
+  }
   if (name === 'view_data') return viewData(loadStates(str(args, 'path', true)));   /* nx_mcp_apps */
   if (name === 'why_best_path') {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);

@@ -242,7 +242,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 
 | ツール | 入力 | 返す物 |
 |---|---|---|
-| `lab_state` | `path` | 最初に `wrong` (問題のある所・1 件 1 行の `text`)、続いて ノードとインターフェース・リンク・OSPF の隣接・BGP のセッション・件数 |
+| `lab_state` | `path`・`only_problems` (任意) | 最初に `wrong` (問題のある所・1 件 1 行の `text`)、続いて ノードとインターフェース・リンク・OSPF の隣接・BGP のセッション・件数。`only_problems: true` なら `wrong` と件数だけ |
 | `why_best_path` | `path`, `node`, `prefix`, `vrf?` | そのプレフィックスの BGP の最良経路と、一緒に保存されている理由 |
 | `list_routers` | `path` | ルータの名前・state のあるプロトコル・ルーティングテーブルを集めたか・行の数 |
 | `ospf_neighbors` | `path`, `router?` | ルータごと: ネイバー ID・アドレス・状態・インターフェース・DR/BDR の役割・相手のノード |
