@@ -1,0 +1,59 @@
+name: List my reader
+description: You wrote a reader in your own repository and would like it in the list of readers by other people.
+title: "[reader] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A reader writes the router state network-xray draws ([docs/readers.md](https://github.com/rclab-dev/network-xray/blob/main/docs/readers.md)).
+        Readers stay in your repository under your license; this issue only adds one line to the list. The list says that listed readers are not reviewed by this project.
+        English or 日本語, either is fine.
+
+  - type: input
+    id: repo
+    attributes:
+      label: Repository URL
+      placeholder: "https://github.com/you/frr-snmp-to-xray"
+    validations:
+      required: true
+
+  - type: input
+    id: reads
+    attributes:
+      label: What it reads
+      description: The device or source, and how (for example "Arista cEOS, eAPI JSON" or "SuzieQ tables").
+    validations:
+      required: true
+
+  - type: dropdown
+    id: fills
+    attributes:
+      label: What it fills
+      multiple: true
+      options:
+        - Interfaces and routes
+        - OSPF
+        - BGP (neighbors)
+        - BGP (best path and the reason)
+        - Static routes
+        - Links
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: network-xray version you tested with
+      placeholder: "v1.8.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample output that passes scripts/validate-states.js
+      description: |
+        A small `xray-states.js` (or `state_<router>.json`) from a lab, or a link to one in your repository. **Remove secrets before pasting.**
+      render: json
+    validations:
+      required: true
