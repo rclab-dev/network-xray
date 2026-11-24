@@ -57,9 +57,11 @@
   function parseBgpTable(text) {
     // Header-driven column slicing (robust to right-aligned numeric cols / blank cells / flags) +
     // multipath continuation rows (`*` / blank Network → previous prefix) + attribute extraction
-    // (Metric / LocPrf[blank=default 100] / Weight). (tested)
+    // (Metric / LocPrf[blank = the table's "Default local pref N", 100 when the header is not pasted] / Weight). (tested)
     var lines = (text || '').split(/\r?\n/);
-    var out = { localAs: null, routerId: null, routes: [] };
+    var out = { localAs: null, routerId: null, defaultLocalPref: null, routes: [] };
+    var mDef = (text || '').match(/Default local pref\s+(\d+)/i); if (mDef) out.defaultLocalPref = parseInt(mDef[1], 10);
+    var defLp = out.defaultLocalPref != null ? out.defaultLocalPref : 100;
     var mAs = (text || '').match(/local AS\s+(\d+)/i); if (mAs) out.localAs = mAs[1];
     var mRid = (text || '').match(/local router ID is\s+([0-9.]+)/i); if (mRid) out.routerId = mRid[1];
     var cols = null;   // column start offsets from the header row
@@ -97,9 +99,11 @@
       var mo = pathRaw.match(/([ie?])\s*$/); var origin = mo ? mo[1] : '';
       var aspath = pathRaw.replace(/\s*[ie?]\s*$/, '').trim();
       var best = />/.test(flags);
-      out.routes.push({ prefix: prefix, nexthop: nh, best: best, ibgp: /i/.test(flags.replace('>', '')),
-        metric: num(metric, 0), local_pref: num(locprf, 100), weight: num(weight, 0),   // LocPrf blank = default 100
-        as_path: aspath, origin: origin, status: flags.replace(/\s+/g, '') || (best ? '*>' : '*') });
+      var rt = { prefix: prefix, nexthop: nh, best: best, ibgp: /i/.test(flags.replace('>', '')),
+        metric: num(metric, 0), local_pref: num(locprf, defLp), weight: num(weight, 0),   // LocPrf blank = the router's default
+        as_path: aspath, origin: origin, status: flags.replace(/\s+/g, '') || (best ? '*>' : '*') };
+      if (locprf === '') rt.local_pref_default = true;   // not printed: the default the router compares with
+      out.routes.push(rt);
     });
     return out;
   }
