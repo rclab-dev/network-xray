@@ -13,6 +13,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **MCP `why_path`:** "First path received" and "Nothing to Select" are not a `deciding_step` (nothing was compared): the comparison gives it (e.g. `"Only path"`) and the text is kept in `device_reason`.
 - **Node panel:** shows a router's own OSPF area only (a third router no longer shows another router's area).
 - **Static DeepDive:** says "(nexthop unreachable)" only when the data says the next hop is not reachable (a static route can stay out of the RIB for other reasons).
+- **MCP with `docker run` or the netlab tool:** `docker exec -i <container> network-xray mcp --path /tmp/network-xray` reads the live state in that container; no copy with `curl` first ([docs/mcp.md](docs/mcp.md#where-the-state-comes-from)).
 - **README:** the opening says what it explains (why the routers are in the state they are in), with MCP, SolvedKit and Grafana as other doors to the same state; "MCP security at a glance" (en / ja); the 13 MCP tools as 9 that read the state and 4 for a solved check; the mcpservers.org badge. Pull requests: the same policy in softer words, and the release notes name the person who opened the issue (unless they would rather not be named). DATA-CONTRACT 4.4: what network-xray compares itself (up to MED, then eBGP > iBGP) and what it takes from the router.
 
 ## v1.7.0 — 2026-11-24

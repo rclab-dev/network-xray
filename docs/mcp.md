@@ -45,8 +45,8 @@ and read under its folder). A `path` outside answers
 `outside the folder this server reads (<folder>): start it with --path <folder>, or --allow-any-path`: check the
 `--path` in your client's settings, or start it with `--allow-any-path`.
 
-With `docker run` or the netlab tool the state is inside the container: save a copy with `curl` first and give that
-file as `path` (the command is under [Where the state comes from](#where-the-state-comes-from)).
+With `docker run` or the netlab tool the state is inside that container: run the MCP server in the same container with
+`docker exec` (the command is under [Where the state comes from](#where-the-state-comes-from)).
 
 ## Where the state comes from
 
@@ -70,14 +70,19 @@ the repo folder) as `path` while the lab is running; each call reads the latest 
 **A containerlab lab you graph yourself** (the README's "Labs started another way"): `clab-xray-collect.js … --watch`
 writes `xray-states.js` into the folder you give it. Give that folder as `path`; it stays live the same way.
 
-**`docker run` or the netlab tool:** the state is inside the container. The page serves it, so save a copy and give
-that file as `path` (use the port the page is on):
+**`docker run` or the netlab tool:** the state is inside the container, in `/tmp/network-xray`, and the collector keeps it
+current. Start the MCP server in that container with `docker exec`; each call reads the latest state and nothing is copied
+out: <!-- nx_mcp_docker_exec -->
 
 ```
-mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/nx-state/xray-states.js
+docker exec -i <container> network-xray mcp --path /tmp/network-xray
 ```
 
-This is a snapshot: run `curl` again for the current state.
+`<container>` is the name `docker ps` shows: add `--name nx` to the `docker run` line to choose one; the netlab tool names it
+`<lab>_network_xray`. In a client's JSON config, `"command": "docker"` and `"args": ["exec", "-i", "nx", "network-xray", "mcp",
+"--path", "/tmp/network-xray"]`. The server ends when the container stops. To keep a snapshot instead (for example a baseline
+for `state_diff`), save a copy from the page and give that file as `path` (use the port the page is on):
+`mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/nx-state/xray-states.js`.
 
 ## Read the lab again: collect (opt-in) <!-- nx_mcp_collect -->
 

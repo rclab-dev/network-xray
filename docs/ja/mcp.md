@@ -42,8 +42,8 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 `outside the folder this server reads (<folder>): start it with --path <folder>, or --allow-any-path` と答えます。
 クライアントの設定の `--path` を見直すか、`--allow-any-path` で起動してください。
 
-`docker run` や netlab の tool の時は state がコンテナの中にあります: 先に `curl` で写しを取り、そのファイルを
-`path` に渡してください (コマンドは [state はどこから来るか](#state-はどこから来るか) にあります)。
+`docker run` や netlab の tool の時は state がそのコンテナの中にあります: 同じコンテナの中で MCP のサーバを `docker exec` で
+動かしてください (コマンドは [state はどこから来るか](#state-はどこから来るか) にあります)。
 
 ## state はどこから来るか
 
@@ -67,14 +67,18 @@ claude mcp add network-xray -- node /path/to/network-xray/scripts/xray-mcp.js --
 **自分で graph を動かす containerlab のラボ** (README の「Labs started another way」): `clab-xray-collect.js … --watch` は
 渡したフォルダに `xray-states.js` を書きます。そのフォルダを `path` に渡します。同じように最新の状態を読みます。
 
-**`docker run` か netlab のツール:** state はコンテナの中です。画面がそれを配っているので、写しを保存して、そのファイルを
-`path` に渡します (ポートは画面のポート):
+**`docker run` か netlab のツール:** state はコンテナの中の `/tmp/network-xray` にあり、collector が今の状態に保ちます。そのコンテナの中で
+MCP のサーバを `docker exec` で動かします。呼ぶたびに最新の状態を読み、外に写しません: <!-- nx_mcp_docker_exec -->
 
 ```
-mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/nx-state/xray-states.js
+docker exec -i <container> network-xray mcp --path /tmp/network-xray
 ```
 
-これはその時の写しです。今の状態にするには `curl` をもう一度動かします。
+`<container>` は `docker ps` に出る名前です。`docker run` の行に `--name nx` を足すと決められます。netlab のツールでは
+`<lab>_network_xray` です。クライアントの JSON の設定では `"command": "docker"`、`"args": ["exec", "-i", "nx", "network-xray", "mcp",
+"--path", "/tmp/network-xray"]`。コンテナが止まるとサーバも終わります。その時の写しを取っておきたい時 (`state_diff` の基準など) は、
+画面から写しを保存して、そのファイルを `path` に渡します (ポートは画面のポート):
+`mkdir -p ~/nx-state && curl -s http://localhost:8600/static/xray-states.js -o ~/nx-state/xray-states.js`。
 
 ## ラボを読み直す: collect (使う時だけ) <!-- nx_mcp_collect -->
 
