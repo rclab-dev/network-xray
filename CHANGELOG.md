@@ -9,6 +9,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **Single-node panel: the cylinder picture:** `{ figure: true }` now draws the router as a see-through cylinder with its process as a dot and a thick arrow toward the chosen route's out-interface (the logo's way of drawing); `figureStyle: 'box'` or a skin with `panelFigure: "box"` keeps the box picture. SKIN-CONTRACT §2c.
 - **Skin: `surface` and the Slate (light) preset:** a skin can put the single-node panel (the 2D picture and its tables) on a light ground (`surface: "light"`); `?skin=slate-light` or the Skin menu picks it. The DeepDive and the topology stay dark. A skin without `surface` looks as before. SKIN-CONTRACT §2b.
 
+- **SolvedKit: rehearsing a change.** `check suggest` / `check init --for change` make the check for planned network work tried on a lab: every changed path, there and back, and every OSPF adjacency and BGP session that must stay up (a puzzle still gets the fewest conditions that tell the fix). SolvedKit guide, section 10: a worked example on q6 (settled "before" state, the way back that did not move, the backup, the rollback). `check run` with its two arguments swapped, or on a problem.json without `check.all`, says what to do.
 ## v1.8.0 — 2026-11-25
 
 - **Logo:** `docs/logo/` (SVG, PNG 400 / 256 / 64, a small version for 32 px and below, favicon.ico); the pages' icon is the small version; README shows the logo; `server.json` lists it as `icons` for the MCP Registry.

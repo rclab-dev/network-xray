@@ -42,6 +42,7 @@ flowchart LR
 7. [When something goes wrong](#7-when-something-goes-wrong)
 8. [Questions authors ask](#8-questions-authors-ask)
 9. [From an AI assistant (MCP)](#9-from-an-ai-assistant-mcp)
+10. [Rehearsing a change (not a puzzle)](#10-rehearsing-a-change-not-a-puzzle)
 
 ## 1. What it is, and what it is not
 
@@ -363,6 +364,7 @@ Errors print as `error: …` on stderr with exit code 2 (with `--format table`),
 | `Solved: cannot judge` / `cannot read r2: not in the state` | a router named in the check is missing from the state | the router name differs (check `node scripts/xray-query.js state <file>`), or it was not up when the state was saved |
 | `cannot read r2: not readable (…)` | the collector could not read that router | wait until it is up and save the state again |
 | `no check (problem.json has no check.all)` | the problem.json has no check yet | run `check init`, or add `check.all` |
+| `... is a state file (xray-states.js), not a problem.json` | the two arguments of `check run` are swapped | `check run <problem.json> <state>` |
 | `unsupported format "…" (network-xray-lab/0 only)` | `format` in problem.json is another value | set `"format": "network-xray-lab/0"` |
 | `unknown node: r9 (not in the solved state)` | `--focus` names a router that is not in the fixed state | use a name from the state |
 | `not written: … already exists (SolvedKit does not overwrite a problem.json)` | `--out` points at an existing file | pick another file name, or move the old one away |
@@ -414,3 +416,76 @@ it."
 4. It calls `check_verify` on that draft and shows `ok` (or which condition is `wrong`).
 5. The user writes the title and the problem text and saves the file; the assistant does not change the lab to make
    the check pass.
+
+## 10. Rehearsing a change (not a puzzle)
+
+The same tool works for planned network work: rehearse the change on a lab that looks like the network, and let the
+states say whether the procedure did what it should and nothing else. The check is the acceptance test of the change;
+run it again each time the procedure is edited (in CI too).
+
+Tried on the official `examples/q6-ospf-solved` (a triangle r1 - r2 - r3, OSPF): before maintenance on the r1 - r3 link,
+move the traffic between r1 and r3 (`3.3.3.3` on r3, `10.10.0.0/24` behind r1) to go through r2, keeping r1 - r3 up as a
+backup. From the network-xray folder, with the lab running:
+
+```
+node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf && cp xray-states.js before.js
+sleep 40; node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf && cp xray-states.js before2.js
+node scripts/xray-query.js diff before.js before2.js --format table      # (none): the lab has settled
+```
+
+**1. Take the "before" state when the lab has settled.** Take it twice; `diff` must say `(none)`. A state taken while
+OSPF is still converging differs from the next one, and the rollback check in step 5 would then report a change that
+the procedure did not make.
+
+**2. Run the procedure, take "after", and let `--for change` show what moved.** The first try of the procedure raised the
+OSPF cost on r1 only (`interface eth2` / `ip ospf cost 100`):
+
+```
+node scripts/xray-query.js check suggest before.js half.js --for change --format table
+  USE  KIND  TELLS APART  CONDITION
+  *    path  yes          r1 routing_table some [["prefix","eq","3.3.3.3/32"],["selected","eq",tru~
+  *    path  yes          r2 routing_table some [["prefix","eq","10.11.0.0/24"],["selected","eq",t~
+  *    keep  no           r1 ospf_neighbors some [["router_id","eq","10.12.0.10"],["full","eq",tru~
+  ...
+```
+
+Nothing on r3: the way back from r3 to r1 did not move (it still takes the direct link). The procedure also has to
+raise the cost on r3's side (`interface eth1` on r3). With both sides changed:
+
+```
+node scripts/xray-query.js check init before.js after.js --for change --out change/problem.json --format table
+  USE  KIND  TELLS APART  CONDITION
+  *    path  yes          r1 routing_table some [["prefix","eq","3.3.3.3/32"],["selected","eq",tru~
+  *    path  yes          r3 routing_table some [["prefix","eq","10.10.0.0/24"],["selected","eq",t~
+  *    keep  no           r1 ospf_neighbors some [["router_id","eq","10.12.0.10"],["full","eq",tru~
+  *    keep  no           r1 ospf_neighbors some [["router_id","eq","3.3.3.3"],["full","eq",true]]
+  ...                     (r2 and r3: the same, every adjacency stays Full)
+```
+
+Without `--for change`, `check suggest` makes a check for a puzzle: the fewest conditions that tell the fix (here r1's
+route only), so that other correct fixes still count. A change needs the opposite: everything it moves, **there and
+back**, and everything it must leave alone (`keep`: each OSPF adjacency Full and BGP session Established in both
+states). `--max <n>` still caps the number.
+
+**3. Check the backup.** Take a third state with the new path down (on r1: `ip link set eth1 down`), then write a
+one-condition problem.json that says the traffic falls back to the direct link, and run it on that state:
+
+```
+{ "format": "network-xray-lab/0", "check": { "all": [
+  ["r1", "routing_table", "some", [["prefix", "eq", "3.3.3.3/32"], ["selected", "eq", true], ["out_iface", "eq", "eth2"]]] ] } }
+```
+
+```
+node scripts/xray-query.js check run backup-check.json backup.js        # solved: the direct link carries it
+```
+
+**4. Run the same check on the production state** after the real work (if network-xray can read those routers), or keep
+it as the record of what the rehearsal showed.
+
+**5. Roll back and compare with "before".** `check run change/problem.json rolled.js` says `not solved` (the change is
+gone), and `diff before.js rolled.js` says `(none)`: the rollback left the lab as it was.
+
+**What it cannot tell you.** It is right only as far as the lab is like the network: the same topology, the same
+protocols and the same values where they matter. It reads FRR, Nokia SR Linux and Cisco IOL routers in a containerlab or netlab lab, and IOS routers in a Cisco CML lab
+([when to use it](../README.md#when-to-use)); it does not log in to production routers. It sees the routing state (routes,
+adjacencies, sessions), not packets or applications.

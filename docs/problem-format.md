@@ -146,7 +146,7 @@ Suggested check: ok (fails on broken, holds on solved)
   apart). Every candidate is judged on both states; the proposed `check` (`*`) is the first path, the evidence on
   the same router and the backup of a BGP best path, and it is verified to fail on broken and hold on solved.
   Exit code 0, or 1 when no condition it can use tells the two states apart (`reason` and `skipped` say why).
-  `--focus <node>` / `--prefix <p>` start from a router and a destination; `--max <n>` caps the check (default 3).
+  `--focus <node>` / `--prefix <p>` start from a router and a destination; `--max <n>` caps the check (default 3); `--for change` makes the check for a change rehearsed on a lab (every changed path there and back, and the adjacencies that stay up - [SolvedKit guide, section 10](solvedkit.md#10-rehearsing-a-change-not-a-puzzle)).
 - **`check init <broken> <solved>`** makes a problem.json draft with that check, `focus`, and empty `title_*`,
   `problem_*` and `id` for you to write. `--out <file>` writes it (the folder is made when it is not there); an existing file is never overwritten.
 - It does not guess other ways to solve the problem. When the fix changed how a route is learned, the condition that

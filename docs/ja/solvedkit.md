@@ -42,6 +42,7 @@ flowchart LR
 7. [困った時](#7-困った時)
 8. [作る人がよく聞くこと](#8-作る人がよく聞くこと)
 9. [AI アシスタントから使う (MCP)](#9-ai-アシスタントから使う-mcp)
+10. [工事のリハーサルに使う (問題作りでなく)](#10-工事のリハーサルに使う-問題作りでなく)
 
 ## 1. これは何か、何でないか
 
@@ -353,6 +354,7 @@ path・field・12 の op は [problem-format.md](problem-format.md#check) にあ
 | `Solved: cannot judge` / `cannot read r2: not in the state` | check が名指すルータが状態の中に無い | ルータの名前が違う (`node scripts/xray-query.js state <file>` で見る)、または保存した時に上がっていなかった |
 | `cannot read r2: not readable (…)` | collector がそのルータを読めなかった | 上がるのを待って状態を保存し直す |
 | `no check (problem.json has no check.all)` | problem.json にまだ check が無い | `check init` を流すか `check.all` を足す |
+| `... is a state file (xray-states.js), not a problem.json` | `check run` の 2 つの引数が逆 | `check run <problem.json> <state>` |
 | `unsupported format "…" (network-xray-lab/0 only)` | problem.json の `format` が別の値 | `"format": "network-xray-lab/0"` にする |
 | `unknown node: r9 (not in the solved state)` | `--focus` が直した版に無いルータを名指している | 状態の中の名前を使う |
 | `not written: … already exists (SolvedKit does not overwrite a problem.json)` | `--out` が既にあるファイルを指している | 別の名前にするか、古い方をよける |
@@ -396,3 +398,73 @@ MCP のサーバ ([mcp.md](mcp.md)) にも同じ 4 つが、読むだけの道�
 3. `check_init` を呼び、problem.json の下書きを見せます (題と問題の文は利用者が書く所として空)。
 4. その下書きに `check_verify` を呼び、`ok` (か、どの条件が `wrong` か) を見せます。
 5. 利用者が題と問題の文を書いて保存します。check を通すためにアシスタントがラボを変えることはしません。
+
+## 10. 工事のリハーサルに使う (問題作りでなく)
+
+同じ道具は、ネットワークの工事 (変更作業) にも使えます。本番に似せたラボで手順を流し、手順がすべき事をして、ほかを
+壊していないかを状態で確かめます。check はその工事の合格の条件になり、手順を直すたびに流し直せます (CI でも)。
+
+公式の `examples/q6-ospf-solved` (r1 - r2 - r3 の三角・OSPF) で試しました: r1 - r3 の回線の保守の前に、r1 と r3 の間の
+通信 (r3 の `3.3.3.3`・r1 の先の `10.10.0.0/24`) を r2 経由に移し、r1 - r3 は予備として残す工事です。ラボを動かした
+状態で、network-xray のフォルダから:
+
+```
+node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf && cp xray-states.js before.js
+sleep 40; node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf && cp xray-states.js before2.js
+node scripts/xray-query.js diff before.js before2.js --format table      # (none) = ラボが落ち着いている
+```
+
+**1. 「前」はラボが落ち着いてから取る。** 2 回取り、`diff` が `(none)` であること。OSPF が収束する途中で取った状態は
+次の回と違い、5 の戻しの確かめで、手順がしていない変化が出てしまいます。
+
+**2. 手順を流して「後」を取り、`--for change` で何が動いたかを見る。** 手順の 1 回目は r1 だけ OSPF の cost を上げました
+(`interface eth2` / `ip ospf cost 100`):
+
+```
+node scripts/xray-query.js check suggest before.js half.js --for change --format table
+  USE  KIND  TELLS APART  CONDITION
+  *    path  yes          r1 routing_table some [["prefix","eq","3.3.3.3/32"],["selected","eq",tru~
+  *    path  yes          r2 routing_table some [["prefix","eq","10.11.0.0/24"],["selected","eq",t~
+  *    keep  no           r1 ospf_neighbors some [["router_id","eq","10.12.0.10"],["full","eq",tru~
+  ...
+```
+
+r3 の行がありません: r3 から r1 への帰りの道は動いていない (直通のまま)。手順は r3 の側 (r3 の `interface eth1`) の
+cost も上げる要があります。両側を変えると:
+
+```
+node scripts/xray-query.js check init before.js after.js --for change --out change/problem.json --format table
+  USE  KIND  TELLS APART  CONDITION
+  *    path  yes          r1 routing_table some [["prefix","eq","3.3.3.3/32"],["selected","eq",tru~
+  *    path  yes          r3 routing_table some [["prefix","eq","10.10.0.0/24"],["selected","eq",t~
+  *    keep  no           r1 ospf_neighbors some [["router_id","eq","10.12.0.10"],["full","eq",tru~
+  *    keep  no           r1 ospf_neighbors some [["router_id","eq","3.3.3.3"],["full","eq",true]]
+  ...                     (r2 と r3 も同じ・隣接はみな Full のまま)
+```
+
+`--for change` を付けない `check suggest` は問題作り向けの check を作ります: 直しを見分ける最少の条件 (ここでは r1 の
+経路だけ) で、別の正しい直し方も通る様に。工事はその逆で、動かす物は**行きも帰りも**全部、触ってはいけない物
+(`keep` = 前と後の両方で Full の OSPF の隣接・Established の BGP のセッション) も全部要ります。`--max <n>` で数を
+抑えられるのは同じです。
+
+**3. 予備を確かめる。** 新しい道を落とした 3 つ目の状態を取り (r1 で `ip link set eth1 down`)、通信が直通に戻る事を
+言う 1 行の problem.json を書いて、その状態で流します:
+
+```
+{ "format": "network-xray-lab/0", "check": { "all": [
+  ["r1", "routing_table", "some", [["prefix", "eq", "3.3.3.3/32"], ["selected", "eq", true], ["out_iface", "eq", "eth2"]]] ] } }
+```
+
+```
+node scripts/xray-query.js check run backup-check.json backup.js        # solved = 直通が運ぶ
+```
+
+**4. 本番の工事の後に同じ check を流す** (network-xray がそのルータを読める時)。読めなければ、リハーサルで確かめた事の
+記録として残します。
+
+**5. 戻して「前」と比べる。** `check run change/problem.json rolled.js` は `not solved` (工事が消えた)、
+`diff before.js rolled.js` は `(none)`: 戻しでラボが元どおり。
+
+**分からない事。** 当たるのはラボが本番に似ている分だけです (同じ形・同じプロトコル・効く所は同じ値)。読めるのは
+containerlab / netlab のラボの FRR・Nokia SR Linux・Cisco IOL と、Cisco CML のラボの IOS のルータで ([使い所](../../README.md#when-to-use))、本番のルータにはログインしません。
+見るのは経路の状態 (経路・隣接・セッション) で、パケットやアプリケーションは見ません。
