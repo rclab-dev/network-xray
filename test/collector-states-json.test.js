@@ -63,7 +63,10 @@ test('the Docker image: the entrypoint drops scripts/ from the copy it runs, the
   var src = fs.readFileSync(path.join(__dirname, '..', 'clab-xray-collect.js'), 'utf8');
   var at = /^SRC=(\S+);/m.exec(ep);
   assert.ok(at && /rm -rf [^\n]*"\$WORK\/scripts"/.test(ep), 'the copy the image runs has no scripts/');
-  assert.ok(src.indexOf("'" + at[1] + "/scripts/xray-query.js'") >= 0, 'the collector falls back to ' + at[1] + '/scripts/xray-query.js');
+  assert.ok(src.indexOf("'" + at[1] + "/scripts/states-doc.js'") >= 0, 'the collector falls back to ' + at[1] + '/scripts/states-doc.js');
+  var sd = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'states-doc.js'), 'utf8');
+  assert.ok(sd.indexOf("'" + at[1] + "/scripts/' + name") >= 0 && src.indexOf("StatesDoc.find(__dirname, 'xray-query.js')") >= 0,
+    'xray-query.js is looked for the same way (states-doc.js find: next to the collector, then ' + at[1] + '/scripts/)');
 });
 
 function posTopo(r3) {

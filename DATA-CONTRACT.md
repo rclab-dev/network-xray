@@ -491,7 +491,7 @@ OSPF/static demos.
 
 ### xray-states.json (schema 1)
 
-**EN** — `clab-xray-collect.js` writes `xray-states.json` next to `xray-states.js` whenever `xray-states.js` is rewritten (`--no-json` turns
+**EN** — `clab-xray-collect.js` (and `cml-xray.js` for a Cisco CML2 lab: the same document from `scripts/states-doc.js`, without node places) writes `xray-states.json` next to `xray-states.js` whenever `xray-states.js` is rewritten (`--no-json` turns
 it off). With `--watch` that is only when something changed, so `generated` = the time of the last change, not of the last read. Besides the states, it carries the answers X-Ray gives, taken from `scripts/xray-query.js` (nothing new is
 inferred): **`routes`** = every selected route of every router with why it won (BGP: the deciding step and the two values
 compared, from `why`; OSPF: the out-interface cost), **`adjacencies`** = each OSPF interface pair (up / down, the
@@ -500,7 +500,7 @@ columns Grafana's Node graph reads (`fixedx` / `fixedy` = the `graph-posX` / `gr
 `adjacencies` are left out where `scripts/xray-query.js` is found neither next to the collector nor in the Docker image (`/opt/network-xray/scripts`). A field may be added; a change
 that breaks a reader raises `schema`.
 
-**JA** — `clab-xray-collect.js` は `xray-states.js` を書き直すたびに隣に `xray-states.json` も書きます (`--no-json` で止める)。`--watch` では変化があった時だけ書くので、`generated` = 最後に変わった時刻 (最後に読んだ時刻ではない)。
+**JA** — `clab-xray-collect.js` (Cisco CML2 のラボでは `cml-xray.js` も・`scripts/states-doc.js` で同じ物を作る・ノードの位置は無し) は `xray-states.js` を書き直すたびに隣に `xray-states.json` も書きます (`--no-json` で止める)。`--watch` では変化があった時だけ書くので、`generated` = 最後に変わった時刻 (最後に読んだ時刻ではない)。
 状態に加えて、X-Ray の答えを `scripts/xray-query.js` から入れます (新しく推論しない): **`routes`** = 各ルータの選ばれた
 経路と勝った理由 (BGP は決め手の段と比べた 2 つの値 = `why` と同じ・OSPF は出口 IF の cost)、**`adjacencies`** = OSPF の
 IF の組ごと (up / down・食い違う設定・X-Ray の文 = `ospf-if` と同じ) と BGP のセッションごと (状態)。人が読む欄 = `between` と `detail` (文)・プログラムが読む欄 = `state`・`mismatch_keys`・`bgp_state` と両端。`nodes` / `edges` は

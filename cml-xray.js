@@ -26,6 +26,7 @@
  *   --enable-env <VAR>     when `enable` asks for a password: the environment variable that holds it (no enable password: nothing to pass)
  *   --proto ospf|bgp       which protocol the view is about (default: bgp when a router runs BGP, else ospf)
  *   --no-state             the topology only (do not read the routers)
+ *   --no-json              do not write xray-states.json next to xray-states.js (the same document as the containerlab collector's)
  *   --jump <user@host>     the jump host to reach the management network through (default: the nx-jump node, which prints
  *                          "NX-JUMP ip=<address>" on its console when it is up - read from the console log, nothing typed)
  *   --mgmt <r1=ip,r2=ip>   management addresses by hand (default: from each router's configuration in the lab)
@@ -45,6 +46,9 @@
  */
 'use strict';
 var fs = require('fs'), path = require('path'), http = require('http'), https = require('https');
+/* nx_cml_states_json (v1.8): scripts/states-doc.js + scripts/xray-query.js build xray-states.json (as clab-xray-collect.js) */
+var StatesDoc = (function () { try { return require(path.join(__dirname, 'scripts', 'states-doc.js')); } catch (e) { return null; } })();
+var StatesQuery = StatesDoc ? StatesDoc.find(__dirname, 'xray-query.js') : null;
 
 // ---- options ------------------------------------------------------------------------------------------------
 var argv = process.argv.slice(2), opt = { port: 8710, listen: '127.0.0.1', out: './cml-view', interval: 10 };
@@ -62,6 +66,7 @@ for (var i = 0; require.main === module && i < argv.length; i++) {   // options 
   else if (a === '--enable-env') opt.enableEnv = argv[++i];
   else if (a === '--proto') opt.proto = argv[++i];
   else if (a === '--no-state') opt.noState = true;
+  else if (a === '--no-json') opt.noJson = true;   /* nx_cml_states_json */
   else if (a === '--quiet-wait') opt.quietWait = Math.max(0, parseInt(argv[++i], 10));   /* nx_cml_share */
   else if (a === '--console') opt.console = true;   /* nx_cml_ssh: the console way only when asked for */
   else if (a === '--jump') opt.jump = argv[++i];   /* nx_cml_ssh */
@@ -872,6 +877,13 @@ Collector.prototype.write = function (states, proto, nodes) {
       (_pos ? 'window.XRAY_POS = ' + JSON.stringify(_pos) + '; window.LIVE_POS = window.XRAY_POS;\n' : '') +
       (self.cfg.problem ? 'window.XRAY_PROBLEM = ' + JSON.stringify(self.cfg.problem) + ';\n' : ''));   /* nx_cml_share */   /* nx_cml_follow */   /* nx_cml_problem: focus + check, as clab-xray-collect.js */
     fs.renameSync(tmp, dest);
+    /* nx_cml_states_json (v1.8): xray-states.json next to it, as clab-xray-collect.js writes it (scripts/states-doc.js; no places:
+       the Node graph lays the routers out itself). --no-json turns it off. */
+    if (StatesDoc && !self.cfg.noJson && nodes.length) {
+      var jd = path.join(path.resolve(self.cfg.out), 'xray-states.json');
+      fs.writeFileSync(jd + '.tmp', StatesDoc.doc(JSON.stringify(states), states, { nodes: nodes, adj: self.view().adj || {}, pos: null, query: StatesQuery }));
+      fs.renameSync(jd + '.tmp', jd);
+    }
     var line = 'state ' + nodes.map(function (n) { var s = states[n]; return n + (s.nx_unread ? '(' + s.nx_unread + ')' : ':' + (s.bgp_neighbors || []).filter(function (b) { return /establ/i.test(b.state); }).length + 'bgp/' + (s.ospf_neighbors || []).filter(function (o) { return o.full; }).length + 'ospf/' + (s.routing_table || []).length + 'rt'); }).join(' ') + ' (' + proto + ')';
     if (nodes.length && line !== self.logged) { self.logged = line; console.log('[' + new Date().toISOString() + '] ' + line); }   // the page file follows every change; the log only when the summary changes
   }
@@ -1007,6 +1019,9 @@ function selfTest() {
       var xp = /XRAY_PROBLEM = (.*);\n/.exec(txt);
       A(xp && JSON.parse(xp[1]).focus.node === 'r1' && JSON.parse(xp[1]).format === 'network-xray-lab/0', 'problem: focus + check go into xray-states.js (window.XRAY_PROBLEM)');
       A(st.r1 && st.r1.nx_unread === 'nomgmt' && st.r1.success === undefined, 'ssh: a router without a management network is on the page as "not read" (nomgmt), not as failed');
+      var jf = path.join(outDir, 'xray-states.json'), jd = fs.existsSync(jf) ? JSON.parse(fs.readFileSync(jf, 'utf8')) : null;   /* nx_cml_states_json */
+      A(!StatesDoc || (jd && jd.schema === 1 && jd.states && jd.states.r1 && Array.isArray(jd.nodes) && jd.nodes[0].id === 'r1' && Array.isArray(jd.edges) && jd.nodes.every(function (n) { return n.fixedx === undefined; })),
+        'states json: xray-states.json is written next to xray-states.js (schema 1, states, nodes, edges; no places)');
       try { fs.rmSync(outDir, { recursive: true, force: true }); } catch (e) {}
     }, function (e) { console.log = _log; A(false, 'ssh: round ' + e.message); });
   });
@@ -1239,7 +1254,7 @@ else if (require.main === module) {
     setInterval(function () { refresh().catch(function (e) { console.error('!! topology: ' + e.message); }); }, POS_EVERY_S * 1000);   // nx_cml_follow: CML's layout within seconds (nodes / links added: on the next page load)
     if (opt.noState || !ios.length) return;
     if (opt.proto && !/^(ospf|bgp)$/.test(opt.proto)) { console.error('!! --proto ospf or bgp'); process.exit(2); }
-    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out, problem: prob ? prob.xp : null };
+    var ap, cfgC = { proto: opt.proto, interval: opt.interval, out: opt.out, noJson: !!opt.noJson, problem: prob ? prob.xp : null };
     if (!opt.console) {   /* nx_cml_ssh: the default - SSH on the management network; the consoles are left alone */
       var s = sshPlanner(api, lab, function () { return view; }, opt);
       if (!s) process.exit(2);

@@ -196,6 +196,8 @@ wr(path.join(OUT, 'web', 'xray-states.js'), 'window.LIVE_STATES = {};\n');
 fs.mkdirSync(path.join(OUT, 'collector'), { recursive: true });
 fs.copyFileSync(path.join(NX, 'clab-collect.js'), path.join(OUT, 'collector', 'clab-collect.js'));   // MUST be the socketless-patched copy
 fs.copyFileSync(path.join(NX, 'clab-xray-collect.js'), path.join(OUT, 'collector', 'clab-xray-collect.js'));
+fs.mkdirSync(path.join(OUT, 'collector', 'scripts'), { recursive: true });   /* nx_states_doc: the collector builds xray-states.json with it */
+fs.copyFileSync(path.join(NX, 'scripts', 'states-doc.js'), path.join(OUT, 'collector', 'scripts', 'states-doc.js'));
 if (fs.existsSync(path.join(NX, 'clab-srl-collect.js'))) fs.copyFileSync(path.join(NX, 'clab-srl-collect.js'), path.join(OUT, 'collector', 'clab-srl-collect.js'));
 // topo.clab.yml: collector orchestrator only text-parses nodes/links; binds are vestigial here.
 // Relativize any absolute host bind path (keep last 2 segments = <node>/<file>) so no host path

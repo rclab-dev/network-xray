@@ -405,7 +405,7 @@ node cml-xray.js --lab "<the lab's title in CML>"
 ```
 Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in as the routers finish booting.
 
-- **What it does:** reads the lab's nodes and links from the CML REST API and serves the same graph + DeepDive page as for containerlab.
+- **What it does:** reads the lab's nodes and links from the CML REST API and serves the same graph + DeepDive page as for containerlab. It also writes `xray-states.json` next to `xray-states.js` in `--out` (the same document as for containerlab, for Grafana or a script; `--no-json` turns it off).
   The IOS nodes (`iol-xe`, `ioll2-xe`, `iosv`, `iosvl2`, `csr1000v`, `cat8000v`) are read over **SSH on the lab's management network** with read-only
   `show` commands (the same reader as IOL in containerlab) every 10 s (`--interval`). Other nodes are drawn but not read.
 - **Your consoles stay yours:** nothing is typed on the CML consoles. Use them exactly as you would without network-xray. One SSH session per router
@@ -1489,7 +1489,7 @@ node cml-xray.js --lab "<CML でのラボのタイトル>"
 ```
 **http://127.0.0.1:8710/** を開きます。先に CML でラボを start してください。ルータが起動し終わると図が埋まっていきます。
 
-- **何をするか:** CML の REST API からラボのノードと線を読み、containerlab の時と同じ図 + DeepDive のページを配ります。
+- **何をするか:** CML の REST API からラボのノードと線を読み、containerlab の時と同じ図 + DeepDive のページを配ります。`--out` の `xray-states.js` の隣に `xray-states.json` も書きます (containerlab の時と同じ物・Grafana やスクリプト向け・`--no-json` で止める)。
   IOS のノード (`iol-xe`・`ioll2-xe`・`iosv`・`iosvl2`・`csr1000v`・`cat8000v`) は **ラボの管理の網を通った SSH** で、読むだけの `show` を打って読みます
   (containerlab の IOL と同じ読み取り・既定は 10 秒ごと = `--interval`)。ほかのノードは描くだけです。
 - **コンソールはあなたの物のまま:** CML のコンソールには何も打ちません。network-xray が無い時と同じに使えます。ルータ 1 台に SSH を 1 本

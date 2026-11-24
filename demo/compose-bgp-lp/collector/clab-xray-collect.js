@@ -594,65 +594,10 @@ function pairOspfIfaces(nodes, states, adj) {
    tried next; where neither is there (the demo copies) they are left out. nodes / edges carry the column
    names Grafana's Node graph reads. --no-json turns it off. */
 var JSON_DEST = path.join(outDir, 'xray-states.json');
-var nxQuery = null;
-[path.join(__dirname, 'scripts', 'xray-query.js'), '/opt/network-xray/scripts/xray-query.js'].some(function (f) {
-  try { nxQuery = require(f); return true; } catch (e) { nxQuery = null; return false; }
-});
-function nxAnswers(states) {
-  var routes = [], adjs = [];
-  if (!nxQuery) return null;
-  // routes: every selected route of every router; the reason is X-Ray's: BGP = the deciding step (whyPath), OSPF = the out-interface cost
-  Object.keys(states).sort().forEach(function (n) {
-    var st = states[n] || {};
-    (st.routing_table || []).forEach(function (r) {
-      if (!r || r.selected === false || !r.prefix) return;
-      var row = { router: n, prefix: r.prefix, protocol: r.protocol || '', next_hop: r.next_hop || '', out_iface: r.out_iface || '', reason: r.protocol || '' };
-      if (r.protocol === 'bgp') {
-        try {
-          var w = nxQuery.whyPath(states, n, r.prefix);
-          if (w && w.deciding_step) {
-            var win = (w.steps || []).filter(function (x) { return x.result === 'win'; })[0];
-            row.reason = 'BGP: ' + w.deciding_step + (win ? ' (' + win.selected + ' vs ' + win.other + ')' : '');
-            row.deciding_step = w.deciding_step;
-          } else if (w && w.selected) row.reason = 'BGP: only path';
-        } catch (e) { row.reason = 'BGP'; }
-      } else if (r.protocol === 'ospf') {
-        var c = ((st.ospf_ifaces || {})[r.out_iface] || {}).cost;
-        row.reason = 'OSPF' + (c != null ? ': out-interface cost ' + c : '');
-      }
-      routes.push(row);
-    });
-  });
-  // adjacencies: OSPF per interface pair (state, mismatch and X-Ray's sentence), BGP per session
-  try {
-    var oi = nxQuery.ospfInterfaces(states), seen = {};
-    (oi.routers || []).forEach(function (rt) {
-      (rt.interfaces || []).forEach(function (f) {
-        if (!f.peer) return;
-        var k1 = rt.router + ':' + f.interface, k2 = f.peer + ':' + (f.peer_interface || ''), id = k1 < k2 ? k1 + '-' + k2 : k2 + '-' + k1;
-        if (seen[id]) return;
-        seen[id] = true;
-        var w = (oi.wrong || []).filter(function (x) { return (x.node === rt.router && x.iface === f.interface) || (x.node === f.peer && x.iface === f.peer_interface); })[0];
-        var up = f.neighbors_adjacent > 0;
-        adjs.push({ id: id, protocol: 'ospf', between: rt.router + ' ' + f.interface + ' ⇔ ' + f.peer + ' ' + (f.peer_interface || ''), state: up ? 'up' : 'down',
-          detail: w ? String(w.text).replace(/^[^:]*⇔[^:]*:/, '').trim() : (up ? 'OSPF ' + (f.neighbor_state || 'up') : 'OSPF no adjacency'),   /* the sentence a person reads (X-Ray's) */
-          a: rt.router, a_iface: f.interface, b: f.peer, b_iface: f.peer_interface || '', neighbor_state: f.neighbor_state || null,
-          mismatch_keys: f.mismatch || [] });   /* for a program: which parameters differ */
-      });
-    });
-  } catch (e) {}
-  try {
-    var bn = nxQuery.bgpNeighbors(states);
-    (bn.routers || []).forEach(function (rt) {
-      (rt.peers || []).forEach(function (pr) {
-        adjs.push({ id: rt.router + '>' + pr.peer, protocol: 'bgp', between: rt.router + ' ⇔ ' + pr.peer + (pr.remote_as != null ? ' (AS ' + pr.remote_as + ')' : ''),
-          state: pr.established ? 'up' : 'down', detail: (pr.type ? pr.type + ' ' : '') + (pr.state || '') + (pr.established && pr.prefixes_received != null ? ', ' + pr.prefixes_received + (pr.prefixes_received === 1 ? ' prefix' : ' prefixes') + ' received' : ''),
-          a: rt.router, peer: pr.peer, remote_as: pr.remote_as, bgp_state: pr.state || '', prefixes_received: pr.prefixes_received });
-      });
-    });
-  } catch (e) {}
-  return { routes: routes, adjacencies: adjs };
-}
+/* nx_states_doc (v1.8): the document is built by scripts/states-doc.js (shared with cml-xray.js); it and xray-query.js are looked
+   for next to the collector, then in the image's /opt/network-xray/scripts (the image runs the collector from a copy without scripts/). */
+var StatesDoc = (function () { try { return require(path.join(__dirname, 'scripts', 'states-doc.js')); } catch (e) { try { return require('/opt/network-xray/scripts/states-doc.js'); } catch (e2) { return null; } } })();
+var nxQuery = StatesDoc ? StatesDoc.find(__dirname, 'xray-query.js') : null;
 /* nx_states_json_pos: where the lab says each router is - containerlab's graph-posX / graph-posY node labels (the ones
    containerlab graph uses) - as fixedx / fixedy on nodes, which Grafana's Node graph draws at those places. Only when every
    router has both (the Node graph refuses a frame where some have them and some not): otherwise none, and the Node graph lays
@@ -667,36 +612,7 @@ var NODE_POS = (function () {
   return all ? pos : null;
 })();
 function statesDoc(sj, states) {
-  var ans = nxAnswers(states);
-  var adjs = ans ? ans.adjacencies : [];
-  var issues = {};
-  adjs.forEach(function (a) { if (a.state === 'down' || (a.mismatch_keys && a.mismatch_keys.length)) { issues[a.a] = (issues[a.a] || 0) + 1; if (a.b) issues[a.b] = (issues[a.b] || 0) + 1; } });
-  var ns = nodes.filter(function (n) { return n in states; }).map(function (n) {
-    var st = states[n] || {}, k = issues[n] || 0;
-    return { id: n, title: n, mainstat: st.success === false ? 'unread' : (k ? k + (k === 1 ? ' issue' : ' issues') : 'ok'),
-      secondarystat: (function (c) { return c + (c === 1 ? ' route' : ' routes'); })((st.routing_table || []).filter(function (r) { return r && r.selected !== false; }).length),
-      color: st.success === false ? '#9ca3af' : (k ? '#ef4444' : '#22c55e'),
-      fixedx: NODE_POS ? NODE_POS[n].x : undefined, fixedy: NODE_POS ? NODE_POS[n].y : undefined };
-  });
-  var seen = {}, es = [];
-  nodes.forEach(function (a) {
-    (adj[a] || []).forEach(function (l) {
-      var k1 = a + ':' + l.iface, k2 = l.peer + ':' + l.peerIface, id = k1 < k2 ? k1 + '-' + k2 : k2 + '-' + k1;
-      if (seen[id]) return;
-      seen[id] = true;
-      var ia = ((states[a] || {}).interfaces || {})[l.iface], ib = ((states[l.peer] || {}).interfaces || {})[l.peerIface];
-      var up = (ia && ib) ? (ia.up !== false && ib.up !== false ? 'up' : 'down') : 'unknown';
-      var o = adjs.filter(function (x) { return x.protocol === 'ospf' && x.id === id; })[0];
-      var bad = up === 'down' || (o && (o.state === 'down' || (o.mismatch_keys && o.mismatch_keys.length)));
-      es.push({ id: id, source: a, target: l.peer,
-        mainstat: o ? 'OSPF ' + (o.state === 'up' ? (o.neighbor_state || 'up') : 'down' + (o.mismatch_keys.length ? ': ' + o.mismatch_keys.join(', ') : '')) : up,
-        secondarystat: o && o.detail ? o.detail : '',
-        color: up === 'unknown' ? '#9ca3af' : (bad ? '#ef4444' : '#22c55e'), thickness: bad ? 4 : 2 });
-    });
-  });
-  return '{"schema":1,"generated":' + JSON.stringify(new Date().toISOString()) + ',"states":' + sj.json +
-    (ans ? ',"routes":' + JSON.stringify(ans.routes) + ',"adjacencies":' + JSON.stringify(ans.adjacencies) : '') +
-    ',"nodes":' + JSON.stringify(ns) + ',"edges":' + JSON.stringify(es) + '}\n';
+  return StatesDoc.doc(sj.json, states, { nodes: nodes, adj: adj, pos: NODE_POS, query: nxQuery });
 }
 
 function writeStates(states, live, sj) {   // sj: statesJson(states), when the caller already has it
@@ -711,7 +627,7 @@ function writeStates(states, live, sj) {   // sj: statesJson(states), when the c
     (valRes ? 'window.XRAY_VALIDATE = ' + JSON.stringify(valRes) + ';\n' : '') +
     (tierRes ? 'window.XRAY_TIERS = ' + JSON.stringify(tierRes) + ';\n' : '');   /* nx_problem_check + nx_netlab_validate (2026-10-06): focus + check (Solved) */
   writeAtomic(dest, 'window.LIVE_STATES = ' + sj.json + ';\n' + extra);
-  if (!noJson) writeAtomic(JSON_DEST, statesDoc(sj, states));   /* nx_states_json */
+  if (!noJson && StatesDoc) writeAtomic(JSON_DEST, statesDoc(sj, states));   /* nx_states_json (no scripts/states-doc.js = an old copy: no JSON) */
   sigGen++;
   Object.keys(sj.parts).forEach(function (n) { if (sj.parts[n] !== sigLastParts[n]) sigNodes[n] = (sigNodes[n] || 0) + 1; });
   Object.keys(sigNodes).forEach(function (n) { if (!(n in sj.parts)) delete sigNodes[n]; });
