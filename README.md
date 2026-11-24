@@ -1057,6 +1057,8 @@ the BGP reason is derived from the printed columns, as for IOS-XE, and marked as
 (Cisco IOL 17.18.02) captures: OSPF and BGP, default VRF, IPv4. No pyATS code is included or needed; the key map is
 in [docs/dev/genie-mapping.md](docs/dev/genie-mapping.md).
 
+**Another device or source?** Write a reader in your own repository and list it: [docs/readers.md](docs/readers.md).
+
 ## Embed the DeepDive in your own tool
 
 X-Ray's per-node **DeepDive** is a self-contained component you can drop into another UI —
@@ -2025,6 +2027,8 @@ node genie-to-xray.js test/fixtures/genie-iosxe/q21 --out /tmp/q21-genie     # �
 ```
 
 ルータ同士のリンクは `--topo <lab.clab.yml>` から、無ければ同じサブネットの interface から決めます (`--mgmt-subnet` のアドレス・既定は containerlab の 172.20.20.0/24 は除く)。Genie が出さない値は分からないまま (`?`) です: BGP の理由は IOS-XE と同じく表示の列から導き、導いた事を印で示します。IOS-XE (Cisco IOL 17.18.02) の取り込みで確かめた範囲 = OSPF と BGP・既定の VRF・IPv4。pyATS のコードは含まず、要りません。鍵の対応表は [docs/dev/genie-mapping.md](docs/dev/genie-mapping.md)。
+
+**ほかの機器やデータは?** 自分の repo で読み取り部品を書いて、一覧に載せられます: [docs/ja/readers.md](docs/ja/readers.md)。
 
 ## 自分のツールに DeepDive を埋め込む
 
