@@ -28,7 +28,7 @@
     if (!problem || typeof problem !== 'object' || Array.isArray(problem)) return 'not a problem.json object';
     if (problem.format != null && problem.format !== 'network-xray-lab/0') return 'unsupported format ' + JSON.stringify(problem.format) + ' (network-xray-lab/0 only)';
     var c = problem.check;
-    if (!c || !Array.isArray(c.all) || !c.all.length) return 'no check (problem.json has no check.all)';
+    if (!c || !Array.isArray(c.all) || !c.all.length) return 'no check (problem.json has no check.all) - make one from a broken and a fixed state: check init <broken> <solved> --out problem.json';
     return '';
   }
 
@@ -102,7 +102,7 @@
      it proposes must fail on the broken state. Nothing is guessed about other ways to solve the problem: a condition
      that names how the route was learned (protocol) is marked binds_method so the author can decide. */
   var diffApi = typeof module !== 'undefined' && module.exports ? require('./xray-diff.js') : root.xrayDiff;
-  var KIND_ORDER = { path: 0, evidence: 1, backup: 2, gone: 3 };
+  var KIND_ORDER = { path: 0, evidence: 1, backup: 2, keep: 3, gone: 4 };
 
   function arrOf(x) { return Array.isArray(x) ? x : []; }
   function s(x) { return x == null ? '' : String(x).trim(); }
@@ -220,6 +220,27 @@
     });
   }
 
+  /* nx_for_change: for a change (a planned piece of work rehearsed on a lab) rather than a puzzle, what the change must
+     leave alone matters as much as what it changes: every OSPF adjacency Full and every BGP session Established in both
+     states stays so. Only asked for with forChange. */
+  function keepConds(broken, solved, out) {
+    Object.keys(solved).sort().forEach(function (n) {
+      var A = solved[n] || {}, B = broken[n] || {};
+      arrOf(A.ospf_neighbors).forEach(function (x) {
+        if (!isFull(x) || !s(x.router_id)) return;
+        if (!arrOf(B.ospf_neighbors).some(function (y) { return isFull(y) && s(y.router_id) === s(x.router_id); })) return;
+        out.push({ cond: [n, 'ospf_neighbors', 'some', [['router_id', 'eq', x.router_id], x.full === true ? ['full', 'eq', true] : ['state', 'eq', x.state]]],
+          kind: 'keep', from: 'unchanged ' + n + ' ospf ' + x.router_id, note: 'stays Full through the change' });
+      });
+      arrOf(A.bgp_neighbors).forEach(function (x) {
+        if (!isEst(x) || !s(x.ip)) return;
+        if (!arrOf(B.bgp_neighbors).some(function (y) { return isEst(y) && s(y.ip) === s(x.ip) && s(y.vrf) === s(x.vrf); })) return;
+        out.push({ cond: [n, 'bgp_neighbors', 'some', withVrf([['ip', 'eq', x.ip], ['state', 'eq', x.state]], x)],
+          kind: 'keep', from: 'unchanged ' + n + ' bgp ' + x.ip, note: 'stays Established through the change' });
+      });
+    });
+  }
+
   // -> { status: 'ok' | 'none', check, candidates, skipped, reason?, verify? }
   function suggest(broken, solved, opts) {
     opts = opts || {};
@@ -231,6 +252,7 @@
     var cands = [], skipped = [];
     d.changes.forEach(function (c) { fromChange(c, broken, solved, cands, skipped); });
     fromResolution(broken, solved, cands);
+    if (opts.forChange) keepConds(broken, solved, cands);
     // judge every candidate on both states; keep one condition per (node, path, value) only once
     var seen = Object.create(null);
     cands = cands.filter(function (c) {
@@ -238,6 +260,7 @@
       c.holds_solved = judgeOne(c.cond, solved).ok === true;
       c.holds_broken = judgeOne(c.cond, broken).ok === true;
       c.tells = c.holds_solved && !c.holds_broken;
+      if (c.kind === 'keep') c.tells = false;   // holds on both by construction: kept, not telling
       if (!c.holds_solved) skipped.push({ from: c.from, why: 'the candidate does not hold on the solved state' });
       return c.holds_solved;
     });
@@ -261,8 +284,15 @@
           (unread.length ? ' (cannot read ' + unread.join(', ') + ')' : '') + ' - see skipped';
       return out;
     }
-    // the check: the first path, the first evidence, the backup of a chosen BGP best path; then fill up to max in order
+    // the check: the first path, the first evidence, the backup of a chosen BGP best path - at most max of them (a puzzle
+    // needs the fewest conditions that tell the fix; more would also fail other correct fixes). For a change (forChange):
+    // every changed path that tells (there and back, each router) and every keep, so nothing the change touches is left out.
     var pick = [];
+    if (opts.forChange) {
+      pick = cands.filter(function (c) { return (c.kind === 'path' && c.tells && !c.binds_method) || c.kind === 'keep'; });
+      if (!pick.some(function (c) { return c.tells; })) pick = pick.concat(telling.slice(0, 1));
+      if (opts.max > 0) pick = pick.slice(0, Math.floor(opts.max));
+    } else {
     var firstOf = function (kind, node) {
       var l = cands.filter(function (c) { return c.kind === kind && c.tells && !c.binds_method; });
       return (node && l.filter(function (c) { return c.cond[0] === node; })[0]) || l[0];
@@ -277,6 +307,7 @@
       if (bk && pick.length < max) pick.push(bk);
     });
     pick = pick.slice(0, max);
+    }
     cands.forEach(function (c) { c.in_check = pick.indexOf(c) >= 0; });
     out.check = { all: pick.map(function (c) { return c.cond; }) };
     out.verify = verify({ format: 'network-xray-lab/0', check: out.check }, broken, solved);

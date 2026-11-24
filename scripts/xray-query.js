@@ -1171,7 +1171,11 @@ function loadProblem(input, opts) {
   if (chk) chk(p);   // the problem.json inside a folder is checked too (a link in it cannot lead outside)
   var obj;
   var text = readCapped(p);   /* nx_state_size_cap: the same 64 MB limit as a state file */
-  try { obj = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (e) { throw new QueryError('problem.json is not valid JSON: ' + e.message); }
+  try { obj = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (e) {
+    /* nx_check_arg_order: a state file where the problem.json goes = the two arguments swapped */
+    if (/^\s*window\./.test(text)) throw new QueryError(input + ' is a state file (xray-states.js), not a problem.json - the problem.json comes first: check run <problem.json> <state>');
+    throw new QueryError('problem.json is not valid JSON: ' + e.message);
+  }
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new QueryError('problem.json is not a JSON object');
   return obj;
 }
@@ -1185,6 +1189,7 @@ function check(argv, opts) {
     if (o.mgmtSubnet != null && !/^\d{1,3}(\.\d{1,3}){3}\/\d{1,2}$/.test(String(o.mgmtSubnet))) throw new QueryError('the management subnet must be an IPv4 subnet like 192.168.121.0/24: ' + o.mgmtSubnet);
     if (o.focus != null || o.prefix != null) so.focus = { node: o.focus || undefined, prefix: o.prefix || undefined };
     if (o.max != null) { if (!/^[1-9]\d?$/.test(String(o.max))) throw new QueryError('--max must be a number from 1 to 99'); so.max = +o.max; }
+    if (o.for != null) { if (o.for !== 'change') throw new QueryError('--for takes change (check suggest / init for a change rehearsal)'); so.forChange = true; }
     var b = loadStates(argv[2]), a = loadStates(argv[3]);
     if (so.focus && so.focus.node && !a[so.focus.node]) throw new QueryError('unknown node: ' + so.focus.node + ' (not in the solved state)');
     if (sub === 'suggest') return kit.suggest(b, a, so);
@@ -1254,7 +1259,7 @@ function parseOptions(argv) {
       o.format = v;
     } else if (a === '--color') o.color = true;
     else if ((m = /^--mgmt-subnet(?:=(.*))?$/.exec(a))) o.mgmtSubnet = m[1] != null ? m[1] : (argv[++i] || '');
-    else if ((m = /^--(focus|prefix|max|out)(?:=(.*))?$/.exec(a))) o[m[1]] = m[2] != null ? m[2] : (argv[++i] || '');
+    else if ((m = /^--(focus|prefix|max|out|for)(?:=(.*))?$/.exec(a))) o[m[1]] = m[2] != null ? m[2] : (argv[++i] || '');
     else o.args.push(a);
   }
   return o;
@@ -1264,7 +1269,7 @@ function run(argv, o) {
   var cmd = argv[0], mg = o && o.mgmtSubnet != null ? o.mgmtSubnet : null;
   var sgi = cmd === 'check' && (argv[1] === 'suggest' || argv[1] === 'init');
   if (mg != null && cmd !== 'diff' && !sgi) throw new QueryError('--mgmt-subnet is for diff only (and check suggest / init)');
-  if (o && (o.focus != null || o.prefix != null || o.max != null) && !sgi) throw new QueryError('--focus / --prefix / --max are for check suggest / init only');
+  if (o && (o.focus != null || o.prefix != null || o.max != null || o.for != null) && !sgi) throw new QueryError('--focus / --prefix / --max / --for are for check suggest / init only');
   if (o && o.out != null && !(cmd === 'check' && argv[1] === 'init')) throw new QueryError('--out is for check init only');
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
   if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
@@ -1296,6 +1301,7 @@ if (require.main === module) {
       '  check suggest <broken> <solved>     candidate conditions from what the fix changed, verified on both (exit 0, 1 none)\n' +
       '  check init <broken> <solved>        a problem.json draft with that check (--out <file>: write it; never overwrites)\n' +
       '  --focus <node> --prefix <p> --max <n>  check suggest / init: the router and destination to start from, how many conditions (3)\n' +
+      '  --for change                       check suggest / init for a change rehearsal: every changed path, there and back, and the adjacencies that must stay up\n' +
       '  --mgmt-subnet <cidr>  diff: the lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)\n' +
       '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR / Genie captures\n' +
       '  --format json|table  default: json\n' +
@@ -1304,8 +1310,8 @@ if (require.main === module) {
     process.exit(0);
   }
   for (var _i = 0; _i < _cli.length; _i++) {
-    if (['--format', '--mgmt-subnet', '--focus', '--prefix', '--max', '--out'].indexOf(_cli[_i]) >= 0) _i++;
-    else if (_cli[_i] !== '--color' && !/^--(format|mgmt-subnet|focus|prefix|max|out)=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
+    if (['--format', '--mgmt-subnet', '--focus', '--prefix', '--max', '--out', '--for'].indexOf(_cli[_i]) >= 0) _i++;
+    else if (_cli[_i] !== '--color' && !/^--(format|mgmt-subnet|focus|prefix|max|out|for)=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
       console.error('xray-query.js: unknown option: ' + _cli[_i] + "\nTry 'node scripts/xray-query.js --help'.");
       process.exit(2);
     }

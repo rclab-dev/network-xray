@@ -386,3 +386,48 @@ test('cli: check init --out makes a folder that is not there yet, and with --for
   r = q(['check', 'init', L.broken, L.solved, '--out', out, '--format', 'table']);
   assert.strictEqual(r.code, 2); assert.match(r.err, /already exists/);
 });
+
+// a change rehearsed on a triangle: r1 -> 3.3.3.3 moves from the direct link (eth2) to r2 (eth1), and the way back on r3
+// from the direct link (eth1) to r2 (eth2); every adjacency stays Full
+const nb = (ids) => ids.map(id => ({ router_id: id, state: 'Full/DR', full: true }));
+const rt3 = (prefix, iface, nh) => ({ prefix, protocol: 'ospf', out_iface: iface, next_hop: nh, selected: true });
+const CH_BEFORE = {
+  r1: { target_node: 'r1', interfaces: {}, ospf_neighbors: nb(['2.2.2.2', '3.3.3.3']), routing_table: [rt3('3.3.3.3/32', 'eth2', '10.13.0.3')] },
+  r2: { target_node: 'r2', interfaces: {}, ospf_neighbors: nb(['1.1.1.1', '3.3.3.3']), routing_table: [] },
+  r3: { target_node: 'r3', interfaces: {}, ospf_neighbors: nb(['1.1.1.1', '2.2.2.2']), routing_table: [rt3('1.1.1.1/32', 'eth1', '10.13.0.1')] }
+};
+const CH_AFTER = {
+  r1: Object.assign({}, CH_BEFORE.r1, { routing_table: [rt3('3.3.3.3/32', 'eth1', '10.12.0.2')] }),
+  r2: CH_BEFORE.r2,
+  r3: Object.assign({}, CH_BEFORE.r3, { routing_table: [rt3('1.1.1.1/32', 'eth2', '10.23.0.2')] })
+};
+
+test('suggest --for change: every changed path, there and back, plus every adjacency that stays Full; a puzzle still gets one path', () => {
+  const puzzle = kit.suggest(CH_BEFORE, CH_AFTER);
+  assert.strictEqual(puzzle.check.all.length, 1, 'a puzzle: the fewest conditions that tell the fix');
+  const ch = kit.suggest(CH_BEFORE, CH_AFTER, { forChange: true });
+  assert.strictEqual(ch.status, 'ok');
+  const paths = ch.check.all.filter(c => c[1] === 'routing_table').map(c => c[0] + ' ' + c[3][0][2] + ' ' + c[3][2][2]);
+  assert.deepStrictEqual(paths.sort(), ['r1 3.3.3.3/32 eth1', 'r3 1.1.1.1/32 eth2'], 'the way there and the way back');
+  const keeps = ch.check.all.filter(c => c[1] === 'ospf_neighbors').map(c => c[0] + '>' + c[3][0][2]);
+  assert.deepStrictEqual(keeps.sort(), ['r1>2.2.2.2', 'r1>3.3.3.3', 'r2>1.1.1.1', 'r2>3.3.3.3', 'r3>1.1.1.1', 'r3>2.2.2.2']);
+  assert.ok(ch.verify.ok, 'fails before the change, holds after');
+  assert.ok(ch.candidates.filter(c => c.kind === 'keep').every(c => c.in_check && !c.tells));
+  // --max still caps
+  assert.strictEqual(kit.suggest(CH_BEFORE, CH_AFTER, { forChange: true, max: 2 }).check.all.length, 2);
+});
+
+test('cli: --for change on check suggest; --for takes change only; a state file given first and a problem.json without check.all say what to do', (t) => {
+  const L = tmpLab(t);
+  const b = L.write('chb.json', CH_BEFORE), a = L.write('cha.json', CH_AFTER);
+  let r = q(['check', 'suggest', b, a, '--for', 'change']);
+  assert.strictEqual(r.code, 0); assert.strictEqual(JSON.parse(r.out).check.all.length, 8);
+  r = q(['check', 'suggest', b, a, '--for', 'puzzle']);
+  assert.strictEqual(r.code, 2); assert.match(JSON.parse(r.out).error, /--for takes change/);
+  r = q(['check', 'run', L.problem, L.solved, '--for', 'change']);
+  assert.strictEqual(r.code, 2); assert.match(JSON.parse(r.out).error, /are for check suggest \/ init only/);
+  r = q(['check', 'run', L.solved, L.problem]);
+  assert.strictEqual(r.code, 2); assert.match(JSON.parse(r.out).error, /is a state file .* the problem\.json comes first: check run <problem\.json> <state>/);
+  r = q(['check', 'run', L.write('nocheck2.json', { format: 'network-xray-lab/0' }), L.solved]);
+  assert.match(JSON.parse(r.out).reason, /check init <broken> <solved>/);
+});
