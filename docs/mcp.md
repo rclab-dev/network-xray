@@ -488,8 +488,14 @@ longest BGP prefix that contains it), and `vrf` (needed only when the prefix is 
 The answer has the selected path, the other `candidates` with their attributes, the `deciding_step`, and `reason_source`:
 `"device"` when the router reported the reason (FRR `selectionReason`), `"derived"` when the collector worked it out from what
 the router printed (Cisco IOS-XE prints no reason; the same reason `why_best_path` returns), `"comparison"` when network-xray
-inferred it by comparing the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED), or `null` with a note when neither
-says. With `"device"` or `"derived"`, `comparison` adds what the attribute comparison says, as a cross-check.
+inferred it by comparing the attributes in the data (Weight, LocPrf, AS-Path, Origin, MED, then eBGP > iBGP when every path
+still compared has `peer_type`), or `null` with a note when neither says. With `"device"` or `"derived"`, `comparison` adds what
+the attribute comparison says, as a cross-check.
+
+Each path has `peer`, the router its next hop belongs to, when exactly one router in the data has that address. `summary`
+says the answer in one line: the path, and the step that chose it with the two values when the comparison names it (and
+agrees with the router's reason, if there is one); otherwise the router's reason, or that the deciding step is not in the data.
+
 "First path received" and "Nothing to Select" are not a step that decided between paths (nothing was compared), so they
 are not a `deciding_step`: the comparison gives it (e.g. `"Only path"`) and the text is kept in `device_reason`.
 
@@ -509,12 +515,14 @@ are not a `deciding_step`: the comparison gives it (e.g. `"Only path"`) and the 
     "weight": 0,
     "metric": 0,
     "origin": "IGP",
-    "best": true
+    "best": true,
+    "peer": "r2"
   },
   "candidates": [],
   "device_reason": "First path received",
   "deciding_step": "Only path",
-  "reason_source": "comparison"
+  "reason_source": "comparison",
+  "summary": "r1 8.8.8.0/24 uses the path via r2 (2.2.2.2), AS 65002: the only path"
 }
 ```
 

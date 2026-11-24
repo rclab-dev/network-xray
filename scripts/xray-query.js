@@ -363,7 +363,7 @@ function routeLen(r) {
 }
 function pathOut(r) {
   var o = { next_hop: r.next_hop || '', as_path: r.as_path || '', status: r.status || '' };
-  ['local_pref', 'weight', 'metric', 'origin'].forEach(function (k) { if (r[k] != null) o[k] = r[k]; });
+  ['local_pref', 'weight', 'metric', 'origin', 'peer_type'].forEach(function (k) { if (r[k] != null) o[k] = r[k]; });   /* nx_peer_type: peer_type for the eBGP > iBGP step */
   if (r.best) o.best = true;
   if (r.multipath) o.multipath = true;
   if (r.valid === false) o.valid = false;
@@ -484,6 +484,46 @@ function storedReason(best) {
   return String(r).trim();
 }
 
+/* nx_plain_line (v1.8): the router (other than `self`) with an interface address equal to `ip`; null when none or more than one */
+function routerByAddress(states, self, ip) {
+  if (!ip) return null;
+  var a = String(ip).split('/')[0];
+  var hits = Object.keys(states).filter(function (n) {
+    if (n === self) return false;
+    var ifs = states[n] && states[n].interfaces;
+    return !!ifs && typeof ifs === 'object' && Object.keys(ifs).some(function (i) { var x = ifs[i]; return !!x && String(x.ip || '').split('/')[0] === a; });
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+// one line for a why_path answer: which path, and the step that chose it with the two values
+function plainLine(out, dec, rows) {
+  var sel = out.selected, head = out.router + ' ' + out.prefix + (out.vrf ? ' (VRF ' + out.vrf + ')' : '');
+  if (!sel) return head + ': no usable path in the data';
+  function via(c) { return 'via ' + (c.peer ? c.peer + ' (' + c.next_hop + ')' : (c.next_hop || '?')); }
+  function nbrAs(c) { var t = String(c.as_path || '').replace(/[(){}]/g, ' ').split(/\s+/).filter(Boolean); return t.length ? ', AS ' + t[0] : ''; }
+  var own = +sel.weight === 32768;   // a route the router originates itself (FRR / IOS give it weight 32768; FRR names the win "Weight")
+  var line = own ? head + ': ' + out.router + ' originates it itself' : head + ' uses the path ' + via(sel) + nbrAs(sel);
+  if (out.deciding_step === 'Only path' || out.comparison === 'Only path') return line + ': the only path';
+  if (out.deciding_step === 'Locally originated' || out.comparison === 'Locally originated') return line + ': originated by ' + out.router + ' itself';
+  var FRR_WORD = { 'Weight': 'weight', 'LocPrf': 'local pref', 'AS-Path': 'as path', 'Origin': 'origin', 'MED': 'med', 'eBGP > iBGP': 'peer type' };
+  var agrees = dec && dec.kind === 'decided' && (out.reason_source === 'comparison' ||
+    (out.comparison === dec.criterion.label && String(out.deciding_step || '').toLowerCase() === FRR_WORD[dec.criterion.label]));
+  if (agrees) {   // the router's reason (when it gave one) and the comparison name the same step -> show the values
+    var crit = dec.criterion, other = null;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].best) continue;
+      if (crit.val(rows[i]) === dec.cmpVal) { other = rows[i]; break; }
+    }
+    var oc = other && [sel].concat(out.candidates).filter(function (c) { return c.next_hop === other.next_hop && c.as_path === other.as_path; })[0];
+    var vs = oc ? ' (' + via(oc) + ')' : '';
+    if (crit.key === 'origin') return line + ': Origin ' + (sel.origin || '?') + ' beats ' + ((other && other.origin) || '?') + vs;
+    if (crit.key === 'peer') return line + ': eBGP beats iBGP' + vs;
+    return line + ': ' + crit.label + ' ' + dec.bestVal + ' ' + (crit.dir > 0 ? '>' : '<') + ' ' + dec.cmpVal + vs;
+  }
+  if (out.deciding_step) return line + ': ' + (out.reason_source === 'device' ? 'the router reports ' : out.reason_source === 'derived' ? 'the collector worked out ' : 'decided by ') + out.deciding_step;
+  return line + ': the deciding step is not in the data';
+}
+
 // router + prefix (or address) -> the selected BGP path, the other candidates, the deciding step and where it came from:
 //   reason_source "device"     - the router reported it (FRR selectionReason, stored as bgp_routes[].reason / sel_reason)
 //   reason_source "derived"    - the collector worked it out from what the router printed (IOS-XE prints no reason; the
@@ -559,6 +599,10 @@ function whyPath(states, router, destination, vrf) {
     out.note = why2 || 'the deciding step is not in the data';
   }
   if (steps) out.steps = steps;
+  /* nx_plain_line (v1.8): each path names the router its next hop belongs to (when exactly one router in the data has that
+     address), and `summary` says the answer in one line */
+  [out.selected].concat(out.candidates).forEach(function (c) { var pr = c && routerByAddress(states, router, c.next_hop); if (pr) c.peer = pr; });
+  out.summary = plainLine(out, dec, rows);
   if (out.selected && out.selected.multipath) out.multipath = true;
   if (w.local_pref_note) out.local_pref_note = w.local_pref_note;   /* nx_why_lp_note (v1.7.0): the comparison takes a missing local_pref as the default - say so, as why_best_path does */
   return out;

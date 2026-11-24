@@ -6,6 +6,8 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 
 - **`wrong`: routes whose next hop is not reachable:** a BGP prefix whose paths the router marks not valid (an inaccessible next hop) and that nothing else installs, and a static route that is not installed while nothing else is (an interface that is down stays its own line). A next hop the router resolves recursively (through OSPF, a static route) is valid and not listed. An installed route whose recursive next hop is resolved only through the containerlab management network is a warning. Read from the state the collectors already write.
 - **MCP `lab_state`:** optional `only_problems: true` returns only `wrong` and `counts`. Without it the answer is unchanged.
+- **Best-Path: eBGP > iBGP:** after MED, the DeepDive, the single-node panel and `why_path` compare eBGP over iBGP when every path still compared says how it was learned. The collector records it as `bgp_routes[].peer_type` (FRR `pathFrom`; the `i` in the IOS-XE status; a confederation peer counts with iBGP). A state without `peer_type` is explained as before. DATA-CONTRACT §4.4.
+- **MCP `why_path`:** `summary`, the answer in one line (the path, and the step that chose it with the two values), and `peer` on each path, the router its next hop belongs to.
 
 ## v1.7.0 — 2026-11-24
 

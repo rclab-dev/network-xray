@@ -112,7 +112,7 @@ function text(html) {
   return html.replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/\s+/g, ' ').trim();
 }
 function expectTie(t, reason) {
-  if (NO_DECIDER.test(reason)) assert.match(t, /all (visible )?attributes equal — FRR decides by a step the table does not show \(eBGP > iBGP .*Older Path, between eBGP paths only .*Router ID\)/, t);
+  if (NO_DECIDER.test(reason)) assert.match(t, /all (visible )?attributes equal — FRR decides by a step the table does not show \(IGP metric .*Older Path, between eBGP paths only .*Router ID\)/, t);   /* nx_peer_type: the older-path capture's two eBGP paths tie at eBGP > iBGP */
   else if (NO_STEP.test(reason)) {
     assert.match(t, /no step decided \(FRR: Nothing left to compare ?\)/, t);
     assert.doesNotMatch(t, /best path by|Older Path/, t);

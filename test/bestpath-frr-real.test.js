@@ -79,7 +79,7 @@ function explain(file) {
 }
 
 // the decider the Best-Path box names, in FRR's selectionReason words
-var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'Origin', 'MED': 'MED' };
+var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'Origin', 'MED': 'MED', 'eBGP': 'Peer Type' };
 function shownDecider(text) {
   var m;
   if (/locally originated/.test(text)) return 'Local Route';

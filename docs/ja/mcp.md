@@ -479,11 +479,15 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 
 答えには、選ばれた経路・ほかの `candidates` とその属性・`deciding_step`・`reason_source` が入ります。`reason_source` は、
 ルータがわけを報告した時 (FRR の `selectionReason`) は `"device"`、collector がルータの表示から割り出した時 (Cisco IOS-XE は
-わけを出さない・`why_best_path` と同じわけ) は `"derived"`、network-xray がデータの属性 (Weight・LocPrf・AS-Path・Origin・MED)
-を比べて割り出した時は `"comparison"`、どちらでもない時は `null` で note が付きます。`"device"` と `"derived"` の時は、
+わけを出さない・`why_best_path` と同じわけ) は `"derived"`、network-xray がデータの属性 (Weight・LocPrf・AS-Path・Origin・MED、
+比べている経路がみな `peer_type` を持つ時はその次の eBGP > iBGP) を比べて割り出した時は `"comparison"`、どちらでもない時は `null` で note が付きます。`"device"` と `"derived"` の時は、
 属性を比べた結果を `comparison` に添えます (突き合わせ用)。
 "First path received" と "Nothing to Select" は経路を比べて決めた段ではない (何も比べていない) ので `deciding_step` にせず、
 比べた結果 (例 `"Only path"`) を入れ、その文は `device_reason` に残します。
+
+各経路の `peer` は next hop のアドレスを持つルータの名前です (データの中でそのアドレスを持つルータが 1 つだけの時)。`summary` は
+答えの 1 行です: どの経路か、と、比べた結果が段を言える時 (ルータのわけがあればそれと同じ時) はその段と 2 つの値。そうでなければ
+ルータのわけ、またはわけがデータに無いこと。
 
 ```json
 {"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"why_path","arguments":{"path":"test/fixtures/iosxe-q15","router":"r1","prefix":"8.8.8.0/24"}}}
@@ -501,12 +505,14 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
     "weight": 0,
     "metric": 0,
     "origin": "IGP",
-    "best": true
+    "best": true,
+    "peer": "r2"
   },
   "candidates": [],
   "device_reason": "First path received",
   "deciding_step": "Only path",
-  "reason_source": "comparison"
+  "reason_source": "comparison",
+  "summary": "r1 8.8.8.0/24 uses the path via r2 (2.2.2.2), AS 65002: the only path"
 }
 ```
 

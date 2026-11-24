@@ -91,7 +91,7 @@ function explain(name) {
 }
 
 // the decider the Best-Path box names, in FRR's selectionReason words
-var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'Origin', 'MED': 'MED' };   // FRR's words (captured: test/fixtures/bestpath-frr-real)
+var LABEL_TO_FRR = { 'Weight': 'Weight', 'LocPrf': 'Local Pref', 'AS-Path': 'AS Path', 'Origin': 'Origin', 'MED': 'MED', 'eBGP': 'Peer Type' };   // FRR's words (captured: test/fixtures/bestpath-frr-real)
 function shownDecider(text) {
   var m;
   if (/locally originated/.test(text)) return 'Local Route';
@@ -151,11 +151,11 @@ CASES.forEach(function (c) {
 });
 
 // the attribute steps the view derives itself must agree with FRR's order, step by step
-test('derived steps follow FRR\'s order: Weight, Local Pref, AS Path, Origin, MED', function () {
+test('derived steps follow FRR\'s order: Weight, Local Pref, AS Path, Origin, MED, eBGP > iBGP', function () {
   var keys = JSON.parse(JSON.stringify(ctx.XRAY_BGP_CRITERIA.map(function (c) { return c.key; })));
-  assert.deepStrictEqual(keys, ['weight', 'locprf', 'aspath', 'origin', 'metric']);
+  assert.deepStrictEqual(keys, ['weight', 'locprf', 'aspath', 'origin', 'metric', 'peer']);
   var dirs = JSON.parse(JSON.stringify(ctx.XRAY_BGP_CRITERIA.map(function (c) { return c.dir; })));
-  assert.deepStrictEqual(dirs, [1, 1, -1, -1, -1], 'higher weight / local pref, shorter AS_PATH, lower origin / MED win');
+  assert.deepStrictEqual(dirs, [1, 1, -1, -1, -1, -1], 'higher weight / local pref, shorter AS_PATH, lower origin / MED, eBGP (0) over iBGP (1) win');
 });
 
 test('steps before the decider are shown as ties', function () {
@@ -201,13 +201,13 @@ test('older-path without selectionReason: fallback text names Older Path for eBG
   assert.match(withoutReason('older-path'), /Older Path/);
 });
 test('older-path without selectionReason: same words as xray-api.js', function () {   /* nx_bestpath_fix */
-  assert.match(withoutReason('older-path'), /all attributes equal — FRR decides by a step the table does not show \(eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID\)/);   /* nx_bp_tie_order */
+  assert.match(withoutReason('older-path'), /all attributes equal — FRR decides by a step the table does not show \(IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID\)/);   /* nx_peer_type: both eBGP = eBGP > iBGP compared, a tie */   /* nx_bp_tie_order */
 });
 test('IOS-XE node without a reason: the tie is put on the unshown steps too, not asserted as Older Path', function () {   /* nx_ios_tie_unasserted */
   ctx.window._lastXrayState = { nos: 'ios-xe' };
   try {
     var t = withoutReason('older-path');
-    assert.match(t, /IOS-XE decides by a step the table does not show \(eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID\)/, t);
+    assert.match(t, /IOS-XE decides by a step the table does not show \(IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID\)/, t);   /* nx_peer_type */
     assert.doesNotMatch(t, /breaks the tie/, t);
   } finally { delete ctx.window._lastXrayState; }
 });

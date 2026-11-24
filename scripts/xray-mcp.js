@@ -186,7 +186,8 @@ var TOOLS = [
       'attributes, the deciding step, and where that reason came from: reason_source "device" when the router reported it ' +
       '(FRR selectionReason), "derived" when the collector worked it out from what the router printed (Cisco IOS-XE prints ' +
       'no reason), "comparison" when network-xray inferred it by comparing the attributes in the data (Weight, LocPrf, ' +
-      'AS-Path, Origin, MED), or null with a note when neither says. A bare address is matched to the longest BGP prefix ' +
+      'AS-Path, Origin, MED, then eBGP over iBGP when the data says how each path was learned), or null with a note when neither says. ' +
+      'summary gives the answer in one line; each path names the router its next hop belongs to (peer). A bare address is matched to the longest BGP prefix ' +
       'that contains it. Read-only.',
     inputSchema: {
       type: 'object',

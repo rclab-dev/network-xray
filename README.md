@@ -206,10 +206,10 @@ the limit is the code. The exceptions, all on purpose:
 |---|---|
 | Neighbors, sessions, routes, the routing table | Reported by the router (`show … json`, `info from state`, IOS `show`) |
 | Which BGP path won | Reported by the router (its `>` mark or `best: true`); network-xray never picks one |
-| Why it won: Weight, LocPref, AS path, Origin, MED | Worked out by network-xray from the collected attributes |
-| A tie past MED | FRR's own `selectionReason`, marked "(FRR)"; with no stored reason, "a step the table does not show", without naming one |
+| Why it won: Weight, LocPref, AS path, Origin, MED, eBGP over iBGP | Worked out by network-xray from the collected attributes (eBGP over iBGP only when the collector recorded how each path was learned) |
+| A tie past those | FRR's own `selectionReason`, marked "(FRR)"; with no stored reason, "a step the table does not show", without naming one |
 | Why it won on Cisco IOL | Worked out by the collector from the printed columns (IOS prints no reason); the panel says it is inferred |
-| eBGP over iBGP, IGP metric, router ID, cluster list | Not compared |
+| IGP metric, router ID, cluster list | Not compared |
 
 The MCP `why_path` tool gives the same split in `reason_source` (`device` = the router reported it, `derived` = the IOS-XE
 collector worked it out from the printed columns, `comparison` = network-xray compared the attributes, `null`); the CLI
@@ -784,7 +784,7 @@ node, you drop that node's state in and get the "inside the router" view the gra
 - **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** pass the node coordinates straight from the
   topology JSON / TopoViewer annotations and each interface link is drawn at the **real angle toward its
   peer** (so the picture matches the graph). Without `positions` it falls back to a neutral fan.
-- **Same Best-Path logic** as the DeepDive (Weight → LocPrf → AS-Path → Origin → MED), so *why a path
+- **Same Best-Path logic** as the DeepDive (Weight → LocPrf → AS-Path → Origin → MED → eBGP > iBGP), so *why a path
   won* is explained the same way.
 - **Data:** `routing_table`, `bgp_routes`, `route_resolution` from `clab-collect.js` (already emitted).
 - **Themeable:** every colour is a CSS variable (`--xnp-bg`, `--xnp-accent`, `--xnp-ok`, …) with a dark
@@ -1281,10 +1281,10 @@ Cisco IOL は `show` (IOL には自分の SSH の session だけの設定 `termi
 |---|---|
 | ネイバー・セッション・経路・ルーティングテーブル | ルータが報告 (`show … json`・`info from state`・IOS の `show`) |
 | どの BGP の経路が勝ったか | ルータが報告 (`>` の印か `best: true`)。network-xray が選ぶことはありません |
-| なぜ勝ったか: Weight・LocPref・AS パス・Origin・MED | 集めた属性から network-xray が推し量る |
-| MED まで同じ時 | FRR 自身の `selectionReason`・「(FRR)」の印。理由が保存されていなければ「表に出ない段」とだけ書き、どの段かは言い切らない |
+| なぜ勝ったか: Weight・LocPref・AS パス・Origin・MED・eBGP と iBGP | 集めた属性から network-xray が推し量る (eBGP と iBGP は、経路ごとの学び方を collector が記録した時だけ) |
+| そこまで同じ時 | FRR 自身の `selectionReason`・「(FRR)」の印。理由が保存されていなければ「表に出ない段」とだけ書き、どの段かは言い切らない |
 | Cisco IOL でなぜ勝ったか | 表示された列から collector が推し量る (IOS は理由を出さない)。パネルにも推し量った物と出ます |
-| eBGP と iBGP・IGP のメトリック・router ID・cluster list | 比べない |
+| IGP のメトリック・router ID・cluster list | 比べない |
 
 MCP の `why_path` も同じ区別を `reason_source` (`device` = ルータが報告・`derived` = IOS-XE の collector が表示の列から割り出した・
 `comparison` = network-xray が属性を比べた・`null`) で返します。CLI の `xray-query.js why` は、保存された
@@ -1803,7 +1803,7 @@ node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exc
 - **位置に依存しない:** グラフの座標を読まないので、ノードがどこにあっても同じ出力 — ノードを自由に動かす時に向きます。
 - **`{ figure: true }`:** ノードを箱で描く (RoutingEngine の円・IF・円の中の緑の転送の矢印)。経路表の行をクリックするとその宛先の出口 IF へ矢印が向く。リンクは**灰色の物理線**、隣接が上がっていればその上に**プロトコルのトンネル** (**OSPF は緑・BGP は紫**、down / 無しは灰色)。省くと表だけ。
 - **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** トポロジの JSON / TopoViewer の注釈の座標を渡すと、各リンクを**相手への本当の角度**で描く (図がグラフと合う)。`positions` が無ければ扇形。
-- **DeepDive と同じ Best-Path の順** (Weight → LocPrf → AS-Path → Origin → MED) = *なぜその経路が勝ったか*を同じように説明します。
+- **DeepDive と同じ Best-Path の順** (Weight → LocPrf → AS-Path → Origin → MED → eBGP > iBGP) = *なぜその経路が勝ったか*を同じように説明します。
 - **データ:** `clab-collect.js` が出す `routing_table`・`bgp_routes`・`route_resolution` (もう出している物)。
 - **テーマ:** 色はすべて CSS 変数 (`--xnp-bg`・`--xnp-accent`・`--xnp-ok` …・既定は暗色)。`.xnp-root` で上書きして自分の UI に合わせる、例 `--xnp-bg: var(--vscode-editor-background)`。
 - **動く例:** `node-panel.html` (ノードとテーマを選べる・バックエンド無し)。

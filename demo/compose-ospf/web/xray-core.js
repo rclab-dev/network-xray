@@ -12418,6 +12418,16 @@ var XRAY_BGP_CRITERIA = [ {
   val: function(r) {
     return xrayBgpNum(r.metric, 0);
   }
+}, {
+  key: "peer",
+  col: null,
+  label: "eBGP > iBGP",
+  dir: -1,
+  noVal: true,
+  val: function(r) {   /* nx_peer_type (v1.8): bgp_routes[].peer_type from the collector; a confederation peer counts as iBGP here (FRR / IOS). null = not in the data */
+    var t = String(r && r.peer_type || "").toLowerCase();
+    return t === "ebgp" ? 0 : t === "ibgp" || t === "confed" ? 1 : null;
+  }
 } ];
 
 /* nx_bgp_origin_rank (2026-10-27): IGP < EGP < incomplete. The collectors write the word ("IGP" / "EGP" / "incomplete");
@@ -12450,9 +12460,11 @@ function _xrayAsPathLen(p) {
   var s = String(p).replace(/\([^)]*\)/g, ' ').replace(/\{[^}]*\}/g, ' {set} ');
   return s.split(/\s+/).filter(Boolean).length;
 }
-function _xrayBgpTieText() {   /* nx_bestpath_fix / nx_bp_tie_order (2026-11-09): same words as xray-api.js (FRR: eBGP > iBGP -> IGP metric -> Older Path between eBGP paths only -> Router ID; IOS-XE: the same unshown steps, not asserted = nx_ios_tie_unasserted 2026-11-12) */
+function _xrayBgpTieText(dec) {   /* nx_bestpath_fix / nx_bp_tie_order (2026-11-09): same words as xray-api.js (FRR: eBGP > iBGP -> IGP metric -> Older Path between eBGP paths only -> Router ID; IOS-XE: the same unshown steps, not asserted = nx_ios_tie_unasserted 2026-11-12) */
   var st = typeof window !== "undefined" ? window._lastXrayState : null;
-  return st && /^ios/i.test(String(st.nos || "")) ? "IOS-XE decides by a step the table does not show (eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID)" : "FRR decides by a step the table does not show (eBGP &gt; iBGP &rarr; IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID)";
+  var peerDone = !!(dec && dec.chain && dec.chain.some(function(x) { return x.crit && x.crit.key === "peer"; }));   /* nx_peer_type */
+  var rest = (peerDone ? "" : "eBGP &gt; iBGP &rarr; ") + "IGP metric &rarr; Older Path, between eBGP paths only &rarr; Router ID";
+  return (st && /^ios/i.test(String(st.nos || "")) ? "IOS-XE" : "FRR") + " decides by a step the table does not show (" + rest + ")";
 }
 function xrayBgpDecision(group) {
   if (!group || !group.length) return null;
@@ -12478,6 +12490,7 @@ function xrayBgpDecision(group) {
   var chain = [], medSkipped = false, alive = group;
   for (var c = 0; c < XRAY_BGP_CRITERIA.length; c++) {
     var crit = XRAY_BGP_CRITERIA[c];
+    if (crit.key === "peer" && alive.some(function(r) { return crit.val(r) === null; })) break;   /* nx_peer_type: not in the data -> stop, assert nothing */
     var bv = crit.val(best);
     var cohort = alive;
     if (crit.key === "metric") {
@@ -12580,10 +12593,10 @@ function xrayBgpChainHtml(chain) {
       return '<span class="bgp-step-tie">' + st.crit.label + " (skipped: diff AS)</span>";
     }
     if (st.status === "tie") {
-      var t = st.crit.key === "origin" ? st.crit.label + " (tie)" : st.crit.label + " " + st.bestVal + "=" + st.cmpVal;
+      var t = st.crit.key === "origin" || st.crit.noVal ? st.crit.label + " (tie)" : st.crit.label + " " + st.bestVal + "=" + st.cmpVal;
       return '<span class="bgp-step-tie">' + t + "</span>";
     }
-    var cmpTxt = st.crit.key === "origin" ? st.crit.label : st.crit.label + " " + st.bestVal + op + st.cmpVal;
+    var cmpTxt = st.crit.key === "origin" || st.crit.noVal ? st.crit.label : st.crit.label + " " + st.bestVal + op + st.cmpVal;
     return '<span class="bgp-step-' + (st.status === "win" ? "win" : "amb") + '">' + cmpTxt + (st.status === "win" ? " ✅" : " ?") + "</span>";
   });
   return '<div class="bgp-chain">' + parts.join(" → ") + "</div>";
@@ -12607,7 +12620,7 @@ function xrayBgpTier3Href(prefix, grp) {
           aspathlen: _xrayAsPathLen(r.as_path),   /* nx_bestpath_fix */
           origin: xrayBgpOriginChar(r.origin) || "i",   /* nx_bgp_origin_rank */
           med: xrayBgpNum(r.metric, 0),
-          ebgp: false,
+          ebgp: String(r.peer_type || "").toLowerCase() === "ebgp",   /* nx_peer_type */
           routerid: r.router_id || "0.0.0." + (i + 1)
         }
       };
@@ -12632,13 +12645,13 @@ function xrayBgpBracketPopHtml(dec, tier3Href) {
   var rows = (dec.chain || []).map(function(st) {
     var op = st.crit.dir > 0 ? "&gt;" : "&lt;";
     if (st.status === "win") {
-      var vv = st.crit.key === "origin" ? "" : "<b>" + st.bestVal + " " + op + " " + st.cmpVal + "</b> ";
+      var vv = st.crit.key === "origin" || st.crit.noVal ? "" : "<b>" + st.bestVal + " " + op + " " + st.cmpVal + "</b> ";
       return '<div class="bp-row win"><span class="k">' + st.crit.label + '</span><span class="v">' + vv + "✅</span></div>";
     }
-    var vtxt = st.crit.key === "origin" || st.status === "skip" ? st.status === "skip" ? "(skipped)" : "=" : st.bestVal + " = " + st.cmpVal;
+    var vtxt = st.crit.key === "origin" || st.crit.noVal || st.status === "skip" ? st.status === "skip" ? "(skipped)" : "=" : st.bestVal + " = " + st.cmpVal;
     return '<div class="bp-row tie"><span class="k">' + st.crit.label + '</span><span class="v">' + vtxt + "</span></div>";
   }).join("");
-  var head = dec.criterion.label + " (" + dec.bestVal + " " + (dec.criterion.dir > 0 ? "&gt;" : "&lt;") + " " + dec.cmpVal + ")";
+  var head = dec.criterion.noVal ? dec.criterion.label : dec.criterion.label + " (" + dec.bestVal + " " + (dec.criterion.dir > 0 ? "&gt;" : "&lt;") + " " + dec.cmpVal + ")";
   return '<div class="de-bgp-bracket-pop" onclick="event.stopPropagation()">' + '<div class="bp-h">' + head + '<button type="button" class="bp-x" onclick="xrayBgpCloseBracketPop(event)" title="close (ESC)">✕</button></div>' + rows + '<a class="bp-more" href="' + tier3Href + '" target="_blank" rel="noopener" onclick="event.preventDefault();event.stopPropagation();window.open(this.href,\'_blank\',\'noopener\');">' + (window._xrayLang === "en" ? "See all decision steps" : "判定の全ステップを見る") + " ⧉</a>" + "</div>";
 }
 
@@ -12714,7 +12727,7 @@ function xrayBgpReasonHtml(p, dec, grp) {
   var chainHtml = xrayBgpChainHtml(dec.chain);
   if (dec.kind === "decided") {
     var op = dec.criterion.dir > 0 ? ">" : "<";
-    var cmp = dec.criterion.key !== "origin" && dec.cmpVal !== null ? " (" + dec.bestVal + " " + op + " " + dec.cmpVal + ")" : "";
+    var cmp = dec.criterion.key !== "origin" && !dec.criterion.noVal && dec.cmpVal !== null ? " (" + dec.bestVal + " " + op + " " + dec.cmpVal + ")" : "";
     if (xrayBgpBracketEnabled()) {
       var _href = xrayBgpTier3Href(p, grp);
       var _btn = '<span class="bgp-crit-btn" role="button" tabindex="0" onclick="xrayBgpToggleBracketPop(event)" onkeydown="xrayBgpBracketKey(event)">' + dec.criterion.label + "</span>";
@@ -12738,8 +12751,8 @@ function xrayBgpReasonHtml(p, dec, grp) {
     if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all visible attributes equal — " + _frBy + "</div>" + chainHtml;
     return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → " + _frBy + "</div>" + chainHtml;
   }
-  if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — " + _xrayBgpTieText() + "</div>" + chainHtml;
-  if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all attributes equal — " + _xrayBgpTieText() + "</div>" + chainHtml;
+  if (dec.kind === "medskip") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>MED not compared</b> (different neighbor AS) — " + _xrayBgpTieText(dec) + "</div>" + chainHtml;
+  if (dec.kind === "tie") return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → all attributes equal — " + _xrayBgpTieText(dec) + "</div>" + chainHtml;
   return '<div class="bgp-reason bgp-reason-note">★ ' + pH + " → <b>no single decider</b> — lower-level tiebreak</div>" + chainHtml;
 }
 
@@ -13230,7 +13243,7 @@ function xrayBuildBgpView(routes) {
   });
   html += "</tbody></table>";
   if (_anyEcmp) html += _xrayEcmpLegendHtml(_anyEcmp === "sel", _ecmpN, _ecmpMix);   /* nx_ecmp */
-  if (reasons) reasons += '<div class="bgp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED</div>';
+  if (reasons) reasons += '<div class="bgp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED → eBGP &gt; iBGP</div>';
   return {
     table: html,
     decision: reasons

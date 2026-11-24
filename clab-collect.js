@@ -341,6 +341,15 @@ function parseBgpSummary(j) {
   return out;
 }
 
+/* nx_peer_type (v1.8): FRR's "pathFrom" = "internal" (iBGP) / "external". FRR writes "external" also for a confederation peer,
+   whose AS_PATH starts with the confederation segment "( ... )"; the best-path step ranks that one with iBGP -> "confed".
+   null when FRR did not write pathFrom. */
+function _frrPeerType(r) {
+  var pf = r && r.pathFrom;
+  if (pf === 'internal') return 'ibgp';
+  if (pf !== 'external') return null;
+  return /^\s*\(/.test(String(r.path == null ? '' : r.path)) ? 'confed' : 'ebgp';
+}
 // show ip bgp json -> [ {prefix, bestNexthop, valid} ]
 function parseBgpRoutes(j) {
   var out = [];
@@ -370,6 +379,7 @@ function parseBgpRoutes(j) {
         as_path: (r.path != null ? String(r.path).trim() : ''),
         local_pref: (r.locPrf != null ? r.locPrf : (r.localPref != null ? r.localPref : null)),
         weight: r.weight, metric: r.metric, origin: r.origin,
+        peer_type: _frrPeerType(r),   /* nx_peer_type (v1.8) */
         reason: r.selectionReason || (r.bestpath && typeof r.bestpath === 'object' && r.bestpath.selectionReason) || '',   /* nx_bestpath_fix: per-prefix form */ multipath: !!r.multipath, valid: !!(r.valid || _best || r.multipath) });   /* nx_ecmp: FRR marks every installed equal path multipath */   /* nx_frr_bgp_valid: FRR puts "valid": true on usable paths only (missing = invalid, e.g. inaccessible next hop); a best / multipath path is usable by definition (hand-made json without valid stays as before) */
     });
   });
@@ -802,6 +812,8 @@ function buildState(opts) {
       if (r.metric != null) o.metric = r.metric;
       if (r.origin) o.origin = r.origin;
       if (r.reason) o.reason = r.reason;
+      var _pt = r.peer_type || (r.ibgp === true ? 'ibgp' : r.ibgp === false ? 'ebgp' : null);   /* nx_peer_type: FRR pathFrom, or the IOS-XE / Genie status 'i' */
+      if (_pt && !/^(0\.0\.0\.0|::)$/.test(String(r.nextHop || '')) && +r.weight !== 32768) o.peer_type = _pt;   // a route the router originates itself was learned from no peer
       if (r.multipath && r.valid !== false) { o.multipath = true; if (!r.best) o.status = '*='; }   /* nx_ecmp: FRR's "=" = multipath, used together with the best */   /* nx_frr_bgp_valid: valid paths only */
       if (r.vrf) o.vrf = r.vrf;   /* nx_vrf_bgp_table: only when not the default VRF */
       return o;

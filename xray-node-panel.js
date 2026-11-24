@@ -38,7 +38,8 @@
     { key: 'locprf', col: 'locprf', label: 'LocPrf',  dir: 1,  val: function (r) { return bnum(r.local_pref, 100); } },
     { key: 'aspath', col: 'path',   label: 'AS-Path', dir: -1, val: function (r) { return r.as_path ? r.as_path.split(/\s+/).filter(Boolean).length : 0; } },
     { key: 'origin', col: 'path',   label: 'Origin',  dir: -1, val: function (r) { var m = { i: 0, e: 1, '?': 2, igp: 0, egp: 1, incomplete: 2 }; var o = String(r.origin == null ? '' : r.origin).trim().toLowerCase(); return (o in m) ? m[o] : 3; } },   /* nx_readme_audit_v2: the collectors write IGP / EGP / incomplete */
-    { key: 'metric', col: 'metric', label: 'MED',     dir: -1, val: function (r) { return bnum(r.metric, 0); } }
+    { key: 'metric', col: 'metric', label: 'MED',     dir: -1, val: function (r) { return bnum(r.metric, 0); } },
+    { key: 'peer',   col: null,     label: 'eBGP > iBGP', dir: -1, noVal: true, val: function (r) { var t = String(r && r.peer_type || '').toLowerCase(); return t === 'ebgp' ? 0 : (t === 'ibgp' || t === 'confed') ? 1 : null; } }   /* nx_peer_type (v1.8): same as xray-api.js */
   ];
   function bnum(v, d) { var n = parseInt(v, 10); return isNaN(n) ? d : n; }
   function nbrAS(r) { var t = (r.as_path || '').split(/\s+/).filter(Boolean); return t.length ? t[0] : ''; }
@@ -55,7 +56,9 @@
     // some but not all came out "no single decider".
     var chain = [], medSkipped = false, alive = group, c;
     for (c = 0; c < BGP_CRIT.length; c++) {
-      var crit = BGP_CRIT[c], bv = crit.val(best), cohort = alive;
+      var crit = BGP_CRIT[c];
+      if (crit.key === 'peer' && alive.some(function (r) { return crit.val(r) === null; })) break;   /* nx_peer_type: not in the data -> assert nothing */
+      var bv = crit.val(best), cohort = alive;
       if (crit.key === 'metric') {
         var bAS = nbrAS(best); cohort = alive.filter(function (r) { return nbrAS(r) === bAS; });
         if (cohort.length < 2) {
@@ -82,8 +85,8 @@
     var parts = chain.map(function (st) {
       var op = st.crit.dir > 0 ? '>' : '<';
       if (st.status === 'skip') return '<span class="xnp-step-tie">' + st.crit.label + ' (skipped: diff AS)</span>';
-      if (st.status === 'tie') { var t = (st.crit.key === 'origin') ? (st.crit.label + ' (tie)') : (st.crit.label + ' ' + st.bestVal + '=' + st.cmpVal); return '<span class="xnp-step-tie">' + t + '</span>'; }
-      var txt = (st.crit.key === 'origin') ? st.crit.label : (st.crit.label + ' ' + st.bestVal + op + st.cmpVal);
+      if (st.status === 'tie') { var t = (st.crit.key === 'origin' || st.crit.noVal) ? (st.crit.label + ' (tie)') : (st.crit.label + ' ' + st.bestVal + '=' + st.cmpVal); return '<span class="xnp-step-tie">' + t + '</span>'; }
+      var txt = (st.crit.key === 'origin' || st.crit.noVal) ? st.crit.label : (st.crit.label + ' ' + st.bestVal + op + st.cmpVal);
       return '<span class="xnp-step-' + (st.status === 'win' ? 'win' : 'amb') + '">' + txt + (st.status === 'win' ? ' ✅' : ' ?') + '</span>';
     });
     return '<div class="xnp-chain">' + parts.join(' → ') + '</div>';
@@ -104,14 +107,15 @@
     var ch = chainHtml(dec.chain);
     if (dec.kind === 'decided') {
       var op = dec.criterion.dir > 0 ? '>' : '<';
-      var cmp = (dec.criterion.key !== 'origin' && dec.cmpVal !== null) ? ' (' + dec.bestVal + ' ' + op + ' ' + dec.cmpVal + ')' : '';
+      var cmp = (dec.criterion.key !== 'origin' && !dec.criterion.noVal && dec.cmpVal !== null) ? ' (' + dec.bestVal + ' ' + op + ' ' + dec.cmpVal + ')' : '';
       return '<div class="xnp-reason">★ ' + esc(p) + ' → best path by <b>' + dec.criterion.label + '</b>' + cmp + '</div>' + ch;
     }
     // The visible attributes do not decide. A stored reason names the step; without one, the tie is decided by a step
     // the table does not show (FRR: eBGP > iBGP -> IGP metric -> Older Path -> Router ID) and no single step is asserted.
     var fr = storedReason(dec.best);
+    var peerDone = (dec.chain || []).some(function (x) { return x.crit && x.crit.key === 'peer'; });   /* nx_peer_type: eBGP > iBGP compared and tied */
     var by = fr ? 'best path by <b>' + esc(fr) + '</b>' + (nos === 'ios-xe' ? ' (derived by the collector from the IOS-XE table; IOS-XE reports no reason)' : ' (reported by FRR)')
-      : 'decided by <b>a step the table does not show</b> (eBGP &gt; iBGP → IGP metric → Older Path → Router ID)';
+      : 'decided by <b>a step the table does not show</b> (' + (peerDone ? '' : 'eBGP &gt; iBGP → ') + 'IGP metric → Older Path → Router ID)';
     if (dec.kind === 'medskip') return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → <b>MED not compared</b> (different neighbor AS) — ' + by + '</div>' + ch;
     if (dec.kind === 'tie') return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → all visible attributes equal — ' + by + '</div>' + ch;
     return '<div class="xnp-reason xnp-note">★ ' + esc(p) + ' → <b>no single decider</b> — ' + (fr ? by : 'a later step not in the data') + '</div>' + ch;
@@ -148,7 +152,7 @@
       reasons += reasonHtml(d.label + (d.vrf ? ' [vrf ' + d.vrf + ']' : ''), dec, nos);
     });
     html += '</tbody></table>';
-    if (reasons) reasons += '<div class="xnp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED</div>';
+    if (reasons) reasons += '<div class="xnp-legend">Best-path order: Weight → LocPrf → AS-Path → Origin → MED → eBGP &gt; iBGP</div>';
     return { table: html, decision: reasons };
   }
 

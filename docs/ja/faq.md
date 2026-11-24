@@ -36,8 +36,8 @@ Cisco IOL は SSH で文字の `show` コマンドを使って読みます。コ
 ### Best-Path の勝者は network-xray が計算したものですか?
 
 違います。勝者は必ず、ルータ自身が best と印を付けた経路 (FRR の `bestpath`) です。パネルは候補を
-Weight・Local Preference・AS path・origin・MED で比べてわけを説明し、それで決まらない時は FRR 自身の
-`selectionReason` を出します。理由が保存されていない時は、表に出ない段 (iBGP より eBGP・IGP のメトリック・
+Weight・Local Preference・AS path・origin・MED と、経路ごとの学び方を collector が記録した時はその次の iBGP より eBGP で比べてわけを説明し、
+それで決まらない時は FRR 自身の `selectionReason` を出します。理由が保存されていない時は、表に出ない段 (比べなかった時の iBGP より eBGP・IGP のメトリック・
 Older Path・Router ID) で決まったと書き、どの段かは言い切りません。Cisco IOL では、`show ip bgp` に出る列からわけを割り出します。
 [See it](../../README.md#see-it) と [Query from a script or an AI assistant](../../README.md#query-from-a-script-or-an-ai-assistant) を参照してください。
 

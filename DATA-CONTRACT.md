@@ -349,12 +349,13 @@ Each entry in `bgp_routes[]` carries the visible attributes (`prefix`, `next_hop
 | `prefixlen` | number | Prefix length (`24` for `203.0.113.0/24`). FRR gives `prefix` without the length, so the table shows `prefix/prefixlen`; `prefix` itself is kept as FRR gives it (problem checks compare it). プレフィックス長。 |
 | `multipath` | boolean | `true` on every path FRR marks multipath (`=` in `show bgp`): with `maximum-paths`, 2+ equal paths are all installed and share the traffic (ECMP). The best keeps `status` `*>` (the representative, advertised to neighbors); the others get `*=`. Absent when the prefix has no ECMP. multipath = 一緒に転送に使う等価の経路。 |
 | `vrf` | string | The VRF of the route (`show ip bgp vrf all json`), only when it is not the default VRF. The same prefix can be in two VRFs; the DeepDive shows one VRF at a time. VRF 名 (default 以外の時だけ)。 |
+| `peer_type` | string | `ebgp` / `ibgp` / `confed`: how the path was learned, for the eBGP > iBGP step. FRR: `paths[].pathFrom` (`internal` = `ibgp`; `external` = `ebgp`, or `confed` when the AS_PATH starts with a confederation segment `( … )`, which FRR also calls external); IOS-XE / Genie: the `i` in the status column. Left out when the router did not say; then the step is not compared. 経路の学び方 (eBGP > iBGP の段に使う)。無い時はその段を比べない。 |
 | `reason` | string | **(iii) best-path reason authority.** The reason stored for the best route: FRR's own `show bgp … json` `paths[].bestpath.selectionReason` (e.g. `Local Pref`, `MED`, `Older Path`, `Router ID`), or, for Cisco IOS-XE (which prints none), the step the collector worked out from the printed columns (`state.nos = 'ios-xe'` tells the readers which). This is the field the collectors write and the panels / `xray-query.js` read; `sel_reason` is read as a synonym. When present it is the FIRST authority for naming the decider. 保存された選択理由 (FRR 自身の selectionReason、IOS-XE では collector が表示の列から割り出した段)。collector が書き、画面と `xray-query.js` が読む欄 (`sel_reason` も同じ物として読む)。存在すれば決定理由の第一権威。 |
 
 **Best-path reason: authority vs. derivation / ベストパス理由の権威と導出.**
 The Best-Path Decision panel names the deciding criterion and lists the full FRR default order as a ladder; network-xray
-itself compares the visible attributes only up to MED, and a step after MED is named only from `reason` (below) or left
-unnamed ("a step the table does not show") — the same split as the README's "What the router reports, and what network-xray works out" table:
+itself compares the visible attributes up to MED, then eBGP > iBGP when every path still compared has `peer_type`; a
+step after that is named only from `reason` (below) or left unnamed ("a step the table does not show") — the same split as the README's "What the router reports, and what network-xray works out" table:
 (Weight → LocPref → Local route → AS-Path → Origin → MED → eBGP&gt;iBGP → IGP metric → **Older Path\* (RFC 5004)** →
 Router ID → Neighbor IP; \* Older Path only between eBGP paths, skipped with `bgp bestpath compare-routerid` — FRR's
 `bgp_path_info_cmp()`).
@@ -368,9 +369,10 @@ Two data sources are supported, in priority order:
    権威: 可視属性で決まらない時は `reason` (FRR の文字列・IOS-XE では collector が割り出した段 = 導出と明記) をそのまま採用。
    可視属性で決まる時はその段 (FRR の selectionReason は最後の 1 組の比較の理由に過ぎない)。
 2. **Derivation** — with no backend (this OSS gallery: recorded demos, `show ip bgp` pastes) the
-   decider is derived from the visible attributes in FRR's default comparison order. A pure
+   decider is derived from the visible attributes in FRR's default comparison order (Weight → LocPrf → AS-Path →
+   Origin → MED → eBGP > iBGP; the last one only when every path still compared has `peer_type`). A pure
    visible-attribute tie is not attributed to one step: the view says FRR decides by a step the table does not
-   show (eBGP > iBGP → IGP metric → **Older Path (RFC 5004)**, only between eBGP paths → Router ID, always
+   show (eBGP > iBGP [left out when it was compared] → IGP metric → **Older Path (RFC 5004)**, only between eBGP paths → Router ID, always
    compared — FRR's `bgp_path_info_cmp()`; recorded FRR 8.4 / 10.7.1: two equal iBGP paths → `Router ID`).
    backend が無い場合は可視属性から FRR 既定順で導出。可視属性が完全に同値のタイは 1 つの段に帰属させず、
    「表に出ない段 (eBGP > iBGP → IGP metric → Older Path [eBGP どうしのみ] → Router ID [常に]) で決まる」と書く。

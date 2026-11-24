@@ -37,9 +37,9 @@ comes from a change you made yourself in the lab.
 ### Is the Best-Path winner network-xray's own calculation?
 
 No. The winner is always the path the router itself marked best (FRR's `bestpath`). The panel explains the reason by
-comparing the candidates on Weight, Local Preference, AS path, origin and MED, and, where those do not decide it, shows
-FRR's own `selectionReason`. When no reason is stored, it says a step the table does not show (eBGP over iBGP, IGP
-metric, Older Path, Router ID) decided it, and does not name one. For Cisco IOL the reason is worked out from the printed `show ip bgp` columns. See
+comparing the candidates on Weight, Local Preference, AS path, origin and MED, then eBGP over iBGP when the collector
+recorded how each path was learned, and, where those do not decide it, shows FRR's own `selectionReason`. When no reason
+is stored, it says a step the table does not show (eBGP over iBGP when it was not compared, IGP metric, Older Path, Router ID) decided it, and does not name one. For Cisco IOL the reason is worked out from the printed `show ip bgp` columns. See
 [See it](../README.md#see-it) and [Query from a script or an AI assistant](../README.md#query-from-a-script-or-an-ai-assistant).
 
 ## How it compares
