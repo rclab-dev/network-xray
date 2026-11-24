@@ -496,7 +496,7 @@ it off). With `--watch` that is only when something changed, so `generated` = th
 inferred): **`routes`** = every selected route of every router with why it won (BGP: the deciding step and the two values
 compared, from `why`; OSPF: the out-interface cost), **`adjacencies`** = each OSPF interface pair (up / down, the
 mismatched parameters and X-Ray's sentence, from `ospf-if`) and each BGP session (state). For a person: `between` and `detail` (sentences); for a program: `state`, `mismatch_keys`, `bgp_state` and the ends. `nodes` / `edges` use the
-columns Grafana's Node graph reads (`color` / `thickness`: red and thick = down or mismatched; grey = a link whose interfaces were not read, or a router that could not be read). `routes` /
+columns Grafana's Node graph reads (`fixedx` / `fixedy` = the `graph-posX` / `graph-posY` labels of the topology, only when every router has both; `color` / `thickness`: red and thick = down or mismatched; grey = a link whose interfaces were not read, or a router that could not be read). `routes` /
 `adjacencies` are left out where `scripts/xray-query.js` is found neither next to the collector nor in the Docker image (`/opt/network-xray/scripts`). A field may be added; a change
 that breaks a reader raises `schema`.
 
@@ -504,7 +504,7 @@ that breaks a reader raises `schema`.
 状態に加えて、X-Ray の答えを `scripts/xray-query.js` から入れます (新しく推論しない): **`routes`** = 各ルータの選ばれた
 経路と勝った理由 (BGP は決め手の段と比べた 2 つの値 = `why` と同じ・OSPF は出口 IF の cost)、**`adjacencies`** = OSPF の
 IF の組ごと (up / down・食い違う設定・X-Ray の文 = `ospf-if` と同じ) と BGP のセッションごと (状態)。人が読む欄 = `between` と `detail` (文)・プログラムが読む欄 = `state`・`mismatch_keys`・`bgp_state` と両端。`nodes` / `edges` は
-Grafana の Node graph が読む列 (`color` / `thickness`: 赤く太い = down か食い違い・灰 = IF が読めていない線 / 読めなかったルータ)。`scripts/xray-query.js` が collector の
+Grafana の Node graph が読む列 (`fixedx` / `fixedy` = トポロジの `graph-posX` / `graph-posY` のラベル・全ルータにある時だけ、`color` / `thickness`: 赤く太い = down か食い違い・灰 = IF が読めていない線 / 読めなかったルータ)。`scripts/xray-query.js` が collector の
 隣にも Docker の像の中 (`/opt/network-xray/scripts`) にも無い時は `routes` / `adjacencies` を省きます。項目は増えることがあり、読む側が壊れる変更の時は `schema` を上げます。
 
 ```json
@@ -518,7 +518,7 @@ Grafana の Node graph が読む列 (`color` / `thickness`: 赤く太い = down 
                    { "id": "r1>10.10.0.20", "protocol": "bgp", "between": "r1 ⇔ 10.10.0.20 (AS 65002)", "state": "up",
                      "detail": "eBGP Established, 1 prefix received", "a": "r1", "peer": "10.10.0.20", "remote_as": 65002,
                      "bgp_state": "Established", "prefixes_received": 1 } ],
-  "nodes": [ { "id": "r1", "title": "r1", "mainstat": "1 issue", "secondarystat": "3 routes", "color": "#ef4444" } ],
+  "nodes": [ { "id": "r1", "title": "r1", "mainstat": "1 issue", "secondarystat": "3 routes", "color": "#ef4444", "fixedx": 200, "fixedy": 40 } ],
   "edges": [ { "id": "r1:eth1-r2:eth1", "source": "r1", "target": "r2", "mainstat": "OSPF down: hello, dead",
                "secondarystat": "OSPF no adjacency — hello 10 ⇔ 5, dead 40 ⇔ 20", "color": "#ef4444", "thickness": 4 } ] }
 ```

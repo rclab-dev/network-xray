@@ -1,0 +1,20 @@
+# Grafana that reads network-xray: docker compose up -d  ->  http://localhost:3000 (no login, view only, this host only)
+# Start network-xray first (./xray.sh <lab> or the image) on the same host. Elsewhere: NX_URL=http://<host>:8600 docker compose up -d
+services:
+  grafana:
+    image: grafana/grafana-oss:12.0.0
+    network_mode: host          # Grafana's server and your browser both reach network-xray at the same NX_URL
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_HTTP_PORT: "3000"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/network-xray.json
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource,innius-video-panel
+      NX_URL: ${NX_URL:-http://localhost:8600}
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning:ro
+      - ./network-xray-dashboard.json:/network-xray-dashboard.json:ro
+    # the dashboard's network-xray box starts at NX_URL
+    entrypoint: ["sh", "-c", "mkdir -p /var/lib/grafana/dashboards && sed \"s#http://localhost:8600#$$NX_URL#g\" /network-xray-dashboard.json > /var/lib/grafana/dashboards/network-xray.json && exec /run.sh"]

@@ -1,0 +1,233 @@
+{
+ "title": "network-xray",
+ "uid": "network-xray",
+ "editable": true,
+ "refresh": "5s",
+ "schemaVersion": 41,
+ "time": {
+  "from": "now-15m",
+  "to": "now"
+ },
+ "templating": {
+  "list": [
+   {
+    "name": "nx",
+    "label": "network-xray",
+    "type": "textbox",
+    "query": "http://localhost:8600",
+    "current": {
+     "text": "http://localhost:8600",
+     "value": "http://localhost:8600"
+    },
+    "description": "Where the network-xray page is (xray.sh or the image): opened by your browser for the picture and by the Grafana server for the tables"
+   },
+   {
+    "name": "router",
+    "label": "router",
+    "type": "textbox",
+    "query": "r1",
+    "current": {
+     "text": "r1",
+     "value": "r1"
+    },
+    "description": "The router the DeepDive shows"
+   },
+   {
+    "name": "DS",
+    "label": "Infinity",
+    "type": "datasource",
+    "query": "yesoreyeram-infinity-datasource",
+    "hide": 2
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "innius-video-panel",
+   "title": "X-Ray: ${router} DeepDive",
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 14,
+    "h": 14
+   },
+   "options": {
+    "videoType": "iframe",
+    "iframeURL": "${nx}/?embed=1&view=deepdive&node=${router}",
+    "url": "${nx}/?embed=1&view=deepdive&node=${router}"
+   }
+  },
+  {
+   "id": 2,
+   "type": "nodeGraph",
+   "title": "Adjacencies (red = down / mismatch)",
+   "description": "An arrow has no meaning: an adjacency has no direction.",
+   "gridPos": {
+    "x": 14,
+    "y": 0,
+    "w": 10,
+    "h": 14
+   },
+   "options": {
+    "layoutAlgorithm": "force"
+   },
+   "targets": [
+    {
+     "refId": "nodes",
+     "datasource": {
+      "type": "yesoreyeram-infinity-datasource",
+      "uid": "${DS}"
+     },
+     "type": "json",
+     "source": "url",
+     "url": "${nx}/static/xray-states.json",
+     "url_options": {
+      "method": "GET"
+     },
+     "parser": "backend",
+     "root_selector": "nodes",
+     "format": "table"
+    },
+    {
+     "refId": "edges",
+     "datasource": {
+      "type": "yesoreyeram-infinity-datasource",
+      "uid": "${DS}"
+     },
+     "type": "json",
+     "source": "url",
+     "url": "${nx}/static/xray-states.json",
+     "url_options": {
+      "method": "GET"
+     },
+     "parser": "backend",
+     "root_selector": "edges",
+     "format": "table"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "table",
+   "title": "Adjacencies - what is wrong",
+   "gridPos": {
+    "x": 0,
+    "y": 14,
+    "w": 24,
+    "h": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "yesoreyeram-infinity-datasource",
+      "uid": "${DS}"
+     },
+     "type": "json",
+     "source": "url",
+     "url": "${nx}/static/xray-states.json",
+     "url_options": {
+      "method": "GET"
+     },
+     "parser": "backend",
+     "root_selector": "adjacencies",
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "id": true,
+       "a": true,
+       "a_iface": true,
+       "b": true,
+       "b_iface": true,
+       "peer": true,
+       "remote_as": true,
+       "type": true,
+       "neighbor_state": true,
+       "mismatch_keys": true,
+       "bgp_state": true,
+       "prefixes_received": true
+      },
+      "indexByName": {
+       "protocol": 0,
+       "between": 1,
+       "state": 2,
+       "detail": 3
+      },
+      "renameByName": {}
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "detail"
+      },
+      "properties": [
+       {
+        "id": "custom.width",
+        "value": 700
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 4,
+   "type": "table",
+   "title": "Routes - why each one",
+   "gridPos": {
+    "x": 0,
+    "y": 20,
+    "w": 24,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "yesoreyeram-infinity-datasource",
+      "uid": "${DS}"
+     },
+     "type": "json",
+     "source": "url",
+     "url": "${nx}/static/xray-states.json",
+     "url_options": {
+      "method": "GET"
+     },
+     "parser": "backend",
+     "root_selector": "routes",
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "protocol": true,
+       "out_iface": true,
+       "deciding_step": true
+      },
+      "indexByName": {
+       "router": 0,
+       "prefix": 1,
+       "next_hop": 2,
+       "reason": 3
+      },
+      "renameByName": {}
+     }
+    }
+   ]
+  }
+ ]
+}

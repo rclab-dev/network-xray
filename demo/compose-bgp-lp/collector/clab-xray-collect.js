@@ -653,6 +653,19 @@ function nxAnswers(states) {
   } catch (e) {}
   return { routes: routes, adjacencies: adjs };
 }
+/* nx_states_json_pos: where the lab says each router is - containerlab's graph-posX / graph-posY node labels (the ones
+   containerlab graph uses) - as fixedx / fixedy on nodes, which Grafana's Node graph draws at those places. Only when every
+   router has both (the Node graph refuses a frame where some have them and some not): otherwise none, and the Node graph lays
+   the routers out itself. */
+var NODE_POS = (function () {
+  var pos = {}, all = nodes.every(function (n) {
+    var L = nodeLabels(n), num = function (k) { var m = new RegExp('(^|[\\s{,])["\']?' + k + '["\']?[ \\t]*:[ \\t]*["\']?(-?\\d+(?:\\.\\d+)?)').exec(L); m = m && [m[0], m[2]]; return m ? +m[1] : null; };
+    var x = num('graph-posX'), y = num('graph-posY');
+    if (x === null || y === null) return false;
+    pos[n] = { x: x, y: y }; return true;
+  });
+  return all ? pos : null;
+})();
 function statesDoc(sj, states) {
   var ans = nxAnswers(states);
   var adjs = ans ? ans.adjacencies : [];
@@ -662,7 +675,8 @@ function statesDoc(sj, states) {
     var st = states[n] || {}, k = issues[n] || 0;
     return { id: n, title: n, mainstat: st.success === false ? 'unread' : (k ? k + (k === 1 ? ' issue' : ' issues') : 'ok'),
       secondarystat: (function (c) { return c + (c === 1 ? ' route' : ' routes'); })((st.routing_table || []).filter(function (r) { return r && r.selected !== false; }).length),
-      color: st.success === false ? '#9ca3af' : (k ? '#ef4444' : '#22c55e') };
+      color: st.success === false ? '#9ca3af' : (k ? '#ef4444' : '#22c55e'),
+      fixedx: NODE_POS ? NODE_POS[n].x : undefined, fixedy: NODE_POS ? NODE_POS[n].y : undefined };
   });
   var seen = {}, es = [];
   nodes.forEach(function (a) {

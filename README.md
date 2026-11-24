@@ -620,6 +620,23 @@ view.openDeepDive();                                      // inside the router
 
 Tried with Grafana OSS 12; nothing to build on the Grafana side.
 
+**Start in three lines** (Linux, network-xray already running on the same host at `:8600`):
+
+```bash
+cd demo/grafana
+docker compose up -d          # Grafana 12 with the two plugins, the data source and the dashboard
+# open http://localhost:3000  (no login, view only, this host only); network-xray elsewhere: NX_URL=http://<host>:8600 docker compose up -d
+```
+
+**Your own Grafana:** install the plugins *Infinity* (`yesoreyeram-infinity-datasource`) and *Video* (`innius-video-panel`), add an
+Infinity data source, then *Dashboards → New → Import* [demo/grafana/network-xray-dashboard.json](./demo/grafana/network-xray-dashboard.json)
+and type where network-xray is in its **network-xray** box. That address is opened by your browser (the picture) and by the
+Grafana server (the tables), so it has to work from both. The Node graph draws an arrow on every link; it has no meaning (an
+adjacency has no direction). Routers are placed where the lab's `graph-posX` / `graph-posY` labels say when every router has
+them, otherwise the Node graph lays them out.
+
+What is inside:
+
 - **The X-Ray answer in a panel** — a panel that shows a URL in an iframe (the community panel *Video*
   `innius-video-panel`, iFrame source) with `http://<host>:8600/?embed=1&view=deepdive&node=r1` (add `&prefix=8.8.8.0/24`
   for a route): the DeepDive of r1 fits the panel - what is wrong, the routing table, the Best-Path Decision. network-xray
@@ -1676,6 +1693,22 @@ view.openDeepDive();                                      // ルータの中へ
 ### Grafana に入れる
 
 Grafana OSS 12 で試しました。Grafana の側で作る物はありません。
+
+**3 行で始める** (Linux・network-xray が同じ機械の `:8600` で動いている時):
+
+```bash
+cd demo/grafana
+docker compose up -d          # Grafana 12 とプラグイン 2 つ・data source・dashboard が一度に立つ
+# http://localhost:3000 を開く (ログイン無し・見るだけ・この機械からだけ)。network-xray が別の機械なら NX_URL=http://<host>:8600 docker compose up -d
+```
+
+**自分の Grafana に入れる:** プラグイン *Infinity* (`yesoreyeram-infinity-datasource`) と *Video* (`innius-video-panel`) を入れ、
+Infinity の data source を足して、*Dashboards → New → Import* で [demo/grafana/network-xray-dashboard.json](./demo/grafana/network-xray-dashboard.json)
+を読み、**network-xray** の欄に network-xray の場所を書きます。この場所はブラウザ (絵) と Grafana のサーバー (表) の両方から開くので、
+両方から届く場所にします。Node graph は線に矢印を付けますが、意味はありません (隣接に向きは無い)。ラボの全ルータに
+`graph-posX` / `graph-posY` のラベルがあればその位置に、無ければ Node graph が自分で並べます。
+
+中身:
 
 - **X-Ray の答えをパネルに** — URL を iframe で出すパネル (community の *Video* `innius-video-panel` の iFrame) に
   `http://<host>:8600/?embed=1&view=deepdive&node=r1` (経路なら `&prefix=8.8.8.0/24` も) を入れると、r1 の DeepDive が

@@ -18,12 +18,12 @@ var STUB = "var a=process.argv,o=a[a.indexOf('--out')+1],n=a[a.indexOf('--node')
 var TOPO = 'name: sj\ntopology:\n  nodes:\n    r1: { kind: linux }\n    r2: { kind: linux }\n    r3: { kind: linux }\n  links:\n' +
   '    - endpoints: ["r1:eth1", "r2:eth1"]\n    - endpoints: ["r1:eth2", "r3:eth2"]\n';
 
-function collectOnce(extra) {
+function collectOnce(extra, topo) {
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-sj-')), out = path.join(dir, 'out');
   fs.mkdirSync(out);
   fs.writeFileSync(path.join(out, 'clab-collect.js'), STUB);
   fs.writeFileSync(path.join(out, 'clab-iosxe-collect.js'), STUB);
-  fs.writeFileSync(path.join(dir, 'lab.clab.yml'), TOPO);
+  fs.writeFileSync(path.join(dir, 'lab.clab.yml'), topo || TOPO);
   cp.spawnSync(process.execPath, [path.join(ROOT, 'clab-xray-collect.js'), path.join(dir, 'lab.clab.yml'), out, 'ospf'].concat(extra || []),
     { env: Object.assign({}, process.env, { TMPDIR: dir, TMP: dir, TEMP: dir }), stdio: 'ignore', timeout: 30000 });
   return { dir: dir, out: out };
@@ -64,4 +64,28 @@ test('the Docker image: the entrypoint drops scripts/ from the copy it runs, the
   var at = /^SRC=(\S+);/m.exec(ep);
   assert.ok(at && /rm -rf [^\n]*"\$WORK\/scripts"/.test(ep), 'the copy the image runs has no scripts/');
   assert.ok(src.indexOf("'" + at[1] + "/scripts/xray-query.js'") >= 0, 'the collector falls back to ' + at[1] + '/scripts/xray-query.js');
+});
+
+function posTopo(r3) {
+  return 'name: sj\ntopology:\n  nodes:\n    r1:\n      kind: linux\n      labels:\n        graph-posX: "200"\n        graph-posY: "40"\n' +
+    '    r2: { kind: linux, labels: { graph-posX: 100, graph-posY: 200 } }\n    r3:\n      kind: linux\n' + r3 +
+    '  links:\n    - endpoints: ["r1:eth1", "r2:eth1"]\n    - endpoints: ["r1:eth2", "r3:eth2"]\n';
+}
+
+test('nodes carry fixedx / fixedy from graph-posX / graph-posY when every router has both (Node graph draws them there)', function () {
+  var r = collectOnce([], posTopo('      labels:\n        graph-posX: "300"\n        graph-posY: "200"\n'));
+  try {
+    var doc = JSON.parse(fs.readFileSync(path.join(r.out, 'xray-states.json'), 'utf8')), at = {};
+    doc.nodes.forEach(function (n) { at[n.id] = [n.fixedx, n.fixedy]; });
+    assert.deepStrictEqual(at, { r1: [200, 40], r2: [100, 200], r3: [300, 200] });
+  } finally { fs.rmSync(r.dir, { recursive: true, force: true }); }
+});
+
+test('one router without a position -> no fixedx / fixedy at all (the Node graph lays them out itself)', function () {
+  var r = collectOnce([], posTopo('      labels:\n        graph-level: 2\n'));
+  try {
+    var doc = JSON.parse(fs.readFileSync(path.join(r.out, 'xray-states.json'), 'utf8'));
+    assert.strictEqual(doc.nodes.length, 3);
+    assert.ok(doc.nodes.every(function (n) { return !('fixedx' in n) && !('fixedy' in n); }));
+  } finally { fs.rmSync(r.dir, { recursive: true, force: true }); }
 });
