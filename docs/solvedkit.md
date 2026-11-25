@@ -478,7 +478,19 @@ node scripts/xray-query.js check run backup backup.js                   # solved
 The routes on the link you took down are gone in that state; they are listed as `gone` and left out of the check.
 
 **4. Run the same check on the production state** after the real work (if network-xray can read those routers), or keep
-it as the record of what the rehearsal showed.
+it as the record of what the rehearsal showed. For the people doing the work, `check to-procedure` writes the check as
+the show commands to type on each router and what each must show (Markdown; `--vendor ios` for Cisco IOS / IOS XE,
+`--lang ja` in Japanese):
+
+```
+node scripts/xray-query.js check to-procedure change --format table
+| # | Router | Command | The output shows |
+|---|---|---|---|
+| 1 | r1 | `show ip route 3.3.3.3/32` | the selected route 3.3.3.3/32, out of eth1 |
+| 2 | r3 | `show ip route 10.10.0.0/24` | the selected route 10.10.0.0/24, out of eth2 |
+| 3 | r1 | `show ip ospf neighbor` | 10.12.0.10 is Full |
+...
+```
 
 **5. Roll back and compare with "before".** `check run change/problem.json rolled.js` says `not solved` (the change is
 gone), and `diff before.js rolled.js` says `(none)`: the rollback left the lab as it was.

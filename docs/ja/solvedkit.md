@@ -458,7 +458,18 @@ node scripts/xray-query.js check run backup backup.js                   # solved
 落とした線の上の経路はその状態では消えるので `gone` に出て、check には入りません。
 
 **4. 本番の工事の後に同じ check を流す** (network-xray がそのルータを読める時)。読めなければ、リハーサルで確かめた事の
-記録として残します。
+記録として残します。工事をする人のために、`check to-procedure` は check を、各ルータで打つ show のコマンドと出力に
+出ることの表にします (Markdown・Cisco IOS / IOS XE は `--vendor ios`・日本語は `--lang ja`):
+
+```
+node scripts/xray-query.js check to-procedure change --lang ja --format table
+| # | ルータ | コマンド | 出力に出ること |
+|---|---|---|---|
+| 1 | r1 | `show ip route 3.3.3.3/32` | 選ばれた経路 3.3.3.3/32・出口 eth1 |
+| 2 | r3 | `show ip route 10.10.0.0/24` | 選ばれた経路 10.10.0.0/24・出口 eth2 |
+| 3 | r1 | `show ip ospf neighbor` | 10.12.0.10 が Full |
+...
+```
 
 **5. 戻して「前」と比べる。** `check run change/problem.json rolled.js` は `not solved` (工事が消えた)、
 `diff before.js rolled.js` は `(none)`: 戻しでラボが元どおり。

@@ -11,6 +11,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **SolvedKit: rehearsing a change.** `check suggest` / `check init --for change` make the check for planned network work tried on a lab: every changed path, there and back, and every OSPF adjacency and BGP session that must stay up (a puzzle still gets the fewest conditions that tell the fix). SolvedKit guide, section 10: a worked example on q6 (settled "before" state, the way back that did not move, the backup, the rollback). `check run` with its two arguments swapped, or on a problem.json without `check.all`, says what to do.
 - **`cml-xray`: `xray-states.json` too:** a Cisco CML lab gets the same document as a containerlab lab (built by `scripts/states-doc.js`, shared with `clab-xray-collect.js`), so Grafana and other tools read it the same way. README (CML2): a lab is readable 1 to 3 minutes after it starts; `cml-xray` keeps reading until the routers answer.
 - **MCP: `router` or `node`:** every tool takes the router under either name (the old names keep working; two different routers in one call is an error).
+- **SolvedKit: `check to-procedure`.** The check as the show commands to type on each router and what each must show (Markdown; FRR, or Cisco IOS / IOS XE with `--vendor ios`; `--lang ja`), for the people doing the work. Tried on FRR and Cisco IOL labs.
 
 ## v1.8.0 — 2026-11-25
 
