@@ -13,6 +13,7 @@
  *   node scripts/xray-query.js check suggest <broken> <solved> [--focus <node>] [--prefix <p>] [--max <n>]
  *                                         (candidate conditions from what the fix changed, verified on both)
  *   node scripts/xray-query.js check init <broken> <solved> [--out <problem.json>]   (a problem.json draft)
+ *   node scripts/xray-query.js check to-procedure <problem.json> [--vendor frr|ios] [--lang en|ja]   (the check as show commands)
  *
  * <input> is one of:
  *   - a per-node state JSON (frr-collect.js / clab-collect.js --out, test/fixtures/<lab>/state_<node>.json)
@@ -1182,6 +1183,13 @@ function loadProblem(input, opts) {
 function check(argv, opts) {
   var kit = require('../solvedkit.js'), sub = argv[1];
   if (sub === 'run') { if (argv.length !== 4) throw new QueryError(USAGE); return kit.run(loadProblem(argv[2]), loadStates(argv[3])); }
+  if (sub === 'to-procedure') {   /* nx_to_procedure */
+    if (argv.length !== 3) throw new QueryError(USAGE);
+    var po = opts || {};
+    if (po.vendor != null && po.vendor !== 'frr' && po.vendor !== 'ios') throw new QueryError('--vendor must be frr or ios');
+    if (po.lang != null && po.lang !== 'en' && po.lang !== 'ja') throw new QueryError('--lang must be en or ja');
+    return kit.toProcedure(loadProblem(argv[2]), { vendor: po.vendor, lang: po.lang });
+  }
   if (sub === 'verify') { if (argv.length !== 5) throw new QueryError(USAGE); return kit.verify(loadProblem(argv[2]), loadStates(argv[3]), loadStates(argv[4])); }
   if (sub === 'suggest' || sub === 'init') {
     if (argv.length !== 4) throw new QueryError(USAGE);
@@ -1203,7 +1211,7 @@ function check(argv, opts) {
     }
     return res;
   }
-  throw new QueryError(sub ? 'unknown check command: ' + sub + ' (run, verify, suggest, init)' : USAGE);
+  throw new QueryError(sub ? 'unknown check command: ' + sub + ' (run, verify, suggest, init, to-procedure)' : USAGE);
 }
 // the exit code a script reads: 0 solved / ok, 1 not, 2 cannot judge
 function checkExit(res) {
@@ -1216,6 +1224,7 @@ function condText(c) {
 function mark(v) { return v === true ? 'yes' : v === false ? 'no' : '?'; }
 function checkTable(argv, res, color) {
   var out = [];
+  if (argv[1] === 'to-procedure') return res.markdown || (title('To procedure: ' + res.status.replace('_', ' '), color) + '\n' + textLine('  ' + res.reason) + '\n');
   if (argv[1] === 'suggest' || argv[1] === 'init') {
     var sg = argv[1] === 'init' ? res.suggest : res;
     out.push(title((argv[1] === 'init' ? 'problem.json draft: ' : 'Suggested check: ') + (res.status === 'ok' ? 'ok (fails on broken, holds on solved)' : 'none'), color));
@@ -1246,6 +1255,7 @@ function checkTable(argv, res, color) {
 var USAGE = 'usage: xray-query.js state <state.json|dir> | why <state.json|dir> <node> <prefix> [vrf] | ospf-if <state.json|dir> [node]' +
   ' | diff <before> <after> [node] [--mgmt-subnet <cidr>] | check run <problem.json> <input> | check verify <problem.json> <broken> <solved>' +
   ' | check suggest <broken> <solved> [--focus <node>] [--prefix <p>] [--max <n>] | check init <broken> <solved> [--out <file>]' +
+  ' | check to-procedure <problem.json> [--vendor frr|ios] [--lang en|ja]' +
   ' [--format json|table] [--color]';
 
 // pull --format / --color out of argv; the rest are the positional arguments
@@ -1259,7 +1269,7 @@ function parseOptions(argv) {
       o.format = v;
     } else if (a === '--color') o.color = true;
     else if ((m = /^--mgmt-subnet(?:=(.*))?$/.exec(a))) o.mgmtSubnet = m[1] != null ? m[1] : (argv[++i] || '');
-    else if ((m = /^--(focus|prefix|max|out|for)(?:=(.*))?$/.exec(a))) o[m[1]] = m[2] != null ? m[2] : (argv[++i] || '');
+    else if ((m = /^--(focus|prefix|max|out|for|vendor|lang)(?:=(.*))?$/.exec(a))) o[m[1]] = m[2] != null ? m[2] : (argv[++i] || '');
     else o.args.push(a);
   }
   return o;
@@ -1271,6 +1281,7 @@ function run(argv, o) {
   if (mg != null && cmd !== 'diff' && !sgi) throw new QueryError('--mgmt-subnet is for diff only (and check suggest / init)');
   if (o && (o.focus != null || o.prefix != null || o.max != null || o.for != null) && !sgi) throw new QueryError('--focus / --prefix / --max / --for are for check suggest / init only');
   if (o && o.out != null && !(cmd === 'check' && argv[1] === 'init')) throw new QueryError('--out is for check init only');
+  if (o && (o.vendor != null || o.lang != null) && !(cmd === 'check' && argv[1] === 'to-procedure')) throw new QueryError('--vendor / --lang are for check to-procedure only');
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
   if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
   if (cmd === 'diff') { if (argv.length < 3 || argv.length > 4) throw new QueryError(USAGE); return diff(loadStates(argv[1]), loadStates(argv[2]), argv[3], mg); }
@@ -1302,6 +1313,8 @@ if (require.main === module) {
       '  check init <broken> <solved>        a problem.json draft with that check (--out <file>: write it; never overwrites)\n' +
       '  --focus <node> --prefix <p> --max <n>  check suggest / init: the router and destination to start from, how many conditions (3)\n' +
       '  --for change                       check suggest / init for a change rehearsal: every changed path, there and back, and the adjacencies that must stay up\n' +
+      '  check to-procedure <problem.json>  the check as show commands to type and what each must show (Markdown with --format table)\n' +
+      '  --vendor frr|ios --lang en|ja      check to-procedure: the routers\' commands (frr) and the language (en)\n' +
       '  --mgmt-subnet <cidr>  diff: the lab\'s management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)\n' +
       '  <path>: a state_<node>.json, a directory of them, an xray-states.js, or a directory of saved FRR / Genie captures\n' +
       '  --format json|table  default: json\n' +
@@ -1310,8 +1323,8 @@ if (require.main === module) {
     process.exit(0);
   }
   for (var _i = 0; _i < _cli.length; _i++) {
-    if (['--format', '--mgmt-subnet', '--focus', '--prefix', '--max', '--out', '--for'].indexOf(_cli[_i]) >= 0) _i++;
-    else if (_cli[_i] !== '--color' && !/^--(format|mgmt-subnet|focus|prefix|max|out|for)=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
+    if (['--format', '--mgmt-subnet', '--focus', '--prefix', '--max', '--out', '--for', '--vendor', '--lang'].indexOf(_cli[_i]) >= 0) _i++;
+    else if (_cli[_i] !== '--color' && !/^--(format|mgmt-subnet|focus|prefix|max|out|for|vendor|lang)=/.test(_cli[_i]) && _cli[_i].charAt(0) === '-' && _cli[_i].length > 1) {
       console.error('xray-query.js: unknown option: ' + _cli[_i] + "\nTry 'node scripts/xray-query.js --help'.");
       process.exit(2);
     }

@@ -447,17 +447,15 @@ node scripts/xray-query.js check init before.js after.js --for change --out chan
 (`keep` = 前と後の両方で Full の OSPF の隣接・Established の BGP のセッション) も全部要ります。`--max <n>` で数を
 抑えられるのは同じです。
 
-**3. 予備を確かめる。** 新しい道を落とした 3 つ目の状態を取り (r1 で `ip link set eth1 down`)、通信が直通に戻る事を
-言う 1 行の problem.json を書いて、その状態で流します:
+**3. 予備を確かめる。** 新しい道を落とした 3 つ目の状態を取り (r1 で `ip link set eth1 down`)、切り替わりの check も
+同じやり方で「後」からその状態へ作ります:
 
 ```
-{ "format": "network-xray-lab/0", "check": { "all": [
-  ["r1", "routing_table", "some", [["prefix", "eq", "3.3.3.3/32"], ["selected", "eq", true], ["out_iface", "eq", "eth2"]]] ] } }
+node scripts/xray-query.js check init after.js backup.js --for change --out backup/problem.json
+node scripts/xray-query.js check run backup backup.js                   # solved = r1 は直通で 3.3.3.3 に届く
 ```
 
-```
-node scripts/xray-query.js check run backup-check.json backup.js        # solved = 直通が運ぶ
-```
+落とした線の上の経路はその状態では消えるので `gone` に出て、check には入りません。
 
 **4. 本番の工事の後に同じ check を流す** (network-xray がそのルータを読める時)。読めなければ、リハーサルで確かめた事の
 記録として残します。

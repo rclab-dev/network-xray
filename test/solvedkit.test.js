@@ -431,3 +431,41 @@ test('cli: --for change on check suggest; --for takes change only; a state file 
   r = q(['check', 'run', L.write('nocheck2.json', { format: 'network-xray-lab/0' }), L.solved]);
   assert.match(JSON.parse(r.out).reason, /check init <broken> <solved>/);
 });
+
+test('toProcedure: each condition as the show command and what it must show (FRR / IOS, en / ja); an unknown one is left to do by hand', () => {
+  const pb = P([
+    ['r1', 'routing_table', 'some', [['prefix', 'eq', '3.3.3.3/32'], ['selected', 'eq', true], ['out_iface', 'eq', 'eth1']]],
+    ['r3', 'routing_table', 'none', [['prefix', 'eq', '10.9.0.0/24'], ['selected', 'eq', true]]],
+    ['r1', 'ospf_neighbors', 'some', [['router_id', 'eq', '2.2.2.2'], ['full', 'eq', true]]],
+    ['r1', 'bgp_neighbors', 'some', [['ip', 'eq', '10.10.0.20'], ['state', 'eq', 'Established']]],
+    ['r1', 'bgp_routes', 'some', [['prefix', 'eq', '8.8.8.0'], ['prefixlen', 'eq', 24], ['best', 'eq', true], ['as_path', 'eq', '65003']]],
+    ['r2', 'interfaces.eth1.up', 'eq', true],
+    ['r2', 'route_resolution.resolved', 'eq', true]
+  ], { title_en: 'Move r1 - r3 to r2' });
+  const f = kit.toProcedure(pb);
+  assert.strictEqual(f.status, 'ok');
+  assert.deepStrictEqual(f.steps.map(x => x.command), ['show ip route 3.3.3.3/32', 'show ip route 10.9.0.0/24', 'show ip ospf neighbor',
+    'show bgp summary', 'show bgp ipv4 unicast 8.8.8.0/24', 'show interface eth1', '']);
+  assert.strictEqual(f.steps[0].expect, 'the selected route 3.3.3.3/32, out of eth1');
+  assert.strictEqual(f.steps[2].expect, '2.2.2.2 is Full');
+  assert.match(f.steps[6].expect, /^check by hand: /);
+  assert.match(f.markdown, /^## Checks: Move r1 - r3 to r2\n\n\| # \| Router \| Command \| The output shows \|/);
+  const i = kit.toProcedure(pb, { vendor: 'ios', lang: 'ja' });
+  assert.deepStrictEqual(i.steps.slice(0, 6).map(x => x.command), ['show ip route 3.3.3.3 255.255.255.255', 'show ip route 10.9.0.0 255.255.255.0',
+    'show ip ospf neighbor', 'show ip bgp summary', 'show ip bgp 8.8.8.0 255.255.255.0', 'show interfaces eth1']);
+  assert.strictEqual(i.steps[0].expect, '選ばれた経路 3.3.3.3/32・出口 eth1');
+  assert.match(i.markdown, /^## 確かめ\n/);
+  assert.strictEqual(kit.toProcedure(P([])).status, 'cannot_judge');
+});
+
+test('cli: check to-procedure prints Markdown with --format table; --vendor / --lang are checked and belong to it only', (t) => {
+  const L = tmpLab(t);
+  let r = q(['check', 'to-procedure', L.problem, '--format', 'table']);
+  assert.strictEqual(r.code, 0); assert.match(r.out, /^## Checks\n/); assert.match(r.out, /`show ip ospf neighbor` \| 2\.2\.2\.2 is Full/);
+  r = q(['check', 'to-procedure', L.problem, '--vendor', 'junos']);
+  assert.strictEqual(r.code, 2); assert.match(JSON.parse(r.out).error, /--vendor must be frr or ios/);
+  r = q(['check', 'run', L.problem, L.solved, '--lang', 'ja']);
+  assert.strictEqual(r.code, 2); assert.match(JSON.parse(r.out).error, /--vendor \/ --lang are for check to-procedure only/);
+  r = q(['check', 'to-procedure', L.write('nocheck3.json', { format: 'network-xray-lab/0' })]);
+  assert.strictEqual(r.code, 2);
+});

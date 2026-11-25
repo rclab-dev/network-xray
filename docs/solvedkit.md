@@ -467,17 +467,15 @@ route only), so that other correct fixes still count. A change needs the opposit
 back**, and everything it must leave alone (`keep`: each OSPF adjacency Full and BGP session Established in both
 states). `--max <n>` still caps the number.
 
-**3. Check the backup.** Take a third state with the new path down (on r1: `ip link set eth1 down`), then write a
-one-condition problem.json that says the traffic falls back to the direct link, and run it on that state:
+**3. Check the backup.** Take a third state with the new path down (on r1: `ip link set eth1 down`), and make the
+check of the failover the same way, from "after" to that state:
 
 ```
-{ "format": "network-xray-lab/0", "check": { "all": [
-  ["r1", "routing_table", "some", [["prefix", "eq", "3.3.3.3/32"], ["selected", "eq", true], ["out_iface", "eq", "eth2"]]] ] } }
+node scripts/xray-query.js check init after.js backup.js --for change --out backup/problem.json
+node scripts/xray-query.js check run backup backup.js                   # solved: r1 reaches 3.3.3.3 over the direct link
 ```
 
-```
-node scripts/xray-query.js check run backup-check.json backup.js        # solved: the direct link carries it
-```
+The routes on the link you took down are gone in that state; they are listed as `gone` and left out of the check.
 
 **4. Run the same check on the production state** after the real work (if network-xray can read those routers), or keep
 it as the record of what the rehearsal showed.

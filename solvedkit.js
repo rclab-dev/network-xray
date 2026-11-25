@@ -344,7 +344,76 @@
       .concat(notes.map(function (n) { return 'check: ' + n; })), suggest: sg };
   }
 
-  var api = { run: run, verify: verify, suggest: suggest, init: init, noCheck: noCheck };
+  /* ---- toProcedure: the check as steps a person runs on the routers ---------------------------------------------
+     nx_to_procedure: each condition becomes the show command to type on that router and what its output must show,
+     for a work procedure (the change was rehearsed on a lab; the people doing the work check the same things on the
+     real routers). FRR (vtysh) and Cisco IOS / IOS XE. A condition it has no command for is listed as it is. Nothing
+     is run here. */
+  var PROC_TEXT = {
+    en: { head: 'Checks', router: 'Router', cmd: 'Command', expect: 'The output shows',
+      selected: 'the selected route', via: 'via', out: 'out of', learned: 'learned by', none: 'no selected route for',
+      full: 'is Full', state: 'state', est: 'is Established (its State/PfxRcd column shows a number)', best: 'the best path', aspath: 'AS path', nh: 'next hop',
+      up: 'is up', hand: 'check by hand', sep: ', ', note: 'Each line holds when the lab is in the state the check describes.' },
+    ja: { head: '確かめ', router: 'ルータ', cmd: 'コマンド', expect: '出力に出ること',
+      selected: '選ばれた経路', via: '次の hop', out: '出口', learned: '学び方', none: '選ばれた経路が無いこと:',
+      full: 'が Full', state: '状態', est: 'が Established (State/PfxRcd の欄が数)', best: 'best path', aspath: 'AS path', nh: '次の hop',
+      up: 'が up', hand: '手で確かめる', sep: '・', note: '各行は、ラボが check の言う状態の時に成り立ちます。' }
+  };
+  function maskOf(len) { var m = [], b = +len; for (var i = 0; i < 4; i++) { var n = Math.max(0, Math.min(8, b - 8 * i)); m.push(256 - Math.pow(2, 8 - n)); } return m.join('.'); }
+  function routeArg(prefix, vendor) {
+    var m = /^(\d+\.\d+\.\d+\.\d+)\/(\d+)$/.exec(s(prefix));
+    if (!m) return s(prefix);
+    return vendor === 'ios' ? m[1] + ' ' + maskOf(m[2]) : m[1] + '/' + m[2];
+  }
+  function field(conds, k) { var c = arrOf(conds).filter(function (x) { return x && x[0] === k && x[1] === 'eq'; })[0]; return c ? c[2] : undefined; }
+  function toProcedure(problem, opts) {
+    opts = opts || {};
+    var why = noCheck(problem);
+    if (why) return { status: 'cannot_judge', reason: why, steps: [] };
+    var vendor = opts.vendor === 'ios' ? 'ios' : 'frr', T = PROC_TEXT[opts.lang === 'ja' ? 'ja' : 'en'];
+    var steps = problem.check.all.map(function (c) {
+      var node = s(c && c[0]), p = s(c && c[1]), q = c && c[2], conds = c && c[3], vrf = field(conds, 'vrf'), v = vrf ? 'vrf ' + vrf + ' ' : '';
+      var step = { node: node, cond: c };
+      if (p === 'routing_table' && (q === 'some' || q === 'none')) {
+        var pfx = field(conds, 'prefix');
+        step.command = 'show ip route ' + v + routeArg(pfx, vendor);
+        if (q === 'none') step.expect = T.none + ' ' + pfx;
+        else {
+          var e = [T.selected + ' ' + pfx], oi = field(conds, 'out_iface'), nh = field(conds, 'next_hop'), pr = field(conds, 'protocol');
+          if (nh) e.push(T.via + ' ' + nh); if (oi) e.push(T.out + ' ' + oi); if (pr) e.push(T.learned + ' ' + pr);
+          step.expect = e.join(T.sep);
+        }
+      } else if (p === 'ospf_neighbors' && q === 'some') {
+        var id = field(conds, 'router_id') || field(conds, 'address'), st = field(conds, 'state');
+        step.command = 'show ip ospf neighbor';
+        step.expect = id + ' ' + (field(conds, 'full') === true ? T.full : T.state + ' ' + st);
+      } else if (p === 'bgp_neighbors' && q === 'some') {
+        step.command = vendor === 'ios' ? 'show ip bgp ' + v + 'summary' : 'show bgp ' + v + 'summary';
+        step.expect = field(conds, 'ip') + ' ' + (/^established$/i.test(s(field(conds, 'state'))) ? T.est : T.state + ' ' + field(conds, 'state'));
+      } else if (p === 'bgp_routes' && q === 'some') {
+        var bp = field(conds, 'prefix'), bl = field(conds, 'prefixlen'), full = bl != null && !/\//.test(s(bp)) ? bp + '/' + bl : bp;
+        step.command = (vendor === 'ios' ? 'show ip bgp ' + v : 'show bgp ' + v + 'ipv4 unicast ') + routeArg(full, vendor);
+        var be = [field(conds, 'best') === true ? T.best + ' ' + full : full];
+        if (field(conds, 'as_path') != null) be.push(T.aspath + ' ' + field(conds, 'as_path'));
+        if (field(conds, 'next_hop') != null) be.push(T.nh + ' ' + field(conds, 'next_hop'));
+        step.expect = be.join(T.sep);
+      } else if (/^interfaces\.[^.]+\.up$/.test(p) && q === 'eq' && conds === true) {
+        var ifn = p.split('.')[1];
+        step.command = vendor === 'ios' ? 'show interfaces ' + ifn : 'show interface ' + ifn;
+        step.expect = ifn + ' ' + T.up;
+      } else {
+        step.command = ''; step.expect = T.hand + ': ' + JSON.stringify(c);
+      }
+      return step;
+    });
+    var md = ['## ' + T.head + (s(problem['title_' + (opts.lang === 'ja' ? 'ja' : 'en')]) ? ': ' + s(problem['title_' + (opts.lang === 'ja' ? 'ja' : 'en')]) : ''), '',
+      '| # | ' + T.router + ' | ' + T.cmd + ' | ' + T.expect + ' |', '|---|---|---|---|']
+      .concat(steps.map(function (x, i) { return '| ' + (i + 1) + ' | ' + x.node + ' | ' + (x.command ? '`' + x.command + '`' : '') + ' | ' + x.expect.replace(/\|/g, '\\|') + ' |'; }))
+      .concat(['', T.note]).join('\n') + '\n';
+    return { status: 'ok', vendor: vendor, lang: opts.lang === 'ja' ? 'ja' : 'en', steps: steps, markdown: md };
+  }
+
+  var api = { run: run, verify: verify, suggest: suggest, init: init, toProcedure: toProcedure, noCheck: noCheck };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.SolvedKit = api;
 })(typeof window !== 'undefined' ? window : this);
