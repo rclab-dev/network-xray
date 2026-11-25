@@ -998,6 +998,7 @@ with code 2.
 | Does it change the routers? | No. The MCP server reads state files and never contacts a router. The collector that writes them sends only fixed read commands (`show` and the like); the few exceptions, such as restarting FRR in a router where it did not come up when an example lab starts, are listed under [Read-only](#read-only). |
 | Which files can the AI read? | Only under `--path` (or `NX_MCP_PATH`; without either, the folder the server started in), and anywhere only with `--allow-any-path`. A state file over 64 MB is not read, and the server writes no files. It does not look at your computer's own network. |
 | Can the AI make it read the routers? | Not by default: `collect` is off so that an AI does not go and read the routers on its own. Start the server with `--allow-collect` to offer it; it uses the same read commands on a running containerlab lab. |
+| Does the state hold the router configuration? | No: only what the page shows (neighbors, routes, interfaces). Started with `--policy-config` (or `XRAY_POLICY_CONFIG=1`), the collector also keeps the route-map and prefix-list names and prefixes, for `explain_plan`; passwords, keys, descriptions and community values never. |
 | Does anything leave your machine? | No. The tools make no network connections, and the MCP Apps picture loads nothing from outside. |
 | Passwords? | The MCP server needs none and reads none. The collector takes router logins from environment variables (`NX_IOS_USER` / `NX_IOS_PASSWORD`, `CML_USER` / `CML_PASSWORD`). |
 | Why does the page's image need the Docker socket? | containerlab's routers are read with `docker exec`, so the collector needs the socket. It gives the same power as any user who can run `docker` (root on the host): use it on lab machines only. The image's `mcp` mode does not need it. |
@@ -1990,6 +1991,7 @@ netlab のラボでは `--mgmt-subnet 192.168.121.0/24` を足します (netlab 
 | ルータを変える? | 変えません。MCP のサーバは状態のファイルを読むだけで、ルータには繋ぎません。そのファイルを書く collector が送るのも、決まった読むコマンド (`show` など) だけです。例外 (例のラボを立てた時に、起動しなかった FRR を起動し直す等) は [読むだけ](#read-only-ja) にまとめてあります。 |
 | AI はどのファイルを読める? | `--path` (か `NX_MCP_PATH`。どちらも無ければ起動したフォルダ) の下だけです。どこでも読めるのは `--allow-any-path` の時だけ。64 MB を超える状態のファイルは読まず、ファイルは書きません。手元の PC のネットワークは調べません。 |
 | AI がルータを読みに行ける? | 初めはできません。AI が自分の判断でルータを読みに行かない様に、`collect` は切ってあります。`--allow-collect` で起動した時だけ出て、動いている containerlab のラボを同じ読むコマンドで読みます。 |
+| 状態のファイルにルータの設定が入る? | 入りません: 頁に出す物 (隣接・経路・インターフェース) だけです。`--policy-config` (か `XRAY_POLICY_CONFIG=1`) で起動した時だけ、`explain_plan` のために route-map と prefix-list の名前と prefix も残します。password・鍵・description・community の値は残しません。 |
 | 外に何か出る? | 出ません。道具は外に通信せず、MCP Apps の絵も外の物を読み込みません。 |
 | パスワードは? | MCP のサーバは使わず、読みもしません。collector はルータのログインを環境変数 (`NX_IOS_USER` / `NX_IOS_PASSWORD`・`CML_USER` / `CML_PASSWORD`) から取ります。 |
 | 頁の像に Docker の socket が要るのはなぜ? | containerlab のルータは `docker exec` で読むので、collector に socket が要ります。`docker` を使える人と同じ力 (host の root と同じ) になるので、ラボのマシンだけで使ってください。像の `mcp` の口には要りません。 |
