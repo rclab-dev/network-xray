@@ -2,14 +2,16 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## Unreleased
+## v1.8.1 — 2026-11-25
 
 - **`scripts/xray-render.js`:** one router's 2D picture and tables as one static HTML page (no script, nothing loaded from elsewhere), made without a browser: `--skin`, `--figure cylinder|box`, `--prefix`, `--detail full|summary`, `--before <state>` (what changed on that router, then before | now). The single-node panel gets `toHtml()` and `cssText()` for it.
 - **docs/showing.md:** what each mark means, the same in the DeepDive, the single-node panel, a rendered page and the text answers.
 - **Single-node panel: the cylinder picture:** `{ figure: true }` now draws the router as a see-through cylinder with its process as a dot and a thick arrow toward the chosen route's out-interface (the logo's way of drawing); `figureStyle: 'box'` or a skin with `panelFigure: "box"` keeps the box picture. SKIN-CONTRACT §2c.
 - **Skin: `surface` and the Slate (light) preset:** a skin can put the single-node panel (the 2D picture and its tables) on a light ground (`surface: "light"`); `?skin=slate-light` or the Skin menu picks it. The DeepDive and the topology stay dark. A skin without `surface` looks as before. SKIN-CONTRACT §2b.
-
 - **SolvedKit: rehearsing a change.** `check suggest` / `check init --for change` make the check for planned network work tried on a lab: every changed path, there and back, and every OSPF adjacency and BGP session that must stay up (a puzzle still gets the fewest conditions that tell the fix). SolvedKit guide, section 10: a worked example on q6 (settled "before" state, the way back that did not move, the backup, the rollback). `check run` with its two arguments swapped, or on a problem.json without `check.all`, says what to do.
+- **`cml-xray`: `xray-states.json` too:** a Cisco CML lab gets the same document as a containerlab lab (built by `scripts/states-doc.js`, shared with `clab-xray-collect.js`), so Grafana and other tools read it the same way. README (CML2): a lab is readable 1 to 3 minutes after it starts; `cml-xray` keeps reading until the routers answer.
+- **MCP: `router` or `node`:** every tool takes the router under either name (the old names keep working; two different routers in one call is an error).
+
 ## v1.8.0 — 2026-11-25
 
 - **Logo:** `docs/logo/` (SVG, PNG 400 / 256 / 64, a small version for 32 px and below, favicon.ico); the pages' icon is the small version; README shows the logo; `server.json` lists it as `icons` for the MCP Registry.
