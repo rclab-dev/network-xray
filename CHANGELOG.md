@@ -2,6 +2,13 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## Unreleased
+
+- **`scripts/xray-render.js`:** one router's 2D picture and tables as one static HTML page (no script, nothing loaded from elsewhere), made without a browser: `--skin`, `--figure cylinder|box`, `--prefix`, `--detail full|summary`, `--before <state>` (what changed on that router, then before | now). The single-node panel gets `toHtml()` and `cssText()` for it.
+- **docs/showing.md:** what each mark means, the same in the DeepDive, the single-node panel, a rendered page and the text answers.
+- **Single-node panel: the cylinder picture:** `{ figure: true }` now draws the router as a see-through cylinder with its process as a dot and a thick arrow toward the chosen route's out-interface (the logo's way of drawing); `figureStyle: 'box'` or a skin with `panelFigure: "box"` keeps the box picture. SKIN-CONTRACT §2c.
+- **Skin: `surface` and the Slate (light) preset:** a skin can put the single-node panel (the 2D picture and its tables) on a light ground (`surface: "light"`); `?skin=slate-light` or the Skin menu picks it. The DeepDive and the topology stay dark. A skin without `surface` looks as before. SKIN-CONTRACT §2b.
+
 ## v1.8.0 — 2026-11-25
 
 - **Logo:** `docs/logo/` (SVG, PNG 400 / 256 / 64, a small version for 32 px and below, favicon.ico); the pages' icon is the small version; README shows the logo; `server.json` lists it as `icons` for the MCP Registry.
@@ -10,10 +17,6 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **`wrong`: routes whose next hop is not reachable:** a BGP prefix whose paths the router marks not valid (an inaccessible next hop) and that nothing else installs, and a static route that is not installed while nothing else is (an interface that is down stays its own line). A next hop the router resolves recursively (through OSPF, a static route) is valid and not listed. An installed route whose recursive next hop is resolved only through the containerlab management network is a warning. Read from the state the collectors already write.
 - **MCP `lab_state`:** optional `only_problems: true` returns only `wrong` and `counts`. Without it the answer is unchanged.
 - **Best-Path: eBGP > iBGP:** after MED, the DeepDive, the single-node panel and `why_path` compare eBGP over iBGP when every path still compared says how it was learned. The collector records it as `bgp_routes[].peer_type` (FRR `pathFrom`; the `i` in the IOS-XE status; a confederation peer counts with iBGP). A state without `peer_type` is explained as before. DATA-CONTRACT §4.4.
-- **`scripts/xray-render.js`:** one router's 2D picture and tables as one static HTML page (no script, nothing loaded from elsewhere), made without a browser: `--skin`, `--figure cylinder|box`, `--prefix`, `--detail full|summary`, `--before <state>` (what changed on that router, then before | now). The single-node panel gets `toHtml()` and `cssText()` for it.
-- **docs/showing.md:** what each mark means, the same in the DeepDive, the single-node panel, a rendered page and the text answers.
-- **Single-node panel: the cylinder picture:** `{ figure: true }` now draws the router as a see-through cylinder with its process as a dot and a thick arrow toward the chosen route's out-interface (the logo's way of drawing); `figureStyle: 'box'` or a skin with `panelFigure: "box"` keeps the box picture. SKIN-CONTRACT §2c.
-- **Skin: `surface` and the Slate (light) preset:** a skin can put the single-node panel (the 2D picture and its tables) on a light ground (`surface: "light"`); `?skin=slate-light` or the Skin menu picks it. The DeepDive and the topology stay dark. A skin without `surface` looks as before. SKIN-CONTRACT §2b.
 - **MCP `why_path`:** `summary`, the answer in one line (the path, and the step that chose it with the two values), and `peer` on each path, the router its next hop belongs to.
 - **Pasted BGP table: a blank LocPrf:** is the default the router compares with, read from the table header (`Default local pref N`; 100 when the header is not pasted), not a fixed 100. Such routes are marked `local_pref_default`.
 - **BGP state not in the data:** a paste of only the BGP table has no session state; the node panel, the logic lines and the DeepDive now say `?` (without the fault colour) instead of Idle or NOT CONFIGURED.
