@@ -84,6 +84,18 @@
   受ける。明るい skin の色は白地で文字として読める濃さにする。v1.8.1 で足した任意の鍵 = 無ければ `dark` (古い skin は
   そのまま)。
 
+### 2c. `panelFigure` — the single-node panel's picture / 単ノードパネルの絵 (v1.8.1)
+
+| value | picture / 絵 |
+|---|---|
+| `cylinder` (default) | the router as a see-through cylinder, the process as a dot, the chosen route as a thick arrow leaving it / 透けた円柱・点・太い矢印 |
+| `box` | the router as a box with the RoutingEngine circle and interface ports (the picture before v1.8.1) / 箱 + RoutingEngine の円 (v1.8.1 より前の絵) |
+
+- The reader writes it as the CSS variable `--xnp-figure`; the panel reads that variable when it draws (`opts.figureStyle`
+  overrides it). Both pictures show the same data with the same meaning. Independent of `surface`. A skin without it
+  gets the cylinder. / reader が CSS 変数 `--xnp-figure` に書き、パネルは描く時に読む (`opts.figureStyle` が優先)。どちらも同じ
+  データ・同じ意味。`surface` とは別に選べる。無ければ円柱。
+
 ---
 
 ## 3. `protocolOrder` — process stacking order / プロセス上下順 (key frozen in Phase 1; UI + engine = Phase 2)

@@ -795,11 +795,12 @@ node, you drop that node's state in and get the "inside the router" view the gra
 
 - **Position-independent:** nothing reads the graph geometry, so the output is identical no matter
   where the node sits — perfect when nodes are dragged around freely.
-- **`{ figure: true }`:** draws the node as a box with its RoutingEngine circle and interfaces, plus a
-  green forwarding arrow inside that circle; click any routing-table row and the arrow swings to that
-  prefix's out-interface. Each link runs from the RoutingEngine out to the peer as a **gray physical
-  wire** with a **protocol tunnel** over it when the adjacency is up — **green for OSPF, purple for
-  BGP** (down/none stays gray). Omit for tables only.
+- **`{ figure: true }`:** draws the node as a see-through **cylinder** (the router; its process as a dot in the
+  protocol's colour) with a thick arrow leaving it toward the chosen route's out-interface; click any
+  routing-table row and the arrow swings to that prefix's out-interface. Each link runs out to the peer as a
+  **gray physical wire** with a **protocol tunnel** over it when the adjacency is up — **green for OSPF,
+  purple for BGP** (down/none stays gray, dashed). `figureStyle: 'box'` (or a skin with `panelFigure: "box"`)
+  draws it as a box with the RoutingEngine circle instead. Omit `figure` for tables only.
 - **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** pass the node coordinates straight from the
   topology JSON / TopoViewer annotations and each interface link is drawn at the **real angle toward its
   peer** (so the picture matches the graph). Without `positions` it falls back to a neutral fan.
@@ -1838,7 +1839,7 @@ node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exc
 </script>
 ```
 - **位置に依存しない:** グラフの座標を読まないので、ノードがどこにあっても同じ出力 — ノードを自由に動かす時に向きます。
-- **`{ figure: true }`:** ノードを箱で描く (RoutingEngine の円・IF・円の中の緑の転送の矢印)。経路表の行をクリックするとその宛先の出口 IF へ矢印が向く。リンクは**灰色の物理線**、隣接が上がっていればその上に**プロトコルのトンネル** (**OSPF は緑・BGP は紫**、down / 無しは灰色)。省くと表だけ。
+- **`{ figure: true }`:** ノードを透けた**円柱** (ルータ・中のプロセスはプロトコルの色の点) で描き、選んだ経路の出口 IF へ太い矢印が出る。経路表の行をクリックするとその宛先の出口 IF へ矢印が向く。リンクは**灰色の物理線**、隣接が上がっていればその上に**プロトコルのトンネル** (**OSPF は緑・BGP は紫**、down / 無しは灰色の点線)。`figureStyle: 'box'` (または skin の `panelFigure: "box"`) で箱 + RoutingEngine の円の絵に。`figure` を省くと表だけ。
 - **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** トポロジの JSON / TopoViewer の注釈の座標を渡すと、各リンクを**相手への本当の角度**で描く (図がグラフと合う)。`positions` が無ければ扇形。
 - **DeepDive と同じ Best-Path の順** (Weight → LocPrf → AS-Path → Origin → MED → eBGP > iBGP) = *なぜその経路が勝ったか*を同じように説明します。
 - **データ:** `clab-collect.js` が出す `routing_table`・`bgp_routes`・`route_resolution` (もう出している物)。

@@ -7,6 +7,8 @@
  * "Node Properties" tab: the user picks a node, you drop that node's state in here.
  *
  *   XrayNodePanel.render(containerEl, nodeState);   // containerEl = element or "#id" / selector
+ *   opts.figure: true draws the node picture: the router as a cylinder (default) or as a box with a circle
+ *   (opts.figureStyle 'box', or the CSS variable --xnp-figure: box, which a skin's panelFigure sets)
  *
  * `nodeState` = the object clab-collect.js emits per node (see DATA-CONTRACT.md). Fields used:
  *   routing_table [{prefix,out_iface,next_hop,protocol,selected}]   -> Routing table
@@ -277,6 +279,74 @@
     return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
 
+  /* nx_panel_figure (v1.8.1): the router as a see-through cylinder (the project's logo), drawn with thick flat strokes:
+     the process inside as a dot in its protocol's colour, the chosen route as a thick arrow leaving the cylinder toward
+     its out-interface, each link from the cylinder's side (grey physical wire + the protocol tunnel when the adjacency is
+     up). Same data and the same meaning as the box figure; only the drawing differs. */
+  function figureCylSvg(state, sel, positions) {
+    var ifm = ifaceMap(state);
+    var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
+    var W = 420, H = 340, CX = W / 2, CY = H / 2 - 6, RX = 54, RY = 16, HH = 66, R = 150;
+    var TOP = CY - HH, BOT = CY + HH;
+    var ang = ifaceAngles(state, names, ifm, positions);
+    var num = function (v) { return v.toFixed(1); };
+    function side(a) {   // where a link at angle a leaves the cylinder's outline (its side, or the top / bottom rim)
+      var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? RX / Math.abs(dx) : 1e9, dy ? (HH + RY * 0.6) / Math.abs(dy) : 1e9);
+      return [CX + dx * t, CY + dy * t];
+    }
+    var s = '<svg class="xnp-fig xnp-fig-cyl" viewBox="0 0 ' + W + ' ' + H + '" width="100%" preserveAspectRatio="xMidYMid meet">';
+    var protos = {};
+    names.forEach(function (ifn) {
+      var a = ang[ifn], p0 = side(a), ex = CX + Math.cos(a) * R, ey = CY + Math.sin(a) * R, up = adjUp(state, ifn, ifm[ifn].peer);
+      var pcol = pcolOf(state, ifm[ifn].peer);
+      if (up) protos[linkProto(state, ifm[ifn].peer)] = true;
+      var anchor = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
+      var lx = CX + Math.cos(a) * (R + 10), ly = CY + Math.sin(a) * (R + 10) + 4;
+      s += '<line x1="' + num(p0[0]) + '" y1="' + num(p0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="12" stroke-linecap="round"' + (up ? '' : ' stroke-dasharray="2 16"') + '/>';
+      if (up) s += '<line x1="' + num(p0[0]) + '" y1="' + num(p0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="6" stroke-linecap="round"/>';
+      s += '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
+    });
+    // the cylinder: body (side walls + bottom rim) then the top rim, filled with the ground so the links stop at its edge
+    s += '<g fill="var(--xnp-bg)" stroke="var(--xnp-accent)" stroke-width="6" stroke-linejoin="round">' +
+      '<path d="M' + (CX - RX) + ',' + TOP + ' L' + (CX - RX) + ',' + BOT + ' A' + RX + ',' + RY + ' 0 0 0 ' + (CX + RX) + ',' + BOT + ' L' + (CX + RX) + ',' + TOP + '"/>' +
+      '<ellipse cx="' + CX + '" cy="' + TOP + '" rx="' + RX + '" ry="' + RY + '"/></g>';
+    // the process (dot) and the chosen route (arrow out of the cylinder toward the out-interface)
+    var oif = selOutIface(state, sel);
+    var _selRow = (state.routing_table || []).filter(function (r) { return r.prefix === sel; })[0];
+    var _fwdBgp = (_selRow && _selRow.protocol === 'bgp') || (state.route_resolution && state.route_resolution.protocol === 'bgp');
+    var _fwdCol = _fwdBgp ? 'var(--xnp-bgp)' : 'var(--xnp-ok)';
+    var procBgp = state.protocol === 'bgp' || state.bgp_configured === true;
+    var dotCol = procBgp ? 'var(--xnp-bgp)' : 'var(--xnp-ospf)', PX = CX, PY = CY - 10;
+    s += '<circle cx="' + PX + '" cy="' + PY + '" r="14" fill="' + dotCol + '"/>';
+    if (oif && ang[oif] != null) {
+      var a2 = ang[oif], e2 = side(a2), tip = [e2[0] + Math.cos(a2) * 30, e2[1] + Math.sin(a2) * 30], hs = 24;   // the tip clearly outside the cylinder
+      var base = [tip[0] - Math.cos(a2) * hs * 0.9, tip[1] - Math.sin(a2) * hs * 0.9];
+      s += '<line x1="' + PX + '" y1="' + PY + '" x2="' + num(base[0]) + '" y2="' + num(base[1]) + '" stroke="' + _fwdCol + '" stroke-width="7" stroke-linecap="round"/>' +
+        '<polygon fill="' + _fwdCol + '" points="' + num(tip[0]) + ',' + num(tip[1]) + ' ' + num(tip[0] - Math.cos(a2 - 0.45) * hs) + ',' + num(tip[1] - Math.sin(a2 - 0.45) * hs) + ' ' + num(tip[0] - Math.cos(a2 + 0.45) * hs) + ',' + num(tip[1] - Math.sin(a2 + 0.45) * hs) + '"/>';
+    } else if (oif === 'lo') {
+      s += '<text x="' + CX + '" y="' + (TOP - RY - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>';
+    }
+    // the protocols that run here, under the cylinder
+    if (procBgp) protos.bgp = true; else if (state.protocol === 'ospf') protos.ospf = true;
+    var pl = ['ospf', 'bgp'].filter(function (k) { return protos[k]; }).map(function (k) { return k.toUpperCase(); }).join(' · ');
+    if (pl) s += '<text x="' + CX + '" y="' + (BOT + RY + 22) + '" fill="var(--xnp-accent)" font-size="12" text-anchor="middle" font-family="monospace">' + pl + '</text>';
+    s += '<text x="14" y="' + (H - 26) + '" fill="var(--xnp-ospf)" font-size="11" font-family="monospace">━ OSPF</text>' +
+      '<text x="72" y="' + (H - 26) + '" fill="var(--xnp-bgp)" font-size="11" font-family="monospace">━ BGP tunnel</text>' +
+      '<text x="14" y="' + (H - 11) + '" fill="var(--xnp-phys)" font-size="11" font-family="monospace">━ physical link</text>';
+    var cap = (state.target_node || 'node') + (sel ? '  ' + sel + (oif ? ' → ' + oif : '') : '');
+    s += '<text x="' + (W - 14) + '" y="' + (H - 11) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
+    return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
+  }
+  // which figure: opts.figureStyle ('cylinder' | 'box'), else the CSS variable --xnp-figure on the container (a skin sets
+  // it), else the cylinder
+  function figureStyleOf(container, opts) {
+    var v = opts && opts.figureStyle;
+    if (v !== 'box' && v !== 'cylinder') {
+      try { v = String(getComputedStyle(container).getPropertyValue('--xnp-figure') || '').trim().replace(/^["']|["']$/g, ''); } catch (e) { v = ''; }
+    }
+    return v === 'box' ? 'box' : 'cylinder';
+  }
+
   function wrongHtml(state) {
     var ifs = state.interfaces || {}, o = state.ospf_ifaces, nb = Array.isArray(state.bgp_neighbors) ? state.bgp_neighbors : null;
     var hasO = !!(o && typeof o === 'object' && !Array.isArray(o));
@@ -446,7 +516,10 @@
     container._xnpBoxNode = state.target_node;
     var _f0 = container.querySelector('.xnp-find'), _hadFocus = !!(_f0 && typeof document !== 'undefined' && document.activeElement === _f0);
     if (!same) container._xnpFind = ''; else if (_f0) container._xnpFind = _f0.value;
-    container.innerHTML = wrongHtml(state) + diffHtml(state, opts) + (fig ? figureSvg(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
+    var figStyle = fig ? figureStyleOf(container, opts) : '';
+    container._xnpLast = { state: state, opts: opts, figStyle: figStyle };   // nx_panel_figure: redrawn when a skin changes the picture
+    if (drawn.indexOf(container) < 0) drawn.push(container);
+    container.innerHTML = wrongHtml(state) + diffHtml(state, opts) + (fig ? (figStyle === 'box' ? figureSvg : figureCylSvg)(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
     wireFind(container, _hadFocus);
     Array.prototype.forEach.call(container.querySelectorAll('[data-xnp-diff]'), function (b) {   // keep / clear the baseline, then draw again
       b.addEventListener('click', function () {
@@ -467,6 +540,18 @@
     }
   }
 
+  /* nx_panel_figure: xray-skin.js sends 'xray:skin' when it applies a skin. A panel drawn before (a page draws at once,
+     the stored skin comes on DOMContentLoaded) is drawn again when its picture style changed. */
+  var drawn = [];
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('xray:skin', function () {
+      drawn = drawn.filter(function (c) { return c && c.isConnected !== false; });
+      drawn.forEach(function (c) {
+        var l = c._xnpLast;
+        if (l && l.opts && l.opts.figure && figureStyleOf(c, l.opts) !== l.figStyle) render(c, l.state, l.opts);
+      });
+    });
+  }
   var api = { render: render, buildBgpView: bgpView };   // buildBgpView exposed for custom layouts
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.XrayNodePanel = api;

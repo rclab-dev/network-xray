@@ -39,7 +39,7 @@
   var SIGNATURE = {
     id: 'signature',
     colors: { ospf: '#39ff14', bgp: '#a855f7', static: '#888888', link: '#00e5ff', idle: '#ff8c00', down: '#555555' },
-    protocolOrder: 'bgp-top', surface: 'dark',
+    protocolOrder: 'bgp-top', surface: 'dark', panelFigure: 'cylinder',
     engineShape: 'cylinder', processGlyph: 'double-circle', rules: {}
   };
 
@@ -86,6 +86,7 @@
       colors: {},
       protocolOrder: raw.protocolOrder === 'ospf-top' ? 'ospf-top' : 'bgp-top',
       surface: raw.surface === 'light' ? 'light' : 'dark',   /* nx_skin_surface: anything else = dark (older skins have none) */
+      panelFigure: raw.panelFigure === 'box' ? 'box' : 'cylinder',   /* nx_panel_figure: the single-node panel's picture (default the cylinder) */
       engineShape: SIGNATURE.engineShape,
       processGlyph: SIGNATURE.processGlyph,
       rules: {}
@@ -113,7 +114,7 @@
     var s = normalize(skin);
     for (var i = 0; i < PRESETS.length; i++) {
       var p = normalize(PRESETS[i]);
-      if (p.protocolOrder !== s.protocolOrder || p.surface !== s.surface) continue;
+      if (p.protocolOrder !== s.protocolOrder || p.surface !== s.surface || p.panelFigure !== s.panelFigure) continue;
       var same = true;
       for (var j = 0; j < COLOR_KEYS.length; j++) {
         if (p.colors[COLOR_KEYS[j]] !== s.colors[COLOR_KEYS[j]]) { same = false; break; }
@@ -170,7 +171,7 @@
     if (!st) { st = doc.createElement('style'); st.id = 'xnp-skin-vars'; (doc.head || doc.documentElement).appendChild(st); }
     var sf = SURFACES[s.surface] || null, chrome = '';   /* nx_skin_surface: a light ground also sets the structural tokens */
     if (sf) Object.keys(sf).forEach(function (k) { chrome += '--xnp-' + k + ':' + sf[k] + ' !important;'; });
-    st.textContent = '.xnp-root{' + chrome +
+    st.textContent = '.xnp-root{' + chrome + '--xnp-figure:' + s.panelFigure + ' !important;' +   /* nx_panel_figure: read by the panel when it draws */
       '--xnp-ospf:' + s.colors.ospf + ' !important;' +
       '--xnp-ok:' + s.colors.ospf + ' !important;' +
       '--xnp-bgp:' + s.colors.bgp + ' !important;' +
@@ -190,6 +191,9 @@
     else if (global.xrayCore && typeof global.xrayCore.setSkin === 'function') { try { global.xrayCore.setSkin(s); } catch (e) {} }
     applyCssVars(s);   // --xto-* (X-Ray engine + gallery demos)
     applyXnpVars(s);   // --xnp-* (SR-Linux node panel / topo-explorer) — universal bridge
+    /* nx_panel_figure: tell drawn views (the single-node panel redraws when its picture changes: the colours follow the
+       CSS variables by themselves, the shape is fixed when it draws) */
+    try { var _d = global.document; if (_d && typeof global.CustomEvent === 'function') _d.dispatchEvent(new global.CustomEvent('xray:skin', { detail: clone(s) })); } catch (e) {}
     return s;
   }
 
