@@ -15,7 +15,7 @@ var ROOT = path.resolve(__dirname, '..');
 // copied verbatim from the repo root into <bundle>/web/ (gen_compose_bundle.js step 7)
 var WEB_COPIES = ['xray-core.js', 'xray-api.js', 'clab-xray-bridge.js', 'xray-skin.js', 'xray-i18n.js', 'skin.html', 'decision-bracket.html'];
 // copied verbatim from the repo root into <bundle>/collector/ (gen_compose_bundle.js step 8)
-var COLLECTOR_COPIES = ['clab-collect.js', 'clab-xray-collect.js', 'scripts/states-doc.js'];
+var COLLECTOR_COPIES = ['clab-collect.js', 'clab-xray-collect.js', 'scripts/states-doc.js', 'policy-parse.js'];   /* nx_policy_why: the collector reads policy-parse.js */
 // written with fixed content into every bundle (no lab-specific text) -> same in all bundles
 var BUNDLE_CONSTANT = ['collector/Dockerfile', 'server/Dockerfile', 'web/xray-states.js'];
 

@@ -340,6 +340,7 @@ cannot see the peer). `peer_iface` / `remote` / `mismatch` は両端の状態が
 | `max_prefix_limit` | number | `maximum-prefix` limit. maximum-prefix 上限。 |
 | `prefix_list_deny` | boolean | A prefix-list is denying the route. prefix-list で拒否されている。 |
 | `neighbor_ip` | string | Peer IP address. ピア IP アドレス。 |
+| `policy_config` | object | The BGP / OSPF policy lines of the running-config, as `policy-parse.js` reads them (FRR): `bgp` (`as`, `neighbors` with their `route_map` / `prefix_list` in / out, `networks`, `redistribute`), `ospf` (`redistribute`), `prefix_lists`, `route_maps`. Only when the router has some. `explain_plan` reads it to tie a route-map line to its neighbor. running-config のポリシーの行 (ある時だけ)。 |
 
 Each entry in `bgp_routes[]` carries the visible attributes (`prefix`, `next_hop`, `as_path`,
 `local_pref`, `weight`, `metric`, `origin`, `status` e.g. `*>`) plus one optional authority field:

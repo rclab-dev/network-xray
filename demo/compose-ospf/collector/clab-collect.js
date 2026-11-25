@@ -58,6 +58,8 @@ function _vtyExec(bin, args, maxBuf) {
 function _vtyBase(container){ return _VTY_SOCK ? ['vtysh', ['--vty_socket', _VTY_SOCK + '/' + container]] : ['docker', ['exec', container, 'vtysh']]; }
 function _stripVtyWarn(o){ if(!o) return o; var i = o.indexOf('{'); return i > 0 ? o.slice(i) : o; }
 var path = (typeof require === 'function') ? require('path') : null;
+/* nx_policy_why (beta): the BGP / OSPF policy lines of the running-config (neighbors, network, redistribute, prefix-list, route-map) */
+var policyParse = (typeof require === 'function') ? (function () { try { return require('./policy-parse.js'); } catch (e) { return null; } })() : null;
 
 // ---- FRR json parsers (defensive: FRR key names vary a little across 7.x/8.x/9.x) -----------
 
@@ -1211,6 +1213,9 @@ function collectFromJson(args) {
   Object.keys(_ifs).forEach(function (n) { if (_ifs[n].via && _st.interfaces && _st.interfaces[n]) _st.interfaces[n].via = _ifs[n].via; });
   /* nx_ospf_lsdb (v1.4): only when the commands were read (an older capture keeps its old shape) */
   if (args.ospfInfo) { var _rid = parseOspfRouterId(args.ospfInfo); if (_rid) _st.ospf_router_id = _rid; }
+  /* nx_policy_why: kept only when there is something (a lab without BGP / OSPF policy keeps its old shape) */
+  var _pc = args.policyConfig;
+  if (_pc && (_pc.bgp || (_pc.ospf && _pc.ospf.redistribute.length) || Object.keys(_pc.prefix_lists).length || Object.keys(_pc.route_maps).length)) _st.policy_config = _pc;
   if (args.ospfSelf) _st.ospf_stubs = parseOspfOwnStubs(args.ospfSelf);
   if (args.ospfRouters) _st.ospf_router_lsas = parseOspfRouterLsas(args.ospfRouters);
   if (args.ospfDatabase) _st.ospf_lsdb = parseOspfDatabaseSummary(args.ospfDatabase);
@@ -1378,6 +1383,7 @@ function collectLive(opts) {
     if (_odb) { raw.ospfInfo = _odb[0]; raw.ospfDatabase = _odb[1]; raw.ospfSelf = _odb[2]; raw.ospfRoute = _odb[3]; raw.ospfRouters = _odb[4]; }
   }
   return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [], configStatics: _cfgStatics,
+    policyConfig: policyParse && _cfgTxt ? policyParse.parse(_cfgLines) : null,   /* nx_policy_why */
     ospfConfigured: _cfgLines.some(function(l){return l.indexOf('router ospf')===0;}),   /* "router ospf6" also starts with "router ospf" = OSPFv3-only routers count (nx_ospf6) */
     bgpConfigured: _bgpCfgWithNeighbor(_cfgLines),   /* nx_bgp_no_nbr */
     bgpNoNeighbor: !_bgpCfgWithNeighbor(_cfgLines) && !!_bgpAsOf(_cfgLines), bgpAs: _bgpAsOf(_cfgLines),   /* nx_bgp_no_nbr_mark */

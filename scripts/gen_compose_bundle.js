@@ -199,6 +199,7 @@ fs.copyFileSync(path.join(NX, 'clab-xray-collect.js'), path.join(OUT, 'collector
 fs.mkdirSync(path.join(OUT, 'collector', 'scripts'), { recursive: true });   /* nx_states_doc: the collector builds xray-states.json with it */
 fs.copyFileSync(path.join(NX, 'scripts', 'states-doc.js'), path.join(OUT, 'collector', 'scripts', 'states-doc.js'));
 if (fs.existsSync(path.join(NX, 'clab-srl-collect.js'))) fs.copyFileSync(path.join(NX, 'clab-srl-collect.js'), path.join(OUT, 'collector', 'clab-srl-collect.js'));
+if (fs.existsSync(path.join(NX, 'policy-parse.js'))) fs.copyFileSync(path.join(NX, 'policy-parse.js'), path.join(OUT, 'collector', 'policy-parse.js'));   /* nx_policy_why */
 // topo.clab.yml: collector orchestrator only text-parses nodes/links; binds are vestigial here.
 // Relativize any absolute host bind path (keep last 2 segments = <node>/<file>) so no host path
 // leaks into the published bundle. Lines with only relative binds are left byte-identical.
