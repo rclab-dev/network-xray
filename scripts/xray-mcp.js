@@ -645,6 +645,12 @@ function handle(msg) {
     case 'resources/list':   /* nx_mcp_apps: the one picture */
       result = { resources: [{ uri: VIEW_URI, name: 'network-xray view', mimeType: UI_MIME, description: 'The X-Ray picture of the lab (topology and the DeepDive) for MCP Apps hosts' }] };
       break;
+    case 'resources/templates/list':   /* nx_mcp_empty_lists: an empty list, not an error, for clients that ask every server */
+      result = { resourceTemplates: [] };
+      break;
+    case 'prompts/list':
+      result = { prompts: [] };
+      break;
     case 'resources/read':
       if (params.uri !== VIEW_URI) { error = { code: -32002, message: 'Resource not found' }; break; }
       try { result = { contents: [{ uri: VIEW_URI, mimeType: UI_MIME, text: viewHtml() }] }; }

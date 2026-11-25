@@ -335,3 +335,13 @@ test('one session with every kind of bad call: each gets a reply and the server 
   assert.strictEqual(s.byId[16].result.structuredContent.route, null);
   assert.deepStrictEqual(s.byId[18].result, {});
 });
+
+test('prompts/list and resources/templates/list answer empty lists (not Method not found)', function () {
+  var s = session([
+    line(1, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0' } }),
+    line(2, 'prompts/list', {}),
+    line(3, 'resources/templates/list', {})
+  ]);
+  assert.deepStrictEqual(s.byId[2].result, { prompts: [] });
+  assert.deepStrictEqual(s.byId[3].result, { resourceTemplates: [] });
+});
