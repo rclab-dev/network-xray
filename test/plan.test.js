@@ -206,3 +206,13 @@ test('checks[]: each condition met now or not, with the lines tied to it (real q
   assert.match(panel, /✕ not met<\/span> r1 routing_table some prefix=3\.3\.3\.3\/32 out_iface=eth1 <span class="xnp-plan-why">← ip route 3\.3\.3\.3\/32 10\.10\.0\.20 120<\/span>/);
   assert.doesNotMatch(JSON.stringify(explainPlan(REAL('q12-ospf-static'), 'r1', Q12_FIX, {})), /"checks"/, 'no problem, no checks');
 });
+
+test('no policy_config in the state (the collector default): a route-map line not bound in the plan says how to tie it', () => {
+  const st = REAL('q21-bgp-lp'); delete st.r1.policy_config;
+  const r = explainPlan(st, 'r1', 'route-map LOW-LP permit 10\n set local-preference 90', { prefix: '8.8.8.0/24' });
+  const s = r.lines.filter((x) => x.line === 'set local-preference 90')[0];
+  assert.equal(s.tag, '?');
+  assert.match(s.because, /only when the collector ran with --policy-config; add the neighbor line to the plan to tie it/);
+  const b = explainPlan(st, 'r1', 'route-map LOW-LP permit 10\n set local-preference 90\nrouter bgp 65001\n neighbor 10.10.0.20 route-map LOW-LP in', { prefix: '8.8.8.0/24' });
+  assert.match(b.lines.filter((x) => x.line === 'set local-preference 90')[0].because, /LocPrf now 50; the comparison now: LocPrf 100 > 50/, 'bound from the plan alone');
+});

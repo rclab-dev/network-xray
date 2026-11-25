@@ -532,7 +532,7 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
 OSPF の値・BGP のネイバー・経路)・`requirement` (check の条件が求めていて今は満たされていない経路や隣接を作る = 例 予備の経路)・
 `not_linked` (画面では「no link found」・警告ではない = 道具の知る物のどれにも結び付かないだけで、文の要件が要るかもしれない)・`?` (読めない・効き目が
 状態から決まらない)。route-map の値は今の比べの横に並べる (`sets LocPrf 90 — ... LocPrf now 50; the comparison now: LocPrf 100 > 50`)
-だけで、どちらが勝つかは言いません。文の要件はそのまま返し、読み解きません。
+だけで、どちらが勝つかは言いません。route-map の行は案の中の `neighbor … route-map … in` の行で、または collector を `--policy-config` で動かした時だけ running-config で、ネイバーに結びます (既定では状態に running-config の文は入りません)。文の要件はそのまま返し、読み解きません。
 `problem` を渡すと `checks` に check の条件が全部並び、`met_now` (今の状態で満たすか) と `lines` (その条件に結び付いた案の行) が付きます
 (行の無い条件 = 道具の見る限り案が届いていない条件)。コマンドでは `scripts/xray-plan.js <state> <router>
 <lines.txt|-> [--problem p] [--requirements 文] [--format table]`、静的な頁には `scripts/xray-render.js ... --plan <lines.txt>`。

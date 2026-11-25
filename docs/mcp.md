@@ -545,7 +545,7 @@ Each line gets a tag against the lab state, with `because` giving the state valu
 a route or adjacency that a condition of the check asks for and is not met now, e.g. a backup route), `not_linked` (shown as "no link found";
 not a warning: linked to nothing the tool knows, and a requirement in words may need it) or `?` (not read, or its effect is not decided
 by the state). A route-map value is shown next to the comparison now (`sets LocPrf 90 — ... LocPrf now 50; the comparison now:
-LocPrf 100 > 50`) without saying which path would win. Requirements in words come back as given and are not interpreted.
+LocPrf 100 > 50`) without saying which path would win. A route-map line is tied to its neighbor by the plan's own `neighbor … route-map … in` line, or by the running-config when the collector ran with `--policy-config` (by default the state holds no running-config text). Requirements in words come back as given and are not interpreted.
 With `problem`, `checks` lists every condition of its check: `met_now` (true / false in the state now) and `lines`, the
 lines of the plan tied to it (a condition with no line is one the plan does not reach as far as the tool can tell).
 `scripts/xray-plan.js <state> <router> <lines.txt|-> [--problem p] [--requirements text] [--format table]` gives the same

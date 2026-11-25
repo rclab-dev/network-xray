@@ -221,7 +221,8 @@ function explainPlan(states, router, text, opts) {
       const field = { 'local-preference': 'local_pref', weight: 'weight', metric: 'metric' }[set[1]];
       const label = { 'local-preference': 'LocPrf', weight: 'Weight', metric: 'MED' }[set[1]];
       const bs = (binds[c.name] || []).filter((b) => b.dir === 'in');
-      if (!bs.length) return result('?', 'sets ' + label + ' ' + set[2] + '; route-map ' + c.name + ' is not applied to a neighbor (in) in the plan or the running-config');
+      if (!bs.length) return result('?', 'sets ' + label + ' ' + set[2] + '; route-map ' + c.name + ' is not applied to a neighbor (in) in the plan' +
+        (st.policy_config ? ' or the running-config' : ' (the running-config is in the state only when the collector ran with --policy-config; add the neighbor line to the plan to tie it)'));
       const parts = [];
       let verdict = '';
       if (focus && PP) {
