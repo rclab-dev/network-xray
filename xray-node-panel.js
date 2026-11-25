@@ -370,7 +370,7 @@
     var dotCol = procBgp ? 'var(--xnp-bgp)' : 'var(--xnp-ospf)', PX = CX, PY = CY - 10;
     s += '<circle cx="' + PX + '" cy="' + PY + '" r="14" fill="' + dotCol + '"/>';
     if (oif && ang[oif] != null) {
-      var a2 = ang[oif], e2 = side(a2), tip = [e2[0] + Math.cos(a2) * 30, e2[1] + Math.sin(a2) * 30], hs = 24;   // the tip clearly outside the cylinder
+      var a2 = ang[oif], e2 = side(a2), tip = [e2[0] - Math.cos(a2) * 7, e2[1] - Math.sin(a2) * 7], hs = 20;   // the tip stops at the inside of the cylinder wall (it does not reach the link)
       var base = [tip[0] - Math.cos(a2) * hs * 0.9, tip[1] - Math.sin(a2) * hs * 0.9];
       s += '<line x1="' + PX + '" y1="' + PY + '" x2="' + num(base[0]) + '" y2="' + num(base[1]) + '" stroke="' + _fwdCol + '" stroke-width="7" stroke-linecap="round"/>' +
         '<polygon fill="' + _fwdCol + '" points="' + num(tip[0]) + ',' + num(tip[1]) + ' ' + num(tip[0] - Math.cos(a2 - 0.45) * hs) + ',' + num(tip[1] - Math.sin(a2 - 0.45) * hs) + ' ' + num(tip[0] - Math.cos(a2 + 0.45) * hs) + ',' + num(tip[1] - Math.sin(a2 + 0.45) * hs) + '"/>';

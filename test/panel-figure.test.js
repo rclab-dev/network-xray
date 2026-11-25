@@ -131,3 +131,12 @@ test('OSPF tunnel by the neighbor state, as the DeepDive draws it (xray-core.js 
   const h = draw(p, Object.assign({}, base, { ospf_neighbors: [] }));
   assert.match(h, /<line[^>]*stroke="var\(--xnp-phys\)" stroke-width="3\.5"[^>]*data-xnp-link="eth1"\/>/, 'the link up: solid in the link colour');
 });
+
+test('the cylinder: the chosen route\'s arrow stops inside the cylinder wall (it does not reach the link)', () => {
+  const h = draw(load(), R1);
+  const pts = /<polygon fill="var\(--xnp-bgp\)" points="([\d.]+),([\d.]+) /.exec(h);
+  assert.ok(pts, 'the arrow head');
+  const x = +pts[1], y = +pts[2];
+  assert.ok(Math.abs(x - 210) < 54, 'tip x inside the side walls: ' + x);
+  assert.ok(y > 98 - 16 && y < 230 + 16, 'tip y inside the cylinder: ' + y);
+});
