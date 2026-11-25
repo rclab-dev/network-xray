@@ -6,6 +6,22 @@
     "url": "https://github.com/rclab-dev/network-xray",
     "source": "github"
   },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/rclab-dev/network-xray/v1.8.0/docs/logo/logo-256.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "256x256"
+      ]
+    },
+    {
+      "src": "https://raw.githubusercontent.com/rclab-dev/network-xray/v1.8.0/docs/logo/logo.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    }
+  ],
   "version": "1.8.0",
   "packages": [
     {

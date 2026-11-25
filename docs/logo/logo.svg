@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="#0d2230"/><stop offset="1" stop-color="#05090d"/></radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="400" height="400" rx="72" fill="url(#bg)"/>
+  <!-- two links into the router -->
+  <g filter="url(#glow)" stroke-linecap="round">
+    <line x1="58" y1="372" x2="160" y2="252" stroke="#7c4dff" stroke-width="30" opacity=".55"/>
+    <line x1="58" y1="372" x2="160" y2="252" stroke="#00e5ff" stroke-width="9"/>
+    <line x1="342" y1="372" x2="240" y2="252" stroke="#7c4dff" stroke-width="30" opacity=".55"/>
+    <line x1="342" y1="372" x2="240" y2="252" stroke="#00e5ff" stroke-width="9"/>
+  </g>
+  <!-- the router, seen through: a cylinder -->
+  <g fill="none" stroke="#26c6da" stroke-width="7" filter="url(#glow)">
+    <ellipse cx="200" cy="86" rx="76" ry="23"/>
+    <line x1="124" y1="86" x2="124" y2="300"/><line x1="276" y1="86" x2="276" y2="300"/>
+    <path d="M124,300 A76,23 0 0 0 276,300"/>
+  </g>
+  <g fill="none" stroke="#26c6da" stroke-width="4" opacity=".35">
+    <path d="M124,300 A76,23 0 0 1 276,300"/>
+    <line x1="162" y1="108" x2="162" y2="322"/><line x1="238" y1="108" x2="238" y2="322"/>
+  </g>
+  <!-- the process inside -->
+  <circle cx="200" cy="148" r="30" fill="none" stroke="#b388ff" stroke-width="7" filter="url(#glow)"/>
+  <circle cx="200" cy="148" r="13" fill="#b388ff"/>
+  <!-- the route it picked: toward the right-hand link -->
+  <g filter="url(#glow)">
+    <line x1="198" y1="190" x2="226" y2="230" stroke="#b388ff" stroke-width="10" stroke-linecap="round"/>
+    <polygon points="242,252 212,236 236,218" fill="#b388ff"/>
+  </g>
+</svg>

@@ -57,6 +57,8 @@ const EXCEPTIONS = [
     why: 'pinned containerlab release, downloaded by docker build' },
   { file: 'js/next.js', url: 'https://github.com/yui/yui3/blob/',
     why: 'reference comment (a page link, not a load)' },
+  { file: 'server.json', url: 'https://raw.githubusercontent.com/rclab-dev/network-xray/',
+    why: 'icons of the MCP Registry entry (this repository\'s own logo; read by the registry and clients, not by a page)' },
 ];
 
 const SCAN_EXT = new Set(['.html', '.htm', '.js', '.mjs', '.cjs', '.css', '.svg', '.json', '.yml', '.yaml', '.txt', '.sh']);
@@ -111,7 +113,7 @@ function scanText(rel, text) {
       let host = m[1].replace(/^[^@]*@/, '').replace(/[.,;:]+$/, '');
       if (/[${}<>%*]/.test(host) || !host) continue;           // template / placeholder, not a host
       host = host.replace(/:\d*$/, '').toLowerCase();
-      if (isLocalHost(host) || LINK_HOSTS[host] || excepted(rel, m[0])) continue;
+      if (isLocalHost(host) || LINK_HOSTS[host] || excepted(rel, urlAt(text, m.index) || m[0])) continue;   // an EXCEPTIONS entry is a file + URL prefix: match the whole URL here too
       out.push(`line ${lineOf(text, m.index)}: external host ${host} (${m[0]}) is not in LINK_HOSTS`);
     }
   }

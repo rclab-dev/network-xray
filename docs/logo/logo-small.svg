@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- network-xray logo, small sizes (32 px and below): the same picture as logo.svg without the glow and the faint
+       back lines, with thicker strokes, so the cylinder, the two links and the arrow survive at 16 px -->
+  <rect width="400" height="400" rx="72" fill="#08141c"/>
+  <g stroke-linecap="round">
+    <line x1="50" y1="380" x2="160" y2="250" stroke="#7c4dff" stroke-width="46"/>
+    <line x1="50" y1="380" x2="160" y2="250" stroke="#00e5ff" stroke-width="18"/>
+    <line x1="350" y1="380" x2="240" y2="250" stroke="#7c4dff" stroke-width="46"/>
+    <line x1="350" y1="380" x2="240" y2="250" stroke="#00e5ff" stroke-width="18"/>
+  </g>
+  <g fill="none" stroke="#26c6da" stroke-width="20">
+    <ellipse cx="200" cy="84" rx="86" ry="28"/>
+    <line x1="114" y1="84" x2="114" y2="300"/><line x1="286" y1="84" x2="286" y2="300"/>
+    <path d="M114,300 A86,28 0 0 0 286,300"/>
+  </g>
+  <circle cx="200" cy="158" r="36" fill="#b388ff"/>
+  <line x1="200" y1="190" x2="226" y2="228" stroke="#b388ff" stroke-width="22" stroke-linecap="round"/>
+  <polygon points="250,262 204,238 240,210" fill="#b388ff"/>
+</svg>

@@ -1,5 +1,7 @@
 # network-xray
 
+<img src="docs/logo/logo.svg" width="96" alt="network-xray logo">
+
 [![rclab-dev/network-xray MCP server](https://glama.ai/mcp/servers/rclab-dev/network-xray/badges/score.svg)](https://glama.ai/mcp/servers/rclab-dev/network-xray) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/rclab-dev/network-xray)
 
 **rclab-dev/network-xray** — explains, to people and to AI agents, why the routers in a containerlab or netlab lab are in the state they are in: which BGP path each router chose and why, and which OSPF adjacency is missing and what differs (FRR, SR Linux, Cisco IOL). Read-only.

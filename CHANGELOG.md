@@ -4,6 +4,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 
 ## v1.8.0 — 2026-11-25
 
+- **Logo:** `docs/logo/` (SVG, PNG 400 / 256 / 64, a small version for 32 px and below, favicon.ico); the pages' icon is the small version; README shows the logo; `server.json` lists it as `icons` for the MCP Registry.
 - **Grafana in one line:** `demo/grafana`: `docker compose up -d` starts Grafana 12 with the two plugins, the Infinity data source and the network-xray dashboard (no login, view only, this host only; `NX_URL` for network-xray elsewhere). The dashboard is also a file to import into your own Grafana (`demo/grafana/network-xray-dashboard.json`): boxes for where network-xray is and which router; the DeepDive, the routes and adjacencies tables and the Node graph.
 - **`xray-states.json`:** `nodes` carry `fixedx` / `fixedy` from the topology's `graph-posX` / `graph-posY` labels when every router has both, so Grafana's Node graph draws the routers where the lab places them.
 - **`wrong`: routes whose next hop is not reachable:** a BGP prefix whose paths the router marks not valid (an inaccessible next hop) and that nothing else installs, and a static route that is not installed while nothing else is (an interface that is down stays its own line). A next hop the router resolves recursively (through OSPF, a static route) is valid and not listed. An installed route whose recursive next hop is resolved only through the containerlab management network is a warning. Read from the state the collectors already write.
