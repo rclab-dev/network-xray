@@ -2,11 +2,12 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## Unreleased
+## v1.8.2 — 2026-11-25
 
 - **MCP `explain_plan` / `scripts/xray-plan.js`:** what each line of a proposed fix is for, against the lab state: `fixes` (touches something listed as wrong), `requirement` (makes what a check condition asks for, e.g. a backup route), `not_linked` (not "unrelated") or `?`, each with the state values behind it; requirements in words are returned, not interpreted; nothing is predicted. The single-node panel and `xray-render.js --plan` show it as a panel and mark the links the lines touch.
 - **`explain_plan`:** `checks` (with `problem`): each condition of the check, met now or not, with the lines of the plan tied to it; the panel shows it as "The check now" at the head of the plan. The tag `not_linked` is shown as "no link found", and its note says it is not a warning.
 - **Single-node panel:** the What's wrong red is the variable `--xnp-down-text` (the light skin uses a darker red that reads on white).
+- **Collector and SolvedKit:** `--settle` waits for matching states before saving; the rehearsal guide puts the production checklist first.
 
 ## v1.8.1 — 2026-11-25
 

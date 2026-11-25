@@ -18,15 +18,15 @@ var STUB = "var a=process.argv,o=a[a.indexOf('--out')+1],n=a[a.indexOf('--node')
 var TOPO = 'name: sj\ntopology:\n  nodes:\n    r1: { kind: linux }\n    r2: { kind: linux }\n    r3: { kind: linux }\n  links:\n' +
   '    - endpoints: ["r1:eth1", "r2:eth1"]\n    - endpoints: ["r1:eth2", "r3:eth2"]\n';
 
-function collectOnce(extra, topo) {
+function collectOnce(extra, topo, stub) {
   var dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nx-sj-')), out = path.join(dir, 'out');
   fs.mkdirSync(out);
-  fs.writeFileSync(path.join(out, 'clab-collect.js'), STUB);
+  fs.writeFileSync(path.join(out, 'clab-collect.js'), stub || STUB);
   fs.writeFileSync(path.join(out, 'clab-iosxe-collect.js'), STUB);
   fs.writeFileSync(path.join(dir, 'lab.clab.yml'), topo || TOPO);
-  cp.spawnSync(process.execPath, [path.join(ROOT, 'clab-xray-collect.js'), path.join(dir, 'lab.clab.yml'), out, 'ospf'].concat(extra || []),
-    { env: Object.assign({}, process.env, { TMPDIR: dir, TMP: dir, TEMP: dir }), stdio: 'ignore', timeout: 30000 });
-  return { dir: dir, out: out };
+  var result = cp.spawnSync(process.execPath, [path.join(ROOT, 'clab-xray-collect.js'), path.join(dir, 'lab.clab.yml'), out, 'ospf'].concat(extra || []),
+    { env: Object.assign({}, process.env, { TMPDIR: dir, TMP: dir, TEMP: dir }), encoding: 'utf8', timeout: 30000 });
+  return { dir: dir, out: out, result: result };
 }
 
 test('xray-states.json carries the same states as xray-states.js, versioned, with nodes / edges', function () {
@@ -90,5 +90,31 @@ test('one router without a position -> no fixedx / fixedy at all (the Node graph
     var doc = JSON.parse(fs.readFileSync(path.join(r.out, 'xray-states.json'), 'utf8'));
     assert.strictEqual(doc.nodes.length, 3);
     assert.ok(doc.nodes.every(function (n) { return !('fixedx' in n) && !('fixedy' in n); }));
+  } finally { fs.rmSync(r.dir, { recursive: true, force: true }); }
+});
+
+test('--settle stops after two equal rounds or times out on changing states', function () {
+  var one = 'name: sj\ntopology:\n  nodes:\n    r1: { kind: linux }\n';
+  var counter = "var fs=require('fs'),a=process.argv,o=a[a.indexOf('--out')+1],f=require('path').join(process.env.TMPDIR,'count'),n=fs.existsSync(f)?+fs.readFileSync(f,'utf8'):0;fs.writeFileSync(f,String(++n));";
+  var stable = counter + "fs.writeFileSync(o,JSON.stringify({success:true,target_node:'r1'}));";
+  var changing = counter + "fs.writeFileSync(o,JSON.stringify({success:true,target_node:'r1',round:n}));";
+  var a = collectOnce(['--settle', '3', '--interval', '1'], one, stable);
+  var b = collectOnce(['--settle', '3', '--interval', '1'], one, changing);
+  try {
+    assert.strictEqual(a.result.status, 0, a.result.stderr);
+    assert.strictEqual(fs.readFileSync(path.join(a.dir, 'count'), 'utf8'), '2');
+    assert.strictEqual(b.result.status, 3, b.result.stderr);
+    assert.match(b.result.stderr, /did not settle in 3 s \(\d+ rounds\)/);
+    assert.ok(fs.existsSync(path.join(b.out, 'xray-states.js')));
+    assert.ok(fs.existsSync(path.join(b.out, 'xray-states.json')));
+  } finally { fs.rmSync(a.dir, { recursive: true, force: true }); fs.rmSync(b.dir, { recursive: true, force: true }); }
+});
+
+test('--settle: routers that cannot be read never count as settled (the same empty round twice is not a lab at rest)', function () {
+  var one = 'name: sj\ntopology:\n  nodes:\n    r1: { kind: linux }\n';
+  var r = collectOnce(['--settle', '3', '--interval', '1'], one, 'process.exit(1);');
+  try {
+    assert.strictEqual(r.result.status, 3, r.result.stderr);
+    assert.match(r.result.stderr, /did not settle/);
   } finally { fs.rmSync(r.dir, { recursive: true, force: true }); }
 });

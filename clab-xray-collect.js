@@ -22,11 +22,12 @@
 var fs = require('fs'), cp = require('child_process'), path = require('path'), os = require('os');
 
 // flags (--watch / --interval N / --exclude-mgmt / --mgmt-subnet <cidr>) may appear in any order
-var argv = process.argv.slice(2), noJson = false, validateFile = '', watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = [], pos = [], serialCollect = false;
-var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>] [--validate <file>] [--serial] [--no-json]\n' +
+var argv = process.argv.slice(2), noJson = false, validateFile = '', watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = [], pos = [], serialCollect = false, settle = false, settleMs = 300000, intervalGiven = false;
+var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch | --settle [secs]] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>] [--validate <file>] [--serial] [--no-json]\n' +
   '  proto                ospf | bgp | static (default: ospf)\n' +
   '  --watch              keep collecting (default: collect once)\n' +
-  '  --interval <secs>    seconds between rounds with --watch (default: 1)\n' +
+  '  --settle [secs]      collect until two rounds match (default timeout: 300)\n' +
+  '  --interval <secs>    seconds between rounds (default: 1 with --watch, 10 with --settle)\n' +
   '  --exclude-mgmt       leave out the management network (the topology\'s mgmt subnet, else 172.20.20.0/24)\n' +
   '  --mgmt-subnet <cidr> leave out this management network\n' +
   '  --validate <file>    netlab topology JSON with validate: tests (network-xray.json)\n' +
@@ -41,15 +42,18 @@ for (var ai = 0; ai < argv.length; ai++) {
 }
 for (ai = 0; ai < argv.length; ai++) {
   if (argv[ai] === '--watch') watch = true;
+  else if (argv[ai] === '--settle') { settle = true; if (/^\d+$/.test(argv[ai + 1] || '')) settleMs = parseInt(argv[++ai], 10) * 1000; }
   else if (argv[ai] === '--validate') validateFile = argv[++ai] || '';   /* nx_netlab_validate: netlab topology JSON with validate: tests */
   else if (argv[ai] === '--no-json') noJson = true;   /* nx_states_json: no xray-states.json */
   else if (argv[ai] === '--serial') serialCollect = true;   /* nx_collect_parallel: old one-node-at-a-time collect */
-  else if (argv[ai] === '--interval') intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000;
+  else if (argv[ai] === '--interval') { intervalGiven = true; intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000; }
   else if (argv[ai] === '--exclude-mgmt') mgmtArg = ['--exclude-mgmt'];                       // drop clab mgmt IF (172.20.20.0/24)
   else if (argv[ai] === '--mgmt-subnet') mgmtArg = ['--mgmt-subnet', argv[++ai] || ''];
   else if (argv[ai].charAt(0) === '-' && argv[ai].length > 1) { console.error('clab-xray-collect.js: unknown option: ' + argv[ai] + '\n' + HINT); process.exit(2); }
   else pos.push(argv[ai]);
 }
+if (watch && settle) { console.error('!! --settle cannot be used with --watch'); process.exit(2); }
+if (settle && !intervalGiven) intervalMs = 10000;
 /* nx_no_shell (2026-10-17): names from the topology file never reach a shell. The per-node collectors are started with
    an argument array (no /bin/sh), and lab / node / interface names must look like names (letters, digits, _ . - and, for
    interfaces, /): anything else is left out of the view with one log line. A topology from someone else is only data. */
@@ -387,7 +391,7 @@ function collectAll() {
     nodes.forEach(function (n) {
       if (drawnOnly(n)) return;   /* nx_bridge_drawn_only */
       if (running[n]) { _job[n] = running[n]; return; }   // started in an earlier cycle and not taken yet
-      if (retryAt[n] > _t0 || (iosNextAt[n] > _t0 && lastGood[n])) return;   /* nx_unread: back-off */   /* nx_ios_interval */
+      if (!settle && (retryAt[n] > _t0 || (iosNextAt[n] > _t0 && lastGood[n]))) return;   /* nx_unread: back-off */   /* nx_ios_interval */
       var c = _cmdOf(n); _job[n] = running[n] = { code: c.out + '.code', err: c.out + '.err', since: _t0 };
       try { fs.unlinkSync(_job[n].code); } catch (e) {}
       _jobs.push({ args: c.args, code: _job[n].code, err: _job[n].err });
@@ -417,8 +421,8 @@ function collectAll() {
     var out = stateFile(n);   /* nx_tmp_per_user (2026-10-05): a collector run with sudo and one without no longer fight over a root-owned tmp file (EACCES forever) */   /* nx_lab_state_file (2026-10-01): lab in the name - two labs with the same node name (r2) must not share one tmp file */
     if (_par && _job[n] && !_jobDone(_job[n], Date.now())) { if (lastOut[n]) { states[n] = lastOut[n]; if (lastOut[n] === lastGood[n]) ok++; } return; }   // still running: its last state stays
     if (_par && _job[n]) delete running[n];
-    if (retryAt[n] > _t0) { if (lastOut[n]) states[n] = lastOut[n]; return; }   /* nx_unread: asked again after RETRY_MS */
-    if (iosNextAt[n] > _t0 && lastGood[n]) { states[n] = lastGood[n]; ok++; return; }   /* nx_ios_interval: not yet time to read this IOS node again */
+    if (!settle && retryAt[n] > _t0) { if (lastOut[n]) states[n] = lastOut[n]; return; }   /* nx_unread: asked again after RETRY_MS */
+    if (!settle && iosNextAt[n] > _t0 && lastGood[n]) { states[n] = lastGood[n]; ok++; return; }   /* nx_ios_interval: not yet time to read this IOS node again */
     try {
       if (_par) {   /* nx_collect_parallel: the child already ran - read its exit code (and stderr on failure) */
         var _code = ''; try { _code = fs.readFileSync(_job[n].code, 'utf8').trim(); } catch (e) {}
@@ -643,10 +647,23 @@ if (!watch) {
   if (VALIDATE) validateRound(function () { oneShot(); }); else oneShot();
 }
 function oneShot() {
-  var r0 = collectAll();
+  /* nx_settle: --settle = read again every --interval until two rounds in a row are the same (and at least one router
+     was read), or the time runs out (exit 3); the file is written once, from the last round */
+  var start = Date.now(), r0 = collectAll(), rounds = 1, previous, current, settled = false;
+  if (settle) {
+    previous = statesJson(r0.states).json;
+    while (Date.now() - start < settleMs) {
+      sleepMs(Math.min(intervalMs, settleMs - (Date.now() - start)));
+      r0 = collectAll(); rounds++; current = statesJson(r0.states).json;
+      if (r0.ok && current === previous) { settled = true; break; }
+      previous = current;
+    }
+    if (!settled) { console.error('!! did not settle in ' + Math.round(settleMs / 1000) + ' s (' + rounds + ' rounds)'); process.exitCode = 3; }
+    else console.log('settled after ' + rounds + ' rounds');
+  }
   if (!r0.ok && !Object.keys(r0.states).length && fs.existsSync(dest)) {
     console.error('!! every node failed - kept the existing ' + dest);
-    process.exitCode = 1;
+    process.exitCode = settle && !settled ? 3 : 1;
   } else {
     writeStates(r0.states, false);
     console.log('wrote ' + dest + '  (' + r0.ok + '/' + nodes.length + ' nodes)');

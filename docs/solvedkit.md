@@ -427,15 +427,15 @@ Tried on the official `examples/q6-ospf-solved` (a triangle r1 - r2 - r3, OSPF):
 move the traffic between r1 and r3 (`3.3.3.3` on r3, `10.10.0.0/24` behind r1) to go through r2, keeping r1 - r3 up as a
 backup. From the network-xray folder, with the lab running:
 
+**1. Take the "before" state when the lab has settled.**
+
 ```
-node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf && cp xray-states.js before.js
-sleep 40; node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf && cp xray-states.js before2.js
-node scripts/xray-query.js diff before.js before2.js --format table      # (none): the lab has settled
+node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf --settle 300 && cp xray-states.js before.js
 ```
 
-**1. Take the "before" state when the lab has settled.** Take it twice; `diff` must say `(none)`. A state taken while
-OSPF is still converging differs from the next one, and the rollback check in step 5 would then report a change that
-the procedure did not make.
+Exit 0 means settled; 3 means it did not settle in time. Underneath, it collects twice and compares the states,
+repeating until two consecutive rounds match (like collecting twice and checking that `diff` says `(none)`).
+A state taken while OSPF is converging could make the rollback check report a change the procedure did not make.
 
 **2. Run the procedure, take "after", and let `--for change` show what moved.** The first try of the procedure raised the
 OSPF cost on r1 only (`interface eth2` / `ip ospf cost 100`):
@@ -477,10 +477,9 @@ node scripts/xray-query.js check run backup backup.js                   # solved
 
 The routes on the link you took down are gone in that state; they are listed as `gone` and left out of the check.
 
-**4. Run the same check on the production state** after the real work (if network-xray can read those routers), or keep
-it as the record of what the rehearsal showed. For the people doing the work, `check to-procedure` writes the check as
-the show commands to type on each router and what each must show (Markdown; `--vendor ios` for Cisco IOS / IOS XE,
-`--lang ja` in Japanese):
+**4. Run the same check on the production state.** When network-xray is not connected to production,
+`check to-procedure` makes a checklist for the people doing the work: the show commands to type on the real routers
+and what each must show (Markdown; `--vendor ios` for Cisco IOS / IOS XE, `--lang ja` in Japanese):
 
 ```
 node scripts/xray-query.js check to-procedure change --format table
@@ -491,6 +490,9 @@ node scripts/xray-query.js check to-procedure change --format table
 | 3 | r1 | `show ip ospf neighbor` | 10.12.0.10 is Full |
 ...
 ```
+
+If network-xray can read the production routers, another option is to collect their state after the work and run
+`check run change <production-state>`.
 
 **5. Roll back and compare with "before".** `check run change/problem.json rolled.js` says `not solved` (the change is
 gone), and `diff before.js rolled.js` says `(none)`: the rollback left the lab as it was.
