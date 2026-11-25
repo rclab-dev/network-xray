@@ -228,7 +228,7 @@ Claude Desktop では `claude_desktop_config.json` に書きます (Settings →
   Status: ⏸ Pending approval (run `claude` to approve)
 ```
 
-多くのクライアントは、ツールを呼ぶたび、または初めてツールを呼ぶ時にも確認します。既定の 9 つのツールはすべて読むだけと
+多くのクライアントは、ツールを呼ぶたび、または初めてツールを呼ぶ時にも確認します。既定のツールはすべて読むだけと
 印が付いており (`readOnlyHint: true`・`destructiveHint: false`)、渡した `path` だけを読みます (選んで使う `collect` の印は `readOnlyHint: false`・`destructiveHint: false`)。network-xray の state を
 持たないファイルは `not a network-xray state file` で断り、エラーにファイルの中身は出しません。
 
@@ -261,6 +261,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `check_verify` | `problem`, `broken`, `solved` | SolvedKit: `check` が壊れた版で不合格・解いた版で合格になるか (条件ごとに `tells` / `both` / `wrong` / `unknown`) |
 | `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: 直して変わった所から条件の候補と、両方の state で確かめた `check` の案 (`status` `ok`・出せなければ `none` と `reason`) |
 | `check_init` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: その check を入れた problem.json の下書き (`problem`・文は空欄)。ファイルは書きません |
+| `explain_plan` | `path`, `router`, `lines`, `problem?`, `requirements?`, `prefix?` | 直す案の各行が何のためか (`fixes` / `requirement` / `not_linked` / `?` と元の状態の値)・`problem` を渡すと今の check の合否。何も変えず・予想もしない |
 
 `why_best_path` は、データに保存されているわけだけを返します (無ければ `null` と注記)。`why_path` はほかの候補も並べ、
 ルータがわけを出していない時は、属性を自分で比べます (`reason_source`)。
@@ -521,6 +522,20 @@ MaxAge (消える途中) の LSA は数えません。`lab_state` の `wrong` �
   "summary": "r1 8.8.8.0/24 uses the path via r2 (2.2.2.2), AS 65002: the only path"
 }
 ```
+
+### explain_plan
+
+入力: `path`・`router`・`lines` (そのルータに打とうとしている設定の行・FRR / IOS・`router ospf` / `interface` / `router bgp` /
+`route-map` の行も)・任意で `problem` (要件を check に持つ problem.json)・`requirements` (文の要件)・`prefix`。
+
+各行に状態と照らした札が付き、`because` にその元の状態の値が入ります: `fixes` (おかしい所として出ている物に触る = 同じ IF・
+OSPF の値・BGP のネイバー・経路)・`requirement` (check の条件が求めていて今は満たされていない経路や隣接を作る = 例 予備の経路)・
+`not_linked` (画面では「no link found」・警告ではない = 道具の知る物のどれにも結び付かないだけで、文の要件が要るかもしれない)・`?` (読めない・効き目が
+状態から決まらない)。route-map の値は今の比べの横に並べる (`sets LocPrf 90 — ... LocPrf now 50; the comparison now: LocPrf 100 > 50`)
+だけで、どちらが勝つかは言いません。文の要件はそのまま返し、読み解きません。
+`problem` を渡すと `checks` に check の条件が全部並び、`met_now` (今の状態で満たすか) と `lines` (その条件に結び付いた案の行) が付きます
+(行の無い条件 = 道具の見る限り案が届いていない条件)。コマンドでは `scripts/xray-plan.js <state> <router>
+<lines.txt|-> [--problem p] [--requirements 文] [--format table]`、静的な頁には `scripts/xray-render.js ... --plan <lines.txt>`。
 
 ### check_run と check_verify (SolvedKit)
 

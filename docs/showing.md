@@ -17,6 +17,7 @@ drawn as a cylinder or a box); it never changes what they say. These are the rul
 | It is not up | the grey link only (dashed in the cylinder picture); under **What's wrong** with the router's own state word | the state word as the router printed it (`Active`, `Idle (Admin)`, `ExStart` …) |
 | Something is wrong | listed first, under **What's wrong**, each with the values on both ends when they must match | `wrong[]` (lab_state), `mismatch` (ospf_interfaces) |
 | Not in the collected data | `?` — never shown as down or wrong | `null` with a note |
+| What a line of a proposed fix is for | **Proposed fix** panel: each line with `fixes` / `for a requirement` / `no link found` / `?` and why; the link it touches marked `· fix` / `· for a requirement` | `explain_plan`: `tag` and `because` per line |
 | Changed since a kept state | **Changed since the baseline** (the page), **What changed on \<router\>** (render `--before`) | `changes[]` (diff / state_diff) |
 
 Rules behind the table:

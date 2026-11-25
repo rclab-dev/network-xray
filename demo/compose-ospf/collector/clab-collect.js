@@ -58,7 +58,7 @@ function _vtyExec(bin, args, maxBuf) {
 function _vtyBase(container){ return _VTY_SOCK ? ['vtysh', ['--vty_socket', _VTY_SOCK + '/' + container]] : ['docker', ['exec', container, 'vtysh']]; }
 function _stripVtyWarn(o){ if(!o) return o; var i = o.indexOf('{'); return i > 0 ? o.slice(i) : o; }
 var path = (typeof require === 'function') ? require('path') : null;
-/* nx_policy_why (beta): the BGP / OSPF policy lines of the running-config (neighbors, network, redistribute, prefix-list, route-map) */
+/* nx_policy_why: the BGP / OSPF policy lines of the running-config (neighbors, network, redistribute, prefix-list, route-map) */
 var policyParse = (typeof require === 'function') ? (function () { try { return require('./policy-parse.js'); } catch (e) { return null; } })() : null;
 
 // ---- FRR json parsers (defensive: FRR key names vary a little across 7.x/8.x/9.x) -----------

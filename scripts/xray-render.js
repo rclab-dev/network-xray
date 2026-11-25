@@ -12,6 +12,8 @@
 //   --detail    full (default) = picture + tables; summary = picture, the one line and What's wrong only
 //   --before    a state kept before a change: the page shows what changed on this router, then before | after
 //   --out       write the page to a file (default: standard output)
+//   --plan      a proposed fix (config lines for this router, a file): each line with what it is for (scripts/xray-plan.js)
+//   --problem   with --plan: the problem.json whose check holds the requirements; --requirements: requirements in words
 // Exit 0 written, 2 a usage / input error.
 'use strict';
 const fs = require('fs');
@@ -21,7 +23,7 @@ const panel = require('../xray-node-panel.js');
 const query = require('./xray-query.js');
 
 const ROOT = path.join(__dirname, '..');
-const USAGE = 'usage: xray-render.js <state.json|dir> <router> [--skin <id>] [--figure cylinder|box] [--prefix <p>] [--detail full|summary] [--before <state.json|dir>] [--out <file.html>]';
+const USAGE = 'usage: xray-render.js <state.json|dir> <router> [--skin <id>] [--figure cylinder|box] [--prefix <p>] [--detail full|summary] [--before <state.json|dir>] [--plan <lines.txt> [--problem <problem.json>] [--requirements <text>]] [--out <file.html>]';
 
 class RenderError extends Error {}
 
@@ -76,6 +78,7 @@ function renderPage(states, node, opts) {
   const light = sk.skin.surface === 'light';
   const prefix = opts.prefix || (st.route_resolution && st.route_resolution.matched_prefix) || '';
   const p = { figure: true, figureStyle: sk.skin.panelFigure, prefix: prefix || undefined, tables: opts.detail !== 'summary' };
+  if (opts.plan) p.plan = require('./xray-plan.js').explainPlan(states, node, opts.plan, { problem: opts.problem || null, requirements: opts.requirements, prefix: opts.prefix });   /* nx_plan_lines */
   const line = oneLine(states, node, prefix);
   let body = '<h1>' + esc(node) + '</h1>' + (line ? '<p class="nx-line">' + esc(line) + '</p>' : '');
   if (opts.before) {
@@ -96,7 +99,7 @@ function renderPage(states, node, opts) {
     '<body><div class="nx-page">' + body + '<p class="nx-foot">network-xray · skin ' + esc(sk.skin.id) + ' · read-only picture of the collected state</p></div></body></html>\n';
 }
 
-const OPTIONS = ['--skin', '--figure', '--prefix', '--detail', '--before', '--out'];   // each takes a value: --name value
+const OPTIONS = ['--skin', '--figure', '--prefix', '--detail', '--before', '--out', '--plan', '--problem', '--requirements'];   // each takes a value: --name value
 function parseArgs(argv) {
   const o = { args: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -115,7 +118,8 @@ if (require.main === module) {
   try {
     const o = parseArgs(argv);
     const html = renderPage(query.loadStates(o.args[0]), o.args[1],
-      { skin: o.skin, figure: o.figure, prefix: o.prefix, detail: o.detail, before: o.before ? query.loadStates(o.before) : null });
+      { skin: o.skin, figure: o.figure, prefix: o.prefix, detail: o.detail, before: o.before ? query.loadStates(o.before) : null,
+        plan: o.plan ? fs.readFileSync(o.plan, 'utf8') : null, problem: o.problem ? query.loadProblem(o.problem) : null, requirements: o.requirements });
     if (o.out) fs.writeFileSync(o.out, html); else process.stdout.write(html);
   } catch (e) {
     if (e instanceof RenderError || (e && e.constructor && e.constructor.name === 'QueryError') || (e && e.code === 'ENOENT')) { console.error('xray-render: ' + e.message); process.exit(2); }

@@ -231,13 +231,14 @@
   // Both ends carry the same <peer>_proto, so the same link is coloured identically from either side.
   function linkProto(state, peer) { var p = (peer && state[peer + '_proto']) || state.protocol; return p === 'bgp' ? 'bgp' : 'ospf'; }
   function pcolOf(state, peer) { return linkProto(state, peer) === 'bgp' ? 'var(--xnp-bgp)' : 'var(--xnp-ospf)'; }
-  function figureSvg(state, sel, positions) {
+  function figureSvg(state, sel, positions, marks) {
     var ifm = ifaceMap(state);
     var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
     var W = 420, H = 340, CX = W / 2, CY = H / 2, HW = 70, HH = 52, RER = 38, R = 132;
     var ang = ifaceAngles(state, names, ifm, positions);
     function edge(a) { var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? HW / Math.abs(dx) : 1e9, dy ? HH / Math.abs(dy) : 1e9); return [CX + dx * t, CY + dy * t]; }
     function re(a) { return [CX + Math.cos(a) * RER, CY + Math.sin(a) * RER]; }   // point on the white RE circle
+    marks = marks || {};
     var num = function (v) { return v.toFixed(1); };
     var s = '<svg class="xnp-fig" viewBox="0 0 ' + W + ' ' + H + '" width="100%" preserveAspectRatio="xMidYMid meet">';
     // node box (rounded rect) — drawn first so links/circle sit on top
@@ -252,7 +253,8 @@
       s += '<line x1="' + num(r0[0]) + '" y1="' + num(r0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="7" stroke-linecap="round"/>';
       if (up) s += '<line x1="' + num(r0[0]) + '" y1="' + num(r0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="3.5" stroke-linecap="round"/>';
       s += '<rect x="' + num(bp[0] - 5) + '" y="' + num(bp[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="' + (up ? pcol : 'var(--xnp-phys)') + '" stroke-width="1.5"/>' +
-        '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
+        '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') +
+        (marks[ifn] ? '<tspan fill="' + markFill(marks[ifn]) + '" font-weight="700">' + markText(marks[ifn]) + '</tspan>' : '') + '</text>';
     });
     // white RoutingEngine circle on top (links terminate at its edge)
     s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + RER + '" fill="var(--xnp-bg)" stroke="var(--xnp-fg)" stroke-width="2.5"/>';
@@ -283,13 +285,14 @@
      the process inside as a dot in its protocol's colour, the chosen route as a thick arrow leaving the cylinder toward
      its out-interface, each link from the cylinder's side (grey physical wire + the protocol tunnel when the adjacency is
      up). Same data and the same meaning as the box figure; only the drawing differs. */
-  function figureCylSvg(state, sel, positions) {
+  function figureCylSvg(state, sel, positions, marks) {
     var ifm = ifaceMap(state);
     var names = Object.keys(ifm).filter(function (n) { return n !== 'lo'; });
     var W = 420, H = 340, CX = W / 2, CY = H / 2 - 6, RX = 54, RY = 16, HH = 66, R = 150;
     var TOP = CY - HH, BOT = CY + HH;
     var ang = ifaceAngles(state, names, ifm, positions);
     var num = function (v) { return v.toFixed(1); };
+    marks = marks || {};
     function side(a) {   // where a link at angle a leaves the cylinder's outline (its side, or the top / bottom rim)
       var dx = Math.cos(a), dy = Math.sin(a), t = Math.min(dx ? RX / Math.abs(dx) : 1e9, dy ? (HH + RY * 0.6) / Math.abs(dy) : 1e9);
       return [CX + dx * t, CY + dy * t];
@@ -304,7 +307,8 @@
       var lx = CX + Math.cos(a) * (R + 10), ly = CY + Math.sin(a) * (R + 10) + 4;
       s += '<line x1="' + num(p0[0]) + '" y1="' + num(p0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="12" stroke-linecap="round"' + (up ? '' : ' stroke-dasharray="2 16"') + '/>';
       if (up) s += '<line x1="' + num(p0[0]) + '" y1="' + num(p0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="6" stroke-linecap="round"/>';
-      s += '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') + '</text>';
+      s += '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') +
+        (marks[ifn] ? '<tspan fill="' + markFill(marks[ifn]) + '" font-weight="700">' + markText(marks[ifn]) + '</tspan>' : '') + '</text>';
     });
     // the cylinder: body (side walls + bottom rim) then the top rim, filled with the ground so the links stop at its edge
     s += '<g fill="var(--xnp-bg)" stroke="var(--xnp-accent)" stroke-width="6" stroke-linejoin="round">' +
@@ -346,6 +350,39 @@
     }
     return v === 'box' ? 'box' : 'cylinder';
   }
+
+  /* nx_plan_lines: a proposed fix (the answer of scripts/xray-plan.js / MCP explain_plan) as one panel */
+  var PLAN_WORD = { fixes: 'fixes', requirement: 'for a requirement', not_linked: 'no link found', '?': '?' };
+  function planHtml(plan) {
+    if (!plan || !Array.isArray(plan.lines) || !plan.lines.length) return '';
+    var req = plan.requirements && plan.requirements.text ? '<div class="xnp-plan-req">Requirement (as given): ' + esc(plan.requirements.text) + '</div>' : '';
+    /* the check now: each condition met or not, and which lines of the plan are tied to it */
+    if (Array.isArray(plan.checks) && plan.checks.length) {
+      var lineNo = {}; plan.lines.forEach(function (x) { lineNo[x.n] = x.line; });
+      req += '<div class="xnp-plan-checks"><div class="xnp-plan-why">The check now</div>' + plan.checks.map(function (c) {
+        var cond = Array.isArray(c.condition) ? c.condition : [];
+        var items = Array.isArray(cond[3]) ? cond[3].map(function (x) { return Array.isArray(x) ? x[0] + (x[1] === 'eq' ? '=' : ' ' + x[1] + ' ') + String(x[2]) : String(x); }).join(' ') : '';
+        return '<div class="xnp-plan-chk ' + (c.met_now ? 'xnp-plan-met' : 'xnp-plan-unmet') + '"><span class="xnp-plan-tag">' + (c.met_now ? '✓ met' : '✕ not met') + '</span> ' +
+          esc([cond[0], cond[1], cond[2], items].join(' ')) +
+          (c.lines && c.lines.length ? ' <span class="xnp-plan-why">← ' + c.lines.map(function (n) { return esc(lineNo[n] || ('line ' + n)); }).join(' / ') + '</span>' : '') + '</div>';
+      }).join('') + '</div>';
+    }
+    var rows = plan.lines.map(function (x) {
+      var cls = x.tag === '?' ? 'q' : esc(x.tag || 'not_linked');
+      if (x.header) return '<div class="xnp-plan-row xnp-plan-hd"><span class="xnp-plan-tag" style="visibility:hidden">-</span><span class="xnp-plan-line">' + esc(x.line) + '</span></div>';
+      return '<div class="xnp-plan-row xnp-plan-' + cls + '"><span class="xnp-plan-tag">' + esc(PLAN_WORD[x.tag] || x.tag) + '</span><span><span class="xnp-plan-line">' +
+        esc(x.line) + '</span><br><span class="xnp-plan-why">' + esc(x.because || '') + '</span></span></div>';
+    }).join('');
+    return panel('Proposed fix: what each line is for', req + rows + (plan.note ? '<div class="xnp-plan-why">' + esc(plan.note) + '</div>' : ''));
+  }
+  // the interfaces the plan's lines touch, with the strongest tag: { eth2: 'fixes', eth1: 'requirement' }
+  function planMarks(plan) {
+    var rank = { fixes: 4, requirement: 3, '?': 2, not_linked: 1 }, out = {};
+    ((plan && plan.lines) || []).forEach(function (x) { (x.touches || []).forEach(function (i) { if (!out[i] || rank[x.tag] > rank[out[i]]) out[i] = x.tag; }); });
+    return out;
+  }
+  function markText(tag) { return tag === 'fixes' ? ' · fix' : tag === 'requirement' ? ' · for a requirement' : ''; }
+  function markFill(tag) { return tag === 'fixes' ? 'var(--xnp-down-text,#ff6b6b)' : 'var(--xnp-bgp)'; }
 
   function wrongHtml(state) {
     var ifs = state.interfaces || {}, o = state.ospf_ifaces, nb = Array.isArray(state.bgp_neighbors) ? state.bgp_neighbors : null;
@@ -460,11 +497,18 @@
       '@supports (-moz-appearance:none){.xnp-scroll{scrollbar-width:thin;scrollbar-color:var(--xnp-scroll-thumb,#3a9aa8) var(--xnp-scroll-track,#12232e)}}' +
       '.xnp-tools{margin:0 0 6px 0}.xnp-find{width:100%;box-sizing:border-box;background:var(--xnp-bg);color:var(--xnp-fg);border:1px solid var(--xnp-border);border-radius:4px;padding:3px 6px;font:inherit}' +
       '.xnp-counts{margin-top:4px;font-size:10px;color:var(--xnp-muted);line-height:1.6}.xnp-cnt{cursor:pointer;white-space:nowrap}.xnp-cnt:hover{color:var(--xnp-accent)}' +
-      '.xnp-wrong-down{color:#ff6b6b}.xnp-wrong-warn{color:var(--xnp-decider-strong)}.xnp-wrong-none{color:var(--xnp-ok)}' +
+      '.xnp-wrong-down{color:var(--xnp-down-text,#ff6b6b)}.xnp-wrong-warn{color:var(--xnp-decider-strong)}.xnp-wrong-none{color:var(--xnp-ok)}' +
       '.xnp-diff-bad{color:#ff6b6b}.xnp-diff-good{color:var(--xnp-ok)}.xnp-diff-note{color:var(--xnp-decider-strong)}.xnp-diff-none{color:var(--xnp-ok)}' +
       '.xnp-diff-btn{cursor:pointer;text-decoration:underline dotted;color:var(--xnp-accent)}.xnp-diff-acts{margin-top:4px}' +
       '.xnp-rt.xnp-click tr[data-prefix]{cursor:pointer}' +
-      '.xnp-rt.xnp-click tr[data-prefix]:hover td{background:var(--xnp-sel-bg)}';
+      '.xnp-rt.xnp-click tr[data-prefix]:hover td{background:var(--xnp-sel-bg)}' +
+      /* nx_plan_lines: the proposed fix, one row per line with its tag (a word as well as a colour) */
+      '.xnp-plan-row{display:flex;gap:8px;align-items:baseline;padding:2px 0}.xnp-plan-row.xnp-plan-hd{opacity:.7}' +
+      '.xnp-plan-tag{flex:0 0 auto;font-size:10px;font-weight:700;border:1px solid;border-radius:3px;padding:0 4px;min-width:64px;text-align:center}' +
+      '.xnp-plan-fixes .xnp-plan-tag{color:var(--xnp-down-text,#ff6b6b)}.xnp-plan-requirement .xnp-plan-tag{color:var(--xnp-bgp)}' +
+      '.xnp-plan-not_linked .xnp-plan-tag{color:var(--xnp-muted)}.xnp-plan-q .xnp-plan-tag{color:var(--xnp-note);border-style:dashed}' +
+      '.xnp-plan-checks{margin:0 0 6px}.xnp-plan-chk{font-size:11px;padding:1px 0}.xnp-plan-met .xnp-plan-tag{color:var(--xnp-ok)}.xnp-plan-unmet .xnp-plan-tag{color:var(--xnp-down-text,#ff6b6b)}' +
+      '.xnp-plan-line{font-weight:600}.xnp-plan-why{color:var(--xnp-muted);font-size:11px}.xnp-plan-req{color:var(--xnp-note);margin:0 0 4px}';
     return s.textContent;
   }
   function injectCss() {
@@ -510,7 +554,7 @@
     opts = opts || {}; state = state || {};
     var fig = !!opts.figure, sel = opts.prefix || defaultSel(state);
     var figStyle = opts.figureStyle === 'box' ? 'box' : 'cylinder';
-    return '<div class="xnp-root">' + wrongHtml(state) + (fig ? (figStyle === 'box' ? figureSvg : figureCylSvg)(state, sel, opts.positions) : '') +
+    return '<div class="xnp-root">' + wrongHtml(state) + (fig ? (figStyle === 'box' ? figureSvg : figureCylSvg)(state, sel, opts.positions, planMarks(opts.plan)) : '') + planHtml(opts.plan) +
       (opts.tables === false ? '' : routingHtml(state, sel, false) + bgpHtml(state)) + '</div>';
   }
   // render(container, state, opts?)  —  opts.figure:true adds the node figure with a clickable route arrow
@@ -535,7 +579,7 @@
     var figStyle = fig ? figureStyleOf(container, opts) : '';
     container._xnpLast = { state: state, opts: opts, figStyle: figStyle };   // nx_panel_figure: redrawn when a skin changes the picture
     if (drawn.indexOf(container) < 0) drawn.push(container);
-    container.innerHTML = wrongHtml(state) + diffHtml(state, opts) + (fig ? (figStyle === 'box' ? figureSvg : figureCylSvg)(state, sel, opts.positions) : '') + routingHtml(state, sel, fig) + bgpHtml(state);
+    container.innerHTML = wrongHtml(state) + diffHtml(state, opts) + (fig ? (figStyle === 'box' ? figureSvg : figureCylSvg)(state, sel, opts.positions, planMarks(opts.plan)) : '') + planHtml(opts.plan) + routingHtml(state, sel, fig) + bgpHtml(state);
     wireFind(container, _hadFocus);
     Array.prototype.forEach.call(container.querySelectorAll('[data-xnp-diff]'), function (b) {   // keep / clear the baseline, then draw again
       b.addEventListener('click', function () {

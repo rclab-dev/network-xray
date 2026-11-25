@@ -367,5 +367,48 @@
       ],
       "additionalProperties": false
     }
+  },
+  {
+    "name": "explain_plan",
+    "description": "What each line of a proposed fix is for: give the config lines someone wants to type on one router (FRR / IOS, with their router ospf / interface / router bgp / route-map lines) and each line gets a tag against the lab state: fixes (it touches something listed as wrong: the same interface, OSPF value, BGP neighbor or route), requirement (it makes a route or adjacency that a condition of the problem check asks for and is not met now, e.g. a backup route), not_linked (linked to nothing the tool knows; not \"unrelated\": a requirement in words may need it) or ? (not read, or its effect is not decided by the state; a route-map value is shown next to the comparison now, without saying which path would win). because gives the state values behind each tag. Requirements in words are returned as given, not interpreted. It changes nothing and predicts nothing. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The lab's state: an xray-states.js, a state_<node>.json, a folder of them, or a folder of saved FRR show ... json files, e.g. lab/xray-states.js"
+        },
+        "router": {
+          "type": "string",
+          "description": "The router the lines are for, e.g. r1"
+        },
+        "lines": {
+          "type": "string",
+          "description": "The proposed config lines, one per line, as typed after configure terminal"
+        },
+        "problem": {
+          "type": "string",
+          "description": "A problem.json (or the folder with it) whose check holds the requirements (optional)"
+        },
+        "requirements": {
+          "type": "string",
+          "description": "Requirements in words, e.g. \"r1 must still reach 3.3.3.3 via r2 if the r1-r3 link fails\" (optional; shown, not interpreted)"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "The destination the fix is about, e.g. 3.3.3.3/32 (default: the problem focus, or the one the state resolved)"
+        },
+        "node": {
+          "type": "string",
+          "description": "Same as router (the name why_best_path uses)"
+        }
+      },
+      "required": [
+        "path",
+        "router",
+        "lines"
+      ],
+      "additionalProperties": false
+    }
   }
 ]

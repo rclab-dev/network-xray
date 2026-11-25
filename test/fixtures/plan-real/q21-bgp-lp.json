@@ -1,0 +1,471 @@
+{
+ "r1": {
+  "success": true,
+  "id": "q21-bgp-lp",
+  "scenario": "q21-bgp-lp",
+  "target_node": "r1",
+  "peer_node": "r2",
+  "interfaces": {
+   "eth1": {
+    "up": true,
+    "ip": "10.10.0.10/24"
+   },
+   "eth2": {
+    "up": true,
+    "ip": "10.11.0.10/24"
+   },
+   "lo": {
+    "up": true,
+    "ip": ""
+   }
+  },
+  "wan_iface": "eth2",
+  "lan_iface": "eth1",
+  "neighbor_state": "Full",
+  "has_full": true,
+  "full_count": 2,
+  "ospf_configured": false,
+  "bgp_configured": true,
+  "ospf_active_on_interface": false,
+  "ospf_if_count": 0,
+  "is_passive": false,
+  "ospf_neighbor_full": false,
+  "peer_sending_hello": false,
+  "iface_hellos": {},
+  "peer_hellos": {},
+  "peer_sending_hellos": {},
+  "bgp_neighbors": [
+   {
+    "ip": "10.10.0.20",
+    "remote_as": 65002,
+    "ibgp": false,
+    "state": "Established",
+    "up_down": "00:01:25",
+    "pfx_rcvd": 1,
+    "iface": "eth1"
+   },
+   {
+    "ip": "10.11.0.20",
+    "remote_as": 65003,
+    "ibgp": false,
+    "state": "Established",
+    "up_down": "00:01:25",
+    "pfx_rcvd": 1,
+    "iface": "eth2"
+   }
+  ],
+  "ospf_neighbors": [],
+  "target_on_path": false,
+  "cleared": true,
+  "is_established": true,
+  "bgp_local_as": 65001,
+  "has_bgp_route": true,
+  "protocol": "bgp",
+  "ping_ok": true,
+  "has_ospf_route": false,
+  "bgp_routes": [
+   {
+    "prefix": "8.8.8.0",
+    "next_hop": "10.10.0.20",
+    "as_path": "65002",
+    "best": false,
+    "status": "* ",
+    "prefixlen": 24,
+    "local_pref": 50,
+    "weight": 0,
+    "metric": 0,
+    "origin": "IGP",
+    "peer_type": "ebgp"
+   },
+   {
+    "prefix": "8.8.8.0",
+    "next_hop": "10.11.0.20",
+    "as_path": "65003",
+    "best": true,
+    "status": "*>",
+    "prefixlen": 24,
+    "weight": 0,
+    "metric": 0,
+    "origin": "IGP",
+    "reason": "Local Pref",
+    "peer_type": "ebgp"
+   }
+  ],
+  "pfx_rcvd": 1,
+  "route_resolution": {
+   "target": "8.8.8.0",
+   "resolved": true,
+   "protocol": "bgp",
+   "out_iface": "eth2",
+   "next_hop": "10.11.0.20",
+   "matched_prefix": "8.8.8.0/24"
+  },
+  "routing_table": [
+   {
+    "prefix": "8.8.8.0/24",
+    "out_iface": "eth2",
+    "next_hop": "10.11.0.20",
+    "protocol": "bgp",
+    "selected": true
+   },
+   {
+    "prefix": "10.10.0.0/24",
+    "out_iface": "eth1",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   },
+   {
+    "prefix": "10.11.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   }
+  ],
+  "r2_has_full": true,
+  "r2_iface": "eth1",
+  "r2_neighbor_state": "Full",
+  "r3_has_full": true,
+  "r3_iface": "eth2",
+  "r3_neighbor_state": "Full",
+  "ospf_neighbor_state": "None",
+  "r2_ospf_full": false,
+  "r2_ospf_state": "None",
+  "r3_ospf_full": false,
+  "r3_ospf_state": "None",
+  "peer_links": [
+   {
+    "iface": "eth1",
+    "peer": "r2",
+    "up": true,
+    "ip": "10.10.0.10/24",
+    "full": true,
+    "state": "Full",
+    "ospf_full": false,
+    "ospf_state": "None",
+    "peer_ip": "10.10.0.20"
+   },
+   {
+    "iface": "eth2",
+    "peer": "r3",
+    "up": true,
+    "ip": "10.11.0.10/24",
+    "full": true,
+    "state": "Full",
+    "ospf_full": false,
+    "ospf_state": "None",
+    "peer_ip": "10.11.0.20"
+   }
+  ],
+  "policy_config": {
+   "bgp": {
+    "as": "65001",
+    "neighbors": {
+     "10.10.0.20": {
+      "remote_as": "65002",
+      "route_map": {
+       "in": "LOW-LP"
+      }
+     },
+     "10.11.0.20": {
+      "remote_as": "65003"
+     }
+    },
+    "networks": [],
+    "redistribute": []
+   },
+   "ospf": null,
+   "prefix_lists": {},
+   "route_maps": {
+    "LOW-LP": [
+     {
+      "seq": 10,
+      "action": "permit",
+      "matches": [],
+      "other": []
+     }
+    ]
+   }
+  }
+ },
+ "r2": {
+  "success": true,
+  "id": "q21-bgp-lp",
+  "scenario": "q21-bgp-lp",
+  "target_node": "r2",
+  "peer_node": "r1",
+  "interfaces": {
+   "eth1": {
+    "up": true,
+    "ip": "10.10.0.20/24"
+   },
+   "lo": {
+    "up": true,
+    "ip": "8.8.8.8/32"
+   }
+  },
+  "wan_iface": "eth1",
+  "lan_iface": "eth1",
+  "neighbor_state": "Full",
+  "has_full": true,
+  "full_count": 1,
+  "ospf_configured": false,
+  "bgp_configured": true,
+  "ospf_active_on_interface": false,
+  "ospf_if_count": 0,
+  "is_passive": false,
+  "ospf_neighbor_full": false,
+  "peer_sending_hello": false,
+  "iface_hellos": {},
+  "peer_hellos": {},
+  "peer_sending_hellos": {},
+  "bgp_neighbors": [
+   {
+    "ip": "10.10.0.10",
+    "remote_as": 65001,
+    "ibgp": false,
+    "state": "Established",
+    "up_down": "00:01:25",
+    "pfx_rcvd": 1,
+    "iface": "eth1"
+   }
+  ],
+  "ospf_neighbors": [],
+  "target_on_path": false,
+  "cleared": false,
+  "is_established": true,
+  "bgp_local_as": 65002,
+  "has_bgp_route": false,
+  "protocol": "bgp",
+  "ping_ok": false,
+  "has_ospf_route": false,
+  "bgp_routes": [
+   {
+    "prefix": "8.8.8.0",
+    "next_hop": "10.10.0.10",
+    "as_path": "65001 65003",
+    "best": false,
+    "status": "* ",
+    "prefixlen": 24,
+    "weight": 0,
+    "origin": "IGP",
+    "peer_type": "ebgp"
+   },
+   {
+    "prefix": "8.8.8.0",
+    "next_hop": "0.0.0.0",
+    "as_path": "",
+    "best": true,
+    "status": "*>",
+    "prefixlen": 24,
+    "weight": 32768,
+    "metric": 0,
+    "origin": "IGP",
+    "reason": "Weight"
+   }
+  ],
+  "pfx_rcvd": 1,
+  "route_resolution": {
+   "target": "",
+   "resolved": false,
+   "protocol": "",
+   "out_iface": "",
+   "next_hop": "",
+   "matched_prefix": ""
+  },
+  "routing_table": [
+   {
+    "prefix": "8.8.8.0/24",
+    "out_iface": "lo",
+    "next_hop": "",
+    "protocol": "static",
+    "selected": true
+   },
+   {
+    "prefix": "8.8.8.8/32",
+    "out_iface": "lo",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   },
+   {
+    "prefix": "10.10.0.0/24",
+    "out_iface": "eth1",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   }
+  ],
+  "r1_has_full": true,
+  "r1_iface": "eth1",
+  "r1_neighbor_state": "Full",
+  "ospf_neighbor_state": "None",
+  "r1_ospf_full": false,
+  "r1_ospf_state": "None",
+  "peer_links": [
+   {
+    "iface": "eth1",
+    "peer": "r1",
+    "up": true,
+    "ip": "10.10.0.20/24",
+    "full": true,
+    "state": "Full",
+    "ospf_full": false,
+    "ospf_state": "None",
+    "peer_ip": "10.10.0.10"
+   }
+  ],
+  "policy_config": {
+   "bgp": {
+    "as": "65002",
+    "neighbors": {
+     "10.10.0.10": {
+      "remote_as": "65001"
+     }
+    },
+    "networks": [
+     "8.8.8.0/24"
+    ],
+    "redistribute": []
+   },
+   "ospf": null,
+   "prefix_lists": {},
+   "route_maps": {}
+  }
+ },
+ "r3": {
+  "success": true,
+  "id": "q21-bgp-lp",
+  "scenario": "q21-bgp-lp",
+  "target_node": "r3",
+  "peer_node": "r1",
+  "interfaces": {
+   "eth1": {
+    "up": true,
+    "ip": "10.11.0.20/24"
+   },
+   "lo": {
+    "up": true,
+    "ip": "8.8.8.8/32"
+   }
+  },
+  "wan_iface": "eth1",
+  "lan_iface": "eth1",
+  "neighbor_state": "Full",
+  "has_full": true,
+  "full_count": 1,
+  "ospf_configured": false,
+  "bgp_configured": true,
+  "ospf_active_on_interface": false,
+  "ospf_if_count": 0,
+  "is_passive": false,
+  "ospf_neighbor_full": false,
+  "peer_sending_hello": false,
+  "iface_hellos": {},
+  "peer_hellos": {},
+  "peer_sending_hellos": {},
+  "bgp_neighbors": [
+   {
+    "ip": "10.11.0.10",
+    "remote_as": 65001,
+    "ibgp": false,
+    "state": "Established",
+    "up_down": "00:01:25",
+    "pfx_rcvd": 0,
+    "iface": "eth1"
+   }
+  ],
+  "ospf_neighbors": [],
+  "target_on_path": false,
+  "cleared": false,
+  "is_established": true,
+  "bgp_local_as": 65003,
+  "has_bgp_route": false,
+  "protocol": "bgp",
+  "ping_ok": false,
+  "has_ospf_route": false,
+  "bgp_routes": [
+   {
+    "prefix": "8.8.8.0",
+    "next_hop": "0.0.0.0",
+    "as_path": "",
+    "best": true,
+    "status": "*>",
+    "prefixlen": 24,
+    "weight": 32768,
+    "metric": 0,
+    "origin": "IGP",
+    "reason": "First path received"
+   }
+  ],
+  "pfx_rcvd": 0,
+  "route_resolution": {
+   "target": "",
+   "resolved": false,
+   "protocol": "",
+   "out_iface": "",
+   "next_hop": "",
+   "matched_prefix": ""
+  },
+  "routing_table": [
+   {
+    "prefix": "8.8.8.0/24",
+    "out_iface": "lo",
+    "next_hop": "",
+    "protocol": "static",
+    "selected": true
+   },
+   {
+    "prefix": "8.8.8.8/32",
+    "out_iface": "lo",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   },
+   {
+    "prefix": "10.11.0.0/24",
+    "out_iface": "eth1",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   }
+  ],
+  "r1_has_full": true,
+  "r1_iface": "eth1",
+  "r1_neighbor_state": "Full",
+  "ospf_neighbor_state": "None",
+  "r1_ospf_full": false,
+  "r1_ospf_state": "None",
+  "peer_links": [
+   {
+    "iface": "eth1",
+    "peer": "r1",
+    "up": true,
+    "ip": "10.11.0.20/24",
+    "full": true,
+    "state": "Full",
+    "ospf_full": false,
+    "ospf_state": "None",
+    "peer_ip": "10.11.0.10"
+   }
+  ],
+  "policy_config": {
+   "bgp": {
+    "as": "65003",
+    "neighbors": {
+     "10.11.0.10": {
+      "remote_as": "65001"
+     }
+    },
+    "networks": [
+     "8.8.8.0/24"
+    ],
+    "redistribute": []
+   },
+   "ospf": null,
+   "prefix_lists": {},
+   "route_maps": {}
+  }
+ }
+}

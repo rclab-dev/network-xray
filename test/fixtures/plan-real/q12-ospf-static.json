@@ -1,0 +1,732 @@
+{
+ "r1": {
+  "success": true,
+  "id": "q12-ospf-static",
+  "scenario": "q12-ospf-static",
+  "target_node": "r1",
+  "peer_node": "r2",
+  "interfaces": {
+   "eth2": {
+    "up": true,
+    "ip": "10.11.0.10/24",
+    "area": "1"
+   },
+   "eth1": {
+    "up": true,
+    "ip": "10.10.0.10/24"
+   }
+  },
+  "wan_iface": "eth1",
+  "lan_iface": "eth2",
+  "neighbor_state": "Down",
+  "has_full": false,
+  "full_count": 0,
+  "ospf_configured": true,
+  "bgp_configured": false,
+  "ospf_active_on_interface": true,
+  "ospf_if_count": 1,
+  "is_passive": false,
+  "ospf_neighbor_full": false,
+  "peer_sending_hello": true,
+  "iface_hellos": {
+   "eth2": 5
+  },
+  "peer_hellos": {
+   "r3": 5
+  },
+  "peer_sending_hellos": {
+   "r2": false,
+   "r3": true
+  },
+  "bgp_neighbors": [],
+  "ospf_neighbors": [],
+  "target_on_path": false,
+  "cleared": false,
+  "ospf_ifaces": {
+   "eth2": {
+    "peer": "r3",
+    "area": "0.0.0.1",
+    "mtu": 9500,
+    "hello": 5,
+    "dead": 20,
+    "network_type": "broadcast",
+    "cost": 10,
+    "role": "DR",
+    "priority": 1,
+    "passive": false,
+    "auth": "none",
+    "neighbors": 0,
+    "neighbors_adjacent": 0,
+    "peer_iface": "eth1",
+    "remote": {
+     "area": "0.0.0.0",
+     "mtu": 9500,
+     "hello": 5,
+     "dead": 20,
+     "network_type": "broadcast",
+     "cost": 10,
+     "role": "DR",
+     "priority": 1,
+     "passive": false,
+     "auth": "none",
+     "neighbors": 0,
+     "neighbors_adjacent": 0
+    },
+    "mismatch": [
+     "area"
+    ]
+   }
+  },
+  "has_ospf_route": false,
+  "ping_ok": false,
+  "route_resolution": {
+   "target": "",
+   "resolved": false,
+   "protocol": "",
+   "out_iface": "",
+   "next_hop": "",
+   "matched_prefix": ""
+  },
+  "lsdb_prefixes": [
+   {
+    "text": "10.11.0.0/24",
+    "own": true,
+    "via": "eth2"
+   }
+  ],
+  "routing_table": [
+   {
+    "prefix": "10.10.0.0/24",
+    "out_iface": "eth1",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   },
+   {
+    "prefix": "10.11.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "",
+    "protocol": "ospf",
+    "selected": false
+   },
+   {
+    "prefix": "10.11.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   }
+  ],
+  "r2_has_full": false,
+  "r2_iface": "eth1",
+  "r2_neighbor_state": "Down",
+  "r3_has_full": false,
+  "r3_iface": "eth2",
+  "r3_neighbor_state": "Down",
+  "ospf_neighbor_state": "Down",
+  "r2_ospf_full": false,
+  "r2_ospf_state": "Down",
+  "r3_ospf_full": false,
+  "r3_ospf_state": "Down",
+  "peer_links": [
+   {
+    "iface": "eth1",
+    "peer": "r2",
+    "up": true,
+    "ip": "10.10.0.10/24",
+    "full": false,
+    "state": "Down",
+    "ospf_full": false,
+    "ospf_state": "Down",
+    "peer_ip": ""
+   },
+   {
+    "iface": "eth2",
+    "peer": "r3",
+    "up": true,
+    "ip": "10.11.0.10/24",
+    "full": false,
+    "state": "Down",
+    "ospf_full": false,
+    "ospf_state": "Down",
+    "peer_ip": "",
+    "area": "1"
+   }
+  ],
+  "ospf_router_id": "10.11.0.10",
+  "ospf_stubs": [],
+  "ospf_router_lsas": [
+   {
+    "adv_router": "10.11.0.10",
+    "area": "0.0.0.1",
+    "stubs": [
+     "10.11.0.0/24"
+    ]
+   }
+  ],
+  "ospf_lsdb": [
+   {
+    "type": "router",
+    "ls_id": "10.11.0.10",
+    "adv_router": "10.11.0.10",
+    "area": "0.0.0.1"
+   }
+  ],
+  "ospf_routes": {
+   "10.11.0.0/24": {
+    "type": "N",
+    "area": "0.0.0.1",
+    "cost": 10
+   }
+  }
+ },
+ "r2": {
+  "success": true,
+  "id": "q12-ospf-static",
+  "scenario": "q12-ospf-static",
+  "target_node": "r2",
+  "peer_node": "r3",
+  "interfaces": {
+   "eth2": {
+    "up": true,
+    "ip": "10.12.0.10/24"
+   },
+   "eth1": {
+    "up": true,
+    "ip": "10.10.0.20/24"
+   }
+  },
+  "wan_iface": "eth2",
+  "lan_iface": "eth1",
+  "neighbor_state": "Full",
+  "has_full": true,
+  "full_count": 1,
+  "ospf_configured": true,
+  "bgp_configured": false,
+  "ospf_active_on_interface": true,
+  "ospf_if_count": 1,
+  "is_passive": false,
+  "ospf_neighbor_full": true,
+  "peer_sending_hello": true,
+  "iface_hellos": {
+   "eth2": 5
+  },
+  "peer_hellos": {
+   "r3": 5
+  },
+  "peer_sending_hellos": {
+   "r3": true,
+   "r1": false
+  },
+  "bgp_neighbors": [],
+  "ospf_neighbors": [
+   {
+    "router_id": "3.3.3.3",
+    "address": "10.12.0.20",
+    "state": "Full",
+    "role": "Backup",
+    "iface": "eth2",
+    "full": true
+   }
+  ],
+  "target_on_path": false,
+  "cleared": true,
+  "ospf_ifaces": {
+   "eth2": {
+    "peer": "r3",
+    "area": "0.0.0.0",
+    "mtu": 9500,
+    "hello": 5,
+    "dead": 20,
+    "network_type": "broadcast",
+    "cost": 10,
+    "role": "DR",
+    "priority": 1,
+    "passive": false,
+    "auth": "none",
+    "neighbors": 1,
+    "neighbors_adjacent": 1,
+    "peer_iface": "eth2",
+    "remote": {
+     "area": "0.0.0.0",
+     "mtu": 9500,
+     "hello": 5,
+     "dead": 20,
+     "network_type": "broadcast",
+     "cost": 10,
+     "role": "BDR",
+     "priority": 1,
+     "passive": false,
+     "auth": "none",
+     "neighbors": 1,
+     "neighbors_adjacent": 1
+    },
+    "mismatch": []
+   }
+  },
+  "has_ospf_route": true,
+  "ping_ok": true,
+  "route_resolution": {
+   "target": "3.3.3.3",
+   "resolved": true,
+   "protocol": "ospf",
+   "out_iface": "eth2",
+   "next_hop": "10.12.0.20",
+   "matched_prefix": "3.3.3.3/32"
+  },
+  "lsdb_prefixes": [
+   {
+    "text": "3.3.3.3/32",
+    "own": false,
+    "via": "10.12.0.20"
+   },
+   {
+    "text": "10.11.0.0/24",
+    "own": false,
+    "via": "10.12.0.20"
+   },
+   {
+    "text": "10.12.0.0/24",
+    "own": true,
+    "via": "eth2"
+   }
+  ],
+  "routing_table": [
+   {
+    "prefix": "3.3.3.3/32",
+    "out_iface": "eth2",
+    "next_hop": "10.12.0.20",
+    "protocol": "ospf",
+    "selected": true
+   },
+   {
+    "prefix": "10.10.0.0/24",
+    "out_iface": "eth1",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   },
+   {
+    "prefix": "10.11.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "10.12.0.20",
+    "protocol": "ospf",
+    "selected": true
+   },
+   {
+    "prefix": "10.12.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "",
+    "protocol": "ospf",
+    "selected": false
+   },
+   {
+    "prefix": "10.12.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   }
+  ],
+  "r1_area": "0",
+  "r2_area": "0",
+  "target_area": "0",
+  "peer_area": "0",
+  "area_match": true,
+  "r1_hello": 5,
+  "r2_hello": 5,
+  "target_hello": 5,
+  "peer_hello": 5,
+  "timer_match": true,
+  "r3_has_full": true,
+  "r3_iface": "eth2",
+  "r3_neighbor_state": "Full",
+  "r1_has_full": false,
+  "r1_iface": "eth1",
+  "r1_neighbor_state": "Down",
+  "ospf_neighbor_state": "Full",
+  "r3_ospf_full": true,
+  "r3_ospf_state": "Full",
+  "r1_ospf_full": false,
+  "r1_ospf_state": "Down",
+  "peer_links": [
+   {
+    "iface": "eth1",
+    "peer": "r1",
+    "up": true,
+    "ip": "10.10.0.20/24",
+    "full": false,
+    "state": "Down",
+    "ospf_full": false,
+    "ospf_state": "Down",
+    "peer_ip": ""
+   },
+   {
+    "iface": "eth2",
+    "peer": "r3",
+    "up": true,
+    "ip": "10.12.0.10/24",
+    "full": true,
+    "state": "Full",
+    "ospf_full": true,
+    "ospf_state": "Full",
+    "peer_ip": "10.12.0.20"
+   }
+  ],
+  "ospf_router_id": "10.12.0.10",
+  "ospf_stubs": [],
+  "ospf_router_lsas": [
+   {
+    "adv_router": "3.3.3.3",
+    "area": "0.0.0.0",
+    "stubs": [
+     "10.11.0.0/24",
+     "3.3.3.3/32"
+    ]
+   },
+   {
+    "adv_router": "10.12.0.10",
+    "area": "0.0.0.0",
+    "stubs": []
+   }
+  ],
+  "ospf_lsdb": [
+   {
+    "type": "router",
+    "ls_id": "3.3.3.3",
+    "adv_router": "3.3.3.3",
+    "area": "0.0.0.0"
+   },
+   {
+    "type": "router",
+    "ls_id": "10.12.0.10",
+    "adv_router": "10.12.0.10",
+    "area": "0.0.0.0"
+   },
+   {
+    "type": "network",
+    "ls_id": "10.12.0.10",
+    "adv_router": "10.12.0.10",
+    "area": "0.0.0.0"
+   }
+  ],
+  "ospf_routes": {
+   "3.3.3.3/32": {
+    "type": "N",
+    "area": "0.0.0.0",
+    "cost": 10
+   },
+   "10.11.0.0/24": {
+    "type": "N",
+    "area": "0.0.0.0",
+    "cost": 20
+   },
+   "10.12.0.0/24": {
+    "type": "N",
+    "area": "0.0.0.0",
+    "cost": 10
+   }
+  }
+ },
+ "r3": {
+  "success": true,
+  "id": "q12-ospf-static",
+  "scenario": "q12-ospf-static",
+  "target_node": "r3",
+  "peer_node": "r2",
+  "interfaces": {
+   "eth1": {
+    "up": true,
+    "ip": "10.11.0.20/24"
+   },
+   "eth2": {
+    "up": true,
+    "ip": "10.12.0.20/24"
+   },
+   "lo": {
+    "up": true,
+    "ip": "3.3.3.3/32"
+   }
+  },
+  "wan_iface": "eth2",
+  "lan_iface": "eth1",
+  "neighbor_state": "Full",
+  "has_full": true,
+  "full_count": 1,
+  "ospf_configured": true,
+  "bgp_configured": false,
+  "ospf_active_on_interface": true,
+  "ospf_if_count": 2,
+  "is_passive": false,
+  "ospf_neighbor_full": true,
+  "peer_sending_hello": true,
+  "iface_hellos": {
+   "eth2": 5,
+   "eth1": 5
+  },
+  "peer_hellos": {
+   "r2": 5,
+   "r1": 5
+  },
+  "peer_sending_hellos": {
+   "r2": true,
+   "r1": true
+  },
+  "bgp_neighbors": [],
+  "ospf_neighbors": [
+   {
+    "router_id": "10.12.0.10",
+    "address": "10.12.0.10",
+    "state": "Full",
+    "role": "DR",
+    "iface": "eth2",
+    "full": true
+   }
+  ],
+  "target_on_path": false,
+  "cleared": true,
+  "ospf_ifaces": {
+   "eth1": {
+    "peer": "r1",
+    "area": "0.0.0.0",
+    "mtu": 9500,
+    "hello": 5,
+    "dead": 20,
+    "network_type": "broadcast",
+    "cost": 10,
+    "role": "DR",
+    "priority": 1,
+    "passive": false,
+    "auth": "none",
+    "neighbors": 0,
+    "neighbors_adjacent": 0,
+    "peer_iface": "eth2",
+    "remote": {
+     "area": "0.0.0.1",
+     "mtu": 9500,
+     "hello": 5,
+     "dead": 20,
+     "network_type": "broadcast",
+     "cost": 10,
+     "role": "DR",
+     "priority": 1,
+     "passive": false,
+     "auth": "none",
+     "neighbors": 0,
+     "neighbors_adjacent": 0
+    },
+    "mismatch": [
+     "area"
+    ]
+   },
+   "eth2": {
+    "peer": "r2",
+    "area": "0.0.0.0",
+    "mtu": 9500,
+    "hello": 5,
+    "dead": 20,
+    "network_type": "broadcast",
+    "cost": 10,
+    "role": "BDR",
+    "priority": 1,
+    "passive": false,
+    "auth": "none",
+    "neighbors": 1,
+    "neighbors_adjacent": 1,
+    "peer_iface": "eth2",
+    "remote": {
+     "area": "0.0.0.0",
+     "mtu": 9500,
+     "hello": 5,
+     "dead": 20,
+     "network_type": "broadcast",
+     "cost": 10,
+     "role": "DR",
+     "priority": 1,
+     "passive": false,
+     "auth": "none",
+     "neighbors": 1,
+     "neighbors_adjacent": 1
+    },
+    "mismatch": []
+   }
+  },
+  "has_ospf_route": true,
+  "ping_ok": true,
+  "route_resolution": {
+   "target": "10.10.0.0",
+   "resolved": true,
+   "protocol": "static",
+   "out_iface": "eth2",
+   "next_hop": "10.12.0.10",
+   "matched_prefix": "10.10.0.0/24"
+  },
+  "lsdb_prefixes": [
+   {
+    "text": "3.3.3.3/32",
+    "own": true,
+    "via": "lo"
+   },
+   {
+    "text": "10.11.0.0/24",
+    "own": true,
+    "via": "eth1"
+   },
+   {
+    "text": "10.12.0.0/24",
+    "own": true,
+    "via": "eth2"
+   }
+  ],
+  "routing_table": [
+   {
+    "prefix": "3.3.3.3/32",
+    "out_iface": "lo",
+    "next_hop": "",
+    "protocol": "ospf",
+    "selected": false
+   },
+   {
+    "prefix": "3.3.3.3/32",
+    "out_iface": "lo",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   },
+   {
+    "prefix": "10.10.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "10.12.0.10",
+    "protocol": "static",
+    "selected": true
+   },
+   {
+    "prefix": "10.11.0.0/24",
+    "out_iface": "eth1",
+    "next_hop": "",
+    "protocol": "ospf",
+    "selected": false
+   },
+   {
+    "prefix": "10.11.0.0/24",
+    "out_iface": "eth1",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   },
+   {
+    "prefix": "10.12.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "",
+    "protocol": "ospf",
+    "selected": false
+   },
+   {
+    "prefix": "10.12.0.0/24",
+    "out_iface": "eth2",
+    "next_hop": "",
+    "protocol": "connected",
+    "selected": true
+   }
+  ],
+  "r1_area": "0",
+  "r2_area": "0",
+  "target_area": "0",
+  "peer_area": "0",
+  "area_match": true,
+  "r1_hello": 5,
+  "r2_hello": 5,
+  "target_hello": 5,
+  "peer_hello": 5,
+  "timer_match": true,
+  "r2_has_full": true,
+  "r2_iface": "eth2",
+  "r2_neighbor_state": "Full",
+  "r1_has_full": false,
+  "r1_iface": "eth1",
+  "r1_neighbor_state": "Down",
+  "ospf_neighbor_state": "Full",
+  "r2_ospf_full": true,
+  "r2_ospf_state": "Full",
+  "r1_ospf_full": false,
+  "r1_ospf_state": "Down",
+  "peer_links": [
+   {
+    "iface": "eth1",
+    "peer": "r1",
+    "up": true,
+    "ip": "10.11.0.20/24",
+    "full": false,
+    "state": "Down",
+    "ospf_full": false,
+    "ospf_state": "Down",
+    "peer_ip": ""
+   },
+   {
+    "iface": "eth2",
+    "peer": "r2",
+    "up": true,
+    "ip": "10.12.0.20/24",
+    "full": true,
+    "state": "Full",
+    "ospf_full": true,
+    "ospf_state": "Full",
+    "peer_ip": "10.12.0.10"
+   }
+  ],
+  "ospf_router_id": "3.3.3.3",
+  "ospf_stubs": [],
+  "ospf_router_lsas": [
+   {
+    "adv_router": "3.3.3.3",
+    "area": "0.0.0.0",
+    "stubs": [
+     "10.11.0.0/24",
+     "3.3.3.3/32"
+    ]
+   },
+   {
+    "adv_router": "10.12.0.10",
+    "area": "0.0.0.0",
+    "stubs": []
+   }
+  ],
+  "ospf_lsdb": [
+   {
+    "type": "router",
+    "ls_id": "3.3.3.3",
+    "adv_router": "3.3.3.3",
+    "area": "0.0.0.0"
+   },
+   {
+    "type": "router",
+    "ls_id": "10.12.0.10",
+    "adv_router": "10.12.0.10",
+    "area": "0.0.0.0"
+   },
+   {
+    "type": "network",
+    "ls_id": "10.12.0.10",
+    "adv_router": "10.12.0.10",
+    "area": "0.0.0.0"
+   }
+  ],
+  "ospf_routes": {
+   "3.3.3.3/32": {
+    "type": "N",
+    "area": "0.0.0.0",
+    "cost": 0
+   },
+   "10.11.0.0/24": {
+    "type": "N",
+    "area": "0.0.0.0",
+    "cost": 10
+   },
+   "10.12.0.0/24": {
+    "type": "N",
+    "area": "0.0.0.0",
+    "cost": 10
+   }
+  }
+ }
+}

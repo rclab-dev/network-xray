@@ -301,6 +301,31 @@ var TOOLS = [
       additionalProperties: false
     },
     annotations: READ_ONLY
+  },
+  {
+    name: 'explain_plan',
+    description: 'What each line of a proposed fix is for: give the config lines someone wants to type on one router (FRR / IOS, ' +
+      'with their router ospf / interface / router bgp / route-map lines) and each line gets a tag against the lab state: fixes ' +
+      '(it touches something listed as wrong: the same interface, OSPF value, BGP neighbor or route), requirement (it makes a route ' +
+      'or adjacency that a condition of the problem check asks for and is not met now, e.g. a backup route), not_linked (linked ' +
+      'to nothing the tool knows; not "unrelated": a requirement in words may need it) or ? (not read, or its effect is not ' +
+      'decided by the state; a route-map value is shown next to the comparison now, without saying which path would win). ' +
+      'because gives the state values behind each tag. Requirements in words are returned as given, not interpreted. It ' +
+      'changes nothing and predicts nothing. Read-only.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: PATH_PROP,
+        router: { type: 'string', description: 'The router the lines are for, e.g. r1' },
+        lines: { type: 'string', description: 'The proposed config lines, one per line, as typed after configure terminal' },
+        problem: { type: 'string', description: 'A problem.json (or the folder with it) whose check holds the requirements (optional)' },
+        requirements: { type: 'string', description: 'Requirements in words, e.g. "r1 must still reach 3.3.3.3 via r2 if the r1-r3 link fails" (optional; shown, not interpreted)' },
+        prefix: { type: 'string', description: 'The destination the fix is about, e.g. 3.3.3.3/32 (default: the problem focus, or the one the state resolved)' }
+      },
+      required: ['path', 'router', 'lines'],
+      additionalProperties: false
+    },
+    annotations: READ_ONLY
   }
 ];
 
@@ -572,6 +597,11 @@ function callTool(name, args) {
     if (fn7 && !s7[fn7]) throw new Error('unknown node: ' + fn7 + ' (not in the solved state)');
     var kit7 = require('../solvedkit.js');
     return name === 'check_suggest' ? kit7.suggest(b7, s7, o7) : kit7.init(b7, s7, o7);
+  }
+  if (name === 'explain_plan') {   /* nx_plan_lines */
+    var pr8 = str(args, 'problem', false);
+    return require('./xray-plan.js').explainPlan(loadStates(str(args, 'path', true)), str(args, 'router', true), str(args, 'lines', true),
+      { problem: pr8 ? loadProblem(pr8) : null, requirements: str(args, 'requirements', false), prefix: str(args, 'prefix', false) });
   }
   if (name === 'why_path') {
     var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);

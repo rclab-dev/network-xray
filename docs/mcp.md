@@ -236,7 +236,7 @@ from a project's `.mcp.json`. Until you approve it, `claude mcp get network-xray
 ```
 
 Many clients also ask before each tool call, or the first
-time a tool is called. The nine default tools are marked read-only (`readOnlyHint: true`, `destructiveHint: false`), and they
+time a tool is called. Every default tool is marked read-only (`readOnlyHint: true`, `destructiveHint: false`), and they
 only read the `path` you give them (the opt-in `collect` is marked `readOnlyHint: false`, `destructiveHint: false`). A file that does not hold network-xray state is refused with
 `not a network-xray state file`; the error never quotes the file.
 
@@ -269,6 +269,7 @@ The router is `node` in `why_best_path` and `router` in the other tools; every t
 | `check_verify` | `problem`, `broken`, `solved` | SolvedKit: does the `check` fail on the broken state and hold on the solved one (a verdict per condition: `tells` / `both` / `wrong` / `unknown`) |
 | `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: candidate conditions from what the fix changed, and a proposed `check` verified on both states (`status` `ok`, or `none` with `reason`) |
 | `check_init` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: a problem.json draft (`problem`) with that check and empty text fields; writes no file |
+| `explain_plan` | `path`, `router`, `lines`, `problem?`, `requirements?`, `prefix?` | what each line of a proposed fix is for (`fixes` / `requirement` / `not_linked` / `?` with the state values behind it) and, with `problem`, the check now; changes and predicts nothing |
 
 `why_best_path` gives only the reason stored in the data (`null` with a note when there is none). `why_path` also lists
 the other candidates, and when the router gave no reason it compares their attributes itself (`reason_source`).
@@ -532,6 +533,23 @@ are not a `deciding_step`: the comparison gives it (e.g. `"Only path"`) and the 
   "summary": "r1 8.8.8.0/24 uses the path via r2 (2.2.2.2), AS 65002: the only path"
 }
 ```
+
+### explain_plan
+
+Input: `path`, `router`, `lines` (the config lines someone wants to type on that router, FRR / IOS, with their
+`router ospf` / `interface` / `router bgp` / `route-map` lines), and optionally `problem` (a problem.json whose check holds
+the requirements), `requirements` (requirements in words) and `prefix`.
+
+Each line gets a tag against the lab state, with `because` giving the state values behind it:
+`fixes` (it touches something listed as wrong: the same interface, OSPF value, BGP neighbor or route), `requirement` (it makes
+a route or adjacency that a condition of the check asks for and is not met now, e.g. a backup route), `not_linked` (shown as "no link found";
+not a warning: linked to nothing the tool knows, and a requirement in words may need it) or `?` (not read, or its effect is not decided
+by the state). A route-map value is shown next to the comparison now (`sets LocPrf 90 — ... LocPrf now 50; the comparison now:
+LocPrf 100 > 50`) without saying which path would win. Requirements in words come back as given and are not interpreted.
+With `problem`, `checks` lists every condition of its check: `met_now` (true / false in the state now) and `lines`, the
+lines of the plan tied to it (a condition with no line is one the plan does not reach as far as the tool can tell).
+`scripts/xray-plan.js <state> <router> <lines.txt|-> [--problem p] [--requirements text] [--format table]` gives the same
+answer on the command line, and `scripts/xray-render.js ... --plan <lines.txt>` puts it on the static page.
 
 ### check_run and check_verify (SolvedKit)
 

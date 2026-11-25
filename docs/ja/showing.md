@@ -16,6 +16,7 @@ network-xray は同じ状態をいくつかの形で見せます: DeepDive (頁�
 | 上がっていない | 灰色の線だけ (円柱の絵では点線)。**What's wrong** にルータ自身の状態の語で | ルータが出したままの状態の語 (`Active`・`Idle (Admin)`・`ExStart` …) |
 | 何かがおかしい | **What's wrong** に先に並べる・両端で揃うべき値は両方を | `wrong[]` (lab_state)・`mismatch` (ospf_interfaces) |
 | 集めたデータに無い | `?` — down やおかしいとは見せない | `null` と note |
+| 直す案の各行が何のためか | **Proposed fix** の欄: 各行に `fixes` / `for a requirement` / `no link found` / `?` とわけ。触る線に `· fix` / `· for a requirement` | `explain_plan`: 行ごとの `tag` と `because` |
 | 控えた状態から変わった | **Changed since the baseline** (頁)・**What changed on \<router\>** (render の `--before`) | `changes[]` (diff / state_diff) |
 
 決まりの元:
