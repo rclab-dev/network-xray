@@ -659,7 +659,7 @@ function oneShot() {
       previous = current;
     }
     if (!settled) { console.error('!! did not settle in ' + Math.round(settleMs / 1000) + ' s (' + rounds + ' rounds)'); process.exitCode = 3; }
-    else console.log('settled after ' + rounds + ' rounds');
+    else console.log('settled after ' + rounds + ' rounds');   // release-check: ok (the --settle result, asked for)
   }
   if (!r0.ok && !Object.keys(r0.states).length && fs.existsSync(dest)) {
     console.error('!! every node failed - kept the existing ' + dest);

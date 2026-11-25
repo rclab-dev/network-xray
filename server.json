@@ -22,11 +22,11 @@
       ]
     }
   ],
-  "version": "1.8.1",
+  "version": "1.8.2",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/rclab-dev/network-xray:1.8.1",
+      "identifier": "ghcr.io/rclab-dev/network-xray:1.8.2",
       "transport": {
         "type": "stdio"
       },
