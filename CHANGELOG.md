@@ -13,6 +13,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **MCP: `router` or `node`:** every tool takes the router under either name (the old names keep working; two different routers in one call is an error).
 - **SolvedKit: `check to-procedure`.** The check as the show commands to type on each router and what each must show (Markdown; FRR, or Cisco IOS / IOS XE with `--vendor ios`; `--lang ja`), for the people doing the work. Tried on FRR and Cisco IOL labs.
 - **`llms-install.md`:** install steps an AI assistant can follow (Node with a clone, or the Docker image; how to pick `--path`; a first check with `list_routers`).
+- **docs/local.md (en / ja):** fully local use: network-xray sends nothing, the data leaves only through the AI client you pick, and the one local-model setup that was tried (Ollama with a small script that hands the MCP tools to the model).
 
 ## v1.8.0 — 2026-11-25
 
