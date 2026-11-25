@@ -807,6 +807,10 @@ node, you drop that node's state in and get the "inside the router" view the gra
 - **Same Best-Path logic** as the DeepDive (Weight → LocPrf → AS-Path → Origin → MED → eBGP > iBGP), so *why a path
   won* is explained the same way.
 - **Data:** `routing_table`, `bgp_routes`, `route_resolution` from `clab-collect.js` (already emitted).
+- **As a file, without a browser:** `node scripts/xray-render.js <state> r1 --out r1.html` writes the same panel as one
+  static page (no script, nothing loaded from elsewhere) to open anywhere or attach to a ticket. `--skin slate-light` for
+  a light ground, `--figure box`, `--detail summary`, and `--before <state>` for what changed on that router, then
+  before | now. What each mark means, the same in every view: [docs/showing.md](docs/showing.md).
 - **Themeable:** every colour is a CSS variable (`--xnp-bg`, `--xnp-accent`, `--xnp-ok`, …) with a dark
   default — override them on `.xnp-root` to match your UI, e.g. `--xnp-bg: var(--vscode-editor-background)`.
 - **Interactive example:** open `node-panel.html` (node picker + theme picker + the panel, no backend).
@@ -1843,6 +1847,9 @@ node clab-xray-collect.js lab.clab.yml <この gallery ディレクトリ> --exc
 - **`{ figure: true, positions: {r1:{x,y}, r2:{x,y}, …} }`:** トポロジの JSON / TopoViewer の注釈の座標を渡すと、各リンクを**相手への本当の角度**で描く (図がグラフと合う)。`positions` が無ければ扇形。
 - **DeepDive と同じ Best-Path の順** (Weight → LocPrf → AS-Path → Origin → MED → eBGP > iBGP) = *なぜその経路が勝ったか*を同じように説明します。
 - **データ:** `clab-collect.js` が出す `routing_table`・`bgp_routes`・`route_resolution` (もう出している物)。
+- **ブラウザ無しでファイルに:** `node scripts/xray-render.js <state> r1 --out r1.html` で同じパネルを 1 枚の静的な頁に (スクリプト無し・
+  外から何も読まない) = どこでも開ける・チケットに付けられる。`--skin slate-light` で明るい地・`--figure box`・`--detail summary`・
+  `--before <state>` でそのルータで変わった所と前 | 今。どの見せ方でも同じ印の意味: [docs/ja/showing.md](docs/ja/showing.md)。
 - **テーマ:** 色はすべて CSS 変数 (`--xnp-bg`・`--xnp-accent`・`--xnp-ok` …・既定は暗色)。`.xnp-root` で上書きして自分の UI に合わせる、例 `--xnp-bg: var(--vscode-editor-background)`。
 - **動く例:** `node-panel.html` (ノードとテーマを選べる・バックエンド無し)。
 

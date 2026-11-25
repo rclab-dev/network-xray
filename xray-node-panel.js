@@ -417,9 +417,9 @@
       (v.decision ? panel('Best-Path Decision', v.decision) : '');
   }
 
-  function injectCss() {
-    if (document.getElementById('xray-node-panel-css')) return;
-    var s = document.createElement('style'); s.id = 'xray-node-panel-css';
+  /* nx_render (v1.8.1): the stylesheet as text, so a static page (scripts/xray-render.js) carries the same look */
+  function cssText() {
+    var s = { textContent: '' };
     // Every colour/size is a CSS custom property with a default, so a host can re-theme the panel by
     // overriding the variables on .xnp-root (or any ancestor) — e.g. map them to VS Code theme vars.
     s.textContent =
@@ -465,6 +465,12 @@
       '.xnp-diff-btn{cursor:pointer;text-decoration:underline dotted;color:var(--xnp-accent)}.xnp-diff-acts{margin-top:4px}' +
       '.xnp-rt.xnp-click tr[data-prefix]{cursor:pointer}' +
       '.xnp-rt.xnp-click tr[data-prefix]:hover td{background:var(--xnp-sel-bg)}';
+    return s.textContent;
+  }
+  function injectCss() {
+    if (document.getElementById('xray-node-panel-css')) return;
+    var s = document.createElement('style'); s.id = 'xray-node-panel-css';
+    s.textContent = cssText();
     document.head.appendChild(s);
   }
 
@@ -496,6 +502,16 @@
     var rt = state.routing_table || [];
     var nonLocal = rt.filter(function (r) { return r.out_iface && r.out_iface !== 'lo'; })[0];
     return (nonLocal || rt[0] || {}).prefix || '';
+  }
+  /* nx_render (v1.8.1): one node's panel as an HTML string, the same markup render() writes (without the click wiring).
+     opts.figure / opts.figureStyle ('cylinder' default | 'box') / opts.positions / opts.prefix (the route the arrow shows;
+     default = the one the state resolved) / opts.tables (false = the picture and What's wrong only). */
+  function toHtml(state, opts) {
+    opts = opts || {}; state = state || {};
+    var fig = !!opts.figure, sel = opts.prefix || defaultSel(state);
+    var figStyle = opts.figureStyle === 'box' ? 'box' : 'cylinder';
+    return '<div class="xnp-root">' + wrongHtml(state) + (fig ? (figStyle === 'box' ? figureSvg : figureCylSvg)(state, sel, opts.positions) : '') +
+      (opts.tables === false ? '' : routingHtml(state, sel, false) + bgpHtml(state)) + '</div>';
   }
   // render(container, state, opts?)  —  opts.figure:true adds the node figure with a clickable route arrow
   function render(container, state, opts) {
@@ -552,7 +568,7 @@
       });
     });
   }
-  var api = { render: render, buildBgpView: bgpView };   // buildBgpView exposed for custom layouts
+  var api = { render: render, buildBgpView: bgpView, toHtml: toHtml, cssText: cssText };   // buildBgpView exposed for custom layouts
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.XrayNodePanel = api;
 })(typeof window !== 'undefined' ? window : this);
