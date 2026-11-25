@@ -10,6 +10,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **Single-node panel:** the What's wrong red is the variable `--xnp-down-text` (the light skin uses a darker red that reads on white).
 - **Collector and SolvedKit:** `--settle` waits for matching states before saving; the rehearsal guide puts the production checklist first.
 - **Collector: `--policy-config` (or `XRAY_POLICY_CONFIG=1`):** keeps the route-map and prefix-list names and prefixes as `policy_config` for `explain_plan`; off by default, so the state still holds no configuration text. Passwords, keys, descriptions and community values are never kept. README: a row in "MCP security at a glance".
+- **MCP:** `prompts/list` and `resources/templates/list` answer with empty lists instead of "Method not found" (clients that ask for every list no longer count two errors).
 
 ## v1.8.1 — 2026-11-25
 
