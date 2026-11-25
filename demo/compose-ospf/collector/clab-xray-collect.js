@@ -23,7 +23,7 @@ var fs = require('fs'), cp = require('child_process'), path = require('path'), o
 
 // flags (--watch / --interval N / --exclude-mgmt / --mgmt-subnet <cidr>) may appear in any order
 var argv = process.argv.slice(2), noJson = false, validateFile = '', watch = false, intervalMs = 1000 /* nx_collect_interval_1s: default 1 s (was 3) */, mgmtArg = [], pos = [], serialCollect = false, settle = false, settleMs = 300000, intervalGiven = false;
-var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch | --settle [secs]] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>] [--validate <file>] [--serial] [--no-json]\n' +
+var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] [--watch | --settle [secs]] [--interval secs] [--exclude-mgmt | --mgmt-subnet <cidr>] [--validate <file>] [--serial] [--no-json] [--policy-config]\n' +
   '  proto                ospf | bgp | static (default: ospf)\n' +
   '  --watch              keep collecting (default: collect once)\n' +
   '  --settle [secs]      collect until two rounds match (default timeout: 300)\n' +
