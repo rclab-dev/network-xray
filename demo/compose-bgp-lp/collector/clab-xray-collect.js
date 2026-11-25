@@ -33,6 +33,8 @@ var USAGE = 'usage: node clab-xray-collect.js <topo.clab.yml> <out-dir> [proto] 
   '  --validate <file>    netlab topology JSON with validate: tests (network-xray.json)\n' +
   '  --serial             read the routers one at a time (default: all at once)\n' +
   '  --no-json            do not write xray-states.json (the same states as plain JSON, for other tools)\n' +
+  '  --policy-config      also keep the BGP / OSPF policy of the running-config (route-map and prefix-list names, prefixes) for\n' +
+  '                       explain_plan; the same as XRAY_POLICY_CONFIG=1. Off by default: no configuration text in the state\n' +
   '  -h, --help           show this help\n' +
   '  env: NX_IOS_INTERVAL (seconds between Cisco IOS reads, default 10), NX_CYCLE_WAIT_MS (default 4000)';
 var HINT = "Try 'node clab-xray-collect.js --help'.";
@@ -46,6 +48,7 @@ for (ai = 0; ai < argv.length; ai++) {
   else if (argv[ai] === '--validate') validateFile = argv[++ai] || '';   /* nx_netlab_validate: netlab topology JSON with validate: tests */
   else if (argv[ai] === '--no-json') noJson = true;   /* nx_states_json: no xray-states.json */
   else if (argv[ai] === '--serial') serialCollect = true;   /* nx_collect_parallel: old one-node-at-a-time collect */
+  else if (argv[ai] === '--policy-config') process.env.XRAY_POLICY_CONFIG = '1';   /* nx_policy_optin: the per-node collectors inherit it */
   else if (argv[ai] === '--interval') { intervalGiven = true; intervalMs = Math.max(1, parseInt(argv[++ai], 10) || 3) * 1000; }
   else if (argv[ai] === '--exclude-mgmt') mgmtArg = ['--exclude-mgmt'];                       // drop clab mgmt IF (172.20.20.0/24)
   else if (argv[ai] === '--mgmt-subnet') mgmtArg = ['--mgmt-subnet', argv[++ai] || ''];

@@ -60,6 +60,10 @@ function _stripVtyWarn(o){ if(!o) return o; var i = o.indexOf('{'); return i > 0
 var path = (typeof require === 'function') ? require('path') : null;
 /* nx_policy_why: the BGP / OSPF policy lines of the running-config (neighbors, network, redistribute, prefix-list, route-map) */
 var policyParse = (typeof require === 'function') ? (function () { try { return require('./policy-parse.js'); } catch (e) { return null; } })() : null;
+/* nx_policy_optin: route-map / prefix-list names and prefixes are configuration text, which the state does not hold by default.
+   policy_config is read and kept only when the user asks: XRAY_POLICY_CONFIG=1, or --policy-config (clab-collect.js /
+   clab-xray-collect.js, which pass it on). Passwords, keys, descriptions and community values are never read into it. */
+function _policyOptIn() { return typeof process !== 'undefined' && !!process.env && process.env.XRAY_POLICY_CONFIG === '1'; }
 
 // ---- FRR json parsers (defensive: FRR key names vary a little across 7.x/8.x/9.x) -----------
 
@@ -1215,7 +1219,7 @@ function collectFromJson(args) {
   if (args.ospfInfo) { var _rid = parseOspfRouterId(args.ospfInfo); if (_rid) _st.ospf_router_id = _rid; }
   /* nx_policy_why: kept only when there is something (a lab without BGP / OSPF policy keeps its old shape) */
   var _pc = args.policyConfig;
-  if (_pc && (_pc.bgp || (_pc.ospf && _pc.ospf.redistribute.length) || Object.keys(_pc.prefix_lists).length || Object.keys(_pc.route_maps).length)) _st.policy_config = _pc;
+  if (_pc && _policyOptIn() && (_pc.bgp || (_pc.ospf && _pc.ospf.redistribute.length) || Object.keys(_pc.prefix_lists).length || Object.keys(_pc.route_maps).length)) _st.policy_config = _pc;
   if (args.ospfSelf) _st.ospf_stubs = parseOspfOwnStubs(args.ospfSelf);
   if (args.ospfRouters) _st.ospf_router_lsas = parseOspfRouterLsas(args.ospfRouters);
   if (args.ospfDatabase) _st.ospf_lsdb = parseOspfDatabaseSummary(args.ospfDatabase);
@@ -1383,7 +1387,7 @@ function collectLive(opts) {
     if (_odb) { raw.ospfInfo = _odb[0]; raw.ospfDatabase = _odb[1]; raw.ospfSelf = _odb[2]; raw.ospfRoute = _odb[3]; raw.ospfRouters = _odb[4]; }
   }
   return collectFromJson({ node: opts.node, id: opts.lab, proto: proto, adjacency: opts.adjacency || [], configStatics: _cfgStatics,
-    policyConfig: policyParse && _cfgTxt ? policyParse.parse(_cfgLines) : null,   /* nx_policy_why */
+    policyConfig: policyParse && _cfgTxt && _policyOptIn() ? policyParse.parse(_cfgLines) : null,   /* nx_policy_why */   /* nx_policy_optin */
     ospfConfigured: _cfgLines.some(function(l){return l.indexOf('router ospf')===0;}),   /* "router ospf6" also starts with "router ospf" = OSPFv3-only routers count (nx_ospf6) */
     bgpConfigured: _bgpCfgWithNeighbor(_cfgLines),   /* nx_bgp_no_nbr */
     bgpNoNeighbor: !_bgpCfgWithNeighbor(_cfgLines) && !!_bgpAsOf(_cfgLines), bgpAs: _bgpAsOf(_cfgLines),   /* nx_bgp_no_nbr_mark */
@@ -1761,7 +1765,7 @@ function selfTest() {
 // ---- main -----------------------------------------------------------------------------------
 if (typeof require !== 'undefined' && require.main === module) {
   var USAGE = 'usage: node clab-collect.js --self-test\n' +
-    '       node clab-collect.js --lab <lab> --node <n> [--container <name>] [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
+    '       node clab-collect.js --lab <lab> --node <n> [--container <name>] [--adj eth0:r2,eth1:r3] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--policy-config] [--out f]\n' +
     '       node clab-collect.js --fixtures <dir> --node <n> [--adj ...] [--proto ospf|bgp] [--exclude-mgmt | --mgmt-subnet <cidr>] [--out f]\n' +
     '  --lab <lab>          read the FRR router clab-<lab>-<n> with docker exec vtysh (read-only)\n' +
     '  --container <name>   the router\'s container name, when it is not clab-<lab>-<n>\n' +
@@ -1770,6 +1774,8 @@ if (typeof require !== 'undefined' && require.main === module) {
     '  --proto ospf|bgp     default: ospf\n' +
     '  --exclude-mgmt       leave out the containerlab management network 172.20.20.0/24\n' +
     '  --mgmt-subnet <cidr> leave out this management network\n' +
+    '  --policy-config      also keep the BGP / OSPF policy of the running-config (route-map and prefix-list names, prefixes);\n' +
+    '                       the same as XRAY_POLICY_CONFIG=1. Off by default: no configuration text in the state\n' +
     '  --out <file>         write the state JSON to <file> (default: stdout)\n' +
     '  --self-test          run the built-in tests\n' +
     '  -h, --help           show this help';
@@ -1787,7 +1793,8 @@ if (typeof require !== 'undefined' && require.main === module) {
     }
     return r;
   }
-  var _cli = _cliCheck(process.argv.slice(2), ['self-test', 'fixtures', 'lab', 'node', 'container', 'adj', 'proto', 'exclude-mgmt', 'mgmt-subnet', 'out'], ['self-test', 'exclude-mgmt']);
+  var _cli = _cliCheck(process.argv.slice(2), ['self-test', 'fixtures', 'lab', 'node', 'container', 'adj', 'proto', 'exclude-mgmt', 'mgmt-subnet', 'out', 'policy-config'], ['self-test', 'exclude-mgmt', 'policy-config']);
+  if (process.argv.indexOf('--policy-config') >= 0) process.env.XRAY_POLICY_CONFIG = '1';   /* nx_policy_optin */
   if (_cli.help) { console.log(USAGE); process.exit(0); }   // release-check: ok (the --help text)
   if (_cli.bad) { console.error('clab-collect.js: unknown option: ' + _cli.bad + "\nTry 'node clab-collect.js --help'."); process.exit(2); }
   var a = _argMap(process.argv.slice(2));

@@ -120,3 +120,34 @@ test('FRR collector: xray-states.js holds no running-config text', { skip: proce
   assertNoConfigText(r.stdout + r.stderr, 'clab-xray-collect output');
   assert.ok(/"bgp_configured":true/.test(js), 'the parsed facts reach the page');
 });
+
+/* nx_policy_optin: policy_config (route-map / prefix-list names and prefixes) only when asked - --policy-config or XRAY_POLICY_CONFIG=1.
+   Even then no password, key, description, key chain, community-list or community value reaches the state. */
+const NEVER = ['ZebraPwCanary1', 'EnablePwCanary2', 'KeyStringCanary3', 'OspfAuthCanary4', 'Md5KeyCanary5', 'BgpPwCanary6',
+  'SnmpCommunityCanary7', '65001:31337', 'KC-CANARY', 'CL-CANARY', 'DescCanary8'];
+
+test('FRR collector --policy-config: the policy names reach the state, still no secret', { skip: process.platform === 'win32' }, () => {
+  const { dir, env } = setup(CONFIG);
+  const out = path.join(dir, 'r1.json');
+  const r = cp.spawnSync(process.execPath, [path.join(ROOT, 'clab-collect.js'), '--lab', 't', '--node', 'r1', '--proto', 'bgp',
+    '--adj', 'eth1:r2', '--policy-config', '--out', out], { env, encoding: 'utf8', timeout: 30000 });
+  assert.strictEqual(r.status, 0, 'collector exit 0: ' + (r.error ? r.error.message : r.stderr));
+  const text = fs.readFileSync(out, 'utf8'), st = JSON.parse(text);
+  NEVER.forEach(s => assert.ok(!(text + r.stdout + r.stderr).includes(s), 'state must not contain ' + JSON.stringify(s)));
+  assert.deepStrictEqual(st.policy_config.bgp.neighbors['10.1.0.2'].route_map, { out: 'RM-CANARY-OUT' });
+  assert.deepStrictEqual(st.policy_config.prefix_lists['PL-CANARY'].map(e => [e.seq, e.action, e.prefix]), [[5, 'permit', '192.0.2.0/24']]);
+});
+
+test('collector: policy_config is kept only with XRAY_POLICY_CONFIG=1 (any OS)', () => {
+  const C = require('../clab-collect.js'), P = require('../policy-parse.js');
+  const pc = P.parse(CONFIG.split('\n').map(l => l.trim()));
+  const run = () => C.collectFromJson({ node: 'r1', id: 't', proto: 'bgp', adjacency: [], policyConfig: pc });
+  const old = process.env.XRAY_POLICY_CONFIG;
+  try {
+    delete process.env.XRAY_POLICY_CONFIG;
+    assert.strictEqual(run().policy_config, undefined, 'off by default');
+    process.env.XRAY_POLICY_CONFIG = '1';
+    assert.ok(run().policy_config.route_maps['RM-CANARY-OUT'], 'on when asked');
+    assert.ok(!NEVER.some(s => JSON.stringify(run().policy_config).includes(s)), 'no secret in it');
+  } finally { if (old === undefined) delete process.env.XRAY_POLICY_CONFIG; else process.env.XRAY_POLICY_CONFIG = old; }
+});
