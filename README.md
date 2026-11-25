@@ -403,7 +403,7 @@ node cml-xray.js --save-cert cml.pem          # once: saves the certificate CML 
 export CML_CA_FILE=cml.pem                    # from now on only that certificate is accepted
 node cml-xray.js --lab "<the lab's title in CML>"
 ```
-Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in as the routers finish booting.
+Open **http://127.0.0.1:8710/**. Start the lab in CML first; the view fills in as the routers finish booting. Expect 1–3 minutes after the start before the routers can be read (each IOS router makes its SSH key while it boots); cml-xray keeps trying until they answer.
 
 - **What it does:** reads the lab's nodes and links from the CML REST API and serves the same graph + DeepDive page as for containerlab. It also writes `xray-states.json` next to `xray-states.js` in `--out` (the same document as for containerlab, for Grafana or a script; `--no-json` turns it off).
   The IOS nodes (`iol-xe`, `ioll2-xe`, `iosv`, `iosvl2`, `csr1000v`, `cat8000v`) are read over **SSH on the lab's management network** with read-only
@@ -1487,7 +1487,7 @@ node cml-xray.js --save-cert cml.pem          # 1 回だけ: CML が見せる証
 export CML_CA_FILE=cml.pem                    # 以後はその証明書だけを受け入れる
 node cml-xray.js --lab "<CML でのラボのタイトル>"
 ```
-**http://127.0.0.1:8710/** を開きます。先に CML でラボを start してください。ルータが起動し終わると図が埋まっていきます。
+**http://127.0.0.1:8710/** を開きます。先に CML でラボを start してください。ルータが起動し終わると図が埋まっていきます。start から読めるまで 1〜3 分ほどかかります (IOS のルータは起動の時に SSH の鍵を作るため)。cml-xray は答えるまで読み直し続けます。
 
 - **何をするか:** CML の REST API からラボのノードと線を読み、containerlab の時と同じ図 + DeepDive のページを配ります。`--out` の `xray-states.js` の隣に `xray-states.json` も書きます (containerlab の時と同じ物・Grafana やスクリプト向け・`--no-json` で止める)。
   IOS のノード (`iol-xe`・`ioll2-xe`・`iosv`・`iosvl2`・`csr1000v`・`cat8000v`) は **ラボの管理の網を通った SSH** で、読むだけの `show` を打って読みます
