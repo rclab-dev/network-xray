@@ -74,7 +74,7 @@
 | value | meaning / 意味 |
 |---|---|
 | `dark` (default) | the single-node panel (`xray-node-panel.js`: the 2D picture and its tables) keeps its own dark ground / 既定の暗い地 |
-| `light` | the panel is drawn on a light ground: the reader also sets its structural tokens (`--xnp-bg`, `--xnp-fg`, `--xnp-border`, `--xnp-accent`, `--xnp-route-fg`, `--xnp-sel-bg`, `--xnp-decider`, `--xnp-decider-strong`, `--xnp-note`) / 明るい地 (構造の色も入れる) |
+| `light` | the panel is drawn on a light ground: the reader also sets its structural tokens (`--xnp-bg`, `--xnp-fg`, `--xnp-border`, `--xnp-accent`, `--xnp-route-fg`, `--xnp-sel-bg`, `--xnp-decider`, `--xnp-decider-strong`, `--xnp-note`, and `--xnp-scheme` / `--xnp-shade` / `--xnp-scroll-thumb` / `--xnp-scroll-track` for the scroll bar) / 明るい地 (構造の色も入れる) |
 
 - **EN** — Only the single-node panel follows the surface. The DeepDive and the topology stay dark whatever the
   skin (their glow needs a dark ground); they still take the six `colors`. A light skin's colors must read as text

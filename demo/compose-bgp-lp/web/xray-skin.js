@@ -27,7 +27,8 @@
   var SURFACES = {
     dark: null,
     light: { fg: '#1e2430', bg: '#ffffff', border: '#d3d9e2', accent: '#5b3fc4', 'route-fg': '#333b4a', 'sel-bg': '#edf8f0',
-             decider: '#e08a00', 'decider-strong': '#b86e00', note: '#4f5f7a' }
+             decider: '#e08a00', 'decider-strong': '#b86e00', note: '#4f5f7a',
+             scheme: 'light', shade: 'rgba(91,63,196,.18)', 'scroll-thumb': '#b3bcc8', 'scroll-track': '#eef1f5' }   /* the browser's scroll bar and the more-below shade */
   };
   // The last skin actually applied this session. May differ from localStorage when a page applies a
   // default view without persisting it (e.g. the containerlab drop-in). UIs that highlight "the current

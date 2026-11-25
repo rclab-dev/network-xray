@@ -383,11 +383,11 @@
       '.xnp-figpanel{padding:6px 8px;position:sticky;top:0;z-index:2}.xnp-fig{display:block;max-height:360px}' +
       // the scroll bar is always shown (overflow-y: scroll = the browser's own bar, dark with color-scheme; Firefox: thin), and a soft
       // shade at the top / bottom edge says there is more (also where the system hides the bar until touched: macOS, phones)
-      '.xnp-scroll{max-height:var(--xnp-scroll-h,240px);overflow-y:scroll;overscroll-behavior:contain;color-scheme:dark;' +
+      '.xnp-scroll{max-height:var(--xnp-scroll-h,240px);overflow-y:scroll;overscroll-behavior:contain;color-scheme:var(--xnp-scheme,dark);' +   /* nx_skin_surface: a light skin sets --xnp-scheme light */
         'background:linear-gradient(var(--xnp-bg) 30%,rgba(11,20,28,0)) center top,linear-gradient(rgba(11,20,28,0),var(--xnp-bg) 70%) center bottom,' +
-        'radial-gradient(farthest-side at 50% 0,rgba(77,208,225,.35),rgba(0,0,0,0)) center top,radial-gradient(farthest-side at 50% 100%,rgba(77,208,225,.35),rgba(0,0,0,0)) center bottom;' +
+        'radial-gradient(farthest-side at 50% 0,var(--xnp-shade,rgba(77,208,225,.35)),rgba(0,0,0,0)) center top,radial-gradient(farthest-side at 50% 100%,var(--xnp-shade,rgba(77,208,225,.35)),rgba(0,0,0,0)) center bottom;' +
         'background-repeat:no-repeat;background-size:100% 28px,100% 28px,100% 10px,100% 10px;background-attachment:local,local,scroll,scroll}' +
-      '@supports (-moz-appearance:none){.xnp-scroll{scrollbar-width:thin;scrollbar-color:#3a9aa8 #12232e}}' +
+      '@supports (-moz-appearance:none){.xnp-scroll{scrollbar-width:thin;scrollbar-color:var(--xnp-scroll-thumb,#3a9aa8) var(--xnp-scroll-track,#12232e)}}' +
       '.xnp-tools{margin:0 0 6px 0}.xnp-find{width:100%;box-sizing:border-box;background:var(--xnp-bg);color:var(--xnp-fg);border:1px solid var(--xnp-border);border-radius:4px;padding:3px 6px;font:inherit}' +
       '.xnp-counts{margin-top:4px;font-size:10px;color:var(--xnp-muted);line-height:1.6}.xnp-cnt{cursor:pointer;white-space:nowrap}.xnp-cnt:hover{color:var(--xnp-accent)}' +
       '.xnp-wrong-down{color:#ff6b6b}.xnp-wrong-warn{color:var(--xnp-decider-strong)}.xnp-wrong-none{color:var(--xnp-ok)}' +

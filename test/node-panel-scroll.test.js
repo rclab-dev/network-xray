@@ -44,7 +44,7 @@ test('the routing table and the BGP table are each inside a scroll box', () => {
   assert.match(el.innerHTML, /<div class="xnp-scroll xnp-rt-box"><table class="xnp-rt xnp-click">/);
   assert.match(el.innerHTML, /<div class="xnp-scroll xnp-bgp-box"><table/);
   assert.match(css, /\.xnp-scroll\{max-height:var\(--xnp-scroll-h,240px\);overflow-y:scroll/, 'the box has a height and its scroll bar is always shown');
-  assert.match(css, /overflow-y:scroll;overscroll-behavior:contain;color-scheme:dark/, 'the browser\'s own bar, always shown, dark');
+  assert.match(css, /overflow-y:scroll;overscroll-behavior:contain;color-scheme:var\(--xnp-scheme,dark\)/, 'the browser\'s own bar, always shown, dark unless a light skin sets --xnp-scheme');
   assert.match(css, /@supports \(-moz-appearance:none\)\{\.xnp-scroll\{scrollbar-width:thin;scrollbar-color:/, 'Firefox: a thin coloured bar');
   assert.match(css, /background-attachment:local,local,scroll,scroll/, 'a shade at the edge where more rows are');
   assert.match(css, /\.xnp-figpanel\{[^}]*position:sticky;top:0/, 'the figure stays at the top of a scrolling host');
