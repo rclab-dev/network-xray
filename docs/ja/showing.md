@@ -12,8 +12,8 @@ network-xray は同じ状態をいくつかの形で見せます: DeepDive (頁�
 | 選んだ段 | その列を枠で囲む・`best path by <段> (<値> > <値>)`・その前の段は同じ (`=`)、決めた段に ✅ | `deciding_step`・`steps[]` (`tie` / `win`)・1 行の `summary` |
 | ルータがわけを言った | `best path by <わけ> (FRR)` / `(reported by FRR)`。IOS-XE は `derived` (collector が割り出した) | `reason_source`: `device` / `derived` / `comparison` |
 | データにわけが無い | 「表に出ない段」とその先の段を書く・どの段かは言い切らない | `deciding_step: null` と `note` |
-| 隣接・セッションが上がっている | 灰色の線の上にプロトコルのトンネル: 緑 = OSPF Full・紫 = BGP Established | 状態の語 (`Full`・`Established`) |
-| 上がっていない | 灰色の線だけ (円柱の絵では点線)。**What's wrong** にルータ自身の状態の語で | ルータが出したままの状態の語 (`Active`・`Idle (Admin)`・`ExStart` …) |
+| 隣接・セッションが上がっている | 線は線の色の実線、トンネルはその横に別の線で・状態の描き方は DeepDive と同じ: OSPF Full 緑の実線・ExStart / Exchange / Loading 緑の点線・2-Way オレンジの実線・Init オレンジの点線 / BGP Established 紫の実線・確立前 紫の点線 (薄く) | 状態の語 (`Full`・`Established`) |
+| 上がっていない | 線の横にトンネル無し。shutdown の IF は赤の点線。**What's wrong** にルータ自身の状態の語で | ルータが出したままの状態の語 (`Active`・`Idle (Admin)`・`ExStart` …) |
 | 何かがおかしい | **What's wrong** に先に並べる・両端で揃うべき値は両方を | `wrong[]` (lab_state)・`mismatch` (ospf_interfaces) |
 | 集めたデータに無い | `?` — down やおかしいとは見せない | `null` と note |
 | 直す案の各行が何のためか | **Proposed fix** の欄: 各行に `fixes` / `for a requirement` / `no link found` / `?` とわけ。触る線に `· fix` / `· for a requirement` | `explain_plan`: 行ごとの `tag` と `because` |

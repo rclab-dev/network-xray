@@ -226,6 +226,56 @@
     if (peer && state[peer + '_has_full'] != null) return !!state[peer + '_has_full'];
     return false;
   }
+  /* nx_link_rules: the protocols on one interface, styled as the DeepDive styles them (xray-core.js protoStyle). */
+  function ospfWord(st) {
+    var w = String(st || '').split('/')[0].trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    return { full: 'Full', exstart: 'ExStart', exchange: 'Exchange', loading: 'Loading', '2way': '2-Way', twoway: '2-Way', init: 'Init', attempt: 'Attempt' }[w] || '';
+  }
+  function ip4n(a) { var m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)/.exec(String(a || '')); return m ? ((+m[1] << 24) >>> 0) + (+m[2] << 16) + (+m[3] << 8) + +m[4] : null; }
+  function onSubnet(state, ifn, ip) {
+    var x = state.interfaces && state.interfaces[ifn] && state.interfaces[ifn].ip, m = /^([\d.]+)\/(\d+)$/.exec(String(x || '')), a = ip4n(ip);
+    if (!m || a == null) return false;
+    var len = +m[2], mask = len === 0 ? 0 : len === 32 ? 0xffffffff : ((0xffffffff << (32 - len)) >>> 0);
+    return ((a & mask) >>> 0) === ((ip4n(m[1]) & mask) >>> 0);
+  }
+  var ORANGE = 'var(--xnp-idle,#ff8c00)';
+  function linkTunnels(state, ifn, peer) {
+    var out = [], nb = (Array.isArray(state.ospf_neighbors) ? state.ospf_neighbors : []).filter(function (n) { return n && n.iface === ifn; })[0];
+    var st = nb ? ospfWord(nb.state) : (peer && state[peer + '_has_full'] === true && linkProto(state, peer) === 'ospf' ? 'Full' : '');
+    if (st === 'Full') out.push({ proto: 'ospf', col: 'var(--xnp-ospf)', dash: false, op: 1 });
+    else if (st === 'ExStart' || st === 'Exchange' || st === 'Loading') out.push({ proto: 'ospf', col: 'var(--xnp-ospf)', dash: true, op: 1 });
+    else if (st === '2-Way') out.push({ proto: 'ospf', col: ORANGE, dash: false, op: 1 });
+    else if (st === 'Init' || st === 'Attempt') out.push({ proto: 'ospf', col: ORANGE, dash: true, op: 1 });
+    var bn = (Array.isArray(state.bgp_neighbors) ? state.bgp_neighbors : []).filter(function (n) { return n && onSubnet(state, ifn, n.ip); });
+    var bgpUp = bn.some(function (n) { return /^established$/i.test(n.state || ''); }) || (peer && linkProto(state, peer) === 'bgp' && state[peer + '_has_full'] === true);
+    if (bgpUp) out.push({ proto: 'bgp', col: 'var(--xnp-bgp)', dash: false, op: 1 });
+    else if (bn.length || (peer && state[peer + '_proto'] === 'bgp')) out.push({ proto: 'bgp', col: 'var(--xnp-bgp)', dash: true, op: 0.42 });
+    return out;
+  }
+  // one interface's link and its tunnels, from p to q: the link in the middle, each tunnel a pair of lines beside it
+  function linkSvg(state, ifn, peer, p, q, lw, gap) {
+    var up = !(state.interfaces && state.interfaces[ifn] && state.interfaces[ifn].up === false);
+    var a = Math.atan2(q[1] - p[1], q[0] - p[0]), px = -Math.sin(a), py = Math.cos(a), n = function (v) { return v.toFixed(1); };
+    function ln(off, col, w, dash, op) {
+      return '<line x1="' + n(p[0] + px * off) + '" y1="' + n(p[1] + py * off) + '" x2="' + n(q[0] + px * off) + '" y2="' + n(q[1] + py * off) + '" stroke="' + col +
+        '" stroke-width="' + w + '" stroke-linecap="round"' + (dash ? ' stroke-dasharray="6 5"' : '') + (op < 1 ? ' opacity="' + op + '"' : '') + ' data-xnp-link="' + esc(ifn) + '"/>';
+    }
+    if (!up) return { svg: ln(0, 'var(--xnp-down-text,#ff6b6b)', lw + 1, true, 1), tunnels: [] };
+    var t = linkTunnels(state, ifn, peer), s2 = ln(0, 'var(--xnp-phys)', lw, false, 1);
+    t.forEach(function (x, i) { var off = lw + gap + i * (lw + 2); s2 += ln(off, x.col, lw, x.dash, x.op) + ln(-off, x.col, lw, x.dash, x.op); });
+    return { svg: s2, tunnels: t };
+  }
+  // the legend: the same rules in words (3 rows at the foot of the picture)
+  function legendSvg(H) {
+    var t = function (x, y, col, txt, dash) {
+      // a path, not a line: the legend's swatches are not links or tunnels of the picture
+      return '<path class="xnp-legend-swatch" d="M' + x + ',' + (y - 4) + ' h16" stroke="' + col + '" stroke-width="2.5"' + (dash ? ' stroke-dasharray="4 3"' : '') + '/>' +
+        '<text x="' + (x + 20) + '" y="' + y + '" fill="' + col + '" font-size="10.5" font-family="monospace">' + txt + '</text>';
+    };
+    return t(14, H - 41, 'var(--xnp-phys)', 'link up') + t(86, H - 41, 'var(--xnp-down-text,#ff6b6b)', 'link shut down', true) +
+      t(14, H - 26, 'var(--xnp-ospf)', 'OSPF Full') + t(98, H - 26, 'var(--xnp-ospf)', 'ExStart…Loading', true) + t(222, H - 26, ORANGE, '2-Way') + t(282, H - 26, ORANGE, 'Init', true) +
+      t(14, H - 11, 'var(--xnp-bgp)', 'BGP Established') + t(146, H - 11, 'var(--xnp-bgp)', 'BGP not established', true);
+  }
   // tunnel colour is a PER-LINK property (the adjacency/session on that link), not a per-node one:
   // read <peer>_proto for this interface's neighbour, falling back to the node's overall protocol.
   // Both ends carry the same <peer>_proto, so the same link is coloured identically from either side.
@@ -250,9 +300,9 @@
       var pcol = pcolOf(state, ifm[ifn].peer);   // colour THIS link by ITS adjacency protocol
       var anchor = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
       var lx = CX + Math.cos(a) * (R + 8), ly = CY + Math.sin(a) * (R + 8) + 4;
-      s += '<line x1="' + num(r0[0]) + '" y1="' + num(r0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="7" stroke-linecap="round"/>';
-      if (up) s += '<line x1="' + num(r0[0]) + '" y1="' + num(r0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="3.5" stroke-linecap="round"/>';
-      s += '<rect x="' + num(bp[0] - 5) + '" y="' + num(bp[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="' + (up ? pcol : 'var(--xnp-phys)') + '" stroke-width="1.5"/>' +
+      var L = linkSvg(state, ifn, ifm[ifn].peer, r0, [ex, ey], 2.5, 3);   // nx_link_rules
+      s += L.svg;
+      s += '<rect x="' + num(bp[0] - 5) + '" y="' + num(bp[1] - 5) + '" width="10" height="10" fill="var(--xnp-bg)" stroke="' + (L.tunnels.length ? L.tunnels[0].col : 'var(--xnp-phys)') + '" stroke-width="1.5"/>' +
         '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') +
         (marks[ifn] ? '<tspan fill="' + markFill(marks[ifn]) + '" font-weight="700">' + markText(marks[ifn]) + '</tspan>' : '') + '</text>';
     });
@@ -273,11 +323,9 @@
         (oif === 'lo' ? '<text x="' + CX + '" y="' + (CY - HH - 8) + '" fill="var(--xnp-ok)" font-size="11" text-anchor="middle">→ lo (self)</text>' : '');
     }
     // legend + caption (a node can now have both OSPF and BGP links, so show both tunnel swatches)
-    s += '<text x="14" y="' + (H - 26) + '" fill="var(--xnp-ospf)" font-size="11" font-family="monospace">━ OSPF</text>' +
-      '<text x="72" y="' + (H - 26) + '" fill="var(--xnp-bgp)" font-size="11" font-family="monospace">━ BGP tunnel</text>' +
-      '<text x="14" y="' + (H - 11) + '" fill="var(--xnp-phys)" font-size="11" font-family="monospace">━ physical link</text>';
+    s += legendSvg(H);   // nx_link_rules
     var cap = (state.target_node || 'node') + (sel ? '  ' + sel + (oif ? ' → ' + oif : '') : '');
-    s += '<text x="' + (W - 14) + '" y="' + (H - 11) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
+    s += '<text x="' + (W - 14) + '" y="' + (H - 41) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
     return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
 
@@ -305,8 +353,7 @@
       if (up) protos[linkProto(state, ifm[ifn].peer)] = true;
       var anchor = Math.cos(a) < -0.35 ? 'end' : (Math.cos(a) > 0.35 ? 'start' : 'middle');
       var lx = CX + Math.cos(a) * (R + 10), ly = CY + Math.sin(a) * (R + 10) + 4;
-      s += '<line x1="' + num(p0[0]) + '" y1="' + num(p0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="var(--xnp-phys)" stroke-width="12" stroke-linecap="round"' + (up ? '' : ' stroke-dasharray="2 16"') + '/>';
-      if (up) s += '<line x1="' + num(p0[0]) + '" y1="' + num(p0[1]) + '" x2="' + num(ex) + '" y2="' + num(ey) + '" stroke="' + pcol + '" stroke-width="6" stroke-linecap="round"/>';
+      s += linkSvg(state, ifn, ifm[ifn].peer, p0, [ex, ey], 3.5, 4).svg;   // nx_link_rules: the link, and each protocol's tunnel beside it
       s += '<text x="' + num(lx) + '" y="' + num(ly) + '" fill="var(--xnp-accent)" font-size="13" font-family="monospace" text-anchor="' + anchor + '">' + esc(ifn) + (ifm[ifn].peer ? ' — ' + esc(ifm[ifn].peer) : '') +
         (marks[ifn] ? '<tspan fill="' + markFill(marks[ifn]) + '" font-weight="700">' + markText(marks[ifn]) + '</tspan>' : '') + '</text>';
     });
@@ -334,11 +381,9 @@
     if (procBgp) protos.bgp = true; else if (state.protocol === 'ospf') protos.ospf = true;
     var pl = ['ospf', 'bgp'].filter(function (k) { return protos[k]; }).map(function (k) { return k.toUpperCase(); }).join(' · ');
     if (pl) s += '<text x="' + CX + '" y="' + (BOT + RY + 22) + '" fill="var(--xnp-accent)" font-size="12" text-anchor="middle" font-family="monospace">' + pl + '</text>';
-    s += '<text x="14" y="' + (H - 26) + '" fill="var(--xnp-ospf)" font-size="11" font-family="monospace">━ OSPF</text>' +
-      '<text x="72" y="' + (H - 26) + '" fill="var(--xnp-bgp)" font-size="11" font-family="monospace">━ BGP tunnel</text>' +
-      '<text x="14" y="' + (H - 11) + '" fill="var(--xnp-phys)" font-size="11" font-family="monospace">━ physical link</text>';
+    s += legendSvg(H);   // nx_link_rules
     var cap = (state.target_node || 'node') + (sel ? '  ' + sel + (oif ? ' → ' + oif : '') : '');
-    s += '<text x="' + (W - 14) + '" y="' + (H - 11) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
+    s += '<text x="' + (W - 14) + '" y="' + (H - 41) + '" fill="var(--xnp-ok)" font-size="12" text-anchor="end" font-family="monospace">' + esc(cap) + '</text></svg>';
     return '<div class="xnp-panel xnp-figpanel">' + s + '</div>';
   }
   // which figure: opts.figureStyle ('cylinder' | 'box'), else the CSS variable --xnp-figure on the container (a skin sets

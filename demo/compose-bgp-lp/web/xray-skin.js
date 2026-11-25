@@ -178,6 +178,7 @@
       '--xnp-bgp-header:' + s.colors.bgp + ' !important;' +
       '--xnp-phys:' + s.colors.link + ' !important;' +
       '--xnp-muted:' + s.colors.down + ' !important;' +
+      '--xnp-idle:' + s.colors.idle + ' !important;' +   /* nx_link_rules: the forming OSPF states (Init / 2-Way) */
     '}';
   }
 

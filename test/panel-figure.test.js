@@ -61,12 +61,14 @@ test('both pictures carry the same meaning: links and peers, tunnel only when up
     const h = draw(p, R1, { figureStyle: style });
     assert.match(h, /eth0 — r2/, style + ': eth0 with its peer');
     assert.match(h, /eth1 — r3/, style + ': eth1 with its peer');
-    const tunnels = (h.match(/stroke="var\(--xnp-bgp\)" stroke-width="(6|3\.5)"/g) || []).length;
-    assert.strictEqual(tunnels, 1, style + ': one tunnel (r2 up, r3 down)');
+    const bgpOn = (ifn) => (h.match(new RegExp('stroke="var\\(--xnp-bgp\\)"[^>]*data-xnp-link="' + ifn + '"', 'g')) || []).length;
+    assert.strictEqual(bgpOn('eth0'), 2, style + ': the up BGP session = a tunnel line on both sides of eth0');
+    assert.strictEqual(bgpOn('eth1'), 0, style + ': no adjacency on eth1 = no tunnel');
     assert.match(h, /<polygon fill="var\(--xnp-bgp\)"/, style + ': the arrow in the BGP colour (the chosen route is BGP)');
     assert.match(h, /r1  8\.8\.8\.0\/24 → eth0/, style + ': caption');
   }
-  assert.match(draw(p, R1), /stroke-dasharray="2 16"/, 'cylinder: the down link\'s wire is dashed');
+  const sh = Object.assign({}, R1, { interfaces: Object.assign({}, R1.interfaces, { eth1: { ip: '10.12.0.10', up: false } }) });
+  assert.match(draw(p, sh), /stroke="var\(--xnp-down-text,#ff6b6b\)"[^>]*stroke-dasharray="6 5"[^>]*data-xnp-link="eth1"/, 'a shut-down interface: red dashed link');
 });
 
 test('the cylinder: the protocols under it, and an OSPF-only router\'s dot in the OSPF colour', () => {
@@ -110,4 +112,22 @@ test('a panel drawn before the skin came is drawn again when the skin changes it
   assert.doesNotMatch(c.innerHTML, /xnp-fig-cyl/, 'redrawn as the box');
   const before = c.innerHTML; onSkin();
   assert.equal(c.innerHTML, before, 'no change of picture: not drawn again');
+});
+
+test('OSPF tunnel by the neighbor state, as the DeepDive draws it (xray-core.js protoStyle)', () => {
+  const p = load();
+  const base = { target_node: 'r1', protocol: 'ospf', interfaces: { eth1: { ip: '10.0.0.1/24' } }, r2_iface: 'eth1', routing_table: [] };
+  const look = (st) => {
+    const h = draw(p, Object.assign({}, base, { ospf_neighbors: st ? [{ iface: 'eth1', state: st }] : [] }));
+    const lines = h.match(/<line[^>]*data-xnp-link="eth1"\/>/g) || [];
+    return lines.slice(1).map((l) => (/xnp-ospf/.test(l) ? 'green' : /xnp-idle/.test(l) ? 'orange' : '?') + (/stroke-dasharray/.test(l) ? '-dashed' : '-solid'));
+  };
+  assert.deepEqual(look('Full/DR'), ['green-solid', 'green-solid']);
+  assert.deepEqual(look('Exchange/Backup'), ['green-dashed', 'green-dashed']);
+  assert.deepEqual(look('Loading'), ['green-dashed', 'green-dashed']);
+  assert.deepEqual(look('2-Way/DROther'), ['orange-solid', 'orange-solid']);
+  assert.deepEqual(look('Init'), ['orange-dashed', 'orange-dashed']);
+  assert.deepEqual(look(null), [], 'no neighbor: the link only');
+  const h = draw(p, Object.assign({}, base, { ospf_neighbors: [] }));
+  assert.match(h, /<line[^>]*stroke="var\(--xnp-phys\)" stroke-width="3\.5"[^>]*data-xnp-link="eth1"\/>/, 'the link up: solid in the link colour');
 });

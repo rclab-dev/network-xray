@@ -13,8 +13,8 @@ drawn as a cylinder or a box); it never changes what they say. These are the rul
 | The step that chose it | its column framed; `best path by <step> (<value> > <value>)`; the steps before it shown as ties (`=`), the deciding one with ✅ | `deciding_step`, `steps[]` (`tie` / `win`), `summary` in one line |
 | The router said why | `best path by <reason> (FRR)` / `(reported by FRR)`; for IOS-XE `derived` (worked out by the collector) | `reason_source`: `device` / `derived` / `comparison` |
 | The data does not say why | "a step the table does not show", with the steps still to come; no step is named | `deciding_step: null` and a `note` |
-| An adjacency or session is up | the protocol's tunnel over the grey link: green = OSPF Full, purple = BGP Established | the state word (`Full`, `Established`) |
-| It is not up | the grey link only (dashed in the cylinder picture); under **What's wrong** with the router's own state word | the state word as the router printed it (`Active`, `Idle (Admin)`, `ExStart` …) |
+| An adjacency or session is up | the link solid in the link colour, the protocol's tunnel as its own lines beside it, by state as in the DeepDive: OSPF Full green solid, ExStart / Exchange / Loading green dashed, 2-Way orange solid, Init orange dashed; BGP Established purple solid, not established purple dashed (faint) | the state word (`Full`, `Established`) |
+| It is not up | no tunnel beside the link; a shut-down interface is a red dashed link; under **What's wrong** with the router's own state word | the state word as the router printed it (`Active`, `Idle (Admin)`, `ExStart` …) |
 | Something is wrong | listed first, under **What's wrong**, each with the values on both ends when they must match | `wrong[]` (lab_state), `mismatch` (ospf_interfaces) |
 | Not in the collected data | `?` — never shown as down or wrong | `null` with a note |
 | What a line of a proposed fix is for | **Proposed fix** panel: each line with `fixes` / `for a requirement` / `no link found` / `?` and why; the link it touches marked `· fix` / `· for a requirement` | `explain_plan`: `tag` and `because` per line |
