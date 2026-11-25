@@ -41,6 +41,10 @@
         "vrf": {
           "type": "string",
           "description": "VRF, only needed when the prefix is in several VRFs"
+        },
+        "router": {
+          "type": "string",
+          "description": "Same as node (the name the other tools use)"
         }
       },
       "required": [
@@ -81,6 +85,10 @@
         "router": {
           "type": "string",
           "description": "Only this router, e.g. r1 (default: all routers)"
+        },
+        "node": {
+          "type": "string",
+          "description": "Same as router (the name why_best_path uses)"
         }
       },
       "required": [
@@ -102,6 +110,10 @@
         "router": {
           "type": "string",
           "description": "Only this router, e.g. r1 (default: all routers)"
+        },
+        "node": {
+          "type": "string",
+          "description": "Same as router (the name why_best_path uses)"
         }
       },
       "required": [
@@ -123,6 +135,10 @@
         "router": {
           "type": "string",
           "description": "Only this router, e.g. r1 (default: all routers)"
+        },
+        "node": {
+          "type": "string",
+          "description": "Same as router (the name why_best_path uses)"
         }
       },
       "required": [
@@ -152,6 +168,10 @@
         "vrf": {
           "type": "string",
           "description": "VRF of the routing table rows to search (default: the default VRF)"
+        },
+        "node": {
+          "type": "string",
+          "description": "Same as router (the name why_best_path uses)"
         }
       },
       "required": [
@@ -183,6 +203,10 @@
         "vrf": {
           "type": "string",
           "description": "VRF, only needed when the prefix is in several VRFs"
+        },
+        "node": {
+          "type": "string",
+          "description": "Same as router (the name why_best_path uses)"
         }
       },
       "required": [
@@ -214,6 +238,10 @@
         "mgmt_subnet": {
           "type": "string",
           "description": "The lab's management network, left out (default 172.20.20.0/24; netlab: 192.168.121.0/24)"
+        },
+        "node": {
+          "type": "string",
+          "description": "Same as router (the name why_best_path uses)"
         }
       },
       "required": [

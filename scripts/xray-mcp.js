@@ -304,6 +304,19 @@ var TOOLS = [
   }
 ];
 
+/* nx_mcp_router_node (v1.8.1): why_best_path names the router `node`, the other tools `router`. Each tool takes both names
+   (the other one as an alias, same meaning), so a client that guesses the other name still works. Given both and they differ: an error. */
+TOOLS.forEach(function (t) {
+  var p = t.inputSchema && t.inputSchema.properties; if (!p) return;
+  if (p.router && !p.node) p.node = { type: 'string', description: 'Same as router (the name why_best_path uses)' };
+  else if (p.node && !p.router) p.router = { type: 'string', description: 'Same as node (the name the other tools use)' };
+});
+function routerNodeAlias(args) {
+  var r = args.router, n = args.node;
+  if (r != null && n != null && r !== n) throw new Error('arguments router and node name different routers (' + r + ', ' + n + '): give one of them');
+  if (r == null && n == null) return args;
+  var a = Object.assign({}, args); a.router = r != null ? r : n; a.node = a.router; return a;
+}
 /* nx_mcp_collect (2026-11-11): read the routers again from the MCP client - off unless the server is started with
    --allow-collect (then tools/list has it too). It runs the existing collector once with fixed arguments; the client
    gives only the topology file and ospf|bgp. */
@@ -518,7 +531,7 @@ function loadStates(p) {
 
 function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
-  args = args || {};
+  args = routerNodeAlias(args || {});   /* nx_mcp_router_node */
   if (defaultPath && !/^(state_diff|check_verify|check_suggest|check_init)$/.test(name) && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
   if (name === 'lab_state') {   /* nx_nh_wrong: only_problems = wrong and counts only */
     var op = args.only_problems;

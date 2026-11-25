@@ -252,6 +252,8 @@ If the assistant does not know which lab you mean, give the path again.
 
 ## Tools
 
+The router is `node` in `why_best_path` and `router` in the other tools; every tool takes either name (giving both with different routers is an error).
+
 | Tool | Input | Returns |
 |---|---|---|
 | `lab_state` | `path`, `only_problems` (optional) | `wrong` first (what is wrong, one `text` line each), then nodes and interfaces, links, OSPF adjacencies, BGP sessions, counts. `only_problems: true` returns only `wrong` and `counts` |
