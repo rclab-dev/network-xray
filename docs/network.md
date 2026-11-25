@@ -48,4 +48,5 @@ that is not listed below. It reads the source text: it finds the known patterns,
 ## MCP server
 
 - `scripts/xray-mcp.js` talks to its client over stdio and reads `xray-states.js` and `problem.json` on your machine. It
-  opens no network connection.
+  opens no network connection. The AI client is another matter: a hosted model gets the tool answers. To keep that local
+  too, see [local.md](local.md).

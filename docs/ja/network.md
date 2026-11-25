@@ -46,4 +46,5 @@ rclab-dev/network-xray には、テレメトリも、アクセス解析も、ア
 ## MCP サーバ
 
 - `scripts/xray-mcp.js` は stdio でクライアントと話し、あなたの機械の `xray-states.js` と `problem.json` を読みます。
-  網には出ません。
+  網には出ません。AI のクライアントは別の話です (クラウドのモデルには道具の答えが届きます)。そこも手元にするなら
+  [local.md](local.md) を見てください。
