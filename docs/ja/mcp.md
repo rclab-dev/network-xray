@@ -537,6 +537,17 @@ OSPF の値・BGP のネイバー・経路)・`requirement` (check の条件が�
 (行の無い条件 = 道具の見る限り案が届いていない条件)。コマンドでは `scripts/xray-plan.js <state> <router>
 <lines.txt|-> [--problem p] [--requirements 文] [--format table]`、静的な頁には `scripts/xray-render.js ... --plan <lines.txt>`。
 
+どれにも結び付かない行は、状態から言える時に `because` に理由が入ります: データに無い IF 名 (ある名前を添えて)・
+ルータのどのサブネットにも入らないネットワークやネクストホップ (サブネットを添えて)・読めない行の頭の語 (別の `router` の
+プロセス・読まないキーワード)。札の付け方は変わりません。
+
+レビューや承認の場では、`no link found` と `?` を「誤り」でなく「道具がこの行を裏付けられない」と読んでください:
+- `because` が食い違いを言う時 (データに無い IF・どのサブネットにも無いネットワークやネクストホップ) は止めて確かめる。
+  打ち間違いや、別のルータ向けに書いた案であることが多い。
+- 変更に要るが状態では判定しない手順の行 (description・logging の行・文の要件 等) で、なぜ要るかを誰かが言えるなら、
+  手順書の行として通す。
+- `problem` を渡した時、`checks` で行の無い条件は、道具の見る限り案が届いていない条件。どの行で満たすつもりかを聞く。
+
 ### check_run と check_verify (SolvedKit)
 
 頁の ✓ Solved と同じ決まりで、保存した state を判定します ([docs/problem-format.md](../problem-format.md#check-a-lab-without-the-page-solvedkit))。

@@ -551,6 +551,18 @@ lines of the plan tied to it (a condition with no line is one the plan does not 
 `scripts/xray-plan.js <state> <router> <lines.txt|-> [--problem p] [--requirements text] [--format table]` gives the same
 answer on the command line, and `scripts/xray-render.js ... --plan <lines.txt>` puts it on the static page.
 
+When a line is tied to nothing, `because` says why where the state tells it: an interface name that is not in the
+data (with the names that are), a network or next hop in none of the router's subnets (with the subnets), or the
+first words of a line that is not read (another `router` process, a keyword not read). The tags do not change.
+
+At a review or approval, read `no link found` and `?` as "the tool cannot vouch for this line", not as "wrong":
+- Stop and check it when `because` names a mismatch (an interface not in the data, a network or next hop on no subnet).
+  This is often a typo or a plan written for another router.
+- Let it pass as a procedure line when it is a step the change needs but the state does not judge, such as a
+  description, a logging line or a requirement in words, and someone has said why it is there.
+- When `problem` was given, a condition in `checks` with no line means the plan does not reach it as far as the tool
+  can tell. Ask which line is meant to meet it.
+
 ### check_run and check_verify (SolvedKit)
 
 The page's ✓ Solved rules on saved states ([docs/problem-format.md](problem-format.md#check-a-lab-without-the-page-solvedkit)).
