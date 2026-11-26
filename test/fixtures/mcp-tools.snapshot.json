@@ -410,5 +410,22 @@
       ],
       "additionalProperties": false
     }
+  },
+  {
+    "name": "story_check",
+    "description": "Check a story file (STORY-CONTRACT.md: a list of scenes, each the whole lab state at one moment, with a title, a caption and a source label such as observed or answer-example) and say what each scene shows: its router and prefix, and what changed from the scene before (worked out from the states, heaviest first). ok is false with every problem listed when the story is not valid. The files the story names are read under the same folder as the other tools. It writes nothing: page gives the command that writes the story as one HTML page that plays it. Read-only.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "story": {
+          "type": "string",
+          "description": "The story file, e.g. lab/story.json (capture-frames.js --story writes a draft)"
+        }
+      },
+      "required": [
+        "story"
+      ],
+      "additionalProperties": false
+    }
   }
 ]

@@ -13,10 +13,12 @@
     en: { kicker: 'X-Ray story', prev: '← Back', next: 'Next →', play: '▶ Play', pause: '⏸ Pause', scene: 'Scene',
       note: 'The labels (observed, answer example, ...) are what the author of this story says; they are not checked.',
       src: { observed: 'observed', 'observed-unsettled': 'observed, not settled', 'answer-example': 'answer example', illustrative: 'illustrative', unknown: 'source unknown' },
+      changes: 'Changed from the scene before (worked out by network-xray)', more: 'and {n} more',
       noState: ' has no state in this scene.', noLinks: ' has no links to inspect.', peers: ' neighbors — inspect peer-pair:', has: ' has ' },
     ja: { kicker: 'X-Ray ストーリー', prev: '← 前へ', next: '次へ →', play: '▶ 再生', pause: '⏸ 止める', scene: '段',
       note: '札 (実測・解答例 など) は作った人の申告で、確かめた物ではありません。',
       src: { observed: '実測', 'observed-unsettled': '実測 (落ち着く前)', 'answer-example': '解答例', illustrative: '説明用', unknown: '出所不明' },
+      changes: '前の段からの差 (network-xray が出した物)', more: 'ほか {n} 件',
       noState: ' はこの段に状態がありません。', noLinks: ' には見るリンクがありません。', peers: ' 台と隣り合う — 見る組:', has: ' は ' },
   };
 
@@ -151,6 +153,13 @@
     var name = doc.createElement('span'); name.className = 'st-name'; name.textContent = s.title;
     var cap = doc.createElement('span'); cap.className = 'st-cap'; cap.textContent = s.caption;
     b.appendChild(num); b.appendChild(src); b.appendChild(name); b.appendChild(cap);
+    if (s.changes && (s.changes.lines.length || s.changes.more)) {   // worked out from the scene before, not written by the author
+      var ch = doc.createElement('span'); ch.className = 'st-chg';
+      var hd = doc.createElement('span'); hd.className = 'st-chg-h'; hd.textContent = L.changes; ch.appendChild(hd);
+      s.changes.lines.forEach(function (ln) { var x = doc.createElement('span'); x.className = 'st-chg-l ' + ln.tone; x.textContent = ln.text; ch.appendChild(x); });
+      if (s.changes.more) { var mo = doc.createElement('span'); mo.className = 'st-chg-l more'; mo.textContent = L.more.replace('{n}', s.changes.more); ch.appendChild(mo); }
+      b.appendChild(ch);
+    }
     b.onclick = function () { stop(); go(i); };
     li.appendChild(b); list.appendChild(li); items.push(b);
   });

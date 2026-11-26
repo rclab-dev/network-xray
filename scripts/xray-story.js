@@ -11,6 +11,7 @@
 var fs = require('fs');
 var path = require('path');
 var vs = require('./validate-states.js');
+var xd = require('../xray-diff.js');
 var parseYaml = require('./check-example-topologies.js').parseYaml;
 
 var ROOT = path.join(__dirname, '..');
@@ -51,10 +52,10 @@ function readTopology(t, baseDir, problems) {
   var data = t;
   if (typeof t === 'string') {
     var file = path.resolve(baseDir, t), text;
-    try { text = fs.readFileSync(file, 'utf8'); } catch (e) { problems.push('topology: cannot read ' + t); return null; }
+    try { text = io.read(file); } catch (e) { problems.push('topology: cannot read ' + t + whyNot(e)); return null; }
     if (/\.ya?ml$/i.test(file)) {
       var y;
-      try { y = parseYaml(text); } catch (e) { problems.push('topology: ' + t + ': ' + e.message); return null; }
+      try { y = parseYaml(text); } catch (e) { problems.push('topology: ' + t + ': ' + (io.quiet ? NOT_TOPO : e.message)); return null; }
       var tn = y && isObj(y.topology) && isObj(y.topology.nodes) ? y.topology.nodes : null;
       if (!tn) { problems.push('topology: ' + t + ': no nodes under topology.nodes'); return null; }
       var links = [];
@@ -66,7 +67,7 @@ function readTopology(t, baseDir, problems) {
       });
       return { nodes: Object.keys(tn).map(function (n) { return { name: n, kind: isObj(tn[n]) && tn[n].kind != null ? String(tn[n].kind) : '' }; }), links: links };
     }
-    try { data = JSON.parse(text); } catch (e) { problems.push('topology: ' + t + ': not JSON: ' + e.message); return null; }
+    try { data = JSON.parse(text); } catch (e) { problems.push('topology: ' + t + ': ' + (io.quiet ? NOT_TOPO : 'not JSON: ' + e.message)); return null; }
   }
   if (!isObj(data) || !Array.isArray(data.nodes)) { problems.push('topology: needs nodes (a list)'); return null; }
   var nodes = [], seen = {};
@@ -93,12 +94,13 @@ function readState(st, baseDir, where, problems) {
   var parsed;
   if (typeof st === 'string') {
     var text;
-    try { text = fs.readFileSync(path.resolve(baseDir, st), 'utf8'); } catch (e) { problems.push(where + '.state: cannot read ' + st); return null; }
-    try { parsed = vs.parseStates(text, st); } catch (e) { problems.push(where + '.state: ' + st + ': ' + e.message); return null; }
+    try { text = io.read(path.resolve(baseDir, st)); } catch (e) { problems.push(where + '.state: cannot read ' + st + whyNot(e)); return null; }
+    try { parsed = vs.parseStates(text, st); } catch (e) { problems.push(where + '.state: ' + st + ': ' + (io.quiet ? NOT_STATE : e.message)); return null; }
   } else if (isObj(st)) {
     parsed = { kind: typeof st.target_node === 'string' ? 'router' : 'map', data: st };
   } else { problems.push(where + '.state: needs a file name or the state itself'); return null; }
   var errs = vs.validateStates(parsed);
+  if (errs.length && io.quiet && typeof st === 'string') { problems.push(where + '.state: ' + st + ': ' + NOT_STATE); return null; }   // a file: say nothing of what is in it
   errs.slice(0, 5).forEach(function (e) { problems.push(where + '.state' + e.path.replace(/^#/, '') + ': ' + e.message); });
   if (errs.length > 5) problems.push(where + '.state: ' + (errs.length - 5) + ' more problem(s)');
   if (errs.length) return null;
@@ -110,8 +112,20 @@ function unknownKeys(o, allowed, where, problems) {
   Object.keys(o).forEach(function (k) { if (allowed.indexOf(k) < 0) problems.push(where + ': unknown key "' + k + '" (put your own fields under "ext")'); });
 }
 
-// check a story; baseDir resolves the file names in it. -> { problems: [...], story: the story as the page gets it }
-function check(story, baseDir) {
+// how the files a story names are read: from disk (the command line), or through opts.read (the MCP server: only under
+// its folder). quiet = a file that is not what it should be gets a fixed message that says nothing of what is in it
+// (a parser's own message can quote the file).
+var NOT_STATE = 'not a network-xray state file', NOT_TOPO = 'not a topology file (.clab.yml or graph JSON)';
+var FS_IO = { read: function (f) { return fs.readFileSync(f, 'utf8'); }, quiet: false }, io = FS_IO;
+function whyNot(e) { return io.quiet && e && !e.code && e.message ? ': ' + e.message : ''; }   // the reader's own refusal (e.g. outside the folder), not a file system error
+
+// check a story; baseDir resolves the file names in it; opts { read(file) -> text, quiet }.
+// -> { problems: [...], story: the story as the page gets it }
+function check(story, baseDir, opts) {
+  io = opts && typeof opts.read === 'function' ? { read: opts.read, quiet: !!opts.quiet } : FS_IO;
+  try { return checkStory(story, baseDir); } finally { io = FS_IO; }
+}
+function checkStory(story, baseDir) {
   var p = [];
   if (!isObj(story)) return { problems: ['the story must be a JSON object'] };
   unknownKeys(story, KEYS.story, 'story', p);
@@ -188,10 +202,24 @@ function check(story, baseDir) {
     });
   }
   if (p.length) return { problems: p };
+  var lang = story.lang || 'en';
+  scenes.forEach(function (s, i) { s.changes = i ? changes(scenes[i - 1].state, s.state, lang) : null; });
   return { problems: [], story: {
-    story: VERSION, title: story.title, description: story.description || '', lang: story.lang || 'en',
+    story: VERSION, title: story.title, description: story.description || '', lang: lang,
     topology: topo, scenes: scenes,
   } };
+}
+
+// what changed from the scene before, worked out by xray-diff.js (not written by the author): the heaviest
+// CHANGES_SHOWN lines, each with its router, and how many more there are. -> { lines: [{text, tone}], more }
+var CHANGES_SHOWN = 3;
+function changes(before, after, lang) {
+  xd.setBaseline(before);
+  try {
+    var d = xd.diffStates(before, after), c = xd.changeLines(after, undefined, lang);
+    var lines = c.items.map(function (it, k) { return { text: d.changes[k].node + ' ' + it.text, tone: it.tone }; });
+    return { lines: lines.slice(0, CHANGES_SHOWN), more: Math.max(0, lines.length - CHANGES_SHOWN) };
+  } finally { xd.clearBaseline(); }
 }
 
 // a JSON value placed inside a <script>: "</script>" or "<!--" in the text cannot end it

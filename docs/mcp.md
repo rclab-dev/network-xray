@@ -270,6 +270,7 @@ The router is `node` in `why_best_path` and `router` in the other tools; every t
 | `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: candidate conditions from what the fix changed, and a proposed `check` verified on both states (`status` `ok`, or `none` with `reason`) |
 | `check_init` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: a problem.json draft (`problem`) with that check and empty text fields; writes no file |
 | `explain_plan` | `path`, `router`, `lines`, `problem?`, `requirements?`, `prefix?` | what each line of a proposed fix is for (`fixes` / `requirement` / `not_linked` / `?` with the state values behind it) and, with `problem`, the check now; changes and predicts nothing |
+| `story_check` | `story` | a story file ([STORY-CONTRACT.md](../STORY-CONTRACT.md)) checked: each scene's router, prefix and what changed from the scene before (`ok: false` with every problem when it is not valid); writes nothing |
 
 `why_best_path` gives only the reason stored in the data (`null` with a note when there is none). `why_path` also lists
 the other candidates, and when the router gave no reason it compares their attributes itself (`reason_source`).
@@ -618,6 +619,44 @@ compared (172.20.20.0/24 unless you give `mgmt_subnet`; a netlab lab uses `192.1
 `not_compared` (`node`, `field`, `missing_in`: before / after); the key is there only when something was left out.
 BGP peers are told apart by address and VRF. The same changes come from `node scripts/xray-query.js diff <before> <after> [router]`
 (`--format table` for people); errors are worded the way each tool words them (see Errors).
+
+### story_check
+
+A story ([STORY-CONTRACT.md](../STORY-CONTRACT.md)) is a list of scenes, each the whole lab state at one moment, with a
+title, a caption and a source label. `story_check` checks a story file and says what each scene shows: the router and
+prefix it opens, the routers it has a state for, and what changed from the scene before (the same heaviest-first
+changes as `state_diff`, three lines at most, `more_changes` for the rest). The files the story names (its topology and
+each scene's state) are read under the same folder as the other tools' paths; a file that is not what it should be gets
+a fixed message that says nothing of what is in it. When the story is not valid, `ok` is `false` and `problems` lists
+every problem. It writes nothing: `page` is the command that writes the story as one HTML page.
+
+```
+{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"story_check","arguments":{"story":"demo/story-q21/story.json"}}}
+```
+
+```json
+{
+  "ok": true,
+  "title": "Q21: why the slow ISP wins, and the fix",
+  "lang": "en",
+  "scenes": [
+    { "id": "fault", "title": "The slow ISP r3 is best", "source": "observed", "node": "r1", "prefix": "8.8.8.0/24", "dwell": 7000,
+      "routers": ["r1", "r2", "r3"], "changes": [], "more_changes": 0 },
+    { "id": "fix", "title": "LocPref 150 on r2: the fast ISP wins", "source": "observed", "node": "r1", "prefix": "8.8.8.0/24", "dwell": 6500,
+      "routers": ["r1", "r2", "r3"],
+      "changes": ["r1 8.8.8.0/24: best path via 10.11.0.20 → via 10.10.0.20 (Local Pref)",
+                  "r1 8.8.8.0/24: route bgp 10.11.0.20 on eth2 → bgp 10.10.0.20 on eth1"], "more_changes": 0 },
+    { "id": "link-down", "title": "r1-r2 link down: only r3 is left", "source": "observed", "node": "r1", "prefix": "8.8.8.0/24", "dwell": 6000,
+      "routers": ["r1", "r2", "r3"],
+      "changes": ["r1 eth1: interface up → down", "r2 eth1: interface up → down", "r1 10.10.0.20: BGP session Established → Active"],
+      "more_changes": 5 }
+  ],
+  "page": "node scripts/xray-story.js demo/story-q21/story.json --out story.html   (one HTML page that plays it, works offline)"
+}
+```
+
+(The fourth scene is left out here.) The source label is what the author says; it is not checked.
+
 ## Errors
 ## A picture in the chat (MCP Apps) <!-- nx_mcp_apps -->
 

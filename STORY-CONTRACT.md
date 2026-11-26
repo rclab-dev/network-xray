@@ -19,8 +19,12 @@
 node scripts/xray-story.js demo/story-q21/story.json              # writes demo/story-q21/story.html (not kept in git)
 node scripts/xray-story.js my-story.json --out /tmp/my-story.html
 node scripts/xray-story.js my-story.json --check                  # check only / 確かめだけ
+./xray.sh story my-story.json --out my-story.html                 # the same / 同じ
 node scripts/capture-frames.js lab.clab.yml steps.json out/ --story   # frames + a draft out/story.json
 ```
+
+From an AI assistant, the MCP tool `story_check` checks a story file and returns what each scene shows; it writes
+nothing ([docs/mcp.md](docs/mcp.md#story_check)). / AI アシスタントからは MCP の `story_check` (ファイルは書かない)。
 
 Exit codes / 終了コード: 0 written or valid / 書いた・正しい, 1 not valid (every problem is listed) / 正しくない
 (問題を全部出す), 2 a usage or read error / 使い方・読めない。
@@ -123,3 +127,8 @@ into the page; a tool that reads the same story file can use it to draw more. / 
 - The router picture is the same engine as the containerlab graph page (`xray-graph.html`): a scene's state is what
   that page shows for the same state. / ルータの絵は containerlab の graph の頁と同じ engine で、同じ状態なら同じに
   描きます。
+- Under each scene after the first, the page shows what changed from the scene before: worked out from the two states
+  by `xray-diff.js` (the same changes as `state_diff`, heaviest first, three lines at most and how many more), each line
+  with its router, and headed as worked out by network-xray (not written by the author). / 2 段目からは、前の段からの差を
+  出します: 2 つの状態から `xray-diff.js` が出した物 (`state_diff` と同じ・重い順に 3 行まで・残りの数)、各行にルータの
+  名前。作った人が書いた物でないと見出しで分かるようにします。

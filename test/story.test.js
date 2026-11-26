@@ -193,3 +193,77 @@ test('capture-frames --story: the draft story of the frames is valid as it is', 
   assert.deepStrictEqual(r.problems, []);
   assert.deepStrictEqual(data(r.html).scenes.map(function (s) { return s.source; }), ['observed', 'observed-unsettled']);
 });
+
+test('each scene after the first says what changed from the scene before (heaviest first, at most 3 lines)', function () {
+  var en = data(story.build(path.join(EXAMPLE, 'story.json')).html).scenes;
+  assert.strictEqual(en[0].changes, null);
+  assert.deepStrictEqual(en[1].changes.lines.map(function (l) { return l.text; }), [
+    'r1 8.8.8.0/24: best path via 10.11.0.20 → via 10.10.0.20 (Local Pref)',
+    'r1 8.8.8.0/24: route bgp 10.11.0.20 on eth2 → bgp 10.10.0.20 on eth1']);
+  assert.strictEqual(en[1].changes.more, 0);
+  assert.deepStrictEqual(en[2].changes.lines.map(function (l) { return [l.text, l.tone]; }).slice(0, 2),
+    [['r1 eth1: interface up → down', 'bad'], ['r2 eth1: interface up → down', 'bad']]);
+  assert.strictEqual(en[2].changes.lines.length, 3);
+  assert.ok(en[2].changes.more > 0);
+  var ja = data(story.build(path.join(EXAMPLE, 'story.ja.json')).html).scenes;
+  assert.match(ja[1].changes.lines[0].text, /^r1 8\.8\.8\.0\/24: 最良経路 via 10\.11\.0\.20 → via 10\.10\.0\.20/);
+  // the same state twice: nothing changed
+  var s = base(); s.scenes.push({ id: 'b', title: 'same', state: FRAME_A });
+  assert.deepStrictEqual(story.check(s, ROOT).story.scenes[1].changes, { lines: [], more: 0 });
+});
+
+// the MCP server, started in a folder of its own (it reads only under it)
+function mcp(cwd, calls) {
+  var lines = [{ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0' } } }]
+    .concat(calls.map(function (a, i) { return { jsonrpc: '2.0', id: i + 2, method: 'tools/call', params: { name: 'story_check', arguments: a } }; }))
+    .map(function (m) { return JSON.stringify(m); });
+  var env = Object.assign({}, process.env); delete env.NX_MCP_ALLOW_ANY_PATH; delete env.NX_MCP_PATH;
+  var r = cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'xray-mcp.js')], { cwd: cwd, input: lines.join('\n') + '\n', encoding: 'utf8', timeout: 20000, env: env });
+  assert.strictEqual(r.status, 0, r.stderr);
+  var by = {};
+  r.stdout.split('\n').filter(Boolean).map(JSON.parse).forEach(function (m) { by[m.id] = m.result; });
+  return calls.map(function (_, i) { var x = by[i + 2]; return x.isError ? { error: JSON.parse(x.content[0].text).error } : x.structuredContent; });
+}
+
+test('MCP story_check: the scenes and their changes, the files it names read only under the server\'s folder, nothing written', function () {
+  var d = tmp(), lab = path.join(d, 'lab');
+  fs.mkdirSync(lab);
+  ['frameA.json', 'frameB.json'].forEach(function (f) { fs.copyFileSync(path.join(ROOT, 'demo', 'bgp-lp', f), path.join(lab, f)); });
+  fs.copyFileSync(path.join(ROOT, 'demo', 'bgp-lp', 'topo.json'), path.join(lab, 'topo.json'));
+  var good = { story: '0.1', title: 'q21', topology: 'topo.json', scenes: [
+    { id: 'a', title: 'fault', state: 'frameA.json', show: { node: 'r1', prefix: '8.8.8.0/24' } },
+    { id: 'b', title: 'fix', state: 'frameB.json', source: 'answer-example' }] };
+  fs.writeFileSync(path.join(lab, 'story.json'), JSON.stringify(good));
+  var outside = JSON.parse(JSON.stringify(good)); outside.scenes[1].state = FRAME_A;   // a file outside the folder
+  fs.writeFileSync(path.join(lab, 'outside.json'), JSON.stringify(outside));
+  fs.writeFileSync(path.join(lab, 'secret.json'), '{"token": "TOP-SECRET-VALUE", "target_node": 7}');
+  var leak = JSON.parse(JSON.stringify(good)); leak.scenes[1].state = 'secret.json'; leak.topology = 'secret.json';
+  fs.writeFileSync(path.join(lab, 'leak.json'), JSON.stringify(leak));
+  fs.writeFileSync(path.join(lab, 'notjson.txt'), 'TOP-SECRET-VALUE is not JSON');
+  var before = fs.readdirSync(lab).sort();
+  var r = mcp(d, [{ story: 'lab/story.json' }, { story: 'lab/outside.json' }, { story: 'lab/leak.json' }, { story: 'lab/notjson.txt' },
+    { story: FRAME_A }, { story: 'lab/none.json' }]);
+  assert.strictEqual(r[0].ok, true);
+  assert.deepStrictEqual(r[0].scenes.map(function (s) { return [s.id, s.source, s.node, s.prefix]; }), [['a', 'unknown', 'r1', '8.8.8.0/24'], ['b', 'answer-example', null, null]]);
+  assert.deepStrictEqual(r[0].scenes[0].changes, []);
+  assert.match(r[0].scenes[1].changes[0], /^r1 8\.8\.8\.0\/24: best path via 10\.11\.0\.20 → via 10\.10\.0\.20/);
+  assert.match(r[0].page, /^node scripts\/xray-story\.js lab\/story\.json --out /);
+  assert.strictEqual(r[1].ok, false);
+  has(r[1].problems, /scenes\[1\]\.state: cannot read .*: outside the folder this server reads/);
+  assert.strictEqual(r[2].ok, false);
+  assert.ok(JSON.stringify(r[2]).indexOf('TOP-SECRET') < 0, 'nothing of the file is quoted: ' + JSON.stringify(r[2]));
+  has(r[2].problems, /^topology: needs nodes/);
+  has(r[2].problems, /scenes\[1\]\.state: secret\.json: not a network-xray state file/);
+  assert.deepStrictEqual(r[3], { error: 'not a story file (a JSON object, see STORY-CONTRACT.md)' });
+  assert.match(r[4].error, /^outside the folder this server reads/);
+  assert.match(r[5].error, /^not found: /);
+  assert.deepStrictEqual(fs.readdirSync(lab).sort(), before, 'nothing written');
+});
+
+test('./xray.sh story is scripts/xray-story.js', { skip: process.platform === 'win32' ? 'bash' : false }, function () {
+  var r = cp.spawnSync('bash', [path.join(ROOT, 'xray.sh'), 'story', path.join(EXAMPLE, 'story.json'), '--check'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+  assert.strictEqual(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^ok .* \(4 scenes\)/);
+  r = cp.spawnSync('bash', [path.join(ROOT, 'xray.sh'), 'story', '--help'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+  assert.strictEqual(r.status, 0); assert.match(r.stdout, /^usage: node scripts\/xray-story\.js/);
+});

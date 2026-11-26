@@ -13,6 +13,7 @@
 #   --check               only check what this run needs (docker, containerlab, node, port, topology,
 #                         IOL image) and say what to fix; nothing is started or changed. exit 0 = ready
 #   ./xray.sh snapshot <name> [--url <page>]   save the lab's state now as <name>.js (SolvedKit's broken / solved)
+#   ./xray.sh story <story.json> [--out <file.html>]   write a story (STORY-CONTRACT.md) as one page that plays it
 #   --attach              do not deploy: collect from and graph the lab that is already running (the lab named
 #                         in the topology), so changes made by hand in the routers are kept
 #   The options may come before, between or after lab / port / template.
@@ -44,6 +45,7 @@ usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] 
   -h, --help            show this help
   env: SUDO= (privilege prefix, default sudo), NX_IOS_INTERVAL (Cisco IOS read interval, default 10)
        ./xray.sh snapshot <name> [--url <page address>]   save the lab's state now as <name>.js (for SolvedKit)
+       ./xray.sh story <story.json> [--out <file.html>]    write a story (scenes of lab states) as one page that plays it
 EOF
 }
 # nx_snapshot (v1.5.2): ./xray.sh snapshot <name> saves the state the running collector last wrote as <name>.js in the
@@ -83,6 +85,13 @@ if [ "${1-}" = snapshot ]; then
   mv "$STMP" "$SN"
   echo "saved $SN - when you have both: node scripts/xray-query.js check suggest broken.js solved.js --format table"
   exit 0
+fi
+# nx_story (v1.9): ./xray.sh story <story.json> [--out <file.html>] [--check] = node scripts/xray-story.js with the same
+# arguments: check a story (STORY-CONTRACT.md) and write the one HTML page that plays it. Nothing is deployed or started.
+if [ "${1-}" = story ]; then
+  shift
+  command -v node >/dev/null 2>&1 || { echo "xray.sh story needs Node.js (node was not found)" >&2; exit 2; }
+  exec node "$HERE/scripts/xray-story.js" "$@"
 fi
 while [ $# -gt 0 ]; do
   case "$1" in

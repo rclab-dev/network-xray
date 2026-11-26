@@ -2,6 +2,12 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## Unreleased
+
+- **Story (new):** `scripts/xray-story.js` (or `./xray.sh story`) checks a story, a list of scenes that each hold the whole lab state with a title, a caption and a source label (observed, answer example, illustrative, ...), and writes it as one HTML page that plays it: the scenes on the left (click, Back / Next, Play), the lab and the open router's X-Ray on the right. The engine is inside the page, so it works offline. Each scene after the first shows what changed from the scene before (worked out from the two states). The format is `STORY-CONTRACT.md`; `demo/story-q21` is the q21 recording as a story (en, ja).
+- **`capture-frames.js --story`:** also writes a draft story of the frames (one scene per frame); a `story.json` already there is kept.
+- **MCP `story_check`:** checks a story file and returns each scene's router, prefix and what changed from the scene before. The files the story names are read under the same folder as the other tools; nothing is written.
+
 ## v1.8.3 — 2026-11-26
 
 - **`explain_plan`:** a line tied to nothing now says why, where the state tells it: an interface name not in the data, a network or next hop in none of the router's subnets, or the first words of a line that is not read. Lines under another router process are no longer read as OSPF / BGP lines. The tags do not change.

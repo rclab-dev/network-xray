@@ -262,6 +262,7 @@ AI がどのラボのことか分からない時は、もう一度パスを付�
 | `check_suggest` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: 直して変わった所から条件の候補と、両方の state で確かめた `check` の案 (`status` `ok`・出せなければ `none` と `reason`) |
 | `check_init` | `broken`, `solved`, `focus?`, `prefix?`, `mgmt_subnet?` | SolvedKit: その check を入れた problem.json の下書き (`problem`・文は空欄)。ファイルは書きません |
 | `explain_plan` | `path`, `router`, `lines`, `problem?`, `requirements?`, `prefix?` | 直す案の各行が何のためか (`fixes` / `requirement` / `not_linked` / `?` と元の状態の値)・`problem` を渡すと今の check の合否。何も変えず・予想もしない |
+| `story_check` | `story` | ストーリーのファイル ([STORY-CONTRACT.md](../../STORY-CONTRACT.md)) を確かめ、各段のルータ・prefix・前の段からの差を返す (正しくなければ `ok: false` と問題の全部)。ファイルは書かない |
 
 `why_best_path` は、データに保存されているわけだけを返します (無ければ `null` と注記)。`why_path` はほかの候補も並べ、
 ルータがわけを出していない時は、属性を自分で比べます (`reason_source`)。
@@ -601,6 +602,23 @@ OSPF の値・BGP のネイバー・経路)・`requirement` (check の条件が�
 カウンタ・管理の網は比べません (`mgmt_subnet` を渡さなければ 172.20.20.0/24・netlab のラボは `192.168.121.0/24`)。片方に無い欄 (そちらでは集めていない) も比べず、`not_compared` (`node`・`field`・`missing_in`: before / after) に並べます
 (比べなかった物がある時だけのキー)。BGP の相手はアドレスと VRF で見分けます。同じ変化は `node scripts/xray-query.js diff <before> <after> [router]` でも
 (人向けは `--format table`)。エラーの言い方はツールごとです (エラーの節)。
+
+### story_check
+
+ストーリー ([STORY-CONTRACT.md](../../STORY-CONTRACT.md)) は段の並びで、各段はある時点のラボの状態をまるごと持ち、題・
+説明・出所の札を付けます。`story_check` はストーリーのファイルを確かめ、各段が何を見せるかを返します: 開くルータと
+prefix、状態のあるルータ、前の段からの差 (`state_diff` と同じ重い順の変化を 3 行まで・残りの数は `more_changes`)。
+ストーリーが名指すファイル (トポロジと各段の状態) は、ほかのツールの path と同じフォルダの下だけを読みます。あるべき
+形でないファイルには、中身に触れない決まった文を返します。ストーリーが正しくない時は `ok` が `false` で、`problems`
+に問題を全部並べます。ファイルは書きません: `page` が、ストーリーを 1 枚の HTML に書くコマンドです。
+
+```
+{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"story_check","arguments":{"story":"demo/story-q21/story.ja.json"}}}
+```
+
+返る形は英語の [docs/mcp.md](../mcp.md#story_check) の例と同じです (題・説明・差の文は日本語、`lang` は `ja`)。出所の札は
+作った人の申告で、確かめた物ではありません。
+
 ## エラー
 ## チャットの中の絵 (MCP Apps) <!-- nx_mcp_apps -->
 
