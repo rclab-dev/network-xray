@@ -223,7 +223,7 @@
   /* nx_for_change: for a change (a planned piece of work rehearsed on a lab) rather than a puzzle, what the change must
      leave alone matters as much as what it changes: every OSPF adjacency Full and every BGP session Established in both
      states stays so. Only asked for with forChange. */
-  function keepConds(broken, solved, out) {
+  function keepConds(broken, solved, out, focusPrefix) {
     Object.keys(solved).sort().forEach(function (n) {
       var A = solved[n] || {}, B = broken[n] || {};
       arrOf(A.ospf_neighbors).forEach(function (x) {
@@ -237,6 +237,26 @@
         if (!arrOf(B.bgp_neighbors).some(function (y) { return isEst(y) && s(y.ip) === s(x.ip) && s(y.vrf) === s(x.vrf); })) return;
         out.push({ cond: [n, 'bgp_neighbors', 'some', withVrf([['ip', 'eq', x.ip], ['state', 'eq', x.state]], x)],
           kind: 'keep', from: 'unchanged ' + n + ' bgp ' + x.ip, note: 'stays Established through the change' });
+      });
+      /* nx_keep_routes: the BGP paths the change must leave alone - each path (best or not) that is there before and
+         after, the same way (best stays best); a path is told by its AS path, else its next hop */
+      var pathKey = function (r) { return s(r.as_path) ? ['as_path', s(r.as_path)] : (s(r.next_hop) ? ['next_hop', s(r.next_hop)] : null); };
+      arrOf(A.bgp_routes).forEach(function (r) {
+        var key = r && pathKey(r);
+        if (!key) return;
+        var before = arrOf(B.bgp_routes).filter(function (y) { return y && s(y.prefix) === s(r.prefix) && s(y.vrf) === s(r.vrf) && s(y[key[0]]) === key[1]; })[0];
+        if (!before || isBest(before) !== isBest(r)) return;
+        var c = bgpPrefixConds(r).concat(isBest(r) ? [['best', 'eq', true]] : []).concat([[key[0], 'eq', key[1]]]);
+        out.push({ cond: [n, 'bgp_routes', 'some', withVrf(c, r)], kind: 'keep', from: 'unchanged ' + n + ' bgp path ' + s(r.prefix) + ' ' + key[1],
+          note: isBest(r) ? 'stays the best path through the change' : 'stays there as a backup through the change' });
+      });
+      // the destination named with --prefix: its selected route stays where it was
+      if (focusPrefix) selectedRows(A, focusPrefix).forEach(function (r) {
+        var b = selectedRows(B, focusPrefix).filter(function (y) { return s(y.out_iface) === s(r.out_iface) && s(y.next_hop) === s(r.next_hop); })[0];
+        if (!b) return;
+        var c = [['prefix', 'eq', r.prefix], ['selected', 'eq', true]];
+        if (s(r.out_iface)) c.push(['out_iface', 'eq', r.out_iface]); else if (s(r.next_hop)) c.push(['next_hop', 'eq', r.next_hop]);
+        out.push({ cond: [n, 'routing_table', 'some', withVrf(c, r)], kind: 'keep', from: 'unchanged ' + n + ' route ' + s(r.prefix), note: 'stays where it was through the change' });
       });
     });
   }
@@ -252,7 +272,7 @@
     var cands = [], skipped = [];
     d.changes.forEach(function (c) { fromChange(c, broken, solved, cands, skipped); });
     fromResolution(broken, solved, cands);
-    if (opts.forChange) keepConds(broken, solved, cands);
+    if (opts.forChange) keepConds(broken, solved, cands, s((opts.focus || {}).prefix));
     // judge every candidate on both states; keep one condition per (node, path, value) only once
     var seen = Object.create(null);
     cands = cands.filter(function (c) {

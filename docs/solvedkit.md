@@ -468,7 +468,8 @@ node scripts/xray-query.js check init before.js after.js --for change --out chan
 Without `--for change`, `check suggest` makes a check for a puzzle: the fewest conditions that tell the fix (here r1's
 route only), so that other correct fixes still count. A change needs the opposite: everything it moves, **there and
 back**, and everything it must leave alone (`keep`: each OSPF adjacency Full and BGP session Established in both
-states). `--max <n>` still caps the number.
+states, each BGP path - best or backup - that is the same before and after, and the selected route of the destination
+named with `--prefix`). `--max <n>` still caps the number.
 
 **3. Check the backup.** Take a third state with the new path down (on r1: `ip link set eth1 down`), and make the
 check of the failover the same way, from "after" to that state:
@@ -503,4 +504,4 @@ gone), and `diff before.js rolled.js` says `(none)`: the rollback left the lab a
 **What it cannot tell you.** It is right only as far as the lab is like the network: the same topology, the same
 protocols and the same values where they matter. It reads FRR, Nokia SR Linux and Cisco IOL routers in a containerlab or netlab lab, and IOS routers in a Cisco CML lab
 ([when to use it](../README.md#when-to-use)); it does not log in to production routers. It sees the routing state (routes,
-adjacencies, sessions), not packets or applications.
+adjacencies, sessions), not packets or applications: check that traffic gets through (ping) separately.

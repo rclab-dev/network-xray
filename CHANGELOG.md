@@ -5,6 +5,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 ## Unreleased
 
 - **Collector:** `--settle` reports recent differences when it times out.
+- **SolvedKit `--for change`:** also keeps the BGP paths (best and backup) that are the same before and after, and the selected route of the `--prefix` destination.
 
 ## v1.8.2 — 2026-11-26
 

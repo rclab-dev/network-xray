@@ -469,3 +469,21 @@ test('cli: check to-procedure prints Markdown with --format table; --vendor / --
   r = q(['check', 'to-procedure', L.write('nocheck3.json', { format: 'network-xray-lab/0' })]);
   assert.strictEqual(r.code, 2);
 });
+
+test('suggest --for change: the BGP paths the change leaves alone (best and backup) and the --prefix route are kept too', () => {
+  const bp = (prefix, as_path, best) => ({ prefix, prefixlen: 24, as_path, next_hop: as_path === '65002' ? '10.12.0.2' : '10.13.0.3', best });
+  const est = (ip) => ({ ip, state: 'Established' });
+  const B = { r1: { target_node: 'r1', interfaces: {}, bgp_neighbors: [est('10.12.0.2'), est('10.13.0.3')],
+    bgp_routes: [bp('8.8.8.0', '65002', true), bp('8.8.8.0', '65003', false), bp('9.9.9.0', '65003', true)],
+    routing_table: [rt3('8.8.8.0/24', 'eth1', '10.12.0.2'), rt3('9.9.9.0/24', 'eth2', '10.13.0.3')] } };
+  const A = { r1: Object.assign({}, B.r1, { bgp_routes: [bp('8.8.8.0', '65002', true), bp('8.8.8.0', '65003', false), bp('9.9.9.0', '65002', true)],
+    routing_table: [rt3('8.8.8.0/24', 'eth1', '10.12.0.2'), rt3('9.9.9.0/24', 'eth1', '10.12.0.2')] }) };
+  const ch = kit.suggest(B, A, { forChange: true, focus: { prefix: '8.8.8.0/24' } });
+  assert.strictEqual(ch.status, 'ok');
+  const keeps = ch.candidates.filter(c => c.kind === 'keep' && c.cond[1] !== 'bgp_neighbors').map(c => JSON.stringify(c.cond[3]));
+  assert.ok(keeps.some(k => k.includes('"best","eq",true') && k.includes('"as_path","eq","65002"') && k.includes('8.8.8.0')), 'the best path that stays');
+  assert.ok(keeps.some(k => !k.includes('"best"') && k.includes('"as_path","eq","65003"') && k.includes('8.8.8.0')), 'the backup that stays');
+  assert.ok(keeps.some(k => k.includes('8.8.8.0/24') && k.includes('"out_iface","eq","eth1"')), 'the --prefix route that stays');
+  assert.ok(!keeps.some(k => k.includes('9.9.9.0')), 'a path the change moved is not kept');
+  assert.ok(ch.verify.ok);
+});

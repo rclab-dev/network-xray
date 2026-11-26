@@ -448,7 +448,8 @@ node scripts/xray-query.js check init before.js after.js --for change --out chan
 
 `--for change` を付けない `check suggest` は問題作り向けの check を作ります: 直しを見分ける最少の条件 (ここでは r1 の
 経路だけ) で、別の正しい直し方も通る様に。工事はその逆で、動かす物は**行きも帰りも**全部、触ってはいけない物
-(`keep` = 前と後の両方で Full の OSPF の隣接・Established の BGP のセッション) も全部要ります。`--max <n>` で数を
+(`keep` = 前と後の両方で Full の OSPF の隣接・Established の BGP のセッション・前と後で同じ BGP の経路 (best も予備も)・
+`--prefix` で名指しした宛先の選ばれた経路) も全部要ります。`--max <n>` で数を
 抑えられるのは同じです。
 
 **3. 予備を確かめる。** 新しい道を落とした 3 つ目の状態を取り (r1 で `ip link set eth1 down`)、切り替わりの check も
@@ -480,4 +481,4 @@ node scripts/xray-query.js check to-procedure change --lang ja --format table
 
 **分からない事。** 当たるのはラボが本番に似ている分だけです (同じ形・同じプロトコル・効く所は同じ値)。読めるのは
 containerlab / netlab のラボの FRR・Nokia SR Linux・Cisco IOL と、Cisco CML のラボの IOS のルータで ([使い所](../../README.md#when-to-use))、本番のルータにはログインしません。
-見るのは経路の状態 (経路・隣接・セッション) で、パケットやアプリケーションは見ません。
+見るのは経路の状態 (経路・隣接・セッション) で、パケットやアプリケーションは見ません。通信が通るか (ping) は別に確かめます。
