@@ -218,8 +218,38 @@ function changes(before, after, lang) {
   try {
     var d = xd.diffStates(before, after), c = xd.changeLines(after, undefined, lang);
     var lines = c.items.map(function (it, k) { return { text: d.changes[k].node + ' ' + it.text, tone: it.tone }; });
+    lines = lines.concat(bgpAttrChanges(before, after, lang));
+    if (!lines.length) return { lines: [{ text: lang === 'ja' ? '変わった所は見つからない (network-xray が比べる所の中で)' : 'nothing changed in what network-xray compares', tone: 'more' }], more: 0 };
     return { lines: lines.slice(0, CHANGES_SHOWN), more: Math.max(0, lines.length - CHANGES_SHOWN) };
   } finally { xd.clearBaseline(); }
+}
+
+// a BGP path whose attributes changed while the best path did not move (e.g. LocPref set on the path that is not
+// chosen): xray-diff compares the selected paths, so these are compared here, per router, prefix and next hop
+var BGP_ATTRS = [['local_pref', 'LocPref'], ['weight', 'Weight'], ['metric', 'MED'], ['as_path', 'AS path'], ['origin', 'Origin']];
+function bgpAttrChanges(before, after, lang) {
+  var out = [], none = lang === 'ja' ? '(無し)' : '(none)';
+  function paths(st) {
+    var m = {};
+    ((st && st.bgp_routes) || []).forEach(function (r) {
+      if (!r || r.prefix == null) return;
+      var pfx = String(r.prefix) + (r.prefixlen != null && String(r.prefix).indexOf('/') < 0 ? '/' + r.prefixlen : '');
+      m[(r.vrf ? '[vrf ' + r.vrf + '] ' : '') + pfx + ' via ' + (r.next_hop || '?')] = r;
+    });
+    return m;
+  }
+  Object.keys(after || {}).sort().forEach(function (node) {
+    var a = paths(after[node]), b = paths((before || {})[node]);
+    Object.keys(a).sort().forEach(function (k) {
+      if (!b[k]) return;   // a path that came or went is xray-diff's (route / best path lines)
+      BGP_ATTRS.forEach(function (f) {
+        var x = b[k][f[0]], y = a[k][f[0]];
+        if (String(x == null ? '' : x) === String(y == null ? '' : y)) return;
+        out.push({ text: node + ' ' + k + ': ' + f[1] + ' ' + (x == null ? none : x) + ' → ' + (y == null ? none : y), tone: 'note' });
+      });
+    });
+  });
+  return out;
 }
 
 // a JSON value placed inside a <script>: "</script>" or "<!--" in the text cannot end it

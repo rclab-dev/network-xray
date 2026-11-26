@@ -132,3 +132,12 @@ into the page; a tool that reads the same Walkthrough file can use it to draw mo
   with its router, and headed as worked out by network-xray (not written by the author). / 2 段目からは、前の段からの差を
   出します: 2 つの状態から `xray-diff.js` が出した物 (`state_diff` と同じ・重い順に 3 行まで・残りの数)、各行にルータの
   名前。作った人が書いた物でないと見出しで分かるようにします。
+  After those, a BGP path that stayed but whose attributes changed (LocPref, Weight, MED, AS path, Origin; e.g. LocPref
+  set on the path that is not chosen) gets a line per attribute, per router, prefix and next hop; `(none)` = the router
+  did not give the value. When nothing changed, one line says so. / その後に、残っている BGP の経路で属性 (LocPref・
+  Weight・MED・AS path・Origin) が変わった物 (例: 選ばれていない経路に LocPref を付けた) をルータ・prefix・次の段ごとに
+  1 行ずつ。`(無し)` = ルータが値を出していない。何も変わっていなければ、そう言う 1 行。
+- The lab picture puts the most connected router on top and the others in a row only when the others have no links
+  between them; otherwise the routers go round a circle (a link is never drawn behind a router). The kind `linux` is not
+  shown under a router's name. / ラボの絵は、一番つながったルータを上・ほかを横一列にするのは、ほか同士に線が無い時
+  だけ。線があれば円に並べます (線がルータの後ろを通らない)。kind の `linux` は名前の下に出しません。

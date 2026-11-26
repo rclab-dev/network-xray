@@ -7,6 +7,8 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **Walkthrough (new):** `scripts/xray-walkthrough.js` (or `./xray.sh walkthrough`) checks a Walkthrough, a list of scenes that each hold the whole lab state with a title, a caption and a source label (observed, answer example, illustrative, ...), and writes it as one HTML page that plays it: the scenes on the left (click, Back / Next, Play), the lab and the open router's X-Ray on the right. The engine is inside the page, so it works offline. Each scene after the first shows what changed from the scene before (worked out from the two states). The format is `WALKTHROUGH-CONTRACT.md`; `demo/walkthrough-q21` is the q21 recording as a Walkthrough (en, ja).
 - **`capture-frames.js --walkthrough`:** also writes a draft Walkthrough of the frames (one scene per frame); a `walkthrough.json` already there is kept.
 - **MCP `walkthrough_check`:** checks a Walkthrough file and returns each scene's router, prefix and what changed from the scene before. The files the Walkthrough names are read under the same folder as the other tools; nothing is written.
+- **Walkthrough changes:** a BGP path whose attributes changed while it stayed (e.g. LocPref set on the path that is not chosen) is listed too; a scene where nothing changed says so.
+- **Lab files:** a list written at its key's own indentation (`links:` then `- endpoints:` under it, as netlab writes a clab.yml) is read by the topology reader (`capture-frames.js`, `xray-walkthrough.js`, the example check).
 
 ## v1.8.3 — 2026-11-26
 

@@ -144,7 +144,11 @@ function parseYaml(text) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) throw new Error('line ' + lines[p].n + ': duplicate key ' + key);
       p++;
       if (m[2] !== undefined && m[2] !== '') obj[key] = inline(m[2]);
-      else obj[key] = (p < lines.length && lines[p].ind > ind) ? block(ind + 1) : null;
+      else if (p < lines.length && lines[p].ind > ind) obj[key] = block(ind + 1);
+      // a list at the key's own indentation ("key:" then "- a" under it, not indented) is the key's value too:
+      // the way netlab and other YAML writers print lists
+      else if (p < lines.length && lines[p].ind === ind && /^-(\s|$)/.test(lines[p].text)) obj[key] = block(ind);
+      else obj[key] = null;
     }
     return obj;
   }

@@ -148,3 +148,33 @@ test('a lab without its solved twin (either way) and a missing bind given under 
   assert.ok(lines.indexOf('orphan-solved: no orphan/ next to this solved lab') >= 0, lines.join('\n'));
   assert.ok(lines.indexOf('kb: node a: bind missing.conf does not exist') >= 0, lines.join('\n'));
 });
+
+test('parseYaml reads a list written at its key\'s own indentation (the way netlab prints a clab.yml)', function () {
+  var doc = ct.parseYaml([
+    'name: lab9',
+    'prefix: "clab"',
+    'topology:',
+    '  nodes:',
+    '    r1:',
+    '      kind: linux',
+    '      binds:',
+    '      - a/daemons:/etc/frr/daemons',
+    '      - a/frr.conf:/etc/frr/frr.conf',
+    '      exec:',
+    '      - sh -c "true"',
+    '    r2: { kind: linux }',
+    '  links:',
+    '  - endpoints:',
+    '    - "r1:eth1"',
+    '    - "r2:eth1"',
+    '    mtu: 1500',
+    '  - endpoints: ["r1:eth2", "r2:eth2"]',
+    'after: 1'
+  ].join('\n'));
+  assert.deepStrictEqual(doc.topology.nodes.r1.binds, ['a/daemons:/etc/frr/daemons', 'a/frr.conf:/etc/frr/frr.conf']);
+  assert.deepStrictEqual(doc.topology.nodes.r1.exec, ['sh -c "true"']);
+  assert.deepStrictEqual(doc.topology.links, [{ endpoints: ['r1:eth1', 'r2:eth1'], mtu: '1500' }, { endpoints: ['r1:eth2', 'r2:eth2'] }]);
+  assert.strictEqual(doc.after, '1');
+  // an empty value is still null when no list follows at the same indentation
+  assert.deepStrictEqual(ct.parseYaml('a:\nb: 2'), { a: null, b: '2' });
+});

@@ -199,7 +199,8 @@ test('each scene after the first says what changed from the scene before (heavie
   assert.strictEqual(en[0].changes, null);
   assert.deepStrictEqual(en[1].changes.lines.map(function (l) { return l.text; }), [
     'r1 8.8.8.0/24: best path via 10.11.0.20 → via 10.10.0.20 (Local Pref)',
-    'r1 8.8.8.0/24: route bgp 10.11.0.20 on eth2 → bgp 10.10.0.20 on eth1']);
+    'r1 8.8.8.0/24: route bgp 10.11.0.20 on eth2 → bgp 10.10.0.20 on eth1',
+    'r1 8.8.8.0/24 via 10.10.0.20: LocPref 50 → 150']);
   assert.strictEqual(en[1].changes.more, 0);
   assert.deepStrictEqual(en[2].changes.lines.map(function (l) { return [l.text, l.tone]; }).slice(0, 2),
     [['r1 eth1: interface up → down', 'bad'], ['r2 eth1: interface up → down', 'bad']]);
@@ -207,9 +208,25 @@ test('each scene after the first says what changed from the scene before (heavie
   assert.ok(en[2].changes.more > 0);
   var ja = data(walkthrough.build(path.join(EXAMPLE, 'walkthrough.ja.json')).html).scenes;
   assert.match(ja[1].changes.lines[0].text, /^r1 8\.8\.8\.0\/24: 最良経路 via 10\.11\.0\.20 → via 10\.10\.0\.20/);
-  // the same state twice: nothing changed
+  // the same state twice: one line says nothing changed (not an empty block)
   var s = base(); s.scenes.push({ id: 'b', title: 'same', state: FRAME_A });
-  assert.deepStrictEqual(walkthrough.check(s, ROOT).walkthrough.scenes[1].changes, { lines: [], more: 0 });
+  assert.deepStrictEqual(walkthrough.check(s, ROOT).walkthrough.scenes[1].changes,
+    { lines: [{ text: 'nothing changed in what network-xray compares', tone: 'more' }], more: 0 });
+  s.lang = 'ja';
+  assert.match(walkthrough.check(s, ROOT).walkthrough.scenes[1].changes.lines[0].text, /^変わった所は見つからない/);
+});
+
+test('a BGP path that is not chosen and only changes its attributes (LocPref set on the backup path) is a change too', function () {
+  var a = JSON.parse(fs.readFileSync(FRAME_A, 'utf8')), b = JSON.parse(fs.readFileSync(FRAME_A, 'utf8'));
+  var backup = b.r1.bgp_routes.filter(function (r) { return r.next_hop === '10.10.0.20'; })[0];
+  assert.strictEqual(backup.best, false);
+  backup.local_pref = 60; backup.metric = 5;
+  var s = base(); s.scenes[0].state = a; s.scenes.push({ id: 'b', title: 'lp 60 on the backup', state: b });
+  assert.deepStrictEqual(walkthrough.check(s, ROOT).walkthrough.scenes[1].changes.lines.map(function (l) { return l.text; }), [
+    'r1 8.8.8.0/24 via 10.10.0.20: LocPref 50 → 60',
+    'r1 8.8.8.0/24 via 10.10.0.20: MED 0 → 5']);
+  delete b.r1.bgp_routes.filter(function (r) { return r.next_hop === '10.10.0.20'; })[0].local_pref;   // not given by the router
+  assert.strictEqual(walkthrough.check(s, ROOT).walkthrough.scenes[1].changes.lines[0].text, 'r1 8.8.8.0/24 via 10.10.0.20: LocPref 50 → (none)');
 });
 
 // the MCP server, started in a folder of its own (it reads only under it)

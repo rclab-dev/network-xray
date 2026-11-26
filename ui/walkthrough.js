@@ -53,7 +53,10 @@
     var deg = function (n) { return ADJ[n].length; };
     if (NAMES.length === 1) { POS[NAMES[0]] = [cx, cy]; return; }
     var hub = NAMES.slice().sort(function (a, b) { return deg(b) - deg(a); })[0], leaves = NAMES.filter(function (n) { return n !== hub; });
-    if (NAMES.length >= 3 && deg(hub) >= leaves.length) {
+    // the hub on top and the others in one row, only when the others have no links between them (a link from the
+    // first to the third in the row would be drawn behind the second); otherwise a circle
+    var leafLinks = EDGES.some(function (k) { var p = k.split('|'); return p[0] !== hub && p[1] !== hub; });
+    if (NAMES.length >= 3 && deg(hub) >= leaves.length && !leafLinks) {
       POS[hub] = [cx, 70];
       leaves.forEach(function (n, i) { POS[n] = [leaves.length === 1 ? cx : W * 0.18 + W * 0.64 * (i / (leaves.length - 1)), H - 70]; });
     } else [hub].concat(leaves).forEach(function (n, i, all) { var a = (i / all.length) * Math.PI * 2 - Math.PI / 2; POS[n] = [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
@@ -126,7 +129,8 @@
       b.className = 'ov-node' + (hl.nodes.indexOf(n) >= 0 ? ' hl' : '') + (n === curNode ? ' sel' : '');
       b.setAttribute('data-n', n); b.setAttribute('role', 'button'); b.tabIndex = 0;
       b.textContent = n;
-      if (KIND[n]) { var k = doc.createElement('span'); k.className = 'k'; k.textContent = KIND[n]; b.appendChild(k); }
+      if (KIND[n] && KIND[n] !== 'linux') { var k = doc.createElement('span');   // "linux" says nothing: FRR routers and hosts are both linux in containerlab
+ k.className = 'k'; k.textContent = KIND[n]; b.appendChild(k); }
       b.style.left = POS[n][0] + 'px'; b.style.top = POS[n][1] + 'px';
       b.onclick = function () { showNode(n); };
       b.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showNode(n); } };
