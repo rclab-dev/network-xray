@@ -11,6 +11,7 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 - **Collector and SolvedKit:** `--settle` waits for matching states before saving; the rehearsal guide puts the production checklist first.
 - **Collector: `--policy-config` (or `XRAY_POLICY_CONFIG=1`):** keeps the route-map and prefix-list names and prefixes as `policy_config` for `explain_plan`; off by default, so the state still holds no configuration text. Passwords, keys, descriptions and community values are never kept. README: a row in "MCP security at a glance".
 - **MCP:** `prompts/list` and `resources/templates/list` answer with empty lists instead of "Method not found" (clients that ask for every list no longer count two errors).
+- **MCP `list_routers`:** with no lab state yet (no path, not found, a folder without state files) it answers `routers: []` with a note on where the state comes from, instead of an error. A path outside the server's folder or a broken state file is still an error.
 
 ## v1.8.1 — 2026-11-25
 
