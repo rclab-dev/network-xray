@@ -644,6 +644,23 @@ function writeStates(states, live, sj) {   // sj: statesJson(states), when the c
   writeAtomic(SIG_DEST, 'window.LIVE_SIG = ' + JSON.stringify({ run: sigRun, gen: sigGen, nodes: sigNodes, extra: sigExtra }) + ';\n');
 }
 
+/* the per-router summary: what the --watch log line and a --settle that did not settle name as changed */
+var _bgpCls = function (st) { st = String(st || ''); return /establ/i.test(st) ? 'Established' : (st.indexOf('(') >= 0 ? st : (st ? 'down' : '')); };
+var _ifUp = function (x) { return x && x.up === false ? 'down' : 'up'; };
+var _summary = function (states) {
+  var o = {};
+  Object.keys(states).sort().forEach(function (n) {
+    var st = states[n] || {}, ifs = st.interfaces || {};
+    o[n] = {
+      bgp: (st.bgp_neighbors || []).map(function (x) { return x.ip + '=' + _bgpCls(x.state); }).join(','),
+      ospf: (st.ospf_neighbors || []).map(function (x) { return (x.router_id || x.address || '?') + '=' + String(x.state || '').split('/')[0]; }).join(','),
+      ifs: Object.keys(ifs).sort().map(function (k) { return k + '=' + _ifUp(ifs[k]); }).join(','),
+      routes: (st.routing_table || []).length
+    };
+  });
+  return o;
+};
+
 console.log('lab=' + lab + ' proto=' + proto + ' nodes=' + nodes.join(',') + (watch ? ' (watch ' + (intervalMs / 1000) + 's)' : ''));
 
 if (!watch) {
@@ -652,16 +669,32 @@ if (!watch) {
 function oneShot() {
   /* nx_settle: --settle = read again every --interval until two rounds in a row are the same (and at least one router
      was read), or the time runs out (exit 3); the file is written once, from the last round */
-  var start = Date.now(), r0 = collectAll(), rounds = 1, previous, current, settled = false;
+  var start = Date.now(), r0 = collectAll(), rounds = 1, previous, current, previousStates, settled = false;
   if (settle) {
     previous = statesJson(r0.states).json;
     while (Date.now() - start < settleMs) {
       sleepMs(Math.min(intervalMs, settleMs - (Date.now() - start)));
+      previousStates = r0.states;
       r0 = collectAll(); rounds++; current = statesJson(r0.states).json;
       if (r0.ok && current === previous) { settled = true; break; }
       previous = current;
     }
-    if (!settled) { console.error('!! did not settle in ' + Math.round(settleMs / 1000) + ' s (' + rounds + ' rounds)'); process.exitCode = 3; }
+    if (!settled) {
+      console.error('!! did not settle in ' + Math.round(settleMs / 1000) + ' s (' + rounds + ' rounds)');
+      var before = _summary(previousStates || {}), after = _summary(r0.states), details = [];
+      nodes.forEach(function (n) {
+        var a = before[n] || {}, b = after[n] || {}, st = r0.states[n], changed = false;
+        if (!st || st.nx_unread) { details.push(n + ': not read'); return; }
+        ['bgp', 'ospf', 'ifs', 'routes'].forEach(function (k) {
+          if (String(a[k]) !== String(b[k])) {
+            details.push(n + ': ' + (k === 'ospf' ? 'ospf neighbors' : k === 'bgp' ? 'bgp neighbors' : k) + ' ' + (a[k] === undefined ? '-' : a[k]) + ' -> ' + b[k]); changed = true;
+          }
+        });
+        if (!changed && previousStates && JSON.stringify(previousStates[n]) !== JSON.stringify(st)) details.push(n + ': state changed');
+      });
+      details.slice(0, 3).forEach(function (line) { console.error('  ' + line); });   // release-check: ok (the --settle result, asked for)
+      process.exitCode = 3;
+    }
     else console.log('settled after ' + rounds + ' rounds');   // release-check: ok (the --settle result, asked for)
   }
   if (!r0.ok && !Object.keys(r0.states).length && fs.existsSync(dest)) {
@@ -679,21 +712,6 @@ if (watch) {
      log line appears only when the summary changes. BGP states that are all "not up" (Idle/Connect/Active/OpenSent/
      OpenConfirm) count as one, so a session retrying Connect <-> Active no longer prints a line every few seconds.
      Idle with a reason, e.g. "Idle (PfxCt)", stays distinct. The line says what changed. */
-  var _bgpCls = function (st) { st = String(st || ''); return /establ/i.test(st) ? 'Established' : (st.indexOf('(') >= 0 ? st : (st ? 'down' : '')); };
-  var _ifUp = function (x) { return x && x.up === false ? 'down' : 'up'; };
-  var _summary = function (states) {
-    var o = {};
-    Object.keys(states).sort().forEach(function (n) {
-      var st = states[n] || {}, ifs = st.interfaces || {};
-      o[n] = {
-        bgp: (st.bgp_neighbors || []).map(function (x) { return x.ip + '=' + _bgpCls(x.state); }).join(','),
-        ospf: (st.ospf_neighbors || []).map(function (x) { return (x.router_id || x.address || '?') + '=' + String(x.state || '').split('/')[0]; }).join(','),
-        ifs: Object.keys(ifs).sort().map(function (k) { return k + '=' + _ifUp(ifs[k]); }).join(','),
-        routes: (st.routing_table || []).length
-      };
-    });
-    return o;
-  };
   var lastSum = null;
   var last = '';
   var tick = function () {

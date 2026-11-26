@@ -110,6 +110,16 @@ test('--settle stops after two equal rounds or times out on changing states', fu
   } finally { fs.rmSync(a.dir, { recursive: true, force: true }); fs.rmSync(b.dir, { recursive: true, force: true }); }
 });
 
+test('--settle reports the router that changed after timing out', function () {
+  var one = 'name: sj\ntopology:\n  nodes:\n    r1: { kind: linux }\n';
+  var changing = "var fs=require('fs'),a=process.argv,o=a[a.indexOf('--out')+1],f=require('path').join(process.env.TMPDIR,'count'),n=fs.existsSync(f)?+fs.readFileSync(f,'utf8'):0;fs.writeFileSync(f,String(++n));fs.writeFileSync(o,JSON.stringify({success:true,target_node:'r1',round:n}));";
+  var r = collectOnce(['--settle', '3', '--interval', '1'], one, changing);
+  try {
+    assert.strictEqual(r.result.status, 3, r.result.stderr);
+    assert.match(r.result.stderr, /did not settle in 3 s \(\d+ rounds\)[^\n]*\n  r1: /);
+  } finally { fs.rmSync(r.dir, { recursive: true, force: true }); }
+});
+
 test('--settle: routers that cannot be read never count as settled (the same empty round twice is not a lab at rest)', function () {
   var one = 'name: sj\ntopology:\n  nodes:\n    r1: { kind: linux }\n';
   var r = collectOnce(['--settle', '3', '--interval', '1'], one, 'process.exit(1);');

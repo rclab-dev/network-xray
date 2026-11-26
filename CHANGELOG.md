@@ -2,6 +2,10 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
+## Unreleased
+
+- **Collector:** `--settle` reports recent differences when it times out.
+
 ## v1.8.2 — 2026-11-26
 
 - **Single-node panel: links drawn as the DeepDive draws them:** the link is its own line (solid in the link colour; a shut-down interface red dashed) and each protocol's tunnel is a separate pair of lines beside it, by state: OSPF Full green solid, ExStart / Exchange / Loading green dashed, 2-Way orange solid, Init orange dashed; BGP Established purple solid, not established purple dashed. The legend says the same.

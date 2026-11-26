@@ -435,6 +435,9 @@ node clab-xray-collect.js examples/q6-ospf-solved/q6.clab.yml . ospf --settle 30
 
 Exit 0 means settled; 3 means it did not settle in time. Underneath, it collects twice and compares the states,
 repeating until two consecutive rounds match (like collecting twice and checking that `diff` says `(none)`).
+On exit 3, read the printed differences (or `diff` the last two states). The same route or adjacency going back and
+forth means it is still converging: give it more time. Something staying down, or a router that cannot be read, is a
+fault to investigate before the rehearsal.
 A state taken while OSPF is converging could make the rollback check report a change the procedure did not make.
 
 **2. Run the procedure, take "after", and let `--for change` show what moved.** The first try of the procedure raised the
