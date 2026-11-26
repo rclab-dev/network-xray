@@ -2,10 +2,13 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## Unreleased
+## v1.8.3 — 2026-11-26
 
-- **Collector:** `--settle` reports recent differences when it times out.
+- **`explain_plan`:** a line tied to nothing now says why, where the state tells it: an interface name not in the data, a network or next hop in none of the router's subnets, or the first words of a line that is not read. Lines under another router process are no longer read as OSPF / BGP lines. The tags do not change.
+- **docs/mcp.md (en / ja):** how to read "no link found" and `?` when reviewing a plan.
+- **Collector:** `--settle` reports what differed between the last two rounds when it times out (exit 3). SolvedKit guide (ja) section 10: what to do on exit 3.
 - **SolvedKit `--for change`:** also keeps the BGP paths (best and backup) that are the same before and after, and the selected route of the `--prefix` destination.
+- **docs/ja/solvedkit.md:** section 10 step 1 restored (four lines had turned into question marks in v1.8.2).
 
 ## v1.8.2 — 2026-11-26
 
