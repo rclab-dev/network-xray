@@ -19,7 +19,7 @@
  *                                               reason_source: "device" (router said) / "derived" (the IOS-XE collector
  *                                               worked it out from the printed columns) / "comparison" (inferred) / null
  *
- *   story_check    { story }                 -> a story file (STORY-CONTRACT.md) checked: each scene's router, prefix and
+ *   walkthrough_check    { walkthrough }                 -> a walkthrough file (WALKTHROUGH-CONTRACT.md) checked: each scene's router, prefix and
  *                                               what changed from the scene before; the command that writes its page
  *
  * Every successful call returns the same JSON object as text content and as structuredContent; bad input
@@ -331,18 +331,18 @@ var TOOLS = [
     annotations: READ_ONLY
   },
   {
-    name: 'story_check',
-    description: 'Check a story file (STORY-CONTRACT.md: a list of scenes, each the whole lab state at one moment, with a title, ' +
+    name: 'walkthrough_check',
+    description: 'Check a walkthrough file (WALKTHROUGH-CONTRACT.md: a list of scenes, each the whole lab state at one moment, with a title, ' +
       'a caption and a source label such as observed or answer-example) and say what each scene shows: its router and prefix, ' +
       'and what changed from the scene before (worked out from the states, heaviest first). ok is false with every problem ' +
-      'listed when the story is not valid. The files the story names are read under the same folder as the other tools. ' +
-      'It writes nothing: page gives the command that writes the story as one HTML page that plays it. Read-only.',
+      'listed when the walkthrough is not valid. The files the walkthrough names are read under the same folder as the other tools. ' +
+      'It writes nothing: page gives the command that writes the walkthrough as one HTML page that plays it. Read-only.',
     inputSchema: {
       type: 'object',
       properties: {
-        story: { type: 'string', description: 'The story file, e.g. lab/story.json (capture-frames.js --story writes a draft)' }
+        walkthrough: { type: 'string', description: 'The walkthrough file, e.g. lab/walkthrough.json (capture-frames.js --walkthrough writes a draft)' }
       },
-      required: ['story'],
+      required: ['walkthrough'],
       additionalProperties: false
     },
     annotations: READ_ONLY
@@ -581,7 +581,7 @@ function noStateYet(why) {
 function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = routerNodeAlias(args || {});   /* nx_mcp_router_node */
-  if (defaultPath && !/^(state_diff|check_verify|check_suggest|check_init|story_check)$/.test(name) && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
+  if (defaultPath && !/^(state_diff|check_verify|check_suggest|check_init|walkthrough_check)$/.test(name) && (args.path == null || args.path === '')) { args = Object.assign({}, args); args.path = defaultPath; }   /* nx_mcp_default_path */
   if (name === 'lab_state') {   /* nx_nh_wrong: only_problems = wrong and counts only */
     var op = args.only_problems;
     if (op != null && typeof op !== 'boolean') throw new Error('argument only_problems must be true or false');
@@ -636,40 +636,40 @@ function callTool(name, args) {
     var p4 = str(args, 'path', true), rt = str(args, 'router', true), pfx = str(args, 'prefix', true);
     return query.whyPath(loadStates(p4), rt, pfx, str(args, 'vrf', false));
   }
-  if (name === 'story_check') return storyCheck(str(args, 'story', true));   /* nx_story */
+  if (name === 'walkthrough_check') return walkthroughCheck(str(args, 'walkthrough', true));   /* nx_walkthrough */
   return null;
 }
 
-/* nx_story (v1.9): a story file and every file it names are read under the same folder as the states (checkPath); a
+/* nx_walkthrough (v1.9): a walkthrough file and every file it names are read under the same folder as the states (checkPath); a
    file that is not what it should be gets a fixed message (nothing of its contents). Nothing is written. */
-var NOT_STORY = 'not a story file (a JSON object, see STORY-CONTRACT.md)';
-function storyCheck(file) {
+var NOT_WALKTHROUGH = 'not a walkthrough file (a JSON object, see WALKTHROUGH-CONTRACT.md)';
+function walkthroughCheck(file) {
   checkPath(file);
   var st;
   try { st = fs.statSync(file); } catch (e) { throw new Error('not found: ' + file); }
-  if (!st.isFile()) throw new Error(NOT_STORY);
-  var story = require('./xray-story.js');
-  if (st.size > story.LIMITS.bytes) throw new Error('the story file is larger than 16 MiB');
+  if (!st.isFile()) throw new Error(NOT_WALKTHROUGH);
+  var walkthrough = require('./xray-walkthrough.js');
+  if (st.size > walkthrough.LIMITS.bytes) throw new Error('the walkthrough file is larger than 16 MiB');
   var data;
-  try { var text = fs.readFileSync(file, 'utf8'); data = JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text); } catch (e) { throw new Error(NOT_STORY); }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error(NOT_STORY);
-  var c = story.check(data, path.dirname(path.resolve(file)), {
+  try { var text = fs.readFileSync(file, 'utf8'); data = JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text); } catch (e) { throw new Error(NOT_WALKTHROUGH); }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error(NOT_WALKTHROUGH);
+  var c = walkthrough.check(data, path.dirname(path.resolve(file)), {
     quiet: true,
     read: function (f) {
       checkPath(f);
       var s = fs.statSync(f);
-      if (!s.isFile() || s.size > story.LIMITS.bytes) throw new Error('not a regular file of at most 16 MiB');
+      if (!s.isFile() || s.size > walkthrough.LIMITS.bytes) throw new Error('not a regular file of at most 16 MiB');
       return fs.readFileSync(f, 'utf8');
     }
   });
   if (c.problems.length) return { ok: false, problems: c.problems };
   return {
-    ok: true, title: c.story.title, lang: c.story.lang,
-    scenes: c.story.scenes.map(function (s) {
+    ok: true, title: c.walkthrough.title, lang: c.walkthrough.lang,
+    scenes: c.walkthrough.scenes.map(function (s) {
       return { id: s.id, title: s.title, source: s.source, node: s.show.node || null, prefix: s.show.prefix || null, dwell: s.dwell,
         routers: Object.keys(s.state), changes: s.changes ? s.changes.lines.map(function (l) { return l.text; }) : [], more_changes: s.changes ? s.changes.more : 0 };
     }),
-    page: 'node scripts/xray-story.js ' + file + ' --out story.html   (one HTML page that plays it, works offline)'
+    page: 'node scripts/xray-walkthrough.js ' + file + ' --out walkthrough.html   (one HTML page that plays it, works offline)'
   };
 }
 

@@ -11,7 +11,7 @@ usage: ./xray.sh [--bind <address>] [--interval <seconds>] [--check] [--attach] 
   -h, --help            show this help
   env: SUDO= (privilege prefix, default sudo), NX_IOS_INTERVAL (Cisco IOS read interval, default 10)
        ./xray.sh snapshot <name> [--url <page address>]   save the lab's state now as <name>.js (for SolvedKit)
-       ./xray.sh story <story.json> [--out <file.html>]    write a story (scenes of lab states) as one page that plays it
+       ./xray.sh walkthrough <walkthrough.json> [--out <file.html>]    write a walkthrough (scenes of lab states) as one page that plays it
 
 ## ./xray.sh no/such.clab.yml (exit 1)
 topology not found: no/such.clab.yml

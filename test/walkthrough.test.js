@@ -1,5 +1,5 @@
-// story.test.js — scripts/xray-story.js: the story format (STORY-CONTRACT.md) is checked, and a valid story is written as
-// one HTML page with the engine inside that loads nothing from outside; the q21 example stories are valid.
+// walkthrough.test.js — scripts/xray-walkthrough.js: the walkthrough format (WALKTHROUGH-CONTRACT.md) is checked, and a valid walkthrough is written as
+// one HTML page with the engine inside that loads nothing from outside; the q21 example walkthroughs are valid.
 // Run: node --test        (from the repo root; Node >= 18, no dependencies)
 'use strict';
 var test = require('node:test');
@@ -8,38 +8,38 @@ var fs = require('fs');
 var os = require('os');
 var path = require('path');
 var cp = require('child_process');
-var story = require('../scripts/xray-story.js');
+var walkthrough = require('../scripts/xray-walkthrough.js');
 var cf = require('../scripts/capture-frames.js');
 
 var ROOT = path.join(__dirname, '..');
-var SCRIPT = path.join(ROOT, 'scripts', 'xray-story.js');
-var EXAMPLE = path.join(ROOT, 'demo', 'story-q21');
+var SCRIPT = path.join(ROOT, 'scripts', 'xray-walkthrough.js');
+var EXAMPLE = path.join(ROOT, 'demo', 'walkthrough-q21');
 var FRAME_A = path.join(ROOT, 'demo', 'bgp-lp', 'frameA.json');
 var TOPO = { nodes: [{ name: 'r1', kind: 'linux' }, { name: 'r2', kind: 'linux' }, { name: 'r3', kind: 'linux' }],
   links: [{ source: 'r1', target: 'r2' }, { source: 'r1', target: 'r3' }] };
 
-// a small valid story: the q21 frame A as the state of one scene, the topology written in the story
+// a small valid walkthrough: the q21 frame A as the state of one scene, the topology written in the walkthrough
 function base() {
-  return { story: '0.1', title: 'one scene', topology: JSON.parse(JSON.stringify(TOPO)),
+  return { walkthrough: '0.1', title: 'one scene', topology: JSON.parse(JSON.stringify(TOPO)),
     scenes: [{ id: 'a', title: 'first', caption: 'r3 wins', state: FRAME_A, show: { node: 'r1', prefix: '8.8.8.0/24' } }] };
 }
-function problems(s) { return story.check(s, ROOT).problems; }
+function problems(s) { return walkthrough.check(s, ROOT).problems; }
 function has(list, re) { assert.ok(list.some(function (m) { return re.test(m); }), 'expected a problem like ' + re + ', got: ' + JSON.stringify(list)); }
-// the story data in a built page
+// the walkthrough data in a built page
 function data(html) {
-  var m = /<script id="nx-story" type="application\/json">([\s\S]*?)<\/script>/.exec(html);
-  assert.ok(m, 'no story data in the page');
+  var m = /<script id="nx-walkthrough" type="application\/json">([\s\S]*?)<\/script>/.exec(html);
+  assert.ok(m, 'no walkthrough data in the page');
   return JSON.parse(m[1]);
 }
 function cli(args) {
   var r = cp.spawnSync(process.execPath, [SCRIPT].concat(args), { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
   return { code: r.status, stdout: r.stdout || '', stderr: r.stderr || '' };
 }
-function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'nx-story-test-')); }
+function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'nx-walkthrough-test-')); }
 
-test('the q21 example stories (en, ja) are valid and are built into a page of 4 scenes', function () {
-  ['story.json', 'story.ja.json'].forEach(function (f) {
-    var r = story.build(path.join(EXAMPLE, f));
+test('the q21 example walkthroughs (en, ja) are valid and are built into a page of 4 scenes', function () {
+  ['walkthrough.json', 'walkthrough.ja.json'].forEach(function (f) {
+    var r = walkthrough.build(path.join(EXAMPLE, f));
     assert.deepStrictEqual(r.problems, [], f);
     var d = data(r.html);
     assert.strictEqual(d.scenes.length, 4, f);
@@ -54,62 +54,62 @@ test('the q21 example stories (en, ja) are valid and are built into a page of 4 
     assert.match(r.html, new RegExp('<html lang="' + d.lang + '">'));
   });
   // the fault scene: on r1 the path via r3 (10.11.0.20) is best, the one via r2 (LocPref 50) is not
-  var fault = data(story.build(path.join(EXAMPLE, 'story.json')).html).scenes[0].state.r1.bgp_routes;
+  var fault = data(walkthrough.build(path.join(EXAMPLE, 'walkthrough.json')).html).scenes[0].state.r1.bgp_routes;
   assert.deepStrictEqual(fault.filter(function (p) { return p.prefix === '8.8.8.0'; }).map(function (p) { return [p.next_hop, p.best]; }),
     [['10.10.0.20', false], ['10.11.0.20', true]]);
 });
 
 test('the page has the engine and the player inside: no script, style or image is loaded from anywhere', function () {
-  var html = story.build(path.join(EXAMPLE, 'story.json')).html;
+  var html = walkthrough.build(path.join(EXAMPLE, 'walkthrough.json')).html;
   var tags = html.replace(/(<script\b[^>]*>)[\s\S]*?<\/script>/gi, '$1</script>');   // the tags only, not the code inside them
   assert.ok(html.length - tags.length > 900000, 'the engine is inside the page');
   assert.doesNotMatch(tags, /<script[^>]+\bsrc=/i);
   assert.doesNotMatch(tags, /<link[^>]+rel=["']?stylesheet/i);
   assert.doesNotMatch(tags, /<img[^>]+\bsrc=["']?(https?:)?\/\//i);
-  assert.doesNotMatch(html, /<!-- nx-inline:|<!-- nx-story-data -->/);
-  ['xrayCore', 'clabXray', 'XraySkin', 'xrayStory'].forEach(function (g) { assert.ok(html.indexOf(g) >= 0, g); });
+  assert.doesNotMatch(html, /<!-- nx-inline:|<!-- nx-walkthrough-data -->/);
+  ['xrayCore', 'clabXray', 'XraySkin', 'xrayWalkthrough'].forEach(function (g) { assert.ok(html.indexOf(g) >= 0, g); });
 });
 
-test('text from the story cannot end the data script or become markup', function () {
+test('text from the walkthrough cannot end the data script or become markup', function () {
   var s = base();
   s.title = '</script><img src=x onerror=alert(1)> & "q"';
   s.description = '<!-- not a comment --> </SCRIPT>';
   s.scenes[0].caption = '</script><script>alert(2)</script>';
-  var d = tmp(), f = path.join(d, 'story.json');
+  var d = tmp(), f = path.join(d, 'walkthrough.json');
   fs.writeFileSync(f, JSON.stringify(s));
-  var r = story.build(f);
+  var r = walkthrough.build(f);
   assert.deepStrictEqual(r.problems, []);
-  var m = /<script id="nx-story" type="application\/json">([\s\S]*?)<\/script>/.exec(r.html)[1];
+  var m = /<script id="nx-walkthrough" type="application\/json">([\s\S]*?)<\/script>/.exec(r.html)[1];
   assert.doesNotMatch(m, /<\/script|<!--/i);
   assert.strictEqual(data(r.html).title, s.title);
   assert.strictEqual(data(r.html).scenes[0].caption, s.scenes[0].caption);
-  assert.match(r.html, /<title>&lt;\/script&gt;&lt;img src=x onerror=alert\(1\)&gt; &amp; &quot;q&quot; - network-xray story<\/title>/);
+  assert.match(r.html, /<title>&lt;\/script&gt;&lt;img src=x onerror=alert\(1\)&gt; &amp; &quot;q&quot; - network-xray Walkthrough<\/title>/);
 });
 
-test('a story with the topology written in it, or as the graph JSON of containerlab, is valid', function () {
+test('a walkthrough with the topology written in it, or as the graph JSON of containerlab, is valid', function () {
   assert.deepStrictEqual(problems(base()), []);
   var s = base(); s.topology = 'demo/bgp-lp/topo.json';
   assert.deepStrictEqual(problems(s), []);
 });
 
-test('defaults: lang en, source unknown, dwell 6000; a scene\'s source wins over the story\'s; ext is accepted and not passed on', function () {
+test('defaults: lang en, source unknown, dwell 6000; a scene\'s source wins over the walkthrough\'s; ext is accepted and not passed on', function () {
   var s = base();
   s.ext = { rcl: { anything: [1, 2] } };
   s.scenes[0].ext = { rcl: { engine: ['xray-bgp-established'], panel: [{ type: 'h.title' }] } };
   s.scenes.push({ id: 'b', title: 'second', state: FRAME_A, source: 'answer-example', dwell: 9000 });
-  var c = story.check(s, ROOT);
+  var c = walkthrough.check(s, ROOT);
   assert.deepStrictEqual(c.problems, []);
-  assert.strictEqual(c.story.lang, 'en');
-  assert.deepStrictEqual(c.story.scenes.map(function (x) { return [x.source, x.dwell]; }), [['unknown', 6000], ['answer-example', 9000]]);
-  assert.ok(!('ext' in c.story) && !('ext' in c.story.scenes[0]));
+  assert.strictEqual(c.walkthrough.lang, 'en');
+  assert.deepStrictEqual(c.walkthrough.scenes.map(function (x) { return [x.source, x.dwell]; }), [['unknown', 6000], ['answer-example', 9000]]);
+  assert.ok(!('ext' in c.walkthrough) && !('ext' in c.walkthrough.scenes[0]));
   s.source = 'illustrative';
-  assert.strictEqual(story.check(s, ROOT).story.scenes[0].source, 'illustrative');
+  assert.strictEqual(walkthrough.check(s, ROOT).walkthrough.scenes[0].source, 'illustrative');
 });
 
 test('unknown keys are refused, except under ext', function () {
   var s = base(); s.color = 'red'; s.scenes[0].note = 'x'; s.scenes[0].show.zoom = 2;
   var p = problems(s);
-  has(p, /^story: unknown key "color"/);
+  has(p, /^walkthrough: unknown key "color"/);
   has(p, /^scenes\[0\]: unknown key "note"/);
   has(p, /^scenes\[0\]\.show: unknown key "zoom"/);
   s = base(); s.scenes[0].show.highlight = { nodes: [], colour: 'x' };
@@ -117,7 +117,7 @@ test('unknown keys are refused, except under ext', function () {
 });
 
 test('the version, title, scenes and ids are checked', function () {
-  var s = base(); s.story = '1.0'; has(problems(s), /^story: must be "0\.1"/);
+  var s = base(); s.walkthrough = '1.0'; has(problems(s), /^walkthrough: must be "0\.1"/);
   s = base(); delete s.title; has(problems(s), /^title: needs text/);
   s = base(); s.title = 'x'.repeat(121); has(problems(s), /^title:/);
   s = base(); s.scenes = []; has(problems(s), /^scenes: needs a list/);
@@ -129,7 +129,7 @@ test('the version, title, scenes and ids are checked', function () {
   s = base(); s.lang = 'fr'; has(problems(s), /^lang: one of en, ja/);
   s = base(); s.scenes[0].dwell = 100; has(problems(s), /\.dwell: whole milliseconds/);
   s = base(); s.scenes[0].dwell = 1500.5; has(problems(s), /\.dwell:/);
-  assert.deepStrictEqual(story.check([], ROOT).problems, ['the story must be a JSON object']);
+  assert.deepStrictEqual(walkthrough.check([], ROOT).problems, ['the walkthrough must be a JSON object']);
 });
 
 test('names must be in the topology and the shown router must have a state in the scene', function () {
@@ -147,55 +147,55 @@ test('names must be in the topology and the shown router must have a state in th
   s = base(); s.topology = { nodes: [{ name: 'r1' }], links: [{ source: 'r1', target: 'r2' }] }; has(problems(s), /topology\.links\[0\]:/);
 });
 
-test('states are read from a file or written in the story, and checked against the states schema', function () {
+test('states are read from a file or written in the walkthrough, and checked against the states schema', function () {
   var s = base(); s.scenes[0].state = 'no/such/frame.json'; has(problems(s), /\.state: cannot read no\/such\/frame\.json/);
   s = base(); s.scenes[0].state = JSON.parse(fs.readFileSync(FRAME_A, 'utf8')); assert.deepStrictEqual(problems(s), []);
   s = base(); var one = JSON.parse(fs.readFileSync(FRAME_A, 'utf8')).r1;   // one router's state = a map of that router
-  s.scenes[0].state = one; var c = story.check(s, ROOT);
-  assert.deepStrictEqual(c.problems, []); assert.deepStrictEqual(Object.keys(c.story.scenes[0].state), ['r1']);
+  s.scenes[0].state = one; var c = walkthrough.check(s, ROOT);
+  assert.deepStrictEqual(c.problems, []); assert.deepStrictEqual(Object.keys(c.walkthrough.scenes[0].state), ['r1']);
   s = base(); s.scenes[0].state = { r1: { target_node: 'r1', interfaces: 'not an object' } };
   has(problems(s), /scenes\[0\]\.state\/r1/);
   s = base(); s.scenes[0].state = 7; has(problems(s), /\.state: needs a file name or the state itself/);
 });
 
-test('command line: --check, --out, a story that is not valid (exit 1, every problem listed), usage errors (exit 2)', function () {
+test('command line: --check, --out, a walkthrough that is not valid (exit 1, every problem listed), usage errors (exit 2)', function () {
   var d = tmp();
-  var r = cli([path.join(EXAMPLE, 'story.json'), '--check']);
+  var r = cli([path.join(EXAMPLE, 'walkthrough.json'), '--check']);
   assert.strictEqual(r.code, 0, r.stderr); assert.match(r.stdout, /^ok .* \(4 scenes\)/);
   var out = path.join(d, 'q21.html');
-  r = cli([path.join(EXAMPLE, 'story.json'), '--out', out]);
+  r = cli([path.join(EXAMPLE, 'walkthrough.json'), '--out', out]);
   assert.strictEqual(r.code, 0, r.stderr); assert.ok(fs.statSync(out).size > 100000);
-  var bad = base(); bad.story = '2'; bad.scenes[0].show.node = 'r9'; delete bad.scenes[0].state;
+  var bad = base(); bad.walkthrough = '2'; bad.scenes[0].show.node = 'r9'; delete bad.scenes[0].state;
   bad.topology = TOPO; fs.writeFileSync(path.join(d, 'bad.json'), JSON.stringify(bad));
   r = cli([path.join(d, 'bad.json')]);
   assert.strictEqual(r.code, 1); assert.match(r.stdout, /^FAIL /);
-  assert.match(r.stdout, /story: must be/); assert.match(r.stdout, /state: needed/); assert.match(r.stdout, /show\.node/);
-  assert.ok(!fs.existsSync(path.join(d, 'bad.html')), 'nothing is written for a story that is not valid');
-  fs.writeFileSync(path.join(d, 'broken.json'), '{ "story": ');
+  assert.match(r.stdout, /walkthrough: must be/); assert.match(r.stdout, /state: needed/); assert.match(r.stdout, /show\.node/);
+  assert.ok(!fs.existsSync(path.join(d, 'bad.html')), 'nothing is written for a walkthrough that is not valid');
+  fs.writeFileSync(path.join(d, 'broken.json'), '{ "walkthrough": ');
   r = cli([path.join(d, 'broken.json')]); assert.strictEqual(r.code, 1); assert.match(r.stdout, /not JSON/);
   r = cli([path.join(d, 'missing.json')]); assert.strictEqual(r.code, 2); assert.match(r.stderr, /cannot read/);
   r = cli([]); assert.strictEqual(r.code, 2);
   r = cli(['a.json', '--out']); assert.strictEqual(r.code, 2); assert.match(r.stderr, /--out needs a file name/);
 });
 
-test('capture-frames --story: the draft story of the frames is valid as it is', function () {
+test('capture-frames --walkthrough: the draft walkthrough of the frames is valid as it is', function () {
   var d = tmp();
   fs.copyFileSync(FRAME_A, path.join(d, 'frame1.json'));
   fs.copyFileSync(path.join(ROOT, 'demo', 'bgp-lp', 'frameB.json'), path.join(d, 'frame2.json'));
-  var draft = cf.draftStory('q21-bgp-lp', path.relative(d, path.join(ROOT, 'examples', 'q21-bgp-lp', 'q21.clab.yml')), [
+  var draft = cf.draftWalkthrough('q21-bgp-lp', path.relative(d, path.join(ROOT, 'examples', 'q21-bgp-lp', 'q21.clab.yml')), [
     { frame: 'frame1.json', name: 'steady', settled: true },
     { frame: 'frame2.json', name: 'lp 150 on r2', settled: false }]);
   assert.deepStrictEqual(draft.scenes.map(function (s) { return [s.id, s.title, s.source || '']; }),
     [['s1', 'steady', ''], ['s2', 'lp 150 on r2', 'observed-unsettled']]);
   assert.ok(draft.topology.indexOf('\\') < 0, 'the topology path is written with /');
-  fs.writeFileSync(path.join(d, 'story.json'), JSON.stringify(draft));
-  var r = story.build(path.join(d, 'story.json'));
+  fs.writeFileSync(path.join(d, 'walkthrough.json'), JSON.stringify(draft));
+  var r = walkthrough.build(path.join(d, 'walkthrough.json'));
   assert.deepStrictEqual(r.problems, []);
   assert.deepStrictEqual(data(r.html).scenes.map(function (s) { return s.source; }), ['observed', 'observed-unsettled']);
 });
 
 test('each scene after the first says what changed from the scene before (heaviest first, at most 3 lines)', function () {
-  var en = data(story.build(path.join(EXAMPLE, 'story.json')).html).scenes;
+  var en = data(walkthrough.build(path.join(EXAMPLE, 'walkthrough.json')).html).scenes;
   assert.strictEqual(en[0].changes, null);
   assert.deepStrictEqual(en[1].changes.lines.map(function (l) { return l.text; }), [
     'r1 8.8.8.0/24: best path via 10.11.0.20 → via 10.10.0.20 (Local Pref)',
@@ -205,17 +205,17 @@ test('each scene after the first says what changed from the scene before (heavie
     [['r1 eth1: interface up → down', 'bad'], ['r2 eth1: interface up → down', 'bad']]);
   assert.strictEqual(en[2].changes.lines.length, 3);
   assert.ok(en[2].changes.more > 0);
-  var ja = data(story.build(path.join(EXAMPLE, 'story.ja.json')).html).scenes;
+  var ja = data(walkthrough.build(path.join(EXAMPLE, 'walkthrough.ja.json')).html).scenes;
   assert.match(ja[1].changes.lines[0].text, /^r1 8\.8\.8\.0\/24: 最良経路 via 10\.11\.0\.20 → via 10\.10\.0\.20/);
   // the same state twice: nothing changed
   var s = base(); s.scenes.push({ id: 'b', title: 'same', state: FRAME_A });
-  assert.deepStrictEqual(story.check(s, ROOT).story.scenes[1].changes, { lines: [], more: 0 });
+  assert.deepStrictEqual(walkthrough.check(s, ROOT).walkthrough.scenes[1].changes, { lines: [], more: 0 });
 });
 
 // the MCP server, started in a folder of its own (it reads only under it)
 function mcp(cwd, calls) {
   var lines = [{ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0' } } }]
-    .concat(calls.map(function (a, i) { return { jsonrpc: '2.0', id: i + 2, method: 'tools/call', params: { name: 'story_check', arguments: a } }; }))
+    .concat(calls.map(function (a, i) { return { jsonrpc: '2.0', id: i + 2, method: 'tools/call', params: { name: 'walkthrough_check', arguments: a } }; }))
     .map(function (m) { return JSON.stringify(m); });
   var env = Object.assign({}, process.env); delete env.NX_MCP_ALLOW_ANY_PATH; delete env.NX_MCP_PATH;
   var r = cp.spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'xray-mcp.js')], { cwd: cwd, input: lines.join('\n') + '\n', encoding: 'utf8', timeout: 20000, env: env });
@@ -225,15 +225,15 @@ function mcp(cwd, calls) {
   return calls.map(function (_, i) { var x = by[i + 2]; return x.isError ? { error: JSON.parse(x.content[0].text).error } : x.structuredContent; });
 }
 
-test('MCP story_check: the scenes and their changes, the files it names read only under the server\'s folder, nothing written', function () {
+test('MCP walkthrough_check: the scenes and their changes, the files it names read only under the server\'s folder, nothing written', function () {
   var d = tmp(), lab = path.join(d, 'lab');
   fs.mkdirSync(lab);
   ['frameA.json', 'frameB.json'].forEach(function (f) { fs.copyFileSync(path.join(ROOT, 'demo', 'bgp-lp', f), path.join(lab, f)); });
   fs.copyFileSync(path.join(ROOT, 'demo', 'bgp-lp', 'topo.json'), path.join(lab, 'topo.json'));
-  var good = { story: '0.1', title: 'q21', topology: 'topo.json', scenes: [
+  var good = { walkthrough: '0.1', title: 'q21', topology: 'topo.json', scenes: [
     { id: 'a', title: 'fault', state: 'frameA.json', show: { node: 'r1', prefix: '8.8.8.0/24' } },
     { id: 'b', title: 'fix', state: 'frameB.json', source: 'answer-example' }] };
-  fs.writeFileSync(path.join(lab, 'story.json'), JSON.stringify(good));
+  fs.writeFileSync(path.join(lab, 'walkthrough.json'), JSON.stringify(good));
   var outside = JSON.parse(JSON.stringify(good)); outside.scenes[1].state = FRAME_A;   // a file outside the folder
   fs.writeFileSync(path.join(lab, 'outside.json'), JSON.stringify(outside));
   fs.writeFileSync(path.join(lab, 'secret.json'), '{"token": "TOP-SECRET-VALUE", "target_node": 7}');
@@ -241,29 +241,29 @@ test('MCP story_check: the scenes and their changes, the files it names read onl
   fs.writeFileSync(path.join(lab, 'leak.json'), JSON.stringify(leak));
   fs.writeFileSync(path.join(lab, 'notjson.txt'), 'TOP-SECRET-VALUE is not JSON');
   var before = fs.readdirSync(lab).sort();
-  var r = mcp(d, [{ story: 'lab/story.json' }, { story: 'lab/outside.json' }, { story: 'lab/leak.json' }, { story: 'lab/notjson.txt' },
-    { story: FRAME_A }, { story: 'lab/none.json' }]);
+  var r = mcp(d, [{ walkthrough: 'lab/walkthrough.json' }, { walkthrough: 'lab/outside.json' }, { walkthrough: 'lab/leak.json' }, { walkthrough: 'lab/notjson.txt' },
+    { walkthrough: FRAME_A }, { walkthrough: 'lab/none.json' }]);
   assert.strictEqual(r[0].ok, true);
   assert.deepStrictEqual(r[0].scenes.map(function (s) { return [s.id, s.source, s.node, s.prefix]; }), [['a', 'unknown', 'r1', '8.8.8.0/24'], ['b', 'answer-example', null, null]]);
   assert.deepStrictEqual(r[0].scenes[0].changes, []);
   assert.match(r[0].scenes[1].changes[0], /^r1 8\.8\.8\.0\/24: best path via 10\.11\.0\.20 → via 10\.10\.0\.20/);
-  assert.match(r[0].page, /^node scripts\/xray-story\.js lab\/story\.json --out /);
+  assert.match(r[0].page, /^node scripts\/xray-walkthrough\.js lab\/walkthrough\.json --out /);
   assert.strictEqual(r[1].ok, false);
   has(r[1].problems, /scenes\[1\]\.state: cannot read .*: outside the folder this server reads/);
   assert.strictEqual(r[2].ok, false);
   assert.ok(JSON.stringify(r[2]).indexOf('TOP-SECRET') < 0, 'nothing of the file is quoted: ' + JSON.stringify(r[2]));
   has(r[2].problems, /^topology: needs nodes/);
   has(r[2].problems, /scenes\[1\]\.state: secret\.json: not a network-xray state file/);
-  assert.deepStrictEqual(r[3], { error: 'not a story file (a JSON object, see STORY-CONTRACT.md)' });
+  assert.deepStrictEqual(r[3], { error: 'not a walkthrough file (a JSON object, see WALKTHROUGH-CONTRACT.md)' });
   assert.match(r[4].error, /^outside the folder this server reads/);
   assert.match(r[5].error, /^not found: /);
   assert.deepStrictEqual(fs.readdirSync(lab).sort(), before, 'nothing written');
 });
 
-test('./xray.sh story is scripts/xray-story.js', { skip: process.platform === 'win32' ? 'bash' : false }, function () {
-  var r = cp.spawnSync('bash', [path.join(ROOT, 'xray.sh'), 'story', path.join(EXAMPLE, 'story.json'), '--check'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+test('./xray.sh walkthrough is scripts/xray-walkthrough.js', { skip: process.platform === 'win32' ? 'bash' : false }, function () {
+  var r = cp.spawnSync('bash', [path.join(ROOT, 'xray.sh'), 'walkthrough', path.join(EXAMPLE, 'walkthrough.json'), '--check'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
   assert.strictEqual(r.status, 0, r.stderr);
   assert.match(r.stdout, /^ok .* \(4 scenes\)/);
-  r = cp.spawnSync('bash', [path.join(ROOT, 'xray.sh'), 'story', '--help'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
-  assert.strictEqual(r.status, 0); assert.match(r.stdout, /^usage: node scripts\/xray-story\.js/);
+  r = cp.spawnSync('bash', [path.join(ROOT, 'xray.sh'), 'walkthrough', '--help'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+  assert.strictEqual(r.status, 0); assert.match(r.stdout, /^usage: node scripts\/xray-walkthrough\.js/);
 });

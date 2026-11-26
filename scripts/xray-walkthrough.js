@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// xray-story.js — a story (a list of scenes, each one a whole lab state) checked and written as ONE HTML page that plays
+// xray-walkthrough.js — a walkthrough (a list of scenes, each one a whole lab state) checked and written as ONE HTML page that plays
 // it: the scenes on the left (click one, Back / Next, Play), the lab and the open router's X-Ray on the right. The page
-// has the engine inside, loads nothing from outside and works offline (file://). The format is STORY-CONTRACT.md.
+// has the engine inside, loads nothing from outside and works offline (file://). The format is WALKTHROUGH-CONTRACT.md.
 //
-//   node scripts/xray-story.js <story.json> [--out <file.html>]   check the story and write the page
-//   node scripts/xray-story.js <story.json> --check               check only (nothing is written)
+//   node scripts/xray-walkthrough.js <walkthrough.json> [--out <file.html>]   check the walkthrough and write the page
+//   node scripts/xray-walkthrough.js <walkthrough.json> --check               check only (nothing is written)
 //
-// Exit 0 written / valid, 1 the story is not valid (every problem is listed), 2 a usage or read error.
+// Exit 0 written / valid, 1 the walkthrough is not valid (every problem is listed), 2 a usage or read error.
 'use strict';
 var fs = require('fs');
 var path = require('path');
@@ -15,11 +15,11 @@ var xd = require('../xray-diff.js');
 var parseYaml = require('./check-example-topologies.js').parseYaml;
 
 var ROOT = path.join(__dirname, '..');
-var ME = 'xray-story.js';
-var USAGE = 'usage: node scripts/xray-story.js <story.json> [--out <file.html>] [--check]\n' +
-  '  check a story (STORY-CONTRACT.md) and write it as one HTML page that plays it (works offline)\n' +
-  '  --out <file>  write the page here (default: <story>.html next to the story file)\n' +
-  '  --check       check the story only, write nothing\n' +
+var ME = 'xray-walkthrough.js';
+var USAGE = 'usage: node scripts/xray-walkthrough.js <walkthrough.json> [--out <file.html>] [--check]\n' +
+  '  check a walkthrough (WALKTHROUGH-CONTRACT.md) and write it as one HTML page that plays it (works offline)\n' +
+  '  --out <file>  write the page here (default: <walkthrough>.html next to the walkthrough file)\n' +
+  '  --check       check the walkthrough only, write nothing\n' +
   '  -h, --help    show this help\n' +
   'exit 0 written / valid, 1 not valid (every problem is listed), 2 usage or read error';
 
@@ -31,23 +31,23 @@ var PREFIX = /^[0-9A-Fa-f:.]{2,45}(\/[0-9]{1,3})?$/;
 var LIMITS = { scenes: 50, title: 120, caption: 2000, description: 2000, nodes: 60, highlight: 20, bytes: 16 * 1024 * 1024 };
 var DWELL = { min: 500, max: 60000, dflt: 6000 };
 var KEYS = {
-  story: ['story', 'title', 'description', 'lang', 'source', 'topology', 'scenes', 'ext'],
+  walkthrough: ['walkthrough', 'title', 'description', 'lang', 'source', 'topology', 'scenes', 'ext'],
   scene: ['id', 'title', 'caption', 'source', 'state', 'show', 'dwell', 'ext'],
   show: ['node', 'prefix', 'highlight'],
   highlight: ['nodes', 'links'],
   topology: ['nodes', 'links'],
 };
 // the engine files put into the page (the same ones ui/view.html gets), then the player
-var INLINE = ['xray-core.js', 'xray-api.js', 'xray-i18n.js', 'xray-skin.js', 'clab-xray-bridge.js', 'ui/story.js'];
+var INLINE = ['xray-core.js', 'xray-api.js', 'xray-i18n.js', 'xray-skin.js', 'clab-xray-bridge.js', 'ui/walkthrough.js'];
 
-class StoryError extends Error {}
+class WalkthroughError extends Error {}
 
 function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
 function own(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 function str(v, max) { return typeof v === 'string' && v.trim() !== '' && v.length <= max; }
 
 // the topology: a .clab.yml (containerlab) or a .json with the graph data ({nodes:[{name,kind}], links:[{source,target}]}),
-// or the same object written in the story. -> { nodes: [{name, kind}], links: [{source, source_endpoint, target, target_endpoint}] }
+// or the same object written in the walkthrough. -> { nodes: [{name, kind}], links: [{source, source_endpoint, target, target_endpoint}] }
 function readTopology(t, baseDir, problems) {
   var data = t;
   if (typeof t === 'string') {
@@ -112,40 +112,40 @@ function unknownKeys(o, allowed, where, problems) {
   Object.keys(o).forEach(function (k) { if (allowed.indexOf(k) < 0) problems.push(where + ': unknown key "' + k + '" (put your own fields under "ext")'); });
 }
 
-// how the files a story names are read: from disk (the command line), or through opts.read (the MCP server: only under
+// how the files a walkthrough names are read: from disk (the command line), or through opts.read (the MCP server: only under
 // its folder). quiet = a file that is not what it should be gets a fixed message that says nothing of what is in it
 // (a parser's own message can quote the file).
 var NOT_STATE = 'not a network-xray state file', NOT_TOPO = 'not a topology file (.clab.yml or graph JSON)';
 var FS_IO = { read: function (f) { return fs.readFileSync(f, 'utf8'); }, quiet: false }, io = FS_IO;
 function whyNot(e) { return io.quiet && e && !e.code && e.message ? ': ' + e.message : ''; }   // the reader's own refusal (e.g. outside the folder), not a file system error
 
-// check a story; baseDir resolves the file names in it; opts { read(file) -> text, quiet }.
-// -> { problems: [...], story: the story as the page gets it }
-function check(story, baseDir, opts) {
+// check a walkthrough; baseDir resolves the file names in it; opts { read(file) -> text, quiet }.
+// -> { problems: [...], walkthrough: the walkthrough as the page gets it }
+function check(walkthrough, baseDir, opts) {
   io = opts && typeof opts.read === 'function' ? { read: opts.read, quiet: !!opts.quiet } : FS_IO;
-  try { return checkStory(story, baseDir); } finally { io = FS_IO; }
+  try { return checkWalkthrough(walkthrough, baseDir); } finally { io = FS_IO; }
 }
-function checkStory(story, baseDir) {
+function checkWalkthrough(walkthrough, baseDir) {
   var p = [];
-  if (!isObj(story)) return { problems: ['the story must be a JSON object'] };
-  unknownKeys(story, KEYS.story, 'story', p);
-  if (story.story !== VERSION) p.push('story: must be "' + VERSION + '" (the format version)');
-  if (!str(story.title, LIMITS.title)) p.push('title: needs text (at most ' + LIMITS.title + ' characters)');
-  if (own(story, 'description') && !(typeof story.description === 'string' && story.description.length <= LIMITS.description)) p.push('description: text of at most ' + LIMITS.description + ' characters');
-  if (own(story, 'lang') && LANGS.indexOf(story.lang) < 0) p.push('lang: one of ' + LANGS.join(', '));
-  if (own(story, 'source') && SOURCES.indexOf(story.source) < 0) p.push('source: one of ' + SOURCES.join(', '));
-  if (own(story, 'ext') && !isObj(story.ext)) p.push('ext: must be an object');
-  var topo = own(story, 'topology') ? readTopology(story.topology, baseDir, p) : (p.push('topology: needed (a .clab.yml, a .json or {nodes, links})'), null);
+  if (!isObj(walkthrough)) return { problems: ['the walkthrough must be a JSON object'] };
+  unknownKeys(walkthrough, KEYS.walkthrough, 'walkthrough', p);
+  if (walkthrough.walkthrough !== VERSION) p.push('walkthrough: must be "' + VERSION + '" (the format version)');
+  if (!str(walkthrough.title, LIMITS.title)) p.push('title: needs text (at most ' + LIMITS.title + ' characters)');
+  if (own(walkthrough, 'description') && !(typeof walkthrough.description === 'string' && walkthrough.description.length <= LIMITS.description)) p.push('description: text of at most ' + LIMITS.description + ' characters');
+  if (own(walkthrough, 'lang') && LANGS.indexOf(walkthrough.lang) < 0) p.push('lang: one of ' + LANGS.join(', '));
+  if (own(walkthrough, 'source') && SOURCES.indexOf(walkthrough.source) < 0) p.push('source: one of ' + SOURCES.join(', '));
+  if (own(walkthrough, 'ext') && !isObj(walkthrough.ext)) p.push('ext: must be an object');
+  var topo = own(walkthrough, 'topology') ? readTopology(walkthrough.topology, baseDir, p) : (p.push('topology: needed (a .clab.yml, a .json or {nodes, links})'), null);
   var names = topo ? topo.nodes.map(function (n) { return n.name; }) : [];
   function isNode(n) { return names.indexOf(n) >= 0; }
   function isLink(pair) { return topo && topo.links.some(function (l) { return (l.source === pair[0] && l.target === pair[1]) || (l.source === pair[1] && l.target === pair[0]); }); }
 
   var scenes = [];
-  if (!Array.isArray(story.scenes) || !story.scenes.length) p.push('scenes: needs a list of 1 to ' + LIMITS.scenes + ' scenes');
-  else if (story.scenes.length > LIMITS.scenes) p.push('scenes: at most ' + LIMITS.scenes);
+  if (!Array.isArray(walkthrough.scenes) || !walkthrough.scenes.length) p.push('scenes: needs a list of 1 to ' + LIMITS.scenes + ' scenes');
+  else if (walkthrough.scenes.length > LIMITS.scenes) p.push('scenes: at most ' + LIMITS.scenes);
   else {
     var ids = {};
-    story.scenes.forEach(function (s, i) {
+    walkthrough.scenes.forEach(function (s, i) {
       var w = 'scenes[' + i + ']';
       if (!isObj(s)) { p.push(w + ': must be an object'); return; }
       unknownKeys(s, KEYS.scene, w, p);
@@ -196,16 +196,16 @@ function checkStory(story, baseDir) {
       }
       scenes.push({
         id: s.id, title: s.title, caption: typeof s.caption === 'string' ? s.caption : '',
-        source: s.source || story.source || 'unknown', dwell: own(s, 'dwell') ? s.dwell : DWELL.dflt,
+        source: s.source || walkthrough.source || 'unknown', dwell: own(s, 'dwell') ? s.dwell : DWELL.dflt,
         show: show, state: state || {},
       });
     });
   }
   if (p.length) return { problems: p };
-  var lang = story.lang || 'en';
+  var lang = walkthrough.lang || 'en';
   scenes.forEach(function (s, i) { s.changes = i ? changes(scenes[i - 1].state, s.state, lang) : null; });
-  return { problems: [], story: {
-    story: VERSION, title: story.title, description: story.description || '', lang: lang,
+  return { problems: [], walkthrough: {
+    walkthrough: VERSION, title: walkthrough.title, description: walkthrough.description || '', lang: lang,
     topology: topo, scenes: scenes,
   } };
 }
@@ -226,34 +226,34 @@ function changes(before, after, lang) {
 function js(v) { return JSON.stringify(v).replace(/</g, '\\u003c'); }
 function escH(v) { return String(v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
-// the page: ui/story.html with the engine and the player put in place of their markers, and the checked story as data
+// the page: ui/walkthrough.html with the engine and the player put in place of their markers, and the checked walkthrough as data
 function page(checked) {
-  var html = fs.readFileSync(path.join(ROOT, 'ui', 'story.html'), 'utf8');
+  var html = fs.readFileSync(path.join(ROOT, 'ui', 'walkthrough.html'), 'utf8');
   INLINE.forEach(function (f) {
     var mark = '<!-- nx-inline:' + f + ' -->';
-    if (html.split(mark).length !== 2) throw new StoryError('ui/story.html: expected one ' + mark);
+    if (html.split(mark).length !== 2) throw new WalkthroughError('ui/walkthrough.html: expected one ' + mark);
     var code = fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/<\/script/gi, '<\\/script');
     html = html.replace(mark, function () { return '<script>\n' + code + '\n</script>'; });
   });
-  var dmark = '<!-- nx-story-data -->';
-  if (html.split(dmark).length !== 2) throw new StoryError('ui/story.html: expected one ' + dmark);
-  html = html.replace(dmark, function () { return '<script id="nx-story" type="application/json">' + js(checked) + '</script>'; });
+  var dmark = '<!-- nx-walkthrough-data -->';
+  if (html.split(dmark).length !== 2) throw new WalkthroughError('ui/walkthrough.html: expected one ' + dmark);
+  html = html.replace(dmark, function () { return '<script id="nx-walkthrough" type="application/json">' + js(checked) + '</script>'; });
   html = html.replace('<html lang="en">', '<html lang="' + checked.lang + '">');
-  return html.replace('<title>network-xray story</title>', function () { return '<title>' + escH(checked.title) + ' - network-xray story</title>'; });
+  return html.replace('<title>network-xray Walkthrough</title>', function () { return '<title>' + escH(checked.title) + ' - network-xray Walkthrough</title>'; });
 }
 
-// read, check and build: -> { problems } or { html, story }
+// read, check and build: -> { problems } or { html, walkthrough }
 function build(file) {
   var text;
   try {
-    if (fs.statSync(file).size > LIMITS.bytes) throw new StoryError(file + ': larger than 16 MiB');
+    if (fs.statSync(file).size > LIMITS.bytes) throw new WalkthroughError(file + ': larger than 16 MiB');
     text = fs.readFileSync(file, 'utf8');
-  } catch (e) { throw new StoryError(e instanceof StoryError ? e.message : 'cannot read ' + file); }
-  var story;
-  try { story = JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text); } catch (e) { return { problems: [path.basename(file) + ': not JSON: ' + e.message] }; }
-  var c = check(story, path.dirname(path.resolve(file)));
+  } catch (e) { throw new WalkthroughError(e instanceof WalkthroughError ? e.message : 'cannot read ' + file); }
+  var walkthrough;
+  try { walkthrough = JSON.parse(text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text); } catch (e) { return { problems: [path.basename(file) + ': not JSON: ' + e.message] }; }
+  var c = check(walkthrough, path.dirname(path.resolve(file)));
   if (c.problems.length) return { problems: c.problems };
-  return { problems: [], story: c.story, html: page(c.story) };
+  return { problems: [], walkthrough: c.walkthrough, html: page(c.walkthrough) };
 }
 
 function main(argv) {
@@ -263,21 +263,21 @@ function main(argv) {
     var a = argv[i];
     if (a === '--out') { out = argv[++i]; if (!out) { console.error(ME + ': --out needs a file name'); return 2; } }
     else if (a === '--check') only = true;
-    else if (a.charAt(0) === '-' && a.length > 1) { console.error(ME + ': unknown option: ' + a + "\nTry 'node scripts/xray-story.js --help'."); return 2; }
+    else if (a.charAt(0) === '-' && a.length > 1) { console.error(ME + ': unknown option: ' + a + "\nTry 'node scripts/xray-walkthrough.js --help'."); return 2; }
     else pos.push(a);
   }
   if (pos.length !== 1) { console.error(USAGE); return 2; }
   var r;
-  try { r = build(pos[0]); } catch (e) { if (e instanceof StoryError) { console.error(ME + ': ' + e.message); return 2; } throw e; }
+  try { r = build(pos[0]); } catch (e) { if (e instanceof WalkthroughError) { console.error(ME + ': ' + e.message); return 2; } throw e; }
   if (r.problems.length) {
     console.log('FAIL ' + pos[0]);
     r.problems.forEach(function (m) { console.log('  ' + m); });
     return 1;
   }
-  if (only) { console.log('ok   ' + pos[0] + ' (' + r.story.scenes.length + ' scenes)'); return 0; }
+  if (only) { console.log('ok   ' + pos[0] + ' (' + r.walkthrough.scenes.length + ' scenes)'); return 0; }
   var dest = out || pos[0].replace(/\.json$/i, '') + '.html';
   fs.writeFileSync(dest, r.html);
-  console.log(dest + ' written: ' + r.story.scenes.length + ' scenes, ' + r.html.length + ' bytes');
+  console.log(dest + ' written: ' + r.walkthrough.scenes.length + ' scenes, ' + r.html.length + ' bytes');
   return 0;
 }
 

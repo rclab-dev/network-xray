@@ -1,5 +1,5 @@
 {
-  "story": "0.1",
+  "walkthrough": "0.1",
   "title": "Q21: 遅い ISP が勝つ理由と直し方",
   "description": "2 つの ISP がどちらも 8.8.8.0/24 を広告している。速い r2 が LocPref 50 にされていて、遅い r3 (既定の 100) が勝つ。r2 を LocPref 150 に上げ、r1-r2 の線を落として戻す。",
   "lang": "ja",

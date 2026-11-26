@@ -4,9 +4,9 @@ User-visible changes in each release of rclab-dev/network-xray, newest first. Da
 
 ## Unreleased
 
-- **Story (new):** `scripts/xray-story.js` (or `./xray.sh story`) checks a story, a list of scenes that each hold the whole lab state with a title, a caption and a source label (observed, answer example, illustrative, ...), and writes it as one HTML page that plays it: the scenes on the left (click, Back / Next, Play), the lab and the open router's X-Ray on the right. The engine is inside the page, so it works offline. Each scene after the first shows what changed from the scene before (worked out from the two states). The format is `STORY-CONTRACT.md`; `demo/story-q21` is the q21 recording as a story (en, ja).
-- **`capture-frames.js --story`:** also writes a draft story of the frames (one scene per frame); a `story.json` already there is kept.
-- **MCP `story_check`:** checks a story file and returns each scene's router, prefix and what changed from the scene before. The files the story names are read under the same folder as the other tools; nothing is written.
+- **Walkthrough (new):** `scripts/xray-walkthrough.js` (or `./xray.sh walkthrough`) checks a Walkthrough, a list of scenes that each hold the whole lab state with a title, a caption and a source label (observed, answer example, illustrative, ...), and writes it as one HTML page that plays it: the scenes on the left (click, Back / Next, Play), the lab and the open router's X-Ray on the right. The engine is inside the page, so it works offline. Each scene after the first shows what changed from the scene before (worked out from the two states). The format is `WALKTHROUGH-CONTRACT.md`; `demo/walkthrough-q21` is the q21 recording as a Walkthrough (en, ja).
+- **`capture-frames.js --walkthrough`:** also writes a draft Walkthrough of the frames (one scene per frame); a `walkthrough.json` already there is kept.
+- **MCP `walkthrough_check`:** checks a Walkthrough file and returns each scene's router, prefix and what changed from the scene before. The files the Walkthrough names are read under the same folder as the other tools; nothing is written.
 
 ## v1.8.3 — 2026-11-26
 

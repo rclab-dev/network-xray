@@ -1,5 +1,5 @@
 {
-  "story": "0.1",
+  "walkthrough": "0.1",
   "title": "Q21: why the slow ISP wins, and the fix",
   "description": "Two ISPs both advertise 8.8.8.0/24. The fast one (r2) was set to LocPref 50, so the slow one (r3, default 100) wins. Raise r2 to LocPref 150, then drop the r1-r2 link and bring it back.",
   "lang": "en",

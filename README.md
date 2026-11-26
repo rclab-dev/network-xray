@@ -920,22 +920,22 @@ Today this is **drop-in for the browser**: include the two `<script>` tags (abov
 embedding-first (blog posts, dashboards, internal tools), not a bundler dependency. If you need
 ESM/types, fork and wrap it.
 
-## Story: scenes of a lab, played as one page <!-- nx_story -->
+## Walkthrough: scenes of a lab, played as one page <!-- nx_walkthrough -->
 
-A **story** is a list of scenes, each one the whole state of the lab at one moment (what the collector wrote), with a
+A **Walkthrough** is a list of scenes, each one the whole state of the lab at one moment (what the collector wrote), with a
 title, a caption and a label saying where the state came from (observed, answer example, illustrative, ...).
-`scripts/xray-story.js` checks it and writes **one HTML page** that plays it: the scenes on the left (click one,
+`scripts/xray-walkthrough.js` checks it and writes **one HTML page** that plays it: the scenes on the left (click one,
 Back / Next, Play), the lab and the open router's X-Ray on the right, and under each scene what changed from the scene
 before (worked out from the two states, not written by hand). The engine is inside the page: it loads nothing and
-works offline (attach it to a ticket, put it in a wiki). The format is [STORY-CONTRACT.md](STORY-CONTRACT.md).
+works offline (attach it to a ticket, put it in a wiki). The format is [WALKTHROUGH-CONTRACT.md](WALKTHROUGH-CONTRACT.md).
 
 ```sh
-node scripts/xray-story.js demo/story-q21/story.json --out q21.html     # or: ./xray.sh story demo/story-q21/story.json --out q21.html
-node scripts/capture-frames.js lab.clab.yml steps.json out/ --story      # frames of a running lab + a draft out/story.json
+node scripts/xray-walkthrough.js demo/walkthrough-q21/walkthrough.json --out q21.html     # or: ./xray.sh walkthrough demo/walkthrough-q21/walkthrough.json --out q21.html
+node scripts/capture-frames.js lab.clab.yml steps.json out/ --walkthrough      # frames of a running lab + a draft out/walkthrough.json
 ```
 
-From an AI assistant: the MCP tool `story_check` checks a story file and says what each scene shows and what changed;
-it writes nothing ([docs/mcp.md](docs/mcp.md#story_check)).
+From an AI assistant: the MCP tool `walkthrough_check` checks a Walkthrough file and says what each scene shows and what changed;
+it writes nothing ([docs/mcp.md](docs/mcp.md#walkthrough_check)).
 
 ## Query from a script or an AI assistant
 
@@ -1022,7 +1022,7 @@ with code 2.
 | Who can open the page? | `xray.sh` and the `docker run` line in this README serve it on this machine only (`127.0.0.1`); it has no login. Use `--bind 0.0.0.0` only on a network you trust. |
 
 `scripts/xray-mcp.js` serves the same questions to an MCP client (Claude Desktop, Claude Code, …) over stdio,
-with no dependencies. It has 15 tools: 10 that read the lab state, 4 for a solved check (`check_run`, `check_verify`, `check_suggest`, `check_init`; see [SolvedKit](docs/solvedkit.md)) and `story_check` (`story`: a [story](#story-scenes-of-a-lab-played-as-one-page) file checked, scene by scene). The ones that read the state: `lab_state` (`path`), `why_best_path` (`path`, `node`, `prefix`, optional `vrf`),
+with no dependencies. It has 15 tools: 10 that read the lab state, 4 for a solved check (`check_run`, `check_verify`, `check_suggest`, `check_init`; see [SolvedKit](docs/solvedkit.md)) and `walkthrough_check` (`walkthrough`: a [Walkthrough](#walkthrough-scenes-of-a-lab-played-as-one-page) file checked, scene by scene). The ones that read the state: `lab_state` (`path`), `why_best_path` (`path`, `node`, `prefix`, optional `vrf`),
 `list_routers` (`path`), `ospf_neighbors`, `ospf_interfaces` and `bgp_neighbors` (`path`, optional `router`), `route_lookup`
 (`path`, `router`, `destination`, optional `vrf`: the longest match in the routing table the collector saved), and
 `why_path` (`path`, `router`, `prefix`, optional `vrf`: the selected BGP path, the other candidates and the deciding step), and `state_diff` (`before`, `after`: what changed from a state you kept), and `explain_plan` (`path`, `router`, `lines`, optional `problem`, `requirements`, `prefix`: what each line of a proposed fix is for).
@@ -1951,21 +1951,21 @@ ping/パケットのアニメはこれらのデモでは非表示(通信内容�
 **npm パッケージ・ES Module・TypeScript 型はまだありません** — バンドラ依存ではなく埋め込み第一
 (ブログ記事・ダッシュボード・社内ツール)。ESM/型が必要ならフォークして包んでください。
 
-## ストーリー: ラボの段を 1 枚の頁で再生する
+## Walkthrough: ラボの段を 1 枚の頁で再生する
 
-**ストーリー** は段の並びです。各段はある時点のラボの状態をまるごと持ち (collector が書いた物)、題・説明・その状態の
-出所の札 (実測・解答例・説明用 など) を付けます。`scripts/xray-story.js` が確かめて、再生する **1 枚の HTML** を書きます:
+**Walkthrough** は段の並びです。各段はある時点のラボの状態をまるごと持ち (collector が書いた物)、題・説明・その状態の
+出所の札 (実測・解答例・説明用 など) を付けます。`scripts/xray-walkthrough.js` が確かめて、再生する **1 枚の HTML** を書きます:
 左に段の一覧 (押す・前へ / 次へ・再生)、右にラボと開いたルータの X-Ray、各段の下に前の段からの差 (2 つの状態から
 出した物で、手書きではない)。engine を中に入れるので外から何も読まず、オフラインで動きます (チケットに添付・wiki に
-置く)。形は [STORY-CONTRACT.md](STORY-CONTRACT.md)。
+置く)。形は [WALKTHROUGH-CONTRACT.md](WALKTHROUGH-CONTRACT.md)。
 
 ```sh
-node scripts/xray-story.js demo/story-q21/story.ja.json --out q21.html     # または ./xray.sh story demo/story-q21/story.ja.json --out q21.html
-node scripts/capture-frames.js lab.clab.yml steps.json out/ --story         # 動いているラボの段 + 下書きの out/story.json
+node scripts/xray-walkthrough.js demo/walkthrough-q21/walkthrough.ja.json --out q21.html     # または ./xray.sh walkthrough demo/walkthrough-q21/walkthrough.ja.json --out q21.html
+node scripts/capture-frames.js lab.clab.yml steps.json out/ --walkthrough         # 動いているラボの段 + 下書きの out/walkthrough.json
 ```
 
-AI アシスタントからは MCP の `story_check` が、ストーリーのファイルを確かめ、各段が何を見せ何が変わったかを返します。
-ファイルは書きません ([docs/ja/mcp.md](docs/ja/mcp.md#story_check))。
+AI アシスタントからは MCP の `walkthrough_check` が、Walkthrough のファイルを確かめ、各段が何を見せ何が変わったかを返します。
+ファイルは書きません ([docs/ja/mcp.md](docs/ja/mcp.md#walkthrough_check))。
 
 ## スクリプトや AI アシスタントから問い合わせる
 
@@ -2030,7 +2030,7 @@ netlab のラボでは `--mgmt-subnet 192.168.121.0/24` を足します (netlab 
 | 頁の像に Docker の socket が要るのはなぜ? | containerlab のルータは `docker exec` で読むので、collector に socket が要ります。`docker` を使える人と同じ力 (host の root と同じ) になるので、ラボのマシンだけで使ってください。像の `mcp` の口には要りません。 |
 | 頁は誰が開ける? | `xray.sh` と、この README の `docker run` の行では、このマシンだけ (`127.0.0.1`) に出します。ログインはありません。`--bind 0.0.0.0` は信頼できる網でだけ。 |
 
-`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。道具は 15: ラボの状態を読む 10・判定 (solved check) の 4 (`check_run`・`check_verify`・`check_suggest`・`check_init`。[SolvedKit](docs/ja/solvedkit.md))・`story_check` (`story`: [ストーリー](#ストーリー-ラボの段を-1-枚の頁で再生する)のファイルを段ごとに確かめる)。状態を読む物: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors`・`ospf_interfaces`・`bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)・`state_diff` (`before`・`after`: 取っておいた状態から何が変わったか)・`explain_plan` (`path`・`router`・`lines`・任意で `problem`・`requirements`・`prefix`: 直す案の各行が何のためか)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。`--allow-collect` を付けて起動した時だけ `collect` (`topology`・任意で `proto`) も出ます: 動いている containerlab のラボのルータを collector の読むだけのコマンドで読み直し (このツールは手元の Docker を読みます)、ほかのツールに渡す新しい `path` を返します ([docs/ja/mcp.md](docs/ja/mcp.md))。<!-- nx_mcp_collect -->initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
+`scripts/xray-mcp.js` は同じ問い合わせを MCP のクライアント (Claude Desktop・Claude Code など) に stdio で出します。依存なし。道具は 15: ラボの状態を読む 10・判定 (solved check) の 4 (`check_run`・`check_verify`・`check_suggest`・`check_init`。[SolvedKit](docs/ja/solvedkit.md))・`walkthrough_check` (`walkthrough`: [Walkthrough](#walkthrough-ラボの段を-1-枚の頁で再生する)のファイルを段ごとに確かめる)。状態を読む物: `lab_state` (`path`)・`why_best_path` (`path`・`node`・`prefix`・任意で `vrf`)・`list_routers` (`path`)・`ospf_neighbors`・`ospf_interfaces`・`bgp_neighbors` (`path`・任意で `router`)・`route_lookup` (`path`・`router`・`destination`・任意で `vrf`: collector が保存した経路表での最長一致)・`why_path` (`path`・`router`・`prefix`・任意で `vrf`: 選ばれた BGP の経路・ほかの候補・決め手の段)・`state_diff` (`before`・`after`: 取っておいた状態から何が変わったか)・`explain_plan` (`path`・`router`・`lines`・任意で `problem`・`requirements`・`prefix`: 直す案の各行が何のためか)。読むだけ: 渡された path だけを読み、ルータでコマンドを打たず、ファイルも書きません。`--allow-collect` を付けて起動した時だけ `collect` (`topology`・任意で `proto`) も出ます: 動いている containerlab のラボのルータを collector の読むだけのコマンドで読み直し (このツールは手元の Docker を読みます)、ほかのツールに渡す新しい `path` を返します ([docs/ja/mcp.md](docs/ja/mcp.md))。<!-- nx_mcp_collect -->initialize で始まる MCP の版 (2024-11-05〜2025-11-25・今の MCP のクライアントが stdio で使う物) に対応。状態を持たない 2026-07-28 の版は未実装。
 
 ```json
 {

@@ -19,6 +19,6 @@ unified-showcase.html
 /.xray.lock/
 # containerlab's per-lab working folders and local backups
 examples/*/clab-*/
-# pages written by scripts/xray-story.js from the example stories (the engine is inside: about 1 MB each)
-demo/story-q21/*.html
+# pages written by scripts/xray-walkthrough.js from the example walkthroughs (the engine is inside: about 1 MB each)
+demo/walkthrough-q21/*.html
 *.bak*

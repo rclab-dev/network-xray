@@ -1,42 +1,42 @@
-/* ui/story.js — the player of a story page (ui/story.html, written by scripts/xray-story.js).
+/* ui/walkthrough.js — the player of a walkthrough page (ui/walkthrough.html, written by scripts/xray-walkthrough.js).
  *
  * The scenes are listed on the left; one is shown at a time. Each scene carries the whole lab state, so going to any
  * scene (a click, Back / Next, ← / →, #scene=<id>) sets that state and nothing is carried over from the scene before.
  * Play moves on by itself after each scene's dwell time and stops at the last scene; it starts stopped, and stops when
  * the tab is hidden. The lab picture and the router's X-Ray are drawn by the engine (the same code as the containerlab
- * graph page); every text from the story is set as text, never as HTML.
+ * graph page); every text from the walkthrough is set as text, never as HTML.
  */
 (function (root) {
   'use strict';
   var doc = root.document;
   var T = {
-    en: { kicker: 'X-Ray story', prev: '← Back', next: 'Next →', play: '▶ Play', pause: '⏸ Pause', scene: 'Scene',
-      note: 'The labels (observed, answer example, ...) are what the author of this story says; they are not checked.',
+    en: { kicker: 'X-Ray Walkthrough', prev: '← Back', next: 'Next →', play: '▶ Play', pause: '⏸ Pause', scene: 'Scene',
+      note: 'The labels (observed, answer example, ...) are what the author of this walkthrough says; they are not checked.',
       src: { observed: 'observed', 'observed-unsettled': 'observed, not settled', 'answer-example': 'answer example', illustrative: 'illustrative', unknown: 'source unknown' },
       changes: 'Changed from the scene before (worked out by network-xray)', more: 'and {n} more',
       noState: ' has no state in this scene.', noLinks: ' has no links to inspect.', peers: ' neighbors — inspect peer-pair:', has: ' has ' },
-    ja: { kicker: 'X-Ray ストーリー', prev: '← 前へ', next: '次へ →', play: '▶ 再生', pause: '⏸ 止める', scene: '段',
+    ja: { kicker: 'X-Ray Walkthrough', prev: '← 前へ', next: '次へ →', play: '▶ 再生', pause: '⏸ 止める', scene: '段',
       note: '札 (実測・解答例 など) は作った人の申告で、確かめた物ではありません。',
       src: { observed: '実測', 'observed-unsettled': '実測 (落ち着く前)', 'answer-example': '解答例', illustrative: '説明用', unknown: '出所不明' },
       changes: '前の段からの差 (network-xray が出した物)', more: 'ほか {n} 件',
       noState: ' はこの段に状態がありません。', noLinks: ' には見るリンクがありません。', peers: ' 台と隣り合う — 見る組:', has: ' は ' },
   };
 
-  var el = doc.getElementById('nx-story'), STORY;
+  var el = doc.getElementById('nx-walkthrough'), WALKTHROUGH;
   function showErr(m) { var e = doc.getElementById('err'); if (e) { e.style.display = 'block'; e.textContent = m; } }
-  try { STORY = JSON.parse(el.textContent); } catch (e) { showErr('The story data could not be read: ' + e.message); return; }
-  var L = T[STORY.lang] || T.en, SCENES = STORY.scenes;
+  try { WALKTHROUGH = JSON.parse(el.textContent); } catch (e) { showErr('The walkthrough data could not be read: ' + e.message); return; }
+  var L = T[WALKTHROUGH.lang] || T.en, SCENES = WALKTHROUGH.scenes;
   if (!root.clabXray || typeof root.clabXray.deepViews !== 'function' || !root.xrayCore || typeof root.xrayCore.openDeepDiveFor !== 'function') {
     showErr('The X-Ray engine is missing from this page.'); return;
   }
   try { if (root.XraySkin) root.XraySkin.apply(root.XraySkin.presetById('signature')); } catch (e) {}
 
   // ---- the lab (the same build as the containerlab graph page) ----
-  var NAMES = STORY.topology.nodes.map(function (n) { return n.name; });
-  var KIND = {}; STORY.topology.nodes.forEach(function (n) { KIND[n.name] = n.kind || ''; });
+  var NAMES = WALKTHROUGH.topology.nodes.map(function (n) { return n.name; });
+  var KIND = {}; WALKTHROUGH.topology.nodes.forEach(function (n) { KIND[n.name] = n.kind || ''; });
   var ADJ = {}, EDGES = [];
   NAMES.forEach(function (n) { ADJ[n] = []; });
-  STORY.topology.links.forEach(function (l) {
+  WALKTHROUGH.topology.links.forEach(function (l) {
     var a = l.source, b = l.target;
     if (ADJ[a].indexOf(b) < 0) ADJ[a].push(b);
     if (ADJ[b].indexOf(a) < 0) ADJ[b].push(a);
@@ -44,7 +44,7 @@
   });
   function roleOf(n) { var k = (KIND[n] || '').toLowerCase(); return (k === 'host' || k === 'linux-host' || /^(sv|server|host|client|pc|h\d+)$/i.test(n)) ? 'server' : 'router'; }
   var fullCfg = {
-    id: 'story', topology_type: 'multi', layout: '', modes: ['troubleshoot'],
+    id: 'walkthrough', topology_type: 'multi', layout: '', modes: ['troubleshoot'],
     nodes: NAMES.map(function (n) { var r = roleOf(n); return { id: n, type: r, role: r === 'server' ? 'Server' : 'Router' }; }),
     networks: EDGES.map(function (k) { var p = k.split('|'); return { name: 'net-' + p[0] + p[1], members: [{ node: p[0], host_id: 10 }, { node: p[1], host_id: 20 }] }; }),
   };
@@ -141,7 +141,7 @@
   // ---- the scenes on the left ----
   var items = [];
   function txt(id, t) { var e = doc.getElementById(id); if (e) e.textContent = t; }
-  txt('st-kicker', L.kicker); txt('st-title', STORY.title); txt('st-desc', STORY.description); txt('st-note', L.note);
+  txt('st-kicker', L.kicker); txt('st-title', WALKTHROUGH.title); txt('st-desc', WALKTHROUGH.description); txt('st-note', L.note);
   txt('st-prev', L.prev); txt('st-next', L.next);
   doc.querySelector('.st-side').setAttribute('aria-label', L.scene);
   var list = doc.getElementById('st-list');
@@ -206,7 +206,7 @@
   });
   doc.addEventListener('visibilitychange', function () { if (doc.hidden && playing) stop(); });
 
-  root.xrayStory = { go: function (i) { stop(); go(i); }, play: play, stop: stop, current: function () { return cur; }, count: SCENES.length };
+  root.xrayWalkthrough = { go: function (i) { stop(); go(i); }, play: play, stop: stop, current: function () { return cur; }, count: SCENES.length };
 
   fitOverview();
   if (root.addEventListener) root.addEventListener('resize', fitOverview);
