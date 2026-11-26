@@ -8,7 +8,8 @@
 //   2. read the lab with the collector (clab-xray-collect.js, one round) every --interval seconds until the
 //      state has been the same --settle reads in a row (or --timeout passes)
 //   3. write <out-dir>/frame<N>.json (the window.LIVE_STATES object the replay pages use)
-// At the end <out-dir>/captions.json lists each frame with its step name.
+// At the end <out-dir>/captions.json lists each frame with its step name. With --story, <out-dir>/story.json is a draft
+// story (STORY-CONTRACT.md: one scene per frame, labelled observed) to edit and play with scripts/xray-story.js.
 //
 // The only commands that change the lab are the ones in the steps file. To read the state, the collector also runs
 // its own read-only commands on every node (FRR: vtysh show ...; Cisco IOS: an SSH login, terminal settings and
@@ -52,6 +53,8 @@ var USAGE = 'usage: node scripts/capture-frames.js <topo.clab.yml> <steps.json> 
   '  --collector <cmd>   collector command, run as <cmd> <topo> <dir> <proto> --exclude-mgmt\n' +
   '                      (default: node clab-xray-collect.js)\n' +
   '  --force             replace frame*.json / captions.json already in <out-dir>\n' +
+  '  --story             also write story.json, a draft story to play with scripts/xray-story.js (one scene per\n' +
+  '                      frame); a story.json already in <out-dir> is kept (your edits are not replaced)\n' +
   '  --dry-run           check everything and print the commands, run nothing\n' +
   '  -h, --help          show this help';
 var HINT = "Try 'node scripts/" + ME + " --help'.";
@@ -60,7 +63,7 @@ function die(msg, code) { process.stderr.write(ME + ': ' + msg + '\n'); process.
 function log(msg) { process.stderr.write(msg + '\n'); }
 
 function parseArgs(argv) {
-  var o = { pos: [], proto: '', interval: 2, settle: 3, timeout: 90, minWait: 3, collector: '', force: false, dryRun: false };
+  var o = { pos: [], proto: '', interval: 2, settle: 3, timeout: 90, minWait: 3, collector: '', force: false, dryRun: false, story: false };
   var VALUED = ['--proto', '--interval', '--settle', '--timeout', '--min-wait', '--collector'];
   for (var i = 0; i < argv.length; i++) {
     if (argv[i] === '-h' || argv[i] === '--help') return { help: true };
@@ -81,6 +84,7 @@ function parseArgs(argv) {
     else if (a === '--collector') { o.collector = argv[++i] || ''; if (!o.collector) die('--collector needs a command\n' + HINT); }
     else if (a === '--force') o.force = true;
     else if (a === '--dry-run') o.dryRun = true;
+    else if (a === '--story') o.story = true;
     else if (a.charAt(0) === '-' && a.length > 1) die('unknown option: ' + a + '\n' + HINT);
     else o.pos.push(a);
   }
@@ -269,11 +273,32 @@ async function main() {
   }
   if (captions.length) fs.writeFileSync(capFile, JSON.stringify(captions, null, 2) + '\n');
   log('wrote ' + captions.length + ' frame(s)' + (captions.length ? ' + captions.json' : '') + ' to ' + outDir);
+  if (o.story && captions.length) {
+    var storyFile = path.join(outDir, 'story.json');
+    if (fs.existsSync(storyFile)) log('story.json is already in ' + outDir + ': kept as it is (not replaced)');
+    else {
+      fs.writeFileSync(storyFile, JSON.stringify(draftStory(t.lab, path.relative(outDir, topo), captions), null, 2) + '\n');
+      log('wrote story.json (a draft: edit its titles and captions, then node scripts/xray-story.js ' + storyFile + ')');
+    }
+  }
   if (unsettled) { log('!! ' + unsettled + ' frame(s) did not settle'); code = 1; }
   return code;
 }
 
-module.exports = { parseStates: parseStates, stateKey: stateKey };
+// a draft story (STORY-CONTRACT.md) of the frames: one scene per frame with the step name as its title; a frame that
+// did not settle is labelled observed-unsettled
+function draftStory(lab, topoRel, captions) {
+  return {
+    story: '0.1', title: lab, lang: 'en', source: 'observed', topology: topoRel.split(path.sep).join('/'),
+    scenes: captions.map(function (c, i) {
+      var s = { id: 's' + (i + 1), title: String(c.name).slice(0, 120), caption: '', state: c.frame };
+      if (!c.settled) s.source = 'observed-unsettled';
+      return s;
+    }),
+  };
+}
+
+module.exports = { parseStates: parseStates, stateKey: stateKey, draftStory: draftStory };
 
 if (require.main === module) {
   main().then(function (c) { process.exit(c); }, function (e) { die(e && e.stack || String(e), 1); });

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>network-xray story</title>
+<!-- A story page (scripts/xray-story.js). The script writes the engine files and the player in place of the markers below
+     and the checked story in place of the data marker, so the page loads nothing from outside and works from file://. -->
+<!-- nx-inline:xray-core.js -->
+<!-- nx-inline:xray-api.js -->
+<!-- nx-inline:xray-i18n.js -->
+<!-- nx-inline:xray-skin.js -->
+<!-- nx-inline:clab-xray-bridge.js -->
+<style>
+  :root{--rc-accent:#4dd0e1 !important}
+  html,body{margin:0;background:#0f1318;color:#e8ecf0;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+  .st-page{display:flex;align-items:flex-start;min-height:100vh}
+  .st-side{position:sticky;top:0;flex:0 0 300px;box-sizing:border-box;height:100vh;overflow-y:auto;padding:18px 16px 14px;
+    background:#0b1016;border-right:1px solid #1e2b36;display:flex;flex-direction:column}
+  .st-kicker{font:11px/1.2 monospace;letter-spacing:.14em;color:#4f7d88;text-transform:uppercase;margin:0 0 6px}
+  .st-title{font-size:17px;line-height:1.35;color:#4dd0e1;margin:0 0 6px;font-weight:700}
+  .st-desc{font-size:12.5px;line-height:1.5;color:#90a4ae;margin:0 0 12px;white-space:pre-line}
+  ol.st-list{list-style:none;margin:0;padding:0;flex:1 1 auto}
+  ol.st-list li{margin:0 0 10px}
+  ol.st-list li+li::before{content:"\2193";display:block;text-align:center;color:#2c4652;font-size:11px;margin:-6px 0 2px}
+  .st-item{display:block;width:100%;box-sizing:border-box;text-align:left;cursor:pointer;background:#0f1a22;color:#cfe0e6;
+    border:1px solid #1c2d38;border-left:3px solid #1c2d38;border-radius:4px;padding:8px 10px;font:inherit}
+  .st-item:hover{border-color:#2f5664}
+  .st-item:focus-visible{outline:2px solid #4dd0e1;outline-offset:2px}
+  .st-item[aria-current="step"]{background:#0f2a33;border-color:#26c6da;border-left-color:#4dd0e1}
+  .st-num{font:11px/1.3 monospace;color:#5f8794}
+  .st-name{display:block;font:13.5px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#e3f2f6;margin-top:2px}
+  .st-src{display:inline-block;font-size:10.5px;line-height:1.5;border:1px solid #3d6b4a;color:#8fd19e;border-radius:9px;padding:0 7px;margin-left:6px;vertical-align:1px}
+  .st-src.answer-example{border-color:#8a6a1e;color:#f3c969}
+  .st-src.illustrative{border-color:#5b4b8a;color:#c3b2ff}
+  .st-src.unknown,.st-src.observed-unsettled{border-color:#55626b;color:#a9b6bd}
+  .st-cap{display:none;font-size:12.5px;line-height:1.5;color:#b9cfd6;margin:7px 0 0;white-space:pre-line}
+  .st-item[aria-current="step"] .st-cap{display:block}
+  .st-ctl{display:flex;gap:8px;justify-content:space-between;margin:12px 0 8px}
+  .st-ctl button{flex:1;background:#10202c;color:#cfe8ee;border:1px solid #26c6da;border-radius:16px;padding:6px 10px;cursor:pointer;font:600 12.5px monospace}
+  .st-ctl button:disabled{opacity:.35;cursor:default}
+  .st-ctl button:focus-visible{outline:2px solid #4dd0e1;outline-offset:2px}
+  .st-note{font-size:11px;line-height:1.45;color:#62757f;margin:4px 0 0}
+  .st-main{flex:1 1 auto;min-width:0;padding:14px 16px}
+  .ov{position:relative;width:560px;height:360px;margin:6px auto;background:#16202b;border-radius:10px;border:1px solid #24323e}
+  .ov svg{position:absolute;inset:0;pointer-events:none}
+  .ov-node{position:absolute;transform:translate(-50%,-50%);background:#141b24;border:2px solid #4dd0e1;border-radius:8px;
+    padding:7px 12px;cursor:pointer;font-weight:700;color:#4dd0e1;font-size:13px;white-space:nowrap;text-align:center}
+  .ov-node .k{display:block;font-size:9px;color:#78909c;font-weight:400}
+  .ov-node:hover{box-shadow:0 0 12px rgba(77,208,225,.6)}
+  .ov-node.hl{border-color:#ffca28;color:#ffe082;box-shadow:0 0 0 3px rgba(255,202,40,.25)}
+  .ov-node.sel{border-color:#ef5350;color:#ef5350;box-shadow:0 0 12px rgba(239,83,80,.5)}
+  #peers{text-align:center;margin:8px 0;min-height:28px}
+  #peers .lbl{font-size:12px;color:#80cbc4;margin-right:8px}
+  #peers button{margin:0 4px;padding:4px 10px;border:1px solid #2b3a44;background:#10202c;color:#cfe8ee;border-radius:5px;cursor:pointer;font-size:12px}
+  #peers button.cur{background:#26c6da;color:#06222a;border-color:#26c6da;font-weight:700}
+  .topology{position:relative;margin:8px 0;min-height:420px;background:#1e2a38;border-radius:10px}
+  #topo{display:none}.xray-deep-engine{min-height:420px}
+  .err{display:none;margin:10px 0;padding:10px 12px;border-radius:8px;background:#3a1c1c;border:1px solid #c62828;color:#ef9a9a;font-size:13px}
+  @media (max-width:900px){
+    .st-page{display:block}
+    .st-side{position:static;height:auto;border-right:0;border-bottom:1px solid #1e2b36}
+    .st-main{overflow-x:auto}
+  }
+</style>
+</head>
+<body class="is-xray-mode">
+<div class="st-page">
+  <aside class="st-side" aria-label="Scenes">
+    <p class="st-kicker" id="st-kicker">X-Ray story</p>
+    <h1 class="st-title" id="st-title"></h1>
+    <p class="st-desc" id="st-desc"></p>
+    <ol class="st-list" id="st-list"></ol>
+    <div class="st-ctl">
+      <button type="button" id="st-prev"></button>
+      <button type="button" id="st-play" aria-pressed="false"></button>
+      <button type="button" id="st-next"></button>
+    </div>
+    <p class="st-note" id="st-note"></p>
+  </aside>
+  <main class="st-main">
+    <div class="ov" id="ov"></div>
+    <div id="peers"></div>
+    <div class="topology"><div class="topo-diagram" id="topo"></div><div class="xray-deep-engine"></div></div>
+    <div class="err" id="err" role="alert"></div>
+  </main>
+</div>
+<!-- nx-story-data -->
+<!-- nx-inline:ui/story.js -->
+</body>
+</html>

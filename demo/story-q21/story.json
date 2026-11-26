@@ -1,0 +1,42 @@
+{
+  "story": "0.1",
+  "title": "Q21: why the slow ISP wins, and the fix",
+  "description": "Two ISPs both advertise 8.8.8.0/24. The fast one (r2) was set to LocPref 50, so the slow one (r3, default 100) wins. Raise r2 to LocPref 150, then drop the r1-r2 link and bring it back.",
+  "lang": "en",
+  "source": "observed",
+  "topology": "../../examples/q21-bgp-lp/q21.clab.yml",
+  "scenes": [
+    {
+      "id": "fault",
+      "title": "The slow ISP r3 is best",
+      "caption": "8.8.8.0/24 is heard from both ISPs. r2 (fast) has LocPref 50, so r3 (slow, 100) wins. Why the slow one?",
+      "state": "../bgp-lp/frameA.json",
+      "show": { "node": "r1", "prefix": "8.8.8.0/24", "highlight": { "nodes": ["r3"], "links": [["r1", "r3"]] } },
+      "dwell": 7000
+    },
+    {
+      "id": "fix",
+      "title": "LocPref 150 on r2: the fast ISP wins",
+      "caption": "Raise LocPref to 150 on r2. The fast ISP is best again (150 > 100).",
+      "state": "../bgp-lp/frameB.json",
+      "show": { "node": "r1", "prefix": "8.8.8.0/24", "highlight": { "nodes": ["r2"], "links": [["r1", "r2"]] } },
+      "dwell": 6500
+    },
+    {
+      "id": "link-down",
+      "title": "r1-r2 link down: only r3 is left",
+      "caption": "With the r1-r2 link down, 8.8.8.0/24 has one path, via r3.",
+      "state": "../bgp-lp/frameC.json",
+      "show": { "node": "r1", "prefix": "8.8.8.0/24", "highlight": { "nodes": ["r3"], "links": [["r1", "r3"]] } },
+      "dwell": 6000
+    },
+    {
+      "id": "restored",
+      "title": "Link back: LocPref decides again",
+      "caption": "The link is back. LocPref 150 > 100 decides again: the fast ISP r2 wins.",
+      "state": "../bgp-lp/frameD.json",
+      "show": { "node": "r1", "prefix": "8.8.8.0/24", "highlight": { "nodes": ["r2"], "links": [["r1", "r2"]] } },
+      "dwell": 6500
+    }
+  ]
+}

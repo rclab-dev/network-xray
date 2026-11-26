@@ -196,6 +196,26 @@ test('frames already in out-dir are kept unless --force', { skip: SH }, function
   assert.strictEqual(frame(d, 1).r1.applied, 0);
 });
 
+test('--story also writes a draft story of the frames, and keeps a story.json that is already there', { skip: SH }, function () {
+  var d = setup(STEPS);
+  var r = capture(d, ['--story']);
+  assert.strictEqual(r.code, 0, r.stderr);
+  assert.deepStrictEqual(outFiles(d), ['captions.json', 'frame1.json', 'frame2.json', 'frame3.json', 'story.json']);
+  var s = JSON.parse(fs.readFileSync(path.join(d, 'out', 'story.json'), 'utf8'));
+  assert.deepStrictEqual(s, { story: '0.1', title: 'lab1', lang: 'en', source: 'observed', topology: '../lab.clab.yml', scenes: [
+    { id: 's1', title: 'steady', caption: '', state: 'frame1.json' },
+    { id: 's2', title: 'lp 150', caption: '', state: 'frame2.json' },
+    { id: 's3', title: 'r2 eth1 down', caption: '', state: 'frame3.json' }] });
+  fs.writeFileSync(path.join(d, 'out', 'story.json'), '{"edited": true}');
+  r = capture(d, ['--story', '--force']);
+  assert.strictEqual(r.code, 0, r.stderr);
+  assert.match(r.stderr, /story\.json is already in .*: kept as it is/);
+  assert.strictEqual(fs.readFileSync(path.join(d, 'out', 'story.json'), 'utf8'), '{"edited": true}');
+  // without --story nothing more is written
+  d = setup(STEPS); r = capture(d);
+  assert.deepStrictEqual(outFiles(d), ['captions.json', 'frame1.json', 'frame2.json', 'frame3.json']);
+});
+
 test('--dry-run prints the commands and runs nothing', function () {
   var d = setup(STEPS);
   var r = capture(d, ['--dry-run']);
