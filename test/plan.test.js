@@ -216,3 +216,27 @@ test('no policy_config in the state (the collector default): a route-map line no
   const b = explainPlan(st, 'r1', 'route-map LOW-LP permit 10\n set local-preference 90\nrouter bgp 65001\n neighbor 10.10.0.20 route-map LOW-LP in', { prefix: '8.8.8.0/24' });
   assert.match(b.lines.filter((x) => x.line === 'set local-preference 90')[0].because, /LocPrf now 50; the comparison now: LocPrf 100 > 50/, 'bound from the plan alone');
 });
+
+test('why a line could not be tied, where the state says it (the tags stay as they were)', () => {
+  const st = REAL('q12-ospf-static');
+  const r = explainPlan(st, 'r1', 'interface eth9\n ip ospf hello-interval 5\nrouter ospf\n network 192.0.2.0/24 area 0\n area 0 range 10.0.0.0/8\nip route 9.9.9.0/24 192.0.2.1\nrouter isis 1', {});
+  const by = (l) => r.lines.filter((x) => x.line === l)[0];
+  assert.equal(by('ip ospf hello-interval 5').tag, 'not_linked');
+  assert.match(by('ip ospf hello-interval 5').because, /r1 has no interface eth9 in the data \(.*eth1.*eth2/);
+  assert.equal(by('network 192.0.2.0/24 area 0').tag, 'not_linked');
+  assert.match(by('network 192.0.2.0/24 area 0').because, /no interface of r1 is in 192\.0\.2\.0\/24 \(r1's subnets: .*eth1 10\.10\.0\.10\/24/);
+  assert.equal(by('area 0 range 10.0.0.0/8').tag, '?');
+  assert.match(by('area 0 range 10.0.0.0/8').because, /an OSPF line this tool does not read: "area 0"/);
+  assert.equal(by('ip route 9.9.9.0/24 192.0.2.1').tag, '?');
+  assert.match(by('ip route 9.9.9.0/24 192.0.2.1').because, /not on a connected subnet of r1 \(r1's subnets: /);
+  assert.equal(by('router isis 1').tag, '?');
+  assert.match(by('router isis 1').because, /"router isis" \(only router ospf and router bgp are read\)/);
+});
+
+test('lines under another routing process are not read as OSPF / BGP lines', () => {
+  const r = explainPlan(REAL('q12-ospf-static'), 'r1', 'router ospf\n network 10.11.0.0/24 area 0\nrouter isis 1\n net 49.0001.0000.0000.0001.00', {});
+  const n = r.lines.filter((x) => x.line === 'net 49.0001.0000.0000.0001.00')[0];
+  assert.equal(n.tag, '?');
+  assert.match(n.because, /a line under "router isis 1", which this tool does not read/);
+  assert.equal(r.lines.filter((x) => x.line === 'network 10.11.0.0/24 area 0')[0].tag, 'fixes');
+});

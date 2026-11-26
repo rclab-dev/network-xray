@@ -65,6 +65,7 @@ function parsePlan(text) {
     if ((m = /^router ospf(?: \d+)?$/.exec(line))) { ctx = { type: 'ospf' }; it.header = ctx; items.push(it); return; }
     if ((m = /^router bgp (\S+)$/.exec(line))) { ctx = { type: 'bgp', as: m[1] }; it.header = ctx; items.push(it); return; }
     if ((m = /^route-map (\S+) (permit|deny) (\d+)$/.exec(line))) { ctx = { type: 'rm', name: m[1], action: m[2], seq: +m[3] }; it.header = ctx; items.push(it); return; }
+    if (/^router \S+/.test(line)) { ctx = { type: 'other', head: line }; it.context = null; items.push(it); return; }   // another routing process: its lines are not read (not taken as OSPF / BGP lines)
     if (/^(ip prefix-list|ip route|ipv6 )/.test(line)) ctx = null;   // top-level lines end a block
     it.context = ctx;
     items.push(it);
@@ -132,6 +133,13 @@ function explainPlan(states, router, text, opts) {
     return wrong.map((w, i) => ({ w, i })).filter(({ w }) => (w.node === router && w.iface === iface) ||
       (w.peer === router && (w.peer_iface === iface || !w.peer_iface)));
   }
+  /* nx_plan_hints (v1.8.3): what the state says when a line cannot be tied */
+  const ifNames = Object.keys((st.interfaces && typeof st.interfaces === 'object') ? st.interfaces : {});
+  const subnets = addrs.filter((a) => a.len < 32).map((a) => a.iface + ' ' + a.ip + '/' + a.len);
+  const subnetsTxt = () => (subnets.length ? ' (' + router + '\'s subnets: ' + subnets.join(', ') + ')' : ' (no interface addresses in the data)');
+  const headWords = (l) => '"' + l.split(/\s+/).slice(0, 2).join(' ') + '"';
+  const unknownIf = (iface) => ifNames.length && ifNames.indexOf(iface) < 0;
+  function noIfaceHint(iface) { return router + ' has no interface ' + iface + ' in the data (' + ifNames.slice().sort().join(', ') + ')'; }
   function ifacesIn(net, len) { return addrs.filter((a) => inNet(a.ip, net, len)).map((a) => a.iface); }
   function result(tag, because, ref, touches) { const o = { tag: tag, because: because }; if (ref) o.ref = ref; if (touches && touches.length) o.touches = touches; return o; }
   function linkIface(iface, field, what) {
@@ -144,6 +152,7 @@ function explainPlan(states, router, text, opts) {
     }
     const u = unmet.filter((x) => (x.cond[1] === 'ospf_neighbors' && condWants(x.cond, 'iface') === iface) || (x.cond[1] === 'interfaces.' + iface));
     if (u.length) return result('requirement', 'the check asks for ' + JSON.stringify(u[0].cond.slice(1)) + ' on ' + router + ' (not met now)', { check: u.map((x) => x.i) }, [iface]);
+    if (unknownIf(iface)) return result('not_linked', what + ': ' + noIfaceHint(iface), null);
     return result('not_linked', what + ': nothing is wrong on ' + router + ' ' + iface + ' and the check asks nothing there', null, [iface]);
   }
 
@@ -155,7 +164,7 @@ function explainPlan(states, router, text, opts) {
       const p = prefixOf(m[2], m[3]);
       if (!p) return result('?', 'the network is not read: ' + m[2]);
       const ifs = ifacesIn(p.net, p.len);
-      if (!ifs.length) return result('not_linked', 'no interface of ' + router + ' is in ' + p.net + '/' + p.len);
+      if (!ifs.length) return result('not_linked', 'no interface of ' + router + ' is in ' + p.net + '/' + p.len + subnetsTxt());
       const rs = ifs.map((i) => linkIface(i, null, (m[1] ? 'takes OSPF off ' : 'puts OSPF on ') + i + ' (area ' + m[4] + ')'));
       return rs.filter((r) => r.tag === 'fixes')[0] || rs.filter((r) => r.tag === 'requirement')[0] || rs[0];
     }
@@ -165,7 +174,8 @@ function explainPlan(states, router, text, opts) {
       if (ws.length) return result('fixes', ws[0].w.text, { wrong: ws.map((x) => x.i) });
       return result('not_linked', 'sets the OSPF router ID to ' + m[1] + ' (no duplicate router ID is listed as wrong)');
     }
-    if (c && c.type === 'ospf') return result('?', 'an OSPF line this tool does not read');
+    if (c && c.type === 'ospf') return result('?', 'an OSPF line this tool does not read: ' + headWords(l));
+    if (c && c.type === 'other') return result('?', 'a line under "' + c.head + '", which this tool does not read');
     // interface lines
     if (c && c.type === 'if') {
       if ((m = /^(no )?ip ospf (\S+)/.exec(l))) {
@@ -178,7 +188,7 @@ function explainPlan(states, router, text, opts) {
         return linkIface(c.iface, null, l + ' on ' + c.iface);
       }
       if (/^(no )?(ip address|ip mtu|mtu)\b/.test(l)) return linkIface(c.iface, /mtu/.test(l) ? 'mtu' : null, l + ' on ' + c.iface);
-      return result('?', 'an interface line this tool does not read', null, [c.iface]);
+      return result('?', 'an interface line this tool does not read: ' + headWords(l), null, [c.iface]);
     }
     // static route: ip route <p>[/len | mask] <next hop> [distance]
     if ((m = /^(no )?ip route (\S+)(?: ((?:\d+\.){3}\d+))? ((?:\d+\.){3}\d+)(?: (\d+))?$/.exec(l))) {
@@ -188,7 +198,7 @@ function explainPlan(states, router, text, opts) {
       if (!p) return result('?', 'the prefix is not read: ' + m[2]);
       const pfx = p.net + '/' + p.len;
       const out = addrs.filter((a) => a.len < 32 && inNet(nh, a.ip, a.len))[0];
-      if (!out) return result('?', 'next hop ' + nh + ' is not on a connected subnet of ' + router + ' (a recursive next hop is not worked out here)');
+      if (!out) return result('?', 'next hop ' + nh + ' is not on a connected subnet of ' + router + subnetsTxt() + '; a recursive next hop is not worked out here');
       const now = (st.routing_table || []).filter((r) => r.prefix === pfx && r.selected)[0];
       const d = dist != null ? dist : 1, nowAd = now ? AD[String(now.protocol || '').toLowerCase()] : null;
       const backup = now && nowAd != null && d > nowAd;
@@ -212,12 +222,12 @@ function explainPlan(states, router, text, opts) {
       if (ws.length) return result('fixes', ws[0].w.text, { wrong: ws.map((x) => x.i) });
       return result('not_linked', 'neighbor ' + ip + ': its session is not listed as wrong');
     }
-    if (c && c.type === 'bgp') return result('?', 'a BGP line this tool does not read');
+    if (c && c.type === 'bgp') return result('?', 'a BGP line this tool does not read: ' + headWords(l));
     // route-map entry: show the values it sets next to the comparison now (no prediction)
     if (c && c.type === 'rm') {
       const set = /^set (local-preference|weight|metric) (\d+)$/.exec(l);
       if (/^match /.test(l)) return result('?', 'which routes this entry takes (see the route-map\'s verdict on the set line)');
-      if (!set) return result('?', 'a route-map line this tool does not read');
+      if (!set) return result('?', 'a route-map line this tool does not read: ' + headWords(l));
       const field = { 'local-preference': 'local_pref', weight: 'weight', metric: 'metric' }[set[1]];
       const label = { 'local-preference': 'LocPrf', weight: 'Weight', metric: 'MED' }[set[1]];
       const bs = (binds[c.name] || []).filter((b) => b.dir === 'in');
@@ -239,7 +249,7 @@ function explainPlan(states, router, text, opts) {
       return result('?', 'sets ' + label + ' ' + set[2] + ' — ' + parts.join('; ') + cmp + verdict + '. Which path wins after the change is not worked out here.');
     }
     if (/^ip prefix-list /.test(l)) return result('?', 'a prefix-list (see where it is used)');
-    return result('?', 'a line this tool does not read');
+    return result('?', 'a line this tool does not read: ' + headWords(l) + (/^router \S+/.test(l) ? ' (only router ospf and router bgp are read)' : ''));
   }
 
   const lines = items.map((it) => {
