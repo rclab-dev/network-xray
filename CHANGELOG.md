@@ -2,7 +2,7 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## Unreleased
+## v1.9.0 — 2026-11-26
 
 - **Walkthrough (new):** `scripts/xray-walkthrough.js` (or `./xray.sh walkthrough`) checks a Walkthrough, a list of scenes that each hold the whole lab state with a title, a caption and a source label (observed, answer example, illustrative, ...), and writes it as one HTML page that plays it: the scenes on the left (click, Back / Next, Play), the lab and the open router's X-Ray on the right. The engine is inside the page, so it works offline. Each scene after the first shows what changed from the scene before (worked out from the two states). The format is `WALKTHROUGH-CONTRACT.md`; `demo/walkthrough-q21` is the q21 recording as a Walkthrough (en, ja).
 - **`capture-frames.js --walkthrough`:** also writes a draft Walkthrough of the frames (one scene per frame); a `walkthrough.json` already there is kept.
