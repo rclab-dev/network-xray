@@ -79,7 +79,7 @@ test('--path wins over NX_MCP_PATH; a default that is not there yet is said on s
   assert.deepStrictEqual(r.out.filter(function (m) { return m.id === 2; })[0].result.structuredContent, WANT);
   var r2 = runServer([], { NX_MCP_PATH: path.join(ROOT, 'no-such-state-dir') });
   assert.match(r2.stderr, /default path does not exist yet/);
-  assert.strictEqual(r2.out.filter(function (m) { return m.id === 2; })[0].result.isError, true);
+  assert.match(r2.out.filter(function (m) { return m.id === 2; })[0].result.structuredContent.note, /^No lab state here yet \(not found/);   // nx_mcp_no_state_yet: list_routers answers no routers
 });
 
 test('--path without a value is a usage error (exit 2)', function () {

@@ -146,9 +146,9 @@ test('list_routers: names and which protocols have state', function () {
     [['r1', ['ospf', 'bgp']], ['r2', ['ospf', 'bgp']], ['r3', ['bgp']]]);
   assert.strictEqual(out.routers[1].counts.bgp_neighbors, 2);
   assert.strictEqual(out.routers[0].routing_table, true);
-  isErr(s.byId[21], /not found/);
+  assert.match(s.byId[21].result.structuredContent.note, /^No lab state here yet \(not found/);   // nx_mcp_no_state_yet
   isErr(s.byId[22], /path must be a string/);
-  isErr(s.byId[23], /missing argument: path/);
+  assert.match(s.byId[23].result.structuredContent.note, /no path was given/);   // nx_mcp_no_state_yet
 });
 
 test('ospf_neighbors: per router neighbor, state, interface', function () {

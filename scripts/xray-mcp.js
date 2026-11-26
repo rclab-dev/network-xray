@@ -554,6 +554,10 @@ function loadStates(p) {
   }
 }
 
+function noStateYet(why) {
+  return { routers: [], note: 'No lab state here yet (' + why + '). The collectors write it while a lab runs: https://github.com/rclab-dev/network-xray/blob/main/docs/mcp.md#where-the-state-comes-from' };
+}
+
 function callTool(name, args) {
   if (args != null && (typeof args !== 'object' || Array.isArray(args))) throw new Error('arguments must be an object');
   args = routerNodeAlias(args || {});   /* nx_mcp_router_node */
@@ -569,7 +573,12 @@ function callTool(name, args) {
     var p = str(args, 'path', true), node = str(args, 'node', true), prefix = str(args, 'prefix', true);
     return query.why(loadStates(p), node, prefix, str(args, 'vrf', false));
   }
-  if (name === 'list_routers') return query.listRouters(loadStates(str(args, 'path', true)));
+  if (name === 'list_routers') {   /* nx_mcp_no_state_yet: no state there yet is an answer (no routers), not an error */
+    var lp = str(args, 'path', false);
+    if (!lp) return noStateYet('no path was given and the server was started without --path');
+    try { return query.listRouters(loadStates(lp)); }
+    catch (e) { if (/^(not found: |no state files )/.test((e && e.message) || '')) return noStateYet(e.message); throw e; }
+  }
   if (name === 'ospf_neighbors' || name === 'bgp_neighbors') {
     var p2 = str(args, 'path', true), router = str(args, 'router', false);
     return (name === 'ospf_neighbors' ? query.ospfNeighbors : query.bgpNeighbors)(loadStates(p2), router);

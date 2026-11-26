@@ -84,7 +84,7 @@ test('arguments that are not an object are an error for every tool', function ()
 
 test('missing required arguments are named in the error', function () {
   var required = {
-    lab_state: ['path'], list_routers: ['path'], ospf_neighbors: ['path'], ospf_interfaces: ['path'], bgp_neighbors: ['path'],
+    lab_state: ['path'], ospf_neighbors: ['path'],   // list_routers: no path answers no routers (nx_mcp_no_state_yet) ospf_interfaces: ['path'], bgp_neighbors: ['path'],
     why_best_path: ['path', 'node', 'prefix'], route_lookup: ['path', 'router', 'destination'], why_path: ['path', 'router', 'prefix']
   };
   var full = { path: Q15, node: 'r1', router: 'r1', prefix: '10.0.0.0/8', destination: '10.0.0.1' };
@@ -142,6 +142,7 @@ test('a router that is not in the lab is an error that lists the known routers',
 test('missing, empty and non-state files are clear errors', function () {
   var missing = path.join(TMP, 'does-not-exist.json');
   ALL_TOOLS.forEach(function (t) {
+    if (t === 'list_routers') return;   // nx_mcp_no_state_yet: answers no routers (test below)
     var args = { path: missing, node: 'r1', router: 'r1', prefix: '10.0.0.0/8', destination: '10.0.0.1' };
     if (t === 'lab_state' || t === 'list_routers') args = { path: missing };
     if (t === 'ospf_neighbors' || t === 'ospf_interfaces' || t === 'bgp_neighbors') args = { path: missing };
@@ -159,7 +160,12 @@ test('missing, empty and non-state files are clear errors', function () {
   assert.match(toolError('lab_state', { path: tmpFile('num.json', '42') }), /^not a network-xray state file$/);
   assert.match(toolError('lab_state', { path: tmpFile('xs.js', 'window.LIVE_STATES = {};\n') }), /^not a network-xray state file$/);
   assert.match(toolError('lab_state', { path: tmpFile('xs-bad.js', 'window.LIVE_STATES = {oops;\n') }), /^not a network-xray state file$/);
-  assert.match(toolError('list_routers', { path: tmpDir('empty-dir') }), /no state files/);
+  [missing, tmpDir('empty-dir')].forEach(function (p) {   // nx_mcp_no_state_yet
+    var r = toolOk('list_routers', { path: p });
+    assert.deepStrictEqual(r.routers, []);
+    assert.match(r.note, /^No lab state here yet \((not found|no state files)/);
+  });
+  assert.match(toolOk('list_routers', {}).note, /no path was given/);
   // a directory with only an empty state_<node>.json
   var d = tmpDir('dir-empty-state');
   fs.writeFileSync(path.join(d, 'state_r1.json'), '');
