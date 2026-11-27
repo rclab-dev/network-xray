@@ -1,0 +1,17 @@
+{
+  "network-instance": [
+    {
+      "name": "default",
+      "route-table": {
+        "next-hop": [
+          {
+            "index": "8",
+            "type": "indirect",
+            "ip-address": "192.0.2.2",
+            "subinterface": "ethernet-1/1.0"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -69,7 +69,8 @@ var TOOLS = [
     description: 'Read a network-xray lab state (read-only) and summarize it. ' + 'Starts with `wrong`: what is wrong, each with a `text` line (an interface down, an OSPF interface that faces a neighbor and has no adjacency with the values both ends must share and do not, a Full adjacency whose ends still differ, a BGP session not Established, a route that cannot be used because its next hop is not reachable); empty when nothing is. only_problems: true returns only wrong and counts. ' +
       'Then nodes and interfaces, links, OSPF adjacencies, BGP sessions and counts. An adjacency that never came up is not in a ' +
       'neighbor table, so counts also has ospf_ifaces_expected (OSPF interfaces that face a neighbor, not passive), ospf_ifaces_full and ' +
-      'ospf_ifaces_without_adjacency. No router is contacted.',
+      'ospf_ifaces_without_adjacency. `not_read` (when present) lists the parts of a router that could not be read (no answer, or an ' +
+      'answer this version does not read): those are not read, not empty - do not take them as no neighbor / no route. No router is contacted.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -586,7 +587,8 @@ function callTool(name, args) {
     var op = args.only_problems;
     if (op != null && typeof op !== 'boolean') throw new Error('argument only_problems must be true or false');
     var sm = query.summarize(loadStates(str(args, 'path', true)));
-    return op ? { wrong: sm.wrong, counts: sm.counts } : sm;
+    if (op) { var opo = { wrong: sm.wrong, counts: sm.counts }; if (sm.not_read) opo.not_read = sm.not_read; return opo; }   /* nx_unread_parts: a part not read is a problem to say */
+    return sm;
   }
   if (name === 'view_data') return viewData(loadStates(str(args, 'path', true)));   /* nx_mcp_apps */
   if (name === 'why_best_path') {

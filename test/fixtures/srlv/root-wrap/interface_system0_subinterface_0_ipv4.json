@@ -1,0 +1,20 @@
+{
+  "interface": [
+    {
+      "name": "system0",
+      "subinterface": [
+        {
+          "index": 0,
+          "ipv4": {
+            "admin-state": "enable",
+            "address": [
+              {
+                "ip-prefix": "198.51.100.1/32"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -20,6 +20,7 @@
         "protocol": { "type": "string", "description": "'ospf' or 'bgp' when set." },
         "nx_unread": { "type": "string", "enum": ["stopped", "device", "timeout", "error"], "description": "Set by clab-xray-collect.js when the router could not be read." },
         "nx_stale_since": { "type": "string", "description": "ISO time of the last good read, with nx_unread 'timeout'." },
+        "nx_unread_parts": { "type": "object", "description": "Parts of a router that was read but where one part could not be: part (interfaces / ospf_neighbors / bgp_neighbors / routes / bgp_routes) -> noanswer (the command gave nothing) or shape (an answer this version does not read). Those lists are not read, not empty.", "additionalProperties": { "type": "string", "enum": ["noanswer", "shape"] } },
         "parse_warnings": {
           "type": "array",
           "description": "IOS-XE only; absent when every output was read.",

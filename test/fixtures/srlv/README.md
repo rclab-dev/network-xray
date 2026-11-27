@@ -36,6 +36,7 @@ network-instance default bgp-rib attr-sets
 | `subif-bgp` | `/31` eBGP peers on `ethernet-1/1.100` / `.200`, indirect BGP next-hop | self-test shape |
 | `bgp-odd` | 4-byte ASN, `opensent` / `openconfirm` / `connect`, `received-routes: 0`, `afi-safi-name` with a module prefix, local-pref 0 and 4294967295, MED 4294967295, origin `egp` / `incomplete`, AS_SET, confederation sequence / set, prepending, a default route, an own route | self-test shape; segment `type` and enum values from `srl_nokia-bgp-rib` / `srl_nokia-bgp` (spelling not seen in a capture) |
 | `ospf-odd` | areas `0.0.0.10` and `10.255.0.1`, hello 1 s / dead 3 s, `/31` link, broadcast LAN with two `two-way` DROthers and one `loading`, transit links and a network-LSA, `route-type` with a module prefix | capture shape; values from `srl_nokia-ospf` |
+| `root-wrap` | the 24.x answer shape: every path answered from the root (`{"network-instance":[{"name":"default","protocols":{"bgp":{"neighbor":[...]}}}]}`, `{"interface":[{"name":...,"subinterface":[{"index":0,"ipv4":{...}}]}]}`) instead of the node the path names, one key with a module prefix (`srl_nokia-bgp:bgp`); eBGP, one neighbor up, one BGP route | the root-wrapped shape some SR Linux releases print (seen on 24.10); leaves as `subif-bgp` / `bgp-odd` |
 
 A module prefix (`srl_nokia-common:ospfv2`) is how YANG identity values look in JSON-IETF (gNMI) output;
 the bundled `sr_cli` capture prints them without one. Both read the same.

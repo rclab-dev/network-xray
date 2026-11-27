@@ -282,6 +282,25 @@ function wrongFor(list, protocols, node) {
   return list.filter(function (w) { return protocols.indexOf(w.protocol) >= 0 && (!node || w.node === node || (Array.isArray(w.nodes) && w.nodes.indexOf(node) >= 0)); });
 }
 
+/* nx_unread_parts (2026-11-27): a router can be read while one part of it is not (the command gave nothing, or an answer
+   in a shape this version does not read). That part is "not read" - an answer must never present it as "none". */
+var NOT_READ_WHY = { noanswer: 'no answer from the router for this part', shape: 'the router answered in a shape this version does not read' };
+function unreadParts(s) { var u = s && s.nx_unread_parts; return u && typeof u === 'object' && !Array.isArray(u) ? u : null; }
+// [{router, part, why, note}] for the given routers (and parts, when given)
+function notRead(states, names, parts) {
+  var out = [];
+  names.forEach(function (n) {
+    var u = unreadParts(states[n]); if (!u) return;
+    Object.keys(u).sort().forEach(function (k) {
+      if (parts && parts.indexOf(k) < 0) return;
+      var w = String(u[k]);
+      out.push({ router: n, part: k, why: w, note: (NOT_READ_WHY[w] || 'not read') + ' - not read, not empty' });
+    });
+  });
+  return out;
+}
+function withNotRead(o, list) { if (o && typeof o === 'object' && !Array.isArray(o) && list.length) o.not_read = list; return o; }
+
 function summarize(states) {
   var names = Object.keys(states).sort();
   var nodes = names.map(function (n) {
@@ -289,6 +308,7 @@ function summarize(states) {
     if (s.nos) o.nos = s.nos;
     if (s.protocol) o.protocol = s.protocol;
     if (s.nx_unread) o.unread = s.nx_unread;
+    if (unreadParts(s)) o.unread_parts = Object.assign({}, unreadParts(s));   /* nx_unread_parts */
     o.interfaces = Object.keys(s.interfaces || {}).map(function (i) {
       var x = s.interfaces[i] || {};
       return { name: i, up: !!x.up, ip: x.ip || '' };
@@ -338,7 +358,7 @@ function summarize(states) {
     });
   });
   var exp = ospfExpected(states);
-  return {
+  return withNotRead({
     wrong: wrongList(states, names), nodes: nodes, links: links, ospf_adjacencies: ospf, bgp_sessions: bgp,
     counts: {
       nodes: nodes.length, links: links.length,
@@ -348,7 +368,7 @@ function summarize(states) {
       ospf_ifaces_expected: exp.expected, ospf_ifaces_full: exp.full, ospf_ifaces_without_adjacency: exp.expected - exp.full,
       bgp_established: bgp.filter(function (x) { return x.established; }).length, bgp_total: bgp.length
     }
-  };
+  }, notRead(states, names));   /* nx_unread_parts: the counts above are of what was read */
 }
 
 // ---- why ------------------------------------------------------------------------------------
@@ -642,6 +662,8 @@ function listRouters(states) {
       bgp_routes: (s.bgp_routes || []).length,
       routes: (s.routing_table || []).length
     };
+    var _u = unreadParts(s);   /* nx_unread_parts: a part that was not read has no count (null), not 0 */
+    if (_u) { o.unread_parts = Object.assign({}, _u); Object.keys(_u).forEach(function (k) { if (k in o.counts) o.counts[k] = null; }); }
     return o;
   });
   return { routers: routers, count: routers.length };
@@ -1065,6 +1087,9 @@ function stateTable(states, color) {
     { head: 'BGP PEERS', key: 'bgp', right: true }, { head: 'BGP ROUTES', key: 'bgp_routes', right: true },
     { head: 'RIB ROUTES', key: 'routes', right: true }
   ]), rrows, color, '  '));
+  notRead(states, Object.keys(states).sort()).forEach(function (x) {   /* nx_unread_parts: '-' above = not read, said once in words */
+    out.push(textLine('  ' + paint('not read:', 'yellow', color) + ' ' + x.router + ' ' + x.part + ' - ' + x.note));
+  });
 
   var orows = [];
   on.routers.forEach(function (r) {
@@ -1118,6 +1143,7 @@ function whyTable(w, color) {
     if (w.reason_source) out.push(textLine('  source:    ' + w.reason_source));
   }
   if (w.note) out.push(textLine('  note:      ' + w.note));
+  (w.not_read || []).forEach(function (x) { out.push(textLine('  ' + paint('not read:', 'yellow', color) + '  ' + x.router + ' ' + x.part + ' - ' + x.note)); });   /* nx_unread_parts */
   out.push('', title('Candidates', color));
   var rows = w.candidates.map(function (c) {
     return { mark: c.best ? '*' : ' ', next_hop: c.next_hop, as_path: c.as_path, lp: c.local_pref, weight: c.weight,
@@ -1283,10 +1309,10 @@ function run(argv, o) {
   if (o && o.out != null && !(cmd === 'check' && argv[1] === 'init')) throw new QueryError('--out is for check init only');
   if (o && (o.vendor != null || o.lang != null) && !(cmd === 'check' && argv[1] === 'to-procedure')) throw new QueryError('--vendor / --lang are for check to-procedure only');
   if (cmd === 'state') { if (argv.length !== 2) throw new QueryError(USAGE); return summarize(loadStates(argv[1])); }
-  if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return why(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
+  if (cmd === 'why') { if (argv.length < 4 || argv.length > 5) throw new QueryError(USAGE); return whyNR(loadStates(argv[1]), argv[2], argv[3], argv[4]); }
   if (cmd === 'diff') { if (argv.length < 3 || argv.length > 4) throw new QueryError(USAGE); return diff(loadStates(argv[1]), loadStates(argv[2]), argv[3], mg); }
   if (cmd === 'check') return check(argv, o);
-  if (cmd === 'ospf-if') { if (argv.length < 2 || argv.length > 3) throw new QueryError(USAGE); return ospfInterfaces(loadStates(argv[1]), argv[2]); }
+  if (cmd === 'ospf-if') { if (argv.length < 2 || argv.length > 3) throw new QueryError(USAGE); return ospfInterfacesNR(loadStates(argv[1]), argv[2]); }
   throw new QueryError(cmd ? 'unknown command: ' + cmd + ' (' + USAGE + ')' : USAGE);
 }
 
@@ -1343,6 +1369,24 @@ if (require.main === module) {
   process.exitCode = code;
 }
 
-module.exports = { diff: diff, loadStates: loadStates, loadProblem: loadProblem, summarize: summarize, why: why, run: run,
-  listRouters: listRouters, ospfNeighbors: ospfNeighbors, ospfInterfaces: ospfInterfaces, ospfIfTable: ospfIfTable, bgpNeighbors: bgpNeighbors, routeLookup: routeLookup, whyPath: whyPath,
+/* nx_unread_parts: the per-router answers say which part they could not read (not_read), and a one-line summary starts with it,
+   so a reader (or an AI) does not take "no route / no neighbor" from a part that was never read */
+function notReadCall(fn, parts, all, args) {   // function declarations: the CLI (require.main above) calls them before this line runs
+  var r = fn.apply(null, args), states = args[0], node = args[1];
+  var names = all || node == null ? Object.keys(states).sort() : (states[node] ? [node] : []);
+  var nr = notRead(states, names, parts);
+  if (nr.length && r && typeof r === 'object' && !Array.isArray(r)) {
+    withNotRead(r, nr);
+    if (typeof r.summary === 'string') r.summary = 'Not read: ' + nr.map(function (x) { return x.router + ' ' + x.part; }).join(', ') + ' (the answer below may miss them). ' + r.summary;
+  }
+  return r;
+}
+function whyNR() { return notReadCall(why, ['bgp_routes', 'bgp_neighbors'], false, arguments); }
+function whyPathNR() { return notReadCall(whyPath, ['routes', 'bgp_routes', 'bgp_neighbors', 'ospf_neighbors'], true, arguments); }
+function routeLookupNR() { return notReadCall(routeLookup, ['routes', 'bgp_routes'], false, arguments); }
+function ospfNeighborsNR() { return notReadCall(ospfNeighbors, ['ospf_neighbors', 'interfaces'], false, arguments); }
+function ospfInterfacesNR() { return notReadCall(ospfInterfaces, ['ospf_neighbors', 'interfaces'], false, arguments); }
+function bgpNeighborsNR() { return notReadCall(bgpNeighbors, ['bgp_neighbors'], false, arguments); }
+module.exports = { diff: diff, loadStates: loadStates, loadProblem: loadProblem, summarize: summarize, why: whyNR, run: run,
+  listRouters: listRouters, ospfNeighbors: ospfNeighborsNR, ospfInterfaces: ospfInterfacesNR, ospfIfTable: ospfIfTable, bgpNeighbors: bgpNeighborsNR, routeLookup: routeLookupNR, whyPath: whyPathNR, notRead: notRead,
   parseOptions: parseOptions, runTable: runTable, stateTable: stateTable, whyTable: whyTable };

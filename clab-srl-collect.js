@@ -70,6 +70,56 @@ function ospfStateWord(v) {
 // an identity value with its YANG module prefix ("srl_nokia-common:bgp") reads as the bare name ("bgp")
 function noMod(v) { return typeof v === 'string' ? v.replace(/^[A-Za-z][A-Za-z0-9_.-]*:/, '') : v; }
 function ospfStateRank(w) { return w ? OSPF_ORDER.indexOf(w) : -1; }
+/* nx_srl_root_wrap (2026-11-27): SR Linux 24.x answers `info from state <path> | as json` from the root
+   ({"network-instance":[{"name":"default","protocols":{"bgp":{"neighbor":[...]}}}]}), 26.x answers with the
+   node the path names ({"neighbor":[...]}). Walk a root-wrapped answer down the path so both read the same.
+   A key may carry its YANG module prefix ("srl_nokia-bgp:bgp"). A list is matched by the next path word
+   (the entry's key value: name / index); `*` keeps the whole list. A path that is not in a wrapped answer
+   reads as empty (the device answered, it has nothing there). An answer that is not wrapped is unchanged. */
+function nxPick(o, k) {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return undefined;
+  if (Object.prototype.hasOwnProperty.call(o, k)) return o[k];
+  var m = Object.keys(o).filter(function (x) { return noMod(x) === k; })[0];
+  return m === undefined ? undefined : o[m];
+}
+function nxUnwrap(p, j) {
+  var t = String(p).split(' ').filter(Boolean);
+  if (!t.length || nxPick(j, t[0]) === undefined) return j;   // 26.x (or not an object): already the node the path names
+  var cur = j;
+  for (var i = 0; i < t.length; i++) {
+    var v = nxPick(cur, t[i]);
+    if (v === undefined) return {};
+    if (Array.isArray(v)) {
+      var key = t[i + 1];
+      if (key === undefined || key === '*') { var w = {}; w[t[i]] = v; return w; }
+      var hit = list(v).filter(function (e) { return Object.keys(e).some(function (k) { var x = e[k]; return (typeof x === 'string' || typeof x === 'number') && String(noMod(x)) === key; }); })[0];
+      if (!hit) return {};
+      cur = hit; i++;
+    } else cur = v;
+  }
+  return cur && typeof cur === 'object' ? cur : {};
+}
+/* nx_unread_parts: which part of the state a path fills, and the list it must hold. Only the paths a part stands on
+   (next-hop / attr-sets only add detail to routes that were read). */
+var NX_PARTS = [
+  [/^interface /, 'interfaces', null],
+  [/ protocols bgp neighbor /, 'bgp_neighbors', 'neighbor'],
+  [/ protocols ospf instance default area /, 'ospf_neighbors', 'area'],
+  [/ route-table ipv4-unicast$/, 'routes', 'route'],
+  [/ local-rib$/, 'bgp_routes', 'route']
+];
+function nxPartOf(p) { var m = NX_PARTS.filter(function (x) { return x[0].test(p); })[0]; return m ? m[1] : null; }
+// 'noanswer' = nothing came back; 'shape' = not an object, or an object holding containers / lists but not the list this
+// reader reads. Plain leaves are not a shape problem: an OSPF instance with no area answers {"name": "default"}.
+function nxUnreadWhy(p, r) {
+  if (r == null) return 'noanswer';
+  if (typeof r !== 'object' || Array.isArray(r)) return 'shape';
+  var m = NX_PARTS.filter(function (x) { return x[0].test(p); })[0], want = m && m[2];
+  if (!want) return null;
+  var keys = Object.keys(r);
+  if (keys.some(function (k) { return noMod(k) === want; })) return null;
+  return keys.some(function (k) { return r[k] !== null && typeof r[k] === 'object'; }) ? 'shape' : null;   // {} / leaves only = the device has none there
+}
 var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 'ip-vrf': 'connected', static: 'static', 'bgp': 'bgp', 'bgp-vpn': 'bgp', arpnd: 'connected', 'arp-nd': 'connected' };
 
 // ---------------------------------------------------------------------------
@@ -78,6 +128,16 @@ var PROTO = { ospfv2: 'ospf', ospf3: 'ospf', local: 'connected', host: 'local', 
 // unit-testable offline (see --self-test) — the live path just wires fetch to docker exec + sr_cli.
 // ---------------------------------------------------------------------------
 function buildState(fetch, node, adj, proto) {
+  var _fetch0 = fetch, _unreadParts = {};
+  fetch = function (p) {
+    var r = _fetch0(p);
+    if (r != null) r = nxUnwrap(p, r);   /* nx_srl_root_wrap */
+    /* nx_unread_parts (2026-11-27): a part that got no answer (the command failed / no file in --from-dir) or an answer in a
+       shape this reader does not know is marked, so it reads as "not read" - never as "none" (an empty router looked healthy) */
+    var part = nxPartOf(p);
+    if (part) { var why = nxUnreadWhy(p, r); if (why && !_unreadParts[part]) _unreadParts[part] = why; }
+    return r;
+  };
   var isBgp = proto === 'bgp';
   var state = { target_node: node, protocol: isBgp ? 'bgp' : 'ospf', interfaces: {} };
   var _ipPfx = {};   // nx_srl_peer_map: ifn -> 'ip/len' (the output keeps the bare ip)
@@ -338,6 +398,7 @@ function buildState(fetch, node, adj, proto) {
     }
   }
 
+  if (Object.keys(_unreadParts).length) state.nx_unread_parts = _unreadParts;   /* nx_unread_parts */
   return state;
 }
 
@@ -464,7 +525,7 @@ function selfTest() {
 }
 
 // ---------------------------------------------------------------------------
-module.exports = { buildState: buildState, dirFetch: dirFetch, pathToFile: pathToFile, sameNet24: sameNet24, maskToPfx: maskToPfx, normArea: normArea, splitIf: splitIf, selfTest: selfTest };
+module.exports = { buildState: buildState, dirFetch: dirFetch, nxUnwrap: nxUnwrap, pathToFile: pathToFile, sameNet24: sameNet24, maskToPfx: maskToPfx, normArea: normArea, splitIf: splitIf, selfTest: selfTest };
 if (require.main !== module) return;   // required (e.g. by test/): export only, no CLI
 
 function arg(name, def) { var i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : def; }

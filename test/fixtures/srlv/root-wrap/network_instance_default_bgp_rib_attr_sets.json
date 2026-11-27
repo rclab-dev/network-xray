@@ -1,0 +1,30 @@
+{
+  "network-instance": [
+    {
+      "name": "default",
+      "bgp-rib": {
+        "attr-sets": {
+          "attr-set": [
+            {
+              "index": "1",
+              "origin": "igp",
+              "as-path": {
+                "segment": [
+                  {
+                    "type": "as_sequence",
+                    "member": [
+                      65002
+                    ]
+                  }
+                ]
+              },
+              "next-hop": "192.0.2.2",
+              "med": 0,
+              "local-pref": 100
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

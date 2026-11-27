@@ -1,0 +1,29 @@
+{
+  "network-instance": [
+    {
+      "name": "default",
+      "bgp-rib": {
+        "afi-safi": [
+          {
+            "afi-safi-name": "ipv4-unicast",
+            "ipv4-unicast": {
+              "local-rib": {
+                "route": [
+                  {
+                    "prefix": "198.51.100.2/32",
+                    "neighbor": "192.0.2.2",
+                    "origin-protocol": "bgp",
+                    "best-route": true,
+                    "used-route": true,
+                    "valid-route": true,
+                    "attr-id": "1"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

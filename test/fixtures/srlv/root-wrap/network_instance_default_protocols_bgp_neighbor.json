@@ -1,0 +1,31 @@
+{
+  "network-instance": [
+    {
+      "name": "default",
+      "protocols": {
+        "srl_nokia-bgp:bgp": {
+          "neighbor": [
+            {
+              "peer-address": "192.0.2.2",
+              "session-state": "established",
+              "peer-as": 65002,
+              "peer-type": "ebgp",
+              "afi-safi": [
+                {
+                  "afi-safi-name": "ipv4-unicast",
+                  "received-routes": 1
+                }
+              ]
+            },
+            {
+              "peer-address": "192.0.2.6",
+              "session-state": "active",
+              "peer-as": 65003,
+              "peer-type": "ebgp"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

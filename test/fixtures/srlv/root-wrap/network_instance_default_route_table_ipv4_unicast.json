@@ -1,0 +1,24 @@
+{
+  "network-instance": [
+    {
+      "name": "default",
+      "route-table": {
+        "ipv4-unicast": {
+          "route": [
+            {
+              "ipv4-prefix": "198.51.100.1/32",
+              "route-type": "host",
+              "active": true
+            },
+            {
+              "ipv4-prefix": "198.51.100.2/32",
+              "route-type": "bgp",
+              "active": true,
+              "next-hop-group": "7"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

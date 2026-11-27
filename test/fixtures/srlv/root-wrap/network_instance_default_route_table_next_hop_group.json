@@ -1,0 +1,20 @@
+{
+  "network-instance": [
+    {
+      "name": "default",
+      "route-table": {
+        "next-hop-group": [
+          {
+            "index": "7",
+            "next-hop": [
+              {
+                "id": 0,
+                "next-hop": "8"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
