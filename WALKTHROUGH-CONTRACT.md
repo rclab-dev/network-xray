@@ -86,6 +86,36 @@ shown first, and going back is the same as going forward. / 各段は状態を**
 | `dwell` | no | milliseconds Play stays on the scene, 500–60000 (default 6000) / 再生で留まる時間 (既定 6000) |
 | `ext` | no | anything of your own (§4) / 自分用の欄 (§4) |
 
+### Getting each scene's state / 各段の状態の採り方
+
+From a running containerlab lab, write the steps of your story in a steps file (one step = one scene: a command run on
+one node, or `"run": "none"` for the state as it is) and let `capture-frames.js` record a settled state after each step.
+/ 動いている containerlab のラボから採ります。話の手順を steps のファイルに書き (1 手順 = 1 段: ノード 1 台で打つ
+命令、または今のままの状態なら `"run": "none"`)、`capture-frames.js` が各手順の後の落ち着いた状態を記録します。
+
+```json
+{ "proto": "bgp",
+  "steps": [ { "name": "the fault", "run": "none" },
+             { "name": "the fix", "node": "r1", "run": "vtysh -c 'configure terminal' -c '...' -c 'end'", "wait": 5 } ] }
+```
+
+`node scripts/capture-frames.js lab.clab.yml steps.json out/ --walkthrough` writes `out/frame1.json`, `out/frame2.json`, ...
+and a draft `out/walkthrough.json` (one scene per step, the step name as its title): edit the titles and captions, then
+make the page. A full example is `demo/capture/q21-bgp-lp.steps.json`; every option is at the top of
+`scripts/capture-frames.js`. A state you write by hand (`illustrative`) or save from a collector works the same.
+/ `out/frame1.json`・`out/frame2.json`… と下書きの `out/walkthrough.json` (手順ごとに 1 段・題は手順の名前) を書きます。
+題と説明を直して頁を作ります。例は `demo/capture/q21-bgp-lp.steps.json`、option は全部 `scripts/capture-frames.js`
+の頭に。手で書いた状態 (`illustrative`) や collector が書いた物も同じに使えます。
+
+### What the page says and what you say / 頁が言うこと・作った人が言うこと
+
+- **What changed** (from the 2nd scene) is worked out by the page from the two states (§6): the facts, the same for any
+  author. / **変わった所** (2 段目から) は頁が 2 つの状態から出します (§6): 誰が作っても同じ事実。
+- **`caption`** is your words: what to look at and why it matters. / **`caption`** は作った人の言葉: どこを見るか・
+  なぜ大事か。
+- **`show`** points at it: `node` and `prefix` open that router and route, `highlight` draws the nodes and links in
+  yellow. / **`show`** は指さし: `node` と `prefix` でそのルータと宛先を開き、`highlight` でノードと線を黄色に。
+
 ## 3. Where the state came from / 出所の札
 
 | `source` | page (en / ja) | meaning / 意味 |

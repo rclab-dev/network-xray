@@ -53,7 +53,7 @@ unchanged.
 | `build-replay.js` | regenerates `index.html` (OSPF) from the OSS template + captured `frame*.json` + `topo.json`. It reads the template from this folder, so copy it in first: `cp ../xray-graph.html . && node build-replay.js` |
 | `build-replay-bgp.js` | regenerates `index-bgp-lp.html` from `bgp-lp/` — see [Rebuilding the BGP LocalPref page](#rebuilding-the-bgp-localpref-page) |
 | `replay-shell.js` | the replay bar markup both builders put into a page |
-| `walkthrough-q21/` | the same four frames as a **Walkthrough** ([WALKTHROUGH-CONTRACT.md](../WALKTHROUGH-CONTRACT.md)): `walkthrough.json` (en) and `walkthrough.ja.json` (ja). `node scripts/xray-walkthrough.js demo/walkthrough-q21/walkthrough.json` writes one HTML page with the scenes on the left and the engine inside (works offline) |
+| `walkthrough-q21/` | the same four frames as a **Walkthrough** ([WALKTHROUGH-CONTRACT.md](../WALKTHROUGH-CONTRACT.md)): `walkthrough.json` (en) and `walkthrough.ja.json` (ja). `node scripts/xray-walkthrough.js demo/walkthrough-q21/walkthrough.json` writes one HTML page with the scenes on the left and the engine inside (works offline); how to open it and make your own: [its README](walkthrough-q21/README.md) |
 | `compose-ospf/` / `compose-bgp-lp/` | live labs with plain `docker compose` (no containerlab) — see the README in each |
 
 ## Rebuilding the BGP LocalPref page
