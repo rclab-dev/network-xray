@@ -45,3 +45,22 @@ test('a log at the bare prompt is read at once, as before (not the one-return pa
     assert.deepStrictEqual(r.calls, [0]);
   } finally { r.restore(); }
 });
+
+test('CML 2.11 log lines start with a mark ("|0000152887|"): a log at the prompt is still read at once', async function () {
+  var r = rig(['|0000152880|\n|0000152887|R1>'.replace(/R1/, 'r1')]);
+  try {
+    assert.strictEqual(await read(r), 'read');
+    assert.deepStrictEqual(r.calls, [0]);
+  } finally { r.restore(); }
+});
+
+test('CML 2.11 marks on an idle boot log: woken with one return after --quiet-wait, as without the marks', async function () {
+  var marked = BOOT.split('\n').map(function (l, i) { return '|00001528' + (80 + i) + '|' + l; }).join('\n');
+  var r = rig([marked]);
+  try {
+    assert.strictEqual(await read(r), 'busy');
+    await later(200);
+    assert.strictEqual(await read(r), 'read');
+    assert.deepStrictEqual(r.calls, [1]);
+  } finally { r.restore(); }
+});

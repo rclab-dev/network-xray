@@ -799,7 +799,8 @@ Collector.prototype.readNodeConsole = function (n) {
   if (c.alive && c.host) { var why = c.whyNot(quietMs); if (why) return busy(why); }
   var idle = this.idleLog || (this.idleLog = {}), wakeOnce = false;
   var logOk = (c.alive && c.host) || !this.cfg.consoleLog ? Promise.resolve() : this.cfg.consoleLog(n).then(function (log) {
-    var lines = String(log || '').replace(/\r/g, '').split('\n').filter(function (l) { return l.trim(); }), last = lines[lines.length - 1] || '';
+    /* nx_cml211_log (2026-11-28): CML 2.11 puts a mark like "|0000152887|" at the head of each log line - taken off first */
+    var lines = String(log || '').replace(/\r/g, '').split('\n').map(function (l) { return l.replace(/^\|\d+\|/, ''); }).filter(function (l) { return l.trim(); }), last = lines[lines.length - 1] || '';
     if (last && !(/^[A-Za-z0-9._-]+[>#]\s*$/.test(last) && last.indexOf('(config') < 0) && !/^Press RETURN/i.test(last) && !/^consoles?>/.test(last)) {
       /* nx_console_idle (2026-11-27): a log that does not end with a prompt but has not changed for --quiet-wait is a router
          nobody is on (booted, its last lines a boot notice): it is woken with ONE return - nothing else is sent before the
