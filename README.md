@@ -195,7 +195,9 @@ the limit is the code. The exceptions, all on purpose:
   `NX_JUMP_KEY` into it and stops, wipes and starts nx-jump. That is its only change to the lab (the routers keep running);
   its other CML API calls are reads (GET, and the login).
 - **`--console` (CML, off by default):** types `enable`, `terminal length 0` and the `show` commands on the CML consoles,
-  so they appear on the console you use.
+  so they appear on the console you use. A console whose log has not changed for `--quiet-wait` (default 60 s) and does
+  not end with a prompt (a router nobody has pressed Enter on since it booted) first gets one return, to show the prompt;
+  a console whose log is changing (someone is on it) is not touched.
 - **Files on your machine:** the collector writes `xray-states.js` and `xray-states.sig.js` next to the page; the netlab
   tool writes `network-xray.json` (it holds the lab's passwords; `netlab down` removes it).
 - **Nothing is sent anywhere else:** no telemetry, no analytics, no account. The "Powered by RCL" link in the DeepDive and
@@ -1117,6 +1119,9 @@ topology view; it doesn't replace it.
 
 - **Descriptive renderer, not a network simulator** — it draws the state you feed it; it does
   not compute routes or run protocols.
+- **Routing, not Layer 2** — it reads interfaces, OSPF, BGP and the routing table. Layer 2 (STP, LACP / EtherChannel,
+  trunks, VLANs) is not read. In a lab that is only switching, the page still names the protocol it was started with (e.g.
+  "(ospf)") and the OSPF / BGP parts are empty: that is outside what it reads, not the state of the lab.
 - **Vendor-neutral via adapter** — map your router OS's `show` output to the documented shapes
   (`frr-parse.js` is the template; DATA-CONTRACT has the mapping).
 - **Browser-only / private** — the paste demo sends nothing to a server.
@@ -1312,7 +1317,9 @@ Cisco IOL は `show` (IOL には自分の SSH の session だけの設定 `termi
 - **CML の踏み台:** nx-jump の設定がまだ `<your public key>` のままなら、`cml-xray.js` は `NX_JUMP_KEY` の公開鍵をそこに書き、
   nx-jump を止めて・消して・起動します。ラボへの変更はこれだけです (ルータは動いたまま)。ほかの CML の API は読むだけ (GET とログイン) です。
 - **`--console` (CML・既定では使わない):** CML のコンソールで `enable`・`terminal length 0` と `show` のコマンドを打ちます。
-  使っているコンソールにそれが出ます。
+  使っているコンソールにそれが出ます。記録が `--quiet-wait` (既定 60 秒) の間変わらず、プロンプトで終わっていない
+  コンソール (起動の後に誰も Enter を押していないルータ) には、プロンプトを出すために先に改行を 1 つだけ送ります。
+  記録が動いているコンソール (誰かが使っている) には何も送りません。
 - **手元のファイル:** collector は画面の隣に `xray-states.js` と `xray-states.sig.js` を書きます。netlab のツールは
   `network-xray.json` を書きます (ラボのパスワードが入ります・`netlab down` で消えます)。
 - **ほかへは何も送りません:** テレメトリ・アクセス解析・アカウントはありません。DeepDive の「Powered by RCL」と、この README の
@@ -2100,6 +2107,9 @@ X-Ray のノードごとの **DeepDive** は、ほかの UI (containerlab の GU
 ## スコープと保守
 
 - **記述レンダラであってシミュレータではない** — 与えた状態を描くだけ。経路計算もプロトコル実行もしない。
+- **経路を読む道具で、L2 は読まない** — 読むのは interface・OSPF・BGP・経路表です。L2 (STP・LACP / EtherChannel・
+  トランク・VLAN) は読みません。スイッチだけのラボでも、頁は起動の時のプロトコル (例「(ospf)」) を題に出し、OSPF / BGP の
+  所は空になります。それは読む範囲の外という意味で、ラボの状態ではありません。
 - **アダプタでベンダー中立** — 自分のルータ OS の `show` 出力をドキュメントの形に対応付ける
   (`frr-parse.js` が雛形、DATA-CONTRACT に対応表)。
 - **ブラウザ完結・プライベート** — 貼るデモはサーバへ何も送らない。

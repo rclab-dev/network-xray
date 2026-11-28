@@ -32,7 +32,7 @@
  *   --mgmt <r1=ip,r2=ip>   management addresses by hand (default: from each router's configuration in the lab)
  *   --console              read over the CML console instead (the old way: show commands appear on the console you use;
  *                          the tool waits while someone types and has a Pause button) - only when you ask for it
- *   --quiet-wait <s>       --console only: after anything you type on the console, wait this long before reading (default 60)
+ *   --quiet-wait <s>       --console only: after anything you type on the console, wait this long before reading (default 60); a log that stays this long without a prompt gets one return
  *   -h, --help             this help
  *   --problem <file>       the lab's problem.json (network-xray-lab/0): the problem band above the graph and "✓ Solved" when its
  *                          check passes (default: "<lab title>.problem.json" in the current folder, when there is one)
@@ -554,7 +554,7 @@ Console.prototype.waitFor = function (re, from, ms) {
     })();
   });
 };
-Console.prototype.login = function (labTitle) {
+Console.prototype.login = function (labTitle, wakeMax) {
   var self = this, c = this.cfg, at;
   var PROMPT = /\n([A-Za-z0-9._-]+)([>#])\s*$/;
   this.start(); this.own = true;   /* nx_cml_share: what arrives while logging in is the tool's own */
@@ -568,7 +568,7 @@ Console.prototype.login = function (labTitle) {
     var tries = 0;
     return (function wake() { self.send(''); tries++; return self.waitFor(PROMPT, at, 8000).then(function (m) {
       if (!m && /\([a-z-]*config[^)]*\)#\s*$/i.test(self.buf.slice(at))) { var be = new Error('config mode'); be.busy = true; throw be; }   /* nx_cml_share2: someone is configuring - stop, send nothing more */
-      return (m || tries >= 4) ? m : wake(); }); })();
+      return (m || tries >= (wakeMax || 4)) ? m : wake(); }); })();   /* nx_console_idle: an idle line gets one return only */
   }).then(function (m) {
     if (!m) throw new Error('no IOS prompt on the console (is the node started and booted?)');
     if (/^consoles$/.test(m[1])) throw new Error('the console server did not open /' + labTitle + '/' + self.node + '/0');
@@ -797,11 +797,20 @@ Collector.prototype.readNodeConsole = function (n) {
   var busy = function (why) { var e = new Error(why); e.busy = true; return Promise.reject(e); };
   var quietMs = (this.cfg.quietWait == null ? 60 : this.cfg.quietWait) * 1000;
   if (c.alive && c.host) { var why = c.whyNot(quietMs); if (why) return busy(why); }
+  var idle = this.idleLog || (this.idleLog = {}), wakeOnce = false;
   var logOk = (c.alive && c.host) || !this.cfg.consoleLog ? Promise.resolve() : this.cfg.consoleLog(n).then(function (log) {
-    var last = String(log || '').replace(/\r/g, '').split('\n').filter(function (l) { return l.trim(); }).pop() || '';
-    if (last && !(/^[A-Za-z0-9._-]+[>#]\s*$/.test(last) && last.indexOf('(config') < 0) && !/^Press RETURN/i.test(last) && !/^consoles?>/.test(last)) return busy('the console is in use (its log does not end with a prompt)');
+    var lines = String(log || '').replace(/\r/g, '').split('\n').filter(function (l) { return l.trim(); }), last = lines[lines.length - 1] || '';
+    if (last && !(/^[A-Za-z0-9._-]+[>#]\s*$/.test(last) && last.indexOf('(config') < 0) && !/^Press RETURN/i.test(last) && !/^consoles?>/.test(last)) {
+      /* nx_console_idle (2026-11-27): a log that does not end with a prompt but has not changed for --quiet-wait is a router
+         nobody is on (booted, its last lines a boot notice): it is woken with ONE return - nothing else is sent before the
+         prompt, nothing is configured. A log that changes is someone on the line: wait, as before. */
+      var tail = lines.slice(-3).join('\n'), now = Date.now(), was = idle[n];
+      if (!was || was.tail !== tail) { idle[n] = { tail: tail, since: now }; was = idle[n]; }
+      if (now - was.since < quietMs) return busy('the console is in use (its log does not end with a prompt)');
+      wakeOnce = true;
+    } else delete idle[n];
   }, function () { /* the log could not be read: connect as before */ });
-  var p = logOk.then(function () { return (c.alive && c.host) ? null : (c.alive ? Promise.resolve(c.stop()) : Promise.resolve()).then(function () { return c.login(self.lab); }); });
+  var p = logOk.then(function () { return (c.alive && c.host) ? null : (c.alive ? Promise.resolve(c.stop()) : Promise.resolve()).then(function () { return c.login(self.lab, wakeOnce ? 1 : 0); }); });   /* nx_console_idle */
   return R.CMDS.reduce(function (acc, cmd) {
     // each piece starts right after the previous prompt: the first one needs the prompt in front, or the splitter cannot name it
     return acc.then(function () { if (self.paused) { var pz = new Error('paused'); pz.busy = true; throw pz; }   /* Pause: nothing more is sent, also in a round that has started */ if (!raw) raw = c.host + '#'; return c.cmd(cmd[1]).then(function (t) { raw += t; }); });
@@ -1291,4 +1300,4 @@ else if (require.main === module) {
 }
 
 module.exports = { KIND: KIND, IOS_DEFS: IOS_DEFS, toClabData: toClabData, renderPage: renderPage,
-  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress, loadProblem: loadProblem, fillJumpKey: fillJumpKey, hostAllowed: hostAllowed, staticAllowed: staticAllowed };   /* nx_cml_ssh */   /* nx_cml_problem */
+  SshLine: SshLine, sshAskpass: sshAskpass, sshPlanner: sshPlanner, mgmtAddress: mgmtAddress, loadProblem: loadProblem, fillJumpKey: fillJumpKey, hostAllowed: hostAllowed, staticAllowed: staticAllowed, Collector: Collector, Console: Console };   /* nx_cml_ssh */   /* nx_cml_problem */

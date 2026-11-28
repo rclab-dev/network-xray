@@ -410,7 +410,8 @@ window.__xrayGraphBoot = function () {
         paused: _uja ? '読むのを一時停止しています (cml-xray)。' : 'Reading is paused (cml-xray).',
         nomgmt: _uja ? 'このルータには管理の網 (SSH で届く口) が無いので、状態は読みません。図にだけ出しています。足し方は README の「CML のラボに管理の網を足す」を見てください (コンソールで読む --console もあります)。' : 'This router has no management network (no way to reach it over SSH), so its state is not read. It is drawn in the topology only. See "Add a management network to a CML lab" in the README (or read over the console with --console).'   /* nx_cml_ssh */
       })[_ust.nx_unread] || '';
-      _ustale = (_ust.nx_unread === 'timeout' || _ust.nx_unread === 'busy' || _ust.nx_unread === 'paused') && _ust.success !== false;   /* nx_cml_share: busy / paused show the last good state */
+      _ustale = (_ust.nx_unread === 'timeout' || _ust.nx_unread === 'busy' || _ust.nx_unread === 'paused') && _ust.success !== false && !!_ust.nx_stale_since;   /* nx_cml_share: busy / paused show the last good state */   /* nx_never_read: only a router read once has one */
+      if (!_ustale && (_ust.nx_unread === 'busy' || _ust.nx_unread === 'paused')) _umsg += _uja ? ' まだ一度も読めていないので、状態は出しません。' : ' It has not been read yet, so no state is shown.';   /* nx_never_read (2026-11-27): never drawn as if read */
       var _uat = (function (t) { try { var d = new Date(t); return isNaN(d) ? (t || '?') : d.toLocaleTimeString(); } catch (e) { return t || '?'; } })(_ust.nx_stale_since);   /* nx_cml_share2: the local time */
       if (_ustale) _umsg += _uja ? ' 下は最後に読めた時 (' + _uat + ') の情報です。' : ' Below is its last good state (' + _uat + '), which may be out of date.';
       _unote = document.createElement('div'); _unote.className = 'nx-unread'; _unote.textContent = nodeId + ': ' + _umsg;
