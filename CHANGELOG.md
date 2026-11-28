@@ -2,10 +2,14 @@
 
 User-visible changes in each release of rclab-dev/network-xray, newest first. Dates are the release tag dates.
 
-## Unreleased
+## v1.9.1 — 2026-11-28
 
+- **CML 2.11 consoles (`cml-xray.js --console`):** CML 2.11 starts each line of a console log with a mark like `|0000152887|`; it is taken off before the log is read. Before, every console read as in use on 2.11, so no router was read. Logs without the mark read as before.
+- **`--console`: an idle console is woken once:** a console whose log has not changed for `--quiet-wait` (default 60 s) and does not end with a prompt (a router nobody has pressed Enter on since it booted) first gets one return, to show the prompt. A console whose log is changing (someone is on it) is not touched.
+- **`--console`: a router never read shows no state:** a router that has not been read yet (busy or paused, with no last good state) is no longer drawn as a state; the note says it has not been read yet and its DeepDive is not shown.
 - **SR Linux collector:** also reads answers printed from the root (`{"network-instance":[{"name":"default","protocols":{"bgp":{"neighbor":[...]}}}]}`, reported on SR Linux 24.10), not only the node the path names (as 26.3 prints). Before, such a router read as having no BGP, no OSPF and no routes.
 - **Not read is not empty:** when one part of a router could not be read (no answer for that command, or an answer in a shape this version does not read), the SR Linux collector marks it (`nx_unread_parts` in the state). MCP `lab_state` (also with `only_problems`), `list_routers`, `bgp_neighbors`, `ospf_neighbors`, `ospf_interfaces`, `route_lookup`, `why_best_path` and `why_path` then return `not_read` (router, part, why), `list_routers` gives that part a `null` count instead of 0, a `summary` line starts with "Not read: ...", and `xray.sh state` / `why` print a "not read" line.
+- **Docs:** WALKTHROUGH-CONTRACT.md section 2 has a short `steps.json` example for `capture-frames.js --walkthrough` and says what the worked-out changes, the caption and `show.highlight` each do; `demo/walkthrough-q21/README.md` says what the example is and how to make and open the page. README: Layer 2 (STP, LACP / EtherChannel, trunks, VLANs) is not read; in a switching-only lab the OSPF / BGP parts are empty because that is outside what it reads.
 
 ## v1.9.0 — 2026-11-27
 
